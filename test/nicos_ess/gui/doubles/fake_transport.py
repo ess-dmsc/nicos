@@ -1,114 +1,26 @@
-"""In-process fake of the NICOS daemon connection for GUI tests.
-
-The real :class:`nicos.clients.gui.client.NicosGuiClient` runs unmodified; only
-the :class:`nicos.clients.base.ClientTransport` it constructs is swapped for
-:class:`FakeClientTransport`, which talks to an in-memory :class:`FakeDaemon`.
-Daemon-side pushes are queued so the real client event thread still emits the
-Qt signals; tests therefore rely on normal Qt event processing rather than a
-fully synchronous shortcut path.
-"""
+"""Small in-process daemon transport for GUI tests."""
 
 from __future__ import annotations
 
-import ast
 import queue
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from nicos.core import MASTER
 from nicos.protocols.cache import OP_TELL, cache_dump
-from nicos.protocols.daemon import DAEMON_EVENTS, STATUS_IDLE
+from nicos.protocols.daemon import (
+    ClientTransport as BaseClientTransport,
+    DAEMON_EVENTS,
+    STATUS_IDLE,
+)
 from nicos.protocols.daemon.classic import PROTO_VERSION
 
 
 _EVENT_SENTINEL = object()
 _NO_REPLY = object()
-_UNKNOWN_EVAL = object()
 _TEST_DIR = Path(__file__).resolve().parents[3]
-
-if not (_TEST_DIR / "runtime_resources.py").is_file():
-    raise RuntimeError(f"could not locate repository test/ directory from {_TEST_DIR}")
-
 _GUI_TEST_ROOT = _TEST_DIR / "root"
-_DIRECT_DEVICE_EXPR = re.compile(
-    r"^(?P<dev>[A-Za-z_][A-Za-z0-9_]*)\.(?P<attr>[_A-Za-z0-9]+)(?P<call>\(\))?$"
-)
-_DEVICE_CLASS = "nicos.core.device.Device"
-_OBJECT_CLASS = "builtins.object"
-_CLASS_MRO = {
-    "nicos.core.device.DeviceAlias": [_DEVICE_CLASS, _OBJECT_CLASS],
-    "nicos.core.device.Moveable": [
-        "nicos.core.device.Waitable",
-        "nicos.core.device.Readable",
-        _DEVICE_CLASS,
-        _OBJECT_CLASS,
-    ],
-    "nicos.core.device.Measurable": [
-        "nicos.core.device.Waitable",
-        "nicos.core.device.Readable",
-        _DEVICE_CLASS,
-        _OBJECT_CLASS,
-    ],
-    "nicos.core.device.SubscanMeasurable": [
-        "nicos.core.device.Measurable",
-        "nicos.core.device.Waitable",
-        "nicos.core.device.Readable",
-        _DEVICE_CLASS,
-        _OBJECT_CLASS,
-    ],
-    "nicos.core.device.Waitable": [
-        "nicos.core.device.Readable",
-        _DEVICE_CLASS,
-        _OBJECT_CLASS,
-    ],
-    "nicos.core.device.Readable": [_DEVICE_CLASS, _OBJECT_CLASS],
-    _DEVICE_CLASS: [_OBJECT_CLASS],
-}
-_DEFAULT_EVALS = {
-    "session.instrument": "",
-    "session.experiment.name": "exp",
-    "session.experiment.title": "",
-    "session.experiment.proposal": "",
-    "session.experiment.get_current_run_number()": 0,
-    "session.experiment.run_title": "",
-    "session.experiment.detectors": [],
-    "session.experiment.scriptpath": "",
-    "session.experiment._canQueryProposals()": False,
-    'session.experiment.propinfo["notif_emails"]': [],
-    "session.experiment.get_samples()": [],
-    "session.experiment.proposal, "
-    "session.experiment.title, "
-    "session.experiment.users, "
-    "session.experiment.localcontact, "
-    "session.experiment.errorbehavior": ("", "", [], [], "abort"),
-    "session.spMode": False,
-    "session.alias_config": {},
-    "config.nicos_root": str(_GUI_TEST_ROOT),
-    "config.logging_path": "log",
-}
-
-
-def _class_name(cls: Any) -> str:
-    if isinstance(cls, str):
-        return cls
-    return f"{cls.__module__}.{cls.__qualname__}"
-
-
-def _expanded_classes(classes: list[Any] | tuple[Any, ...]) -> list[str]:
-    expanded = []
-
-    def add(class_name: str) -> None:
-        if class_name not in expanded:
-            expanded.append(class_name)
-        for base_name in _CLASS_MRO.get(class_name, ()):
-            add(base_name)
-
-    for cls in classes:
-        add(_class_name(cls))
-    add(_DEVICE_CLASS)
-    return expanded
 
 
 @dataclass
@@ -117,14 +29,6 @@ class DeviceSpec:
     valuetype: Any
     params: dict[str, Any] = field(default_factory=dict)
     param_info: dict[str, Any] = field(default_factory=dict)
-
-    @property
-    def key(self) -> str:
-        return self.name.lower()
-
-    @property
-    def classes(self) -> list[str]:
-        return _expanded_classes(self.params.get("classes", []))
 
 
 @dataclass
@@ -142,39 +46,9 @@ class SetupSpec:
     sysconfig: dict[str, Any] = field(default_factory=dict)
     extended: dict[str, Any] = field(default_factory=dict)
 
-    def as_setup_info(self) -> dict[str, Any]:
-        return {
-            "description": self.description,
-            "devices": list(self.devices),
-            "display_order": self.display_order,
-            "extended": dict(self.extended),
-        }
-
-    def as_read_setup_info(self, devices: dict[str, DeviceSpec]) -> dict[str, Any]:
-        read_devices = {}
-        for devname in self.devices:
-            device = devices.get(devname)
-            visibility = ("devlist",)
-            if device is not None:
-                visibility = device.params.get("visibility", visibility)
-            read_devices[devname] = ("", {"visibility": visibility})
-        return {
-            "description": self.description,
-            "devices": read_devices,
-            "display_order": self.display_order,
-            "includes": list(self.includes),
-            "excludes": list(self.excludes),
-            "modules": list(self.modules),
-            "alias_config": dict(self.alias_config),
-            "startupcode": self.startupcode,
-            "sysconfig": dict(self.sysconfig),
-            "extended": dict(self.extended),
-            "group": self.group,
-        }
-
 
 class FakeDaemon:
-    """In-memory daemon state + command dispatch."""
+    """Dumb fake daemon: exact replies in, exact replies out."""
 
     def __init__(
         self,
@@ -183,435 +57,246 @@ class FakeDaemon:
         daemon_version: str = "fake-1.0",
         protocol_version: int = PROTO_VERSION,
     ):
+        self.banner = {
+            "daemon_version": daemon_version,
+            "protocol_version": protocol_version,
+            "pw_hashing": "plain",
+        }
         self.user_level = user_level
-        self.daemon_version = daemon_version
-        self.protocol_version = protocol_version
-        self.devices: dict[str, DeviceSpec] = {}
-        self.explicit_devices: set[str] = set()
-        self.setups: dict[str, SetupSpec] = {}
-        self.loaded_setups: set[str] = set()
-        self.cache: dict[str, Any] = {"sample/samples": {}}
-        self.datasets: list[Any] = []
-        self.status: tuple = (STATUS_IDLE, -1)
+        self.status = (STATUS_IDLE, -1)
         self.mode = MASTER
-        self.eval_table: dict[str, Any] = {}
-        self.messages: list[tuple] = []
-        self.completions: dict[tuple[str, str], list[str]] = {}
-        self.command_log: list[tuple[str, tuple]] = []
-        self.command_replies: dict[str, tuple[bool, Any]] = {}
-        self.command_exceptions: dict[str, BaseException] = {}
-        self.unknown_evals: list[str] = []
-        self.unknown_commands: list[str] = []
-        # Request ids are local to one fake daemon instance.
+        self.devices = {}
+        self.setups = {}
+        self.loaded_setups = set()
+        self.cache = {}
+        self.messages = []
+        self.datasets = []
+        self.evals = {}
+        self.command_log = []
+        self.unknown_evals = []
+        self.unknown_commands = []
         self._next_request_id = 1
-        self._transports: list["FakeClientTransport"] = []
+        self._transports = []
+        self._seed_gui_defaults()
 
-    # ------------------------------------------------------------------
-    # wiring
+    def _seed_gui_defaults(self):
+        self.evals.update(
+            {
+                "session.instrument": "",
+                "session.experiment.name": "exp",
+                "session.experiment.title": "",
+                "session.experiment.proposal": "",
+                "session.experiment.get_current_run_number()": 0,
+                "session.experiment.run_title": "",
+                "session.experiment.detectors": [],
+                "session.experiment.scriptpath": "",
+                "session.experiment._canQueryProposals()": False,
+                'session.experiment.propinfo["notif_emails"]': [],
+                "session.experiment.get_samples()": [],
+                "session.experiment.proposal, "
+                "session.experiment.title, "
+                "session.experiment.users, "
+                "session.experiment.localcontact, "
+                "session.experiment.errorbehavior": ("", "", [], [], "abort"),
+                "session.spMode": False,
+                "session.alias_config": {},
+                "config.nicos_root": str(_GUI_TEST_ROOT),
+                "config.logging_path": "log",
+            }
+        )
+        self._refresh_state_evals()
 
-    def attach(self, transport: "FakeClientTransport") -> None:
+    def _refresh_state_evals(self):
+        self.evals["session.loaded_setups"] = set(self.loaded_setups)
+        self.evals["session.devices"] = dict(self.devices)
+        self.evals["session.getSetupInfo()"] = {
+            name: {
+                "description": setup.description,
+                "devices": list(setup.devices),
+                "display_order": setup.display_order,
+                "extended": dict(setup.extended),
+            }
+            for name, setup in self.setups.items()
+        }
+        self.evals["session.readSetupInfo()"] = {
+            name: {
+                "description": setup.description,
+                "devices": {
+                    devname: (
+                        "",
+                        {
+                            "visibility": self.devices.get(
+                                devname, DeviceSpec(devname, object)
+                            ).params.get("visibility", ("devlist",))
+                        },
+                    )
+                    for devname in setup.devices
+                },
+                "display_order": setup.display_order,
+                "includes": list(setup.includes),
+                "excludes": list(setup.excludes),
+                "modules": list(setup.modules),
+                "alias_config": dict(setup.alias_config),
+                "startupcode": setup.startupcode,
+                "sysconfig": dict(setup.sysconfig),
+                "extended": dict(setup.extended),
+                "group": setup.group,
+            }
+            for name, setup in self.setups.items()
+        }
+        self.evals[
+            '{d.name: d.alias for d in session.devices.values() '
+            'if "alias" in d.parameters}'
+        ] = {}
+
+    def attach(self, transport):
         self._transports.append(transport)
 
-    def detach(self, transport: "FakeClientTransport") -> None:
+    def detach(self, transport):
         if transport in self._transports:
             self._transports.remove(transport)
 
-    def banner(self) -> dict:
-        return {
-            "daemon_version": self.daemon_version,
-            "protocol_version": self.protocol_version,
-            "pw_hashing": "plain",
-        }
-
-    # ------------------------------------------------------------------
-    # state setup
-
-    def add_device(
-        self,
-        device: DeviceSpec,
-        *,
-        setup: str | None = None,
-        load_setup: bool = False,
-        explicit: bool = True,
-    ) -> DeviceSpec:
-        for existing_name in self.devices:
-            if existing_name != device.name and existing_name.lower() == device.key:
-                raise ValueError(
-                    "add_device() rejects names that collide after lowercasing: "
-                    f"{existing_name!r} vs {device.name!r}"
-                )
-        device.params["classes"] = device.classes
+    def add_device(self, device, *, setup=None, load_setup=False, explicit=True):
         self.devices[device.name] = device
-        if explicit:
-            self.explicit_devices.add(device.name)
-        else:
-            self.explicit_devices.discard(device.name)
         if setup is not None:
-            self.add_setup(setup, loaded=load_setup)
-            if device.name not in self.setups[setup].devices:
-                self.setups[setup].devices.append(device.name)
+            setup_spec = self.add_setup(setup, loaded=load_setup)
+            if device.name not in setup_spec.devices:
+                setup_spec.devices.append(device.name)
         for param, value in device.params.items():
-            self.cache[f"{device.key}/{param}"] = value
+            self.set_cache(f"{device.name.lower()}/{param}", value)
+            self.evals[f"{device.name}.{param}"] = value
+        self.evals[f"{device.name}.pollParams()"] = None
+        self.evals[f"session.getDevice({device.name!r}).read()"] = (
+            device.params.get("value")
+        )
+        self.evals[f"session.getDevice({device.name!r}).valuetype"] = device.valuetype
+        self.evals[
+            "dict((pn, pi.serialize()) for (pn, pi) in "
+            f"session.getDevice({device.name!r}).parameters.items())"
+        ] = dict(device.param_info)
+        self._refresh_state_evals()
         return device
 
-    def add_setup(
-        self, setup: str | SetupSpec, *, loaded: bool = False, **kwargs
-    ) -> SetupSpec:
-        if isinstance(setup, SetupSpec):
-            spec = setup
-        else:
-            spec = SetupSpec(name=setup, **kwargs)
-        stored = self.setups.get(spec.name)
-        if stored is None:
-            self.setups[spec.name] = spec
-            stored = spec
+    def add_setup(self, setup, *, loaded=False, **kwargs):
+        if not isinstance(setup, SetupSpec):
+            setup = SetupSpec(setup, **kwargs)
+        self.setups.setdefault(setup.name, setup)
         if loaded:
-            self.loaded_setups.add(stored.name)
-        return stored
+            self.loaded_setups.add(setup.name)
+        self._refresh_state_evals()
+        return self.setups[setup.name]
 
-    def set_cache(self, key: str, value: Any) -> None:
-        key = key.lower()
-        self.cache[key] = value
-        if "/" in key:
-            devkey, param = key.split("/", 1)
-            dev = self._get_device(devkey)
-            if dev is not None:
-                dev.params[param] = value
+    def set_cache(self, key, value):
+        self.cache[key.lower()] = value
 
-    def add_message(self, message: tuple) -> tuple:
+    def add_message(self, message):
         self.messages.append(message)
         return message
 
-    def set_completion(
-        self, fullstring: str, lastword: str, replies: list[str]
-    ) -> None:
-        self.completions[(fullstring, lastword)] = list(replies)
+    def handle(self, command, args):
+        self.command_log.append((command, args))
 
-    def fail_with(self, cmd: str, reply: tuple[bool, Any]) -> None:
-        self.command_replies[cmd] = reply
-        self.command_exceptions.pop(cmd, None)
-
-    def raise_on(self, cmd: str, exc: BaseException) -> None:
-        self.command_exceptions[cmd] = exc
-        self.command_replies.pop(cmd, None)
-
-    # ------------------------------------------------------------------
-    # event push helpers (tests drive these)
-
-    def push_cache(
-        self, key: str, value: Any, *, timestamp: float = 0.0, op: str = OP_TELL
-    ) -> None:
-        self.set_cache(key, value)
-        dumped = cache_dump(value) if value is not None else ""
-        self._push_event("cache", (timestamp, key.lower(), op, dumped))
-
-    def push_device_event(self, action: str, devnames: Any) -> None:
-        """Push a raw daemon-side device event payload into the client."""
-        self._push_event("device", (action, devnames))
-
-    def push_setup(self, loaded: list[str] | None = None) -> None:
-        if loaded is not None:
-            unknown_setups = sorted(set(loaded) - set(self.setups))
-            if unknown_setups:
-                raise ValueError(
-                    "push_setup() references unknown setups: "
-                    + ", ".join(repr(name) for name in unknown_setups)
-                )
-            self.loaded_setups = set(loaded)
-        lists = (sorted(self.loaded_setups), sorted(self.setups.keys()))
-        self._push_event("setup", lists)
-
-    def push_message(self, message: tuple) -> None:
-        self.add_message(message)
-        self._push_event("message", message)
-
-    def push_status(self, status: tuple) -> None:
-        self.status = status
-        self._push_event("status", status)
-
-    def push_mode(self, mode: int) -> None:
-        self.mode = mode
-        self._push_event("mode", mode)
-
-    def push_experiment(self, data: tuple) -> None:
-        self._push_event("experiment", data)
-
-    def push_simmessage(self, message: tuple) -> None:
-        self._push_event("simmessage", message)
-
-    def _push_event(self, name: str, data: Any) -> None:
-        if name not in DAEMON_EVENTS:
-            raise ValueError(f"unknown event {name!r}")
-        for tr in list(self._transports):
-            tr.deliver_event(name, data, [])
-
-    # ------------------------------------------------------------------
-    # command dispatch
-
-    def handle(self, cmd: str, args: tuple) -> tuple[bool, Any]:
-        self.command_log.append((cmd, args))
-
-        failure = self.command_replies.get(cmd)
-        if failure is not None:
-            return failure
-
-        exception = self.command_exceptions.get(cmd)
-        if exception is not None:
-            raise exception
-
-        if cmd == "authenticate":
+        if command == "authenticate":
             return True, {"user_level": self.user_level}
-        if cmd in {"eventmask", "eventunmask", "keepalive", "quit"}:
+        if command in {"eventmask", "eventunmask", "keepalive", "quit"}:
             return True, None
-        if cmd == "getstatus":
-            return True, self._status()
-        if cmd == "getcachekeys":
-            return True, self._cache_keys(args[0])
-        if cmd == "getdataset":
-            return True, self._dataset(args[0])
-        if cmd == "getmessages":
-            return True, self._messages(args[0])
-        if cmd == "complete":
-            return True, self._complete(args[0], args[1])
-        if cmd == "eval":
+        if command in {"queue", "start"}:
+            request_id = self._next_request_id
+            self._next_request_id += 1
+            return True, request_id
+        if command == "getstatus":
+            return True, {
+                "devices": list(self.devices),
+                "devicefailures": {},
+                "setups": (sorted(self.loaded_setups), sorted(self.setups)),
+                "script": "",
+                "status": self.status,
+                "mode": self.mode,
+                "requests": [],
+                "current_script": [""],
+                "watch": {},
+                "eta": (0, None),
+            }
+        if command == "getdataset":
+            return True, list(self.datasets)
+        if command == "getmessages":
+            return True, list(self.messages)
+        if command == "getcachekeys":
+            return True, self._cache_reply(args[0])
+        if command == "complete":
+            return True, []
+        if command == "eval":
             expr, stringify = args
-            value = self._eval(expr)
-            if stringify and value is not None:
-                value = str(value)
-            return True, value
-        if cmd in {"queue", "start"}:
-            return True, self._next_request()
-        self.unknown_commands.append(cmd)
-        return False, f"unknown command: {cmd}"
+            if expr not in self.evals:
+                self.unknown_evals.append(expr)
+                return True, None
+            value = self.evals[expr]
+            return True, str(value) if stringify and value is not None else value
 
-    def _status(self) -> dict[str, Any]:
-        return {
-            "devices": [spec.name for spec in self.devices.values()],
-            "devicefailures": {},
-            "setups": (sorted(self.loaded_setups), sorted(self.setups)),
-            "script": "",
-            "status": self.status,
-            "mode": self.mode,
-            "requests": [],
-            "current_script": [""],
-            "watch": {},
-            "eta": (0, None),
-        }
+        self.unknown_commands.append(command)
+        return False, f"unexpected command: {command}"
 
-    def _cache_keys(self, query: str) -> list[tuple[str, Any]]:
+    def _cache_reply(self, query):
         query = query.lower()
-        if "," in query:
-            return [
-                (key, self.cache[key]) for key in query.split(",") if key in self.cache
-            ]
+        keys = query.split(",") if "," in query else [query]
+        if len(keys) > 1:
+            return [(key, self.cache[key]) for key in keys if key in self.cache]
         if query.endswith("/"):
             return sorted((k, v) for k, v in self.cache.items() if k.startswith(query))
         if query in self.cache:
             return [(query, self.cache[query])]
         return []
 
-    def _messages(self, limit: str | int | None) -> list[tuple]:
-        try:
-            count = int(limit) if limit is not None else len(self.messages)
-        except (TypeError, ValueError):
-            count = len(self.messages)
-        if count <= 0:
-            return []
-        return list(self.messages[-count:])
+    def push(self, event, data, blobs=None):
+        if event not in DAEMON_EVENTS:
+            raise ValueError(f"unknown event {event!r}")
+        for transport in list(self._transports):
+            transport.deliver_event(event, data, blobs or [])
 
-    def _dataset(self, index: str | int) -> list[Any] | Any | None:
-        if index == "*":
-            return list(self.datasets)
-        try:
-            return self.datasets[int(index)]
-        except (TypeError, ValueError, IndexError):
-            return None
+    def push_cache(self, key, value, *, timestamp=0.0, op=OP_TELL):
+        self.set_cache(key, value)
+        dumped = cache_dump(value) if value is not None else ""
+        self.push("cache", (timestamp, key.lower(), op, dumped))
 
-    def _complete(self, fullstring: str, lastword: str) -> list[str]:
-        return list(self.completions.get((fullstring, lastword), []))
+    def push_setup(self, loaded=None):
+        if loaded is not None:
+            self.loaded_setups = set(loaded)
+            self._refresh_state_evals()
+        self.push("setup", (sorted(self.loaded_setups), sorted(self.setups)))
 
-    def _eval(self, expr: str) -> Any:
-        if expr in self.eval_table:
-            value = self.eval_table[expr]
-            return value() if callable(value) else value
-        if expr == "session.loaded_setups":
-            return set(self.loaded_setups)
-        if expr in _DEFAULT_EVALS:
-            return _DEFAULT_EVALS[expr]
-        if expr == "session.devices":
-            return dict(self.devices)
-        if expr == "session.getSetupInfo()":
-            return {name: spec.as_setup_info() for name, spec in self.setups.items()}
-        if expr == "session.readSetupInfo()":
-            return {
-                name: spec.as_read_setup_info(self.devices)
-                for name, spec in self.setups.items()
-            }
-        alias_expr = (
-            '{d.name: d.alias for d in session.devices.values() '
-            'if "alias" in d.parameters}'
-        )
-        if expr == alias_expr:
-            return {
-                spec.name: spec.params["alias"]
-                for spec in self.devices.values()
-                if "alias" in spec.params
-            }
-        if ".pollParams(" in expr and expr.endswith(")"):
-            return None
+    def push_message(self, message):
+        self.add_message(message)
+        self.push("message", message)
 
-        value = self._eval_param_info(expr)
-        if value is not _UNKNOWN_EVAL:
-            return value
-        value = self._eval_device_list_expr(expr)
-        if value is not _UNKNOWN_EVAL:
-            return value
-        value = self._eval_device_expr(expr)
-        if value is not _UNKNOWN_EVAL:
-            return value
+    def push_status(self, status):
+        self.status = status
+        self.push("status", status)
 
-        self.unknown_evals.append(expr)
-        return None
+    def push_mode(self, mode):
+        self.mode = mode
+        self.push("mode", mode)
 
-    def _eval_param_info(self, expr: str) -> dict[str, Any] | object:
-        prefix = "dict((pn, pi.serialize()) for (pn, pi) in session.getDevice("
-        suffix = ").parameters.items())"
-        devname = self._expr_arg(expr, prefix, suffix)
-        if devname is _UNKNOWN_EVAL:
-            return _UNKNOWN_EVAL
-        device = self._get_device(devname)
-        if device is None:
-            return {}
-        return dict(device.param_info)
-
-    def _eval_device_list_expr(self, expr: str) -> list[str] | object:
-        prefix = "list(dn for (dn, d) in session.devices.items() if "
-        if not expr.startswith(prefix) or not expr.endswith(")"):
-            return _UNKNOWN_EVAL
-
-        conditions = expr[len(prefix) : -1]
-        required_classes = []
-        excluded_classes = []
-        only_explicit = False
-        for condition in conditions.split(" and "):
-            required_match = re.fullmatch(r"'([^']+)' in d\.classes", condition)
-            if required_match is not None:
-                required_classes.append(required_match.group(1))
-                continue
-            excluded_match = re.fullmatch(r"'([^']+)' not in d\.classes", condition)
-            if excluded_match is not None:
-                excluded_classes.append(excluded_match.group(1))
-                continue
-            if condition == "dn in session.explicit_devices":
-                only_explicit = True
-                continue
-            return _UNKNOWN_EVAL
-
-        result = []
-        for devname, spec in self.devices.items():
-            if only_explicit and devname not in self.explicit_devices:
-                continue
-            classes = set(spec.classes)
-            if any(req not in classes for req in required_classes):
-                continue
-            if any(exc in classes for exc in excluded_classes):
-                continue
-            result.append(devname)
-        return result
-
-    def _eval_device_expr(self, expr: str) -> Any:
-        lookups = {
-            ").classes": lambda device: device.classes,
-            ").read()": lambda device: device.params.get("value"),
-            ").valueInfo()": lambda device: None,
-            ").valuetype": lambda device: device.valuetype,
-        }
-        for suffix, lookup in lookups.items():
-            device = self._device_from_expr(expr, "session.getDevice(", suffix)
-            if device is not None:
-                return lookup(device)
-        direct_value = self._eval_direct_device_expr(expr)
-        if direct_value is not _UNKNOWN_EVAL:
-            return direct_value
-        return _UNKNOWN_EVAL
-
-    def _eval_direct_device_expr(self, expr: str) -> Any:
-        match = _DIRECT_DEVICE_EXPR.match(expr)
-        if match is None:
-            return _UNKNOWN_EVAL
-
-        device = self._get_device(match.group("dev"))
-        if device is None:
-            return _UNKNOWN_EVAL
-
-        attr = match.group("attr")
-        if match.group("call"):
-            if attr == "read":
-                return device.params.get("value")
-            if attr == "poll":
-                return None
-            if f"{attr}()" in device.params:
-                return device.params[f"{attr}()"]
-        if attr in device.params:
-            return device.params[attr]
-        return _UNKNOWN_EVAL
-
-    def _device_from_expr(
-        self, expr: str, prefix: str, suffix: str
-    ) -> DeviceSpec | None:
-        devname = self._expr_arg(expr, prefix, suffix)
-        if devname is _UNKNOWN_EVAL:
-            return None
-        return self._get_device(devname)
-
-    def _get_device(self, devname: str) -> DeviceSpec | None:
-        device = self.devices.get(devname)
-        if device is not None:
-            return device
-        matches = [
-            spec
-            for name, spec in self.devices.items()
-            if name.lower() == devname.lower()
-        ]
-        if len(matches) == 1:
-            return matches[0]
-        return None
-
-    def _expr_arg(self, expr: str, prefix: str, suffix: str) -> str | object:
-        if not expr.startswith(prefix) or not expr.endswith(suffix):
-            return _UNKNOWN_EVAL
-        return ast.literal_eval(expr[len(prefix) : -len(suffix)])
-
-    def _next_request(self) -> int:
-        request_id = self._next_request_id
-        self._next_request_id += 1
-        return request_id
+    def push_simmessage(self, message):
+        self.push("simmessage", message)
 
 
-class FakeClientTransport:
-    """Implements the 6-method :class:`ClientTransport` contract in-process."""
-
-    def __init__(self, daemon: FakeDaemon):
+class FakeClientTransport(BaseClientTransport):
+    def __init__(self, daemon):
         self.daemon = daemon
         self.serializer = None
-        self._event_mask: set[str] = set()
-        self._events: queue.Queue = queue.Queue()
-        self._pending_reply: tuple[bool, Any] | object = _NO_REPLY
-
-    # -- client-side contract ------------------------------------------------
+        self._event_mask = set()
+        self._events = queue.Queue()
+        self._pending_reply = _NO_REPLY
 
     def connect(self, conndata):
         self.daemon.attach(self)
-        self._pending_reply = (True, self.daemon.banner())
+        self._pending_reply = (True, self.daemon.banner)
 
     def connect_events(self, conndata):
-        # Event queue is already set up; nothing to do.
         pass
 
     def disconnect(self):
         self.daemon.detach(self)
-        # Unblock recv_event so the real event thread exits cleanly via the
-        # self.disconnecting branch in NicosClient.event_handler.
         self._events.put(_EVENT_SENTINEL)
 
     def send_command(self, cmdname, args):
@@ -634,9 +319,6 @@ class FakeClientTransport:
             raise ConnectionError("fake transport closed")
         return item
 
-    # -- daemon-side helper --------------------------------------------------
-
     def deliver_event(self, name, data, blobs):
-        if name in self._event_mask:
-            return
-        self._events.put((name, data, blobs))
+        if name not in self._event_mask:
+            self._events.put((name, data, blobs))

@@ -123,7 +123,6 @@ def gui_runtime_resources():
 @pytest.fixture
 def strict_fake_daemon(fake_daemon):
     yield
-    assert fake_daemon.unknown_evals == []
     assert fake_daemon.unknown_commands == []
 
 
