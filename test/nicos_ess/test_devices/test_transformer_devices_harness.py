@@ -36,6 +36,24 @@ from test.nicos_ess.test_devices.doubles import (
 
 
 MOTOR_PV = "SIM:M1"
+CHOPPER_SPEED_READPV = "SIM:CHOP:SPD.RBV"
+CHOPPER_SPEED_WRITEPV = "SIM:CHOP:SPD.VAL"
+
+
+def chopper_phase_config():
+    return {
+        "unit": "deg",
+        "offset": 0.0,
+        "phase_ns_dev": "phase_ns_dev",
+        "mapped_speed_dev": "mapped_speed_dev",
+    }
+
+
+def cache_raw_speed_target(device_harness, raw_target):
+    speed = device_harness.get_device(
+        device_harness.POLLER_ROLE, "mapped_speed_dev"
+    )
+    speed._cache.put(speed.name, "target", raw_target)
 
 
 @pytest.fixture
@@ -46,8 +64,8 @@ def fake_backend(monkeypatch):
     )
     monkeypatch.setattr(motor, "create_wrapper", lambda timeout, use_pva: backend)
 
-    backend.values["SIM:CHOP:SPD.RBV"] = 14.0
-    backend.values["SIM:CHOP:SPD.VAL"] = 14.0
+    backend.values[CHOPPER_SPEED_READPV] = 0.0
+    backend.values[CHOPPER_SPEED_WRITEPV] = 70.0
     seed_epics_jog_motor_defaults(backend, motor_pv=MOTOR_PV)
     return backend
 
@@ -65,9 +83,9 @@ def attached_transformer_devices(device_harness, fake_backend):
         EpicsManualMappedAnalogMoveable,
         name="mapped_speed_dev",
         shared={
-            "readpv": "SIM:CHOP:SPD.RBV",
-            "writepv": "SIM:CHOP:SPD.VAL",
-            "mapping": {"0 Hz": 0.0, "14 Hz": 14.0},
+            "readpv": CHOPPER_SPEED_READPV,
+            "writepv": CHOPPER_SPEED_WRITEPV,
+            "mapping": {"0 Hz": 0.0, "14 Hz": 14.0, "70 Hz": 70.0},
             "monitor": True,
             "pva": True,
         },
@@ -89,12 +107,23 @@ class TestChopperPhaseHarness:
         daemon_device, poller_device = device_harness.create_pair(
             transformer_devices.ChopperPhase,
             name="chopper_phase",
-            shared={
-                "unit": "deg",
-                "offset": 0.0,
-                "phase_ns_dev": "phase_ns_dev",
-                "mapped_speed_dev": "mapped_speed_dev",
-            },
+            shared=chopper_phase_config(),
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
+
+    def test_initializes_with_raw_speed_target_in_cache(
+        self, device_harness, fake_backend, attached_transformer_devices
+    ):
+        # cache a speed value which is not in the mapping to verify 
+        # that the device can handle this case on initialization
+        cache_raw_speed_target(device_harness, 70.0)
+
+        daemon_device, poller_device = device_harness.create_pair(
+            transformer_devices.ChopperPhase,
+            name="chopper_phase",
+            shared=chopper_phase_config(),
         )
 
         assert daemon_device is not None
