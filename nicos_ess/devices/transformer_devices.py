@@ -63,7 +63,10 @@ class ChopperPhase(TransformedMoveable):
 
     def doReadSpeed(self, maxage=0):
         target_val = self._attached_mapped_speed_dev.doReadTarget(maxage=maxage)
-        return abs(self._attached_mapped_speed_dev.mapping.get(target_val))
+        raw_target = self._attached_mapped_speed_dev.mapping.get(
+            target_val, target_val
+        )  # if the target value is not in the mapping, assume it is a raw value and use it directly
+        return abs(raw_target)
 
 
 class DegreesPerSecondToRPM(HasLimits, TransformedMoveable):
