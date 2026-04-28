@@ -50,6 +50,7 @@ devices = dict(
         mapping={
             "0 Hz": 0,
             "14 Hz": 14,
+            "70 Hz": 70,
         },
     ),
     pulse_shaping_chopper_1_delay=device(
@@ -190,7 +191,8 @@ devices = dict(
         precision=0.1,
         mapping={
             "0 Hz": 0,
-            "14 Hz": 14,
+            "-14 Hz": -14,
+            "-70 Hz": -70,
         },
     ),
     pulse_shaping_chopper_2_delay=device(
