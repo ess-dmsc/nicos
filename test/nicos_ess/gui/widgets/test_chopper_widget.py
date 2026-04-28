@@ -287,6 +287,11 @@ def _interval_contains(angle, interval):
     return start <= angle <= end
 
 
+def _interval_center(interval):
+    start, end = interval
+    return wrap360(start + wrap360(end - start) / 2.0)
+
+
 def _dream_psc_cases():
     # Values taken from `nicos_ess/ymir/setups/choppers_dream.py`.
     psc1 = _ymir_psc(
@@ -369,6 +374,39 @@ def _nmx_wls_cases():
     )
     wls2a, wls2b = _nmx_wls2_pair()
     return [wls1, wls2a, wls2b]
+
+
+def _heimdal_tpsc_pair():
+    # Values from the HEIMDAL-ChpSy1 TPSC-100 pair.  The lab-provided side
+    # window delays place the single 5.20° opening 90° from the DOWN guide.
+    # The canonical phase reference remains the calculated guide-centered delay.
+    tpsc101 = _canonical(
+        "tpsc101",
+        slit_edges=[[0.0, 5.20]],
+        motor_position="upstream",
+        disk_rotation_direction="CCW",
+        parked_opening_index=0,
+        tdc_resolver_position=341.3,
+        park_open_angle=243.0,
+        park_edge_1=240.4,
+        park_edge_2=245.6,
+        phase_tdc_center_window_delay=14.9,
+        side_window_center_delay=104.9,
+    )
+    tpsc102 = _canonical(
+        "tpsc102",
+        slit_edges=[[0.0, 5.20]],
+        motor_position="downstream",
+        disk_rotation_direction="CW",
+        parked_opening_index=0,
+        tdc_resolver_position=341.9,
+        park_open_angle=59.3,
+        park_edge_1=56.7,
+        park_edge_2=61.9,
+        phase_tdc_center_window_delay=18.8,
+        side_window_center_delay=288.8,
+    )
+    return [tpsc101, tpsc102]
 
 
 def test_widget_returns_none_for_missing_canonical(qapp):
@@ -796,6 +834,102 @@ def test_widget_choppers_dream_psc_all_openings_render_open_at_down_guide_spinni
             f"{chopper_name}: opening index {opening_index} at spinning phase "
             f"{phase_angle:.3f}° renders coated at DOWN guide"
         )
+
+
+@pytest.mark.parametrize("tpsc", _heimdal_tpsc_pair(), ids=lambda c: c["chopper"])
+def test_widget_heimdal_tpsc_side_window_delay_centers_opening_on_right(qapp, tpsc):
+    widget = ChopperWidget(guide_pos="DOWN")
+    chopper_name = tpsc["chopper"]
+    widget.update_chopper_data([tpsc])
+    widget.set_chopper_speed(chopper_name, 14.0)
+    widget.set_chopper_angle(chopper_name, float(tpsc["side_window_center_delay"]))
+
+    draw_rotation = widget.get_rotation_angle_for_chopper(
+        chopper_name, include_guide=True
+    )
+    assert draw_rotation is not None
+    opening_center = _interval_center(_opening_intervals_qt(tpsc, draw_rotation)[0])
+
+    assert wrap180(opening_center - widget._guide_angle_deg) == pytest.approx(90.0)
+    assert wrap180(opening_center) == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize("tpsc", _heimdal_tpsc_pair(), ids=lambda c: c["chopper"])
+def test_widget_heimdal_tpsc_side_window_delay_renders_opening_on_right(qapp, tpsc):
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    chopper_name = tpsc["chopper"]
+    widget.update_chopper_data([tpsc])
+    widget.set_chopper_speed(chopper_name, 14.0)
+    widget.set_chopper_angle(chopper_name, float(tpsc["side_window_center_delay"]))
+
+    assert not _rendered_probe_is_dark(widget, qapp, 0.0), (
+        f"{chopper_name}: expected opening at right-side transparent window for "
+        f"delay {float(tpsc['side_window_center_delay']):.1f}°, "
+        "but rendered blade/coating there"
+    )
+    assert _rendered_probe_is_dark(widget, qapp, 12.0)
+    assert _rendered_probe_is_dark(widget, qapp, 348.0)
+
+
+@pytest.mark.parametrize("tpsc", _heimdal_tpsc_pair(), ids=lambda c: c["chopper"])
+def test_widget_heimdal_tpsc_calculated_guide_delay_renders_opening_at_down_guide(
+    qapp, tpsc
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    chopper_name = tpsc["chopper"]
+    guide_center_delay = float(tpsc["phase_tdc_center_window_delay"])
+    widget.update_chopper_data([tpsc])
+    widget.set_chopper_speed(chopper_name, 14.0)
+    widget.set_chopper_angle(chopper_name, guide_center_delay)
+
+    assert not _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg), (
+        f"{chopper_name}: expected opening at DOWN guide for calculated delay "
+        f"{guide_center_delay:.1f}°, but rendered blade/coating there"
+    )
+    assert _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg + 12.0)
+    assert _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg - 12.0)
+
+
+def test_widget_heimdal_tpsc_pair_side_window_delays_show_right_side_transmission(
+    qapp,
+):
+    tpsc101, tpsc102 = _heimdal_tpsc_pair()
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.update_chopper_data([tpsc101, tpsc102])
+
+    for tpsc in (tpsc101, tpsc102):
+        chopper_name = tpsc["chopper"]
+        widget.set_chopper_speed(chopper_name, 14.0)
+        widget.set_chopper_angle(chopper_name, float(tpsc["side_window_center_delay"]))
+
+    def _unwrap(interval):
+        start, end = interval
+        if end < start:
+            return [(start, 360.0), (0.0, end)]
+        return [(start, end)]
+
+    intervals = []
+    for tpsc in (tpsc101, tpsc102):
+        draw_rotation = widget.get_rotation_angle_for_chopper(
+            tpsc["chopper"], include_guide=True
+        )
+        assert draw_rotation is not None
+        intervals.append(_opening_intervals_qt(tpsc, draw_rotation)[0])
+
+    transmitted_opening = []
+    for s1, e1 in _unwrap(intervals[0]):
+        for s2, e2 in _unwrap(intervals[1]):
+            lo = max(s1, s2)
+            hi = min(e1, e2)
+            if hi > lo:
+                transmitted_opening.append((lo, hi))
+
+    assert transmitted_opening
+    total_opening = sum(hi - lo for lo, hi in transmitted_opening)
+    assert total_opening == pytest.approx(5.2)
+    assert any(lo <= 3.0 or hi >= 357.0 for lo, hi in transmitted_opening)
 
 
 def test_widget_nmx_wls2_pair_shows_small_right_side_transmission_opening(qapp):
