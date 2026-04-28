@@ -6,11 +6,15 @@ from logging import INFO
 
 from nicos.clients.gui.utils import modePrompt
 from nicos.core import MAINTENANCE, MASTER
-from test.nicos_ess.gui.helpers import _minimal_guiconfig, get_panel_by_class
+from test.nicos_ess.gui.helpers import (
+    get_panel_by_class,
+    single_panel_guiconfig_text,
+)
 
 
-guiconfig_text = _minimal_guiconfig("nicos_ess.gui.panels.console.ConsolePanel")
-panel_class = "nicos_ess.gui.panels.console.ConsolePanel"
+guiconfig_text = single_panel_guiconfig_text(
+    "nicos_ess.gui.panels.console.ConsolePanel"
+)
 
 
 def test_console_replays_backlog_and_reacts_to_live_events(
@@ -25,7 +29,7 @@ def test_console_replays_backlog_and_reacts_to_live_events(
     fake_daemon.add_message(backlog_message)
 
     window = gui_window_factory(guiconfig=guiconfig_text)
-    panel = get_panel_by_class(window, panel_class)
+    panel = get_panel_by_class(window, "nicos_ess.gui.panels.console.ConsolePanel")
 
     qtbot.waitUntil(
         lambda p=panel: "Backlog line" in p.outView.getOutputString(), timeout=2000

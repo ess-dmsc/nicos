@@ -1,4 +1,14 @@
-"""Startup coverage for ESS GUI panels."""
+"""Startup coverage for ESS GUI panels.
+
+The panel inventory is curated, not auto-discovered. Every panel class
+explicitly named as a top-level panel in production ESS guiconfigs under
+``nicos_ess`` should get one case here. Base implementations that are never
+used as a top-level panel are intentionally excluded with an inline comment.
+
+When adding a panel, add a ``panel_case(...)`` to the matching instrument
+group. If it needs richer options than literal kwargs, check in a small
+``guiconfigs/<instrument>/<panel>.py`` file and pass ``guiconfig_name=``.
+"""
 
 from __future__ import annotations
 
@@ -143,24 +153,24 @@ STARTUP_CASE_GROUPS = [
 
 ALL_STARTUP_CASES = [
     pytest.param(
-        startup_case.values[0],
-        id=f"{instrument}-{startup_case.id}",
-        marks=startup_case.marks,
+        case,
+        id=f"{instrument}-{case.case_id}",
+        marks=case.marks,
     )
     for instrument, cases in STARTUP_CASE_GROUPS
-    for startup_case in cases
+    for case in cases
 ]
 
 
 @pytest.mark.parametrize("startup_case", ALL_STARTUP_CASES)
 def test_panel_starts_without_warnings_or_errors(
-    gui_window_from_spec,
+    gui_window_factory,
     startup_case,
     fake_daemon,
     caplog,
 ):
     assert_panel_starts_clean(
-        gui_window_from_spec=gui_window_from_spec,
+        gui_window_factory=gui_window_factory,
         startup_case=startup_case,
         fake_daemon=fake_daemon,
         caplog=caplog,
@@ -169,14 +179,14 @@ def test_panel_starts_without_warnings_or_errors(
 
 @pytest.mark.parametrize("startup_case", ALL_STARTUP_CASES)
 def test_panel_survives_minimal_status_transitions_without_warnings_or_errors(
-    gui_window_from_spec,
+    gui_window_factory,
     startup_case,
     fake_daemon,
     caplog,
     qtbot,
 ):
     assert_panel_survives_minimal_status_transitions(
-        gui_window_from_spec=gui_window_from_spec,
+        gui_window_factory=gui_window_factory,
         startup_case=startup_case,
         fake_daemon=fake_daemon,
         caplog=caplog,

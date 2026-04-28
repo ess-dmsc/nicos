@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import pytest
-
 from test.runtime_resources import ensure_runtime_resources
 
 
@@ -33,21 +31,21 @@ def test_ensure_runtime_resources_repairs_broken_symlink(tmp_path):
     assert dst.resolve() == src.resolve()
 
 
-def test_ensure_runtime_resources_rejects_existing_directory(tmp_path):
+def test_ensure_runtime_resources_refreshes_existing_directory(tmp_path):
     src = tmp_path / "resources"
     dst = tmp_path / "runtime-resources"
 
     src.mkdir()
+    (src / "resource.txt").write_text("fresh")
     dst.mkdir()
     marker = dst / "marker.txt"
-    marker.write_text("keep me")
+    marker.write_text("stale")
 
-    with pytest.raises(FileExistsError, match="already exists and is not a symlink"):
-        ensure_runtime_resources(src, dst)
+    ensure_runtime_resources(src, dst)
 
     assert dst.is_dir()
-    assert not dst.is_symlink()
-    assert marker.read_text() == "keep me"
+    assert (dst / "resource.txt").read_text() == "fresh"
+    assert not marker.exists()
 
 
 def test_ensure_runtime_resources_creates_missing_parent(tmp_path):

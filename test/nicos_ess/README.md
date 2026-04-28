@@ -240,13 +240,67 @@ test needs a real multi-panel layout or panel-specific options:
 
 GUI test modules can declare:
 
-- `guiconfig_text = _minimal_guiconfig("pkg.Panel", option=value)` for the
-  common single-panel path
-- `guiconfig_name = "command_console.py"` to select a file-based layout
-- `panel_class = "pkg.Panel"` when using the shared `gui_panel` fixture
+- `single_panel_guiconfig_text("pkg.Panel", option=value)` for the common
+  single-panel path
+- `pytest.mark.parametrize("gui_window", [GuiConfigSpec(name="...")],
+  indirect=True)` to select a file-based layout through the shared
+  `gui_window` fixture
+- `pytest.mark.parametrize("gui_panel", ["pkg.Panel"], indirect=True)` when a
+  file-based layout test needs the shared `gui_panel` fixture
 
 Keep widget-search helpers local to the panel test module unless at least two
 panel suites need the same helper.
+
+### Process-global setup
+
+`test/nicos_ess/gui/conftest.py` forces `QT_QPA_PLATFORM=offscreen` before
+pytest-qt creates the `QApplication`, so CI without an X server can still run
+the GUI harness. The original value is restored during pytest unconfigure.
+
+The same hook force-loads `pytest-qt` if entry-point plugin autoloading is
+disabled, because these tests require both `qtbot` and `qt_log_ignore`.
+
+Two Qt log patterns are silenced globally: the platform-native system tray
+signal warning and the `propagateSizeHints()` notice. Add new global GUI noise
+to `_IGNORED_QT_MESSAGE_PATTERNS` instead of adding per-test suppressions.
+
+### Fake daemon extension points
+
+Seed daemon state with `fake_daemon.add_device(DeviceSpec(...))` and
+`fake_daemon.add_setup("name", loaded=True)`. Startup cases can pass
+`seed_daemon=` to `panel_case(...)`; `seed_spectrometer_devices` in
+`test_startup.py` is the reference example.
+
+Live updates should go through the fake daemon event helpers: `push_cache`,
+`push_setup`, `push_message`, `push_status`, `push_mode`, and
+`push_simmessage`. These use the real client signal plumbing, so tests should
+wait with `qtbot.waitSignal(window.client.<signal>)` or the `qtbot.waitUntil`
+pattern used in `test_devices_panel.py`.
+
+The default strict fake-daemon check asserts that unexpected daemon commands
+stay empty. Tests that intentionally exercise misses can request
+`allow_unknown_fake_daemon_calls`; otherwise, add the missing command or eval
+reply to `_seed_gui_defaults` or test-local seeding. Unknown evals are recorded
+in `fake_daemon.unknown_evals` for direct assertions.
+
+`record_modal_message_boxes` records static `QMessageBox` calls. Critical and
+warning dialogs fail by default; information and question dialogs are only
+recorded. Request `allow_critical_message_boxes` or
+`allow_warning_message_boxes` only in tests that intentionally exercise those
+modal paths.
+
+Prefer `single_panel_guiconfig_text` over checking in a guiconfig file unless a
+panel needs nested or richer options that are clearer as a file under
+`test/nicos_ess/gui/guiconfigs`.
+
+### Runtime resources
+
+The GUI harness wires `resources/` into `test/root/resources` through
+`ensure_runtime_resources`. On platforms that cannot create symlinks, the
+helper falls back to a real copy and wipes then re-copies it at each session
+start, so source changes always propagate. This is cheap while the resources
+tree is small; if it grows substantially, switch the tests back to requiring
+symlinks.
 
 ## Full Fixture/Setup Guidance
 

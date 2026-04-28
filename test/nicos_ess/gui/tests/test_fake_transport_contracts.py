@@ -132,6 +132,11 @@ def test_fake_transport_implements_the_client_transport_method_contract():
         for name, member in inspect.getmembers(BaseClientTransport, inspect.isfunction)
         if name != "determine_serializer"
     }
+    # Strict equality is intentional: if NICOS adds a method to ClientTransport
+    # (for example a new RPC or lifecycle hook), the fake must opt in
+    # explicitly so we never silently lose protocol coverage. Update
+    # TRANSPORT_METHODS and add the corresponding implementation to
+    # FakeClientTransport when this fails.
     assert base_methods == set(TRANSPORT_METHODS)
 
     for name in TRANSPORT_METHODS:

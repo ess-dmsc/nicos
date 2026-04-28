@@ -1,12 +1,15 @@
-"""Helpers for ESS GUI panel startup and lifecycle tests."""
+"""Helpers for ESS GUI panel startup and lifecycle tests.
+
+Use checked-in files under ``test/nicos_ess/gui/guiconfigs`` when generated
+single-panel config text becomes too cumbersome.
+"""
 
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable
-
-import pytest
 
 from nicos.guisupport.qt import QApplication
 from nicos.protocols.daemon import STATUS_IDLE, STATUS_RUNNING
@@ -14,6 +17,7 @@ from nicos.utils import importString
 
 
 ESS_TEST_FACILITY = "ess"
+GUICONFIGS_DIR = Path(__file__).with_name("guiconfigs").resolve()
 SeedDaemon = Callable[[Any], None]
 
 
@@ -35,9 +39,11 @@ class StartupCase:
     panel_class: str | type
     guiconfig: GuiConfigSpec
     seed_daemon: SeedDaemon | None = None
+    marks: tuple = ()
 
 
 def _validate_guiconfig_value(value: Any) -> None:
+    """Restrict kwargs so ``repr()`` cannot inject code at config exec time."""
     if value is None or isinstance(value, (str, int, float, bool)):
         return
     if isinstance(value, (list, tuple)):
@@ -59,7 +65,35 @@ def _validate_guiconfig_value(value: Any) -> None:
     )
 
 
-def _minimal_guiconfig(panel_cls, **panel_kwargs):
+def resolve_guiconfig_path(guiconfig_name: str) -> Path:
+    if not isinstance(guiconfig_name, str) or not guiconfig_name:
+        raise ValueError(
+            "GUI test guiconfig_name must be a non-empty relative path, "
+            "for example 'command_console.py'"
+        )
+    guiconfig_path = (GUICONFIGS_DIR / guiconfig_name).resolve()
+    try:
+        guiconfig_path.relative_to(GUICONFIGS_DIR)
+    except ValueError as err:
+        raise ValueError(
+            f"GUI test guiconfig_name must stay inside {GUICONFIGS_DIR}: "
+            f"{guiconfig_name!r}"
+        ) from err
+    if not guiconfig_path.is_file():
+        raise FileNotFoundError(
+            f"GUI test guiconfig not found: {guiconfig_name!r} -> {guiconfig_path}"
+        )
+    return guiconfig_path
+
+
+def single_panel_guiconfig_text(panel_cls, **panel_kwargs):
+    """Render an executable guiconfig source string with one root panel.
+
+    Produced text is ``exec``d by ``processGuiConfig``; kwargs are stamped via
+    ``repr()`` and validated against a literal-only whitelist
+    (``_validate_guiconfig_value``) so a test cannot smuggle arbitrary code or
+    non-deterministic objects into the generated config.
+    """
     for value in panel_kwargs.values():
         _validate_guiconfig_value(value)
     panel_path = (
@@ -95,17 +129,16 @@ def panel_case(
     **panel_kwargs,
 ):
     if guiconfig_name is None:
-        guiconfig = GuiConfigSpec(text=_minimal_guiconfig(panel_class, **panel_kwargs))
+        guiconfig = GuiConfigSpec(
+            text=single_panel_guiconfig_text(panel_class, **panel_kwargs)
+        )
     else:
         guiconfig = GuiConfigSpec(name=guiconfig_name)
-    return pytest.param(
-        StartupCase(
-            case_id=case_id,
-            panel_class=panel_class,
-            guiconfig=guiconfig,
-            seed_daemon=seed_daemon,
-        ),
-        id=case_id,
+    return StartupCase(
+        case_id=case_id,
+        panel_class=panel_class,
+        guiconfig=guiconfig,
+        seed_daemon=seed_daemon,
         marks=marks,
     )
 
@@ -124,12 +157,27 @@ def get_panel_by_class(window, panel_class):
     return matches[0]
 
 
+_RELEVANT_LOGGER_PREFIXES = ("nicos", "nicos_ess")
+
+
 def _is_relevant_gui_record(record):
-    pathname = record.pathname.replace("\\", "/")
-    return "/nicos/" in pathname or "/nicos_ess/" in pathname
+    """Filter caplog records to those produced by NICOS code.
+
+    Filters by logger name, which is controlled by NICOS itself, instead of
+    file path so the helper works regardless of checkout location and ignores
+    third-party Qt/matplotlib warnings that we do not own.
+    """
+    name = (record.name or "").split(".", 1)[0]
+    return name in _RELEVANT_LOGGER_PREFIXES
 
 
-def _assert_no_warnings_or_errors(caplog):
+def _assert_no_unexpected_nicos_logs(caplog):
+    """Catch NICOS warnings/errors that do not crash panel startup.
+
+    Defense-in-depth: panel readiness is the primary signal; this catches
+    silent NICOS-level warnings/errors that would otherwise be lost, for
+    example cache lookup failures.
+    """
     relevant_records = [
         record for record in caplog.records if _is_relevant_gui_record(record)
     ]
@@ -148,41 +196,47 @@ def _assert_panel_is_alive(window, panel):
     assert window.client.isconnected is True
 
 
-def _build_panel(gui_window_from_spec, startup_case, fake_daemon, caplog):
+def _build_panel(gui_window_factory, startup_case, fake_daemon, caplog):
     if startup_case.seed_daemon is not None:
         startup_case.seed_daemon(fake_daemon)
     caplog.clear()
     caplog.set_level(logging.WARNING)
-    window = gui_window_from_spec(startup_case.guiconfig)
+    if startup_case.guiconfig.text is not None:
+        window = gui_window_factory(guiconfig=startup_case.guiconfig.text)
+    else:
+        window = gui_window_factory(
+            guiconfig_path=resolve_guiconfig_path(startup_case.guiconfig.name)
+        )
     QApplication.processEvents()
     return window, get_panel_by_class(window, startup_case.panel_class)
 
 
-def assert_panel_starts_clean(gui_window_from_spec, startup_case, fake_daemon, caplog):
-    _, panel = _build_panel(
-        gui_window_from_spec=gui_window_from_spec,
+def assert_panel_starts_clean(gui_window_factory, startup_case, fake_daemon, caplog):
+    window, panel = _build_panel(
+        gui_window_factory=gui_window_factory,
         startup_case=startup_case,
         fake_daemon=fake_daemon,
         caplog=caplog,
     )
-    _assert_no_warnings_or_errors(caplog)
+    _assert_panel_is_alive(window, panel)
+    _assert_no_unexpected_nicos_logs(caplog)
     return panel
 
 
 def assert_panel_survives_minimal_status_transitions(
-    gui_window_from_spec,
+    gui_window_factory,
     startup_case,
     fake_daemon,
     caplog,
     qtbot,
 ):
     window, panel = _build_panel(
-        gui_window_from_spec=gui_window_from_spec,
+        gui_window_factory=gui_window_factory,
         startup_case=startup_case,
         fake_daemon=fake_daemon,
         caplog=caplog,
     )
-    _assert_no_warnings_or_errors(caplog)
+    _assert_no_unexpected_nicos_logs(caplog)
 
     caplog.clear()
 
@@ -212,5 +266,5 @@ def assert_panel_survives_minimal_status_transitions(
         qtbot.waitUntil(lambda t=thread: not t.is_alive(), timeout=2000)
     QApplication.processEvents()
 
-    _assert_no_warnings_or_errors(caplog)
+    _assert_no_unexpected_nicos_logs(caplog)
     return panel

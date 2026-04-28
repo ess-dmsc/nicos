@@ -2,8 +2,8 @@
 
 Only the transport is faked: ``NicosGuiClient``, ``MainWindow``, and all panels
 remain the unmodified production classes. Tests use file-based guiconfigs under
-``test/nicos_ess/gui/guiconfigs`` and default to ``base.py`` unless a module
-selects a more specific panel or layout config.
+``test/nicos_ess/gui/guiconfigs`` and default to ``base.py`` unless a test
+passes an explicit ``GuiConfigSpec`` through the ``gui_window`` fixture.
 """
 
 from __future__ import annotations
@@ -21,11 +21,14 @@ from nicos.utils import importString
 from nicos.utils.loggers import NicosLogger
 
 from test.nicos_ess.gui.doubles import FakeClientTransport, FakeDaemon
-from test.nicos_ess.gui.helpers import get_panel_by_class
+from test.nicos_ess.gui.helpers import (
+    GuiConfigSpec,
+    get_panel_by_class,
+    resolve_guiconfig_path,
+)
 from test.runtime_resources import ensure_runtime_resources
 
 
-GUICONFIGS_DIR = Path(__file__).with_name("guiconfigs").resolve()
 TEST_ROOT = Path(__file__).resolve().parents[2] / "root"
 RESOURCES_DIR = Path(__file__).resolve().parents[3] / "resources"
 _IGNORED_QT_MESSAGE_PATTERNS = (
@@ -37,6 +40,7 @@ _IGNORED_QT_MESSAGE_PATTERNS = (
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
+    # Process-global GUI test setup is documented in test/nicos_ess/README.md.
     # This must happen before pytest-qt creates the QApplication. The mutation
     # is process-local to the pytest run, so best-effort restoration is enough.
     config._nicos_original_qt_qpa_platform = os.environ.get("QT_QPA_PLATFORM")
@@ -61,27 +65,6 @@ def pytest_unconfigure(config):
         os.environ["QT_QPA_PLATFORM"] = original_qt_qpa_platform
 
 
-def _resolve_guiconfig_path(guiconfig_name: str) -> Path:
-    if not isinstance(guiconfig_name, str) or not guiconfig_name:
-        raise ValueError(
-            "GUI test guiconfig_name must be a non-empty relative path, "
-            "for example 'command_console.py'"
-        )
-    guiconfig_path = (GUICONFIGS_DIR / guiconfig_name).resolve()
-    try:
-        guiconfig_path.relative_to(GUICONFIGS_DIR)
-    except ValueError as err:
-        raise ValueError(
-            f"GUI test guiconfig_name must stay inside {GUICONFIGS_DIR}: "
-            f"{guiconfig_name!r}"
-        ) from err
-    if not guiconfig_path.is_file():
-        raise FileNotFoundError(
-            f"GUI test guiconfig not found: {guiconfig_name!r} -> {guiconfig_path}"
-        )
-    return guiconfig_path
-
-
 def _event_thread_stopped(thread) -> bool:
     from nicos.guisupport.qt import QApplication
 
@@ -92,14 +75,10 @@ def _event_thread_stopped(thread) -> bool:
 
 
 def _raise_teardown_errors(teardown_errors):
-    primary_error = teardown_errors[0]
-    current_error = primary_error
-    for extra_error in teardown_errors[1:]:
-        current_error.__context__ = extra_error
-        current_error = extra_error
-    raise RuntimeError(
-        f"GUI window teardown failed with {len(teardown_errors)} error(s)"
-    ) from primary_error
+    raise ExceptionGroup(
+        f"GUI window teardown failed with {len(teardown_errors)} error(s)",
+        teardown_errors,
+    )
 
 
 def _stop_active_timers(widget) -> None:
@@ -133,23 +112,9 @@ def allow_critical_message_boxes():
 
 
 @pytest.fixture
-def guiconfig_name(request):
-    return getattr(request.module, "guiconfig_name", "base.py")
-
-
-@pytest.fixture
-def panel_name(request):
-    return getattr(request.module, "panel_name", None)
-
-
-@pytest.fixture
-def panel_class(request):
-    return getattr(request.module, "panel_class", None)
-
-
-@pytest.fixture
-def guiconfig_path(guiconfig_name):
-    return _resolve_guiconfig_path(guiconfig_name)
+def allow_warning_message_boxes():
+    """Opt-in for tests that intentionally exercise warning dialogs."""
+    return None
 
 
 @pytest.fixture
@@ -266,13 +231,26 @@ def record_modal_message_boxes(monkeypatch, request):
 
     yield calls
 
-    if "allow_critical_message_boxes" in request.fixturenames:
-        return
-    critical_calls = [call for call in calls if call.kind == "critical"]
-    message = "unexpected critical QMessageBox call(s):\n" + "\n".join(
-        _format_message_box_call(call) for call in critical_calls
+    unexpected_kinds = set()
+    if "allow_critical_message_boxes" not in request.fixturenames:
+        unexpected_kinds.add("critical")
+    if "allow_warning_message_boxes" not in request.fixturenames:
+        unexpected_kinds.add("warning")
+
+    unexpected_calls = [call for call in calls if call.kind in unexpected_kinds]
+    assert unexpected_calls == [], _format_unexpected_message_box_calls(
+        unexpected_calls
     )
-    assert critical_calls == [], message
+
+
+def _format_unexpected_message_box_calls(calls: list[RecordedMessageBox]) -> str:
+    lines = ["unexpected QMessageBox call(s):"]
+    for kind in ("critical", "warning"):
+        kind_calls = [call for call in calls if call.kind == kind]
+        if kind_calls:
+            lines.append(f"{kind}:")
+            lines.extend(f"  {_format_message_box_call(call)}" for call in kind_calls)
+    return "\n".join(lines)
 
 
 def _format_message_box_call(call: RecordedMessageBox) -> str:
@@ -282,51 +260,24 @@ def _format_message_box_call(call: RecordedMessageBox) -> str:
 
 
 @pytest.fixture
-def gui_window(gui_window_factory, request):
-    guiconfig = getattr(request.module, "guiconfig_text", None)
-    if guiconfig is not None:
-        return gui_window_factory(guiconfig=guiconfig)
-    return gui_window_factory(
-        guiconfig_path=_resolve_guiconfig_path(
-            getattr(request.module, "guiconfig_name", "base.py")
+def gui_window(request, gui_window_factory):
+    """Return a window built from request.param (GuiConfigSpec) or base.py."""
+    spec = getattr(request, "param", None)
+    if spec is None:
+        return gui_window_factory(guiconfig_path=resolve_guiconfig_path("base.py"))
+    if not isinstance(spec, GuiConfigSpec):
+        raise TypeError(
+            "gui_window indirect params must be GuiConfigSpec instances, "
+            f"got {type(spec).__name__}"
         )
-    )
+    if spec.text is not None:
+        return gui_window_factory(guiconfig=spec.text)
+    return gui_window_factory(guiconfig_path=resolve_guiconfig_path(spec.name))
 
 
 @pytest.fixture
-def gui_window_from_name(gui_window_factory):
-    def _build(guiconfig_name):
-        return gui_window_factory(
-            guiconfig_path=_resolve_guiconfig_path(guiconfig_name)
-        )
-
-    return _build
-
-
-@pytest.fixture
-def gui_window_from_spec(gui_window_factory):
-    def _build(guiconfig):
-        if guiconfig.text is not None:
-            return gui_window_factory(guiconfig=guiconfig.text)
-        return gui_window_factory(
-            guiconfig_path=_resolve_guiconfig_path(guiconfig.name)
-        )
-
-    return _build
-
-
-@pytest.fixture
-def gui_panel(gui_window, panel_name, panel_class, guiconfig_name):
-    if panel_class is not None:
-        return get_panel_by_class(gui_window, panel_class)
-    if panel_name is None:
-        raise ValueError(
-            "gui_panel requires module-level panel_class or panel_name, "
-            f"for example in tests using {guiconfig_name!r}"
-        )
-    panel = gui_window.getPanel(panel_name)
-    if panel is None:
-        raise LookupError(
-            f"panel {panel_name!r} not found in GUI test config {guiconfig_name!r}"
-        )
-    return panel
+def gui_panel(request, gui_window):
+    panel_class = getattr(request, "param", None)
+    if panel_class is None:
+        raise ValueError("gui_panel requires an indirect panel class parameter")
+    return get_panel_by_class(gui_window, panel_class)

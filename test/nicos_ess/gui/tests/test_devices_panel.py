@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from test.nicos_ess.gui.doubles import DeviceSpec
-from test.nicos_ess.gui.helpers import _minimal_guiconfig, get_panel_by_class
+from test.nicos_ess.gui.helpers import (
+    get_panel_by_class,
+    single_panel_guiconfig_text,
+)
 
 
-guiconfig_text = _minimal_guiconfig("nicos_ess.gui.panels.devices.DevicesPanel")
-panel_class = "nicos_ess.gui.panels.devices.DevicesPanel"
+guiconfig_text = single_panel_guiconfig_text(
+    "nicos_ess.gui.panels.devices.DevicesPanel"
+)
 
 
 def _setup_item(panel, name):
@@ -45,7 +49,7 @@ def test_device_appears_after_connect(gui_window_factory, fake_daemon, qtbot):
     )
 
     window = gui_window_factory(guiconfig=guiconfig_text)
-    panel = get_panel_by_class(window, panel_class)
+    panel = get_panel_by_class(window, "nicos_ess.gui.panels.devices.DevicesPanel")
 
     qtbot.waitUntil(lambda p=panel: p.tree.topLevelItemCount() == 1, timeout=2000)
 
@@ -73,7 +77,7 @@ def test_cache_event_updates_panel(gui_window_factory, fake_daemon, qtbot):
     )
 
     window = gui_window_factory(guiconfig=guiconfig_text)
-    panel = get_panel_by_class(window, panel_class)
+    panel = get_panel_by_class(window, "nicos_ess.gui.panels.devices.DevicesPanel")
     item = _device_item(panel, "tas")
 
     qtbot.waitUntil(

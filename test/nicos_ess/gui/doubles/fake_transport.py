@@ -33,22 +33,22 @@ class DeviceSpec:
 
 @dataclass
 class SetupSpec:
+    """Subset of NICOS setup metadata exposed over client.eval()."""
+
     name: str
     description: str = ""
-    display_order: int = 50
     group: str = "optional"
+    display_order: int = 50
     devices: list[str] = field(default_factory=list)
-    includes: list[str] = field(default_factory=list)
-    excludes: list[str] = field(default_factory=list)
-    modules: list[str] = field(default_factory=list)
-    alias_config: dict[str, dict[str, Any]] = field(default_factory=dict)
-    startupcode: str = ""
-    sysconfig: dict[str, Any] = field(default_factory=dict)
-    extended: dict[str, Any] = field(default_factory=dict)
 
 
 class FakeDaemon:
-    """Dumb fake daemon: exact replies in, exact replies out."""
+    """In-memory daemon model for GUI client tests.
+
+    We do not delegate to ``Session.readSetupInfo()`` because that requires
+    real setup files; the fake speaks the same wire-shape but reads it from
+    in-memory specs.
+    """
 
     def __init__(
         self,
@@ -80,30 +80,45 @@ class FakeDaemon:
         self._seed_gui_defaults()
 
     def _seed_gui_defaults(self):
-        self.evals.update(
-            {
-                "session.instrument": "",
-                "session.experiment.name": "exp",
-                "session.experiment.title": "",
-                "session.experiment.proposal": "",
-                "session.experiment.get_current_run_number()": 0,
-                "session.experiment.run_title": "",
-                "session.experiment.detectors": [],
-                "session.experiment.scriptpath": "",
-                "session.experiment._canQueryProposals()": False,
-                'session.experiment.propinfo["notif_emails"]': [],
-                "session.experiment.get_samples()": [],
-                "session.experiment.proposal, "
-                "session.experiment.title, "
-                "session.experiment.users, "
-                "session.experiment.localcontact, "
-                "session.experiment.errorbehavior": ("", "", [], [], "abort"),
-                "session.spMode": False,
-                "session.alias_config": {},
-                "config.nicos_root": str(_GUI_TEST_ROOT),
-                "config.logging_path": "log",
-            }
-        )
+        """Seed exact ``client.eval(...)`` answers used by GUI panels at startup.
+
+        These are wire-level replies from the daemon to the production GUI
+        client. They are not shared with UnitTestSession
+        (test/nicos_ess/device_harness.py), which models in-process Python
+        access for direct device tests.
+        """
+        session_metadata = {
+            "session.instrument": "",
+            "session.spMode": False,
+            "session.alias_config": {},
+        }
+        experiment_metadata = {
+            "session.experiment.name": "exp",
+            "session.experiment.title": "",
+            "session.experiment.proposal": "",
+            "session.experiment.run_title": "",
+            "session.experiment.detectors": [],
+            "session.experiment.scriptpath": "",
+            "session.experiment.get_current_run_number()": 0,
+            "session.experiment._canQueryProposals()": False,
+            'session.experiment.propinfo["notif_emails"]': [],
+            "session.experiment.get_samples()": [],
+            # ExpPanel reads proposal/title/users/localcontact/errorbehavior
+            # in one tuple expression.
+            "session.experiment.proposal, "
+            "session.experiment.title, "
+            "session.experiment.users, "
+            "session.experiment.localcontact, "
+            "session.experiment.errorbehavior": ("", "", [], [], "abort"),
+        }
+        config_defaults = {
+            "config.nicos_root": str(_GUI_TEST_ROOT),
+            "config.logging_path": "log",
+        }
+
+        self.evals.update(session_metadata)
+        self.evals.update(experiment_metadata)
+        self.evals.update(config_defaults)
         self._refresh_state_evals()
 
     def _refresh_state_evals(self):
@@ -114,7 +129,7 @@ class FakeDaemon:
                 "description": setup.description,
                 "devices": list(setup.devices),
                 "display_order": setup.display_order,
-                "extended": dict(setup.extended),
+                "extended": {},
             }
             for name, setup in self.setups.items()
         }
@@ -133,13 +148,13 @@ class FakeDaemon:
                     for devname in setup.devices
                 },
                 "display_order": setup.display_order,
-                "includes": list(setup.includes),
-                "excludes": list(setup.excludes),
-                "modules": list(setup.modules),
-                "alias_config": dict(setup.alias_config),
-                "startupcode": setup.startupcode,
-                "sysconfig": dict(setup.sysconfig),
-                "extended": dict(setup.extended),
+                "includes": [],
+                "excludes": [],
+                "modules": [],
+                "alias_config": {},
+                "startupcode": "",
+                "sysconfig": {},
+                "extended": {},
                 "group": setup.group,
             }
             for name, setup in self.setups.items()
@@ -156,7 +171,7 @@ class FakeDaemon:
         if transport in self._transports:
             self._transports.remove(transport)
 
-    def add_device(self, device, *, setup=None, load_setup=False, explicit=True):
+    def add_device(self, device, *, setup=None, load_setup=False):
         self.devices[device.name] = device
         if setup is not None:
             setup_spec = self.add_setup(setup, loaded=load_setup)
