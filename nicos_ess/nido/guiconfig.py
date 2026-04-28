@@ -26,6 +26,13 @@ main_window = docked(
                             panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
                         (
+                            "Choppers",
+                            panel(
+                                "nicos_ess.gui.panels.chopper.ChopperPanel",
+                                guide_pos="DOWN",
+                            ),
+                        ),
+                        (
                             "Script Status",
                             panel(
                                 "nicos.clients.flowui.panels.status.ScriptStatusPanel",

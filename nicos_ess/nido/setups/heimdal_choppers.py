@@ -1,0 +1,294 @@
+description = "The choppers for HEIMDAL"
+
+pv_root_pulse_shaping_chopper_1 = "HEIMDAL-ChpSy1:Chop-TPSC-101:"
+pv_root_pulse_shaping_chopper_2 = "HEIMDAL-ChpSy1:Chop-TPSC-102:"
+chic_root_1 = "HEIMDAL-ChpSy1:Chop-CHIC-001:"
+
+# Markus' measured MechDly-S values of 104.9 deg and 288.8 deg place the 5.20
+# deg openings at the left transparent side window, 90 deg from the DOWN guide.  The
+# canonical GUI model stores the equivalent guide-centered phase references.
+
+devices = dict(
+    pulse_shaping_chopper_1_log=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The logs from chopper controller",
+        readpv="{}Log_R".format(pv_root_pulse_shaping_chopper_1),
+        visibility=(),
+    ),
+    pulse_shaping_chopper_1_levitation_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}LeviStatus_R".format(pv_root_pulse_shaping_chopper_1),
+        visibility=(),
+    ),
+    pulse_shaping_chopper_1_motor_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The temperature of the motor of the chopper",
+        readpv="{}MtrTemp_R".format(pv_root_pulse_shaping_chopper_1),
+        visibility=(),
+    ),
+    pulse_shaping_chopper_1_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}ChopState_R".format(pv_root_pulse_shaping_chopper_1),
+        visibility=(),
+    ),
+    pulse_shaping_chopper_1_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Used to start and stop the chopper.",
+        readpv="{}C_Execute".format(pv_root_pulse_shaping_chopper_1),
+        writepv="{}C_Execute".format(pv_root_pulse_shaping_chopper_1),
+        requires={"level": "admin"},
+        visibility=(),
+    ),
+    pulse_shaping_chopper_1_speed=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="The current speed.",
+        readpv="{}Spd_R".format(pv_root_pulse_shaping_chopper_1),
+        writepv="{}Spd_S".format(pv_root_pulse_shaping_chopper_1),
+        precision=0.1,
+        mapping={
+            "0 Hz": 0,
+            "14 Hz": 14,
+        },
+    ),
+    pulse_shaping_chopper_1_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The current delay.",
+        readpv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_1),
+        writepv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_1),
+        abslimits=(0.0, 0.0),
+    ),
+    pulse_shaping_chopper_1_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(pv_root_pulse_shaping_chopper_1),
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
+    pulse_shaping_chopper_1_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="pulse_shaping_chopper_1_delay",
+        mapped_speed_dev="pulse_shaping_chopper_1_speed",
+        offset=0,
+        unit="degrees",
+    ),
+    pulse_shaping_chopper_1_delay_errors=device(
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(pv_root_pulse_shaping_chopper_1),
+        unit="ns",
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
+    pulse_shaping_chopper_1_phased=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper is in phase.",
+        readpv="{}InPhs_R".format(pv_root_pulse_shaping_chopper_1),
+    ),
+    pulse_shaping_chopper_1_park_angle=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="The chopper's park angle.",
+        readpv="{}Pos_R".format(pv_root_pulse_shaping_chopper_1),
+        writepv="{}Park_S".format(pv_root_pulse_shaping_chopper_1),
+        visibility=(),
+        mapping={
+            "park open": 243.0,
+            "park close": 63.0,
+        },
+    ),
+    pulse_shaping_chopper_1_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the pulse shaping chopper 1.",
+        readpv="{}ParkStatus_R".format(pv_root_pulse_shaping_chopper_1),
+    ),
+    pulse_shaping_chopper_1_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the pulse shaping chopper 1.",
+        readpv="{}C_Park".format(pv_root_pulse_shaping_chopper_1),
+        writepv="{}C_Park".format(pv_root_pulse_shaping_chopper_1),
+    ),
+    pulse_shaping_chopper_1_chic=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The status of the CHIC connection.",
+        readpv="{}ConnectedR".format(chic_root_1),
+        visibility=(),
+        pva=True,
+    ),
+    pulse_shaping_chopper_1_alarms=device(
+        "nicos_ess.devices.epics.chopper.NmxChopperAlarms",
+        description="The chopper alarms",
+        pv_root=pv_root_pulse_shaping_chopper_1,
+        visibility=(),
+    ),
+    pulse_shaping_chopper_1=device(
+        "nicos_ess.devices.epics.chopper.NmxChopperController",
+        description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
+        state="pulse_shaping_chopper_1_status",
+        command="pulse_shaping_chopper_1_control",
+        speed="pulse_shaping_chopper_1_speed",
+        chic_conn="pulse_shaping_chopper_1_chic",
+        alarms="pulse_shaping_chopper_1_alarms",
+        slit_edges=[[0.0, 5.20]],
+        motor_position="upstream",
+        disk_rotation_direction="CCW",
+        parked_opening_index=0,
+        tdc_resolver_position=341.3,
+        park_open_angle=243.0,
+        park_edge_1=240.4,
+        park_edge_2=245.6,
+        phase_tdc_center_window_delay=194.9,
+    ),
+    pulse_shaping_chopper_2_log=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The logs from chopper controller",
+        readpv="{}Log_R".format(pv_root_pulse_shaping_chopper_2),
+        visibility=(),
+    ),
+    pulse_shaping_chopper_2_levitation_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}LeviStatus_R".format(pv_root_pulse_shaping_chopper_2),
+        visibility=(),
+    ),
+    pulse_shaping_chopper_2_motor_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The temperature of the motor of the chopper",
+        readpv="{}MtrTemp_R".format(pv_root_pulse_shaping_chopper_2),
+        visibility=(),
+    ),
+    pulse_shaping_chopper_2_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}ChopState_R".format(pv_root_pulse_shaping_chopper_2),
+        visibility=(),
+    ),
+    pulse_shaping_chopper_2_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Used to start and stop the chopper.",
+        readpv="{}C_Execute".format(pv_root_pulse_shaping_chopper_2),
+        writepv="{}C_Execute".format(pv_root_pulse_shaping_chopper_2),
+        requires={"level": "admin"},
+        visibility=(),
+    ),
+    pulse_shaping_chopper_2_speed=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="The current speed.",
+        readpv="{}Spd_R".format(pv_root_pulse_shaping_chopper_2),
+        writepv="{}Spd_S".format(pv_root_pulse_shaping_chopper_2),
+        precision=0.1,
+        mapping={
+            "0 Hz": 0,
+            "14 Hz": 14,
+        },
+    ),
+    pulse_shaping_chopper_2_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The current delay.",
+        readpv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_2),
+        writepv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_2),
+        abslimits=(0.0, 0.0),
+    ),
+    pulse_shaping_chopper_2_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(pv_root_pulse_shaping_chopper_2),
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
+    pulse_shaping_chopper_2_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="pulse_shaping_chopper_2_delay",
+        mapped_speed_dev="pulse_shaping_chopper_2_speed",
+        offset=0,
+        unit="degrees",
+    ),
+    pulse_shaping_chopper_2_delay_errors=device(
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(pv_root_pulse_shaping_chopper_2),
+        unit="ns",
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
+    pulse_shaping_chopper_2_phased=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper is in phase.",
+        readpv="{}InPhs_R".format(pv_root_pulse_shaping_chopper_2),
+    ),
+    pulse_shaping_chopper_2_park_angle=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="The chopper's park angle.",
+        readpv="{}Pos_R".format(pv_root_pulse_shaping_chopper_2),
+        writepv="{}Park_S".format(pv_root_pulse_shaping_chopper_2),
+        visibility=(),
+        mapping={
+            "park open": 59.3,
+            "park close": 239.3,
+        },
+    ),
+    pulse_shaping_chopper_2_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the pulse shaping chopper 2.",
+        readpv="{}ParkStatus_R".format(pv_root_pulse_shaping_chopper_2),
+    ),
+    pulse_shaping_chopper_2_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the pulse shaping chopper 2.",
+        readpv="{}C_Park".format(pv_root_pulse_shaping_chopper_2),
+        writepv="{}C_Park".format(pv_root_pulse_shaping_chopper_2),
+    ),
+    pulse_shaping_chopper_2_chic=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The status of the CHIC connection.",
+        readpv="{}ConnectedR".format(chic_root_1),
+        visibility=(),
+        pva=True,
+    ),
+    pulse_shaping_chopper_2_alarms=device(
+        "nicos_ess.devices.epics.chopper.NmxChopperAlarms",
+        description="The chopper alarms",
+        pv_root=pv_root_pulse_shaping_chopper_2,
+        visibility=(),
+    ),
+    pulse_shaping_chopper_2=device(
+        "nicos_ess.devices.epics.chopper.NmxChopperController",
+        description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
+        state="pulse_shaping_chopper_2_status",
+        command="pulse_shaping_chopper_2_control",
+        speed="pulse_shaping_chopper_2_speed",
+        chic_conn="pulse_shaping_chopper_2_chic",
+        alarms="pulse_shaping_chopper_2_alarms",
+        slit_edges=[[0.0, 5.20]],
+        motor_position="downstream",
+        disk_rotation_direction="CW",
+        parked_opening_index=0,
+        tdc_resolver_position=341.9,
+        park_open_angle=59.3,
+        park_edge_1=56.7,
+        park_edge_2=61.9,
+        phase_tdc_center_window_delay=198.8,
+    ),
+)

@@ -11,10 +11,11 @@ from nicos.core import (
     Readable,
     Waitable,
     listof,
+    none_or,
     oneof,
     status,
 )
-from nicos.devices.abstract import MappedMoveable, Moveable
+from nicos.devices.abstract import MappedMoveable
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsManualMappedAnalogMoveable,
     EpicsParameters,
@@ -23,6 +24,59 @@ from nicos_ess.devices.epics.pva.epics_devices import (
     create_wrapper,
     get_from_cache_or,
 )
+
+
+def canonical_chopper_parameters():
+    return {
+        "motor_position": Param(
+            "Motor mounting side for chopper drawing",
+            type=none_or(oneof("upstream", "downstream")),
+            default=None,
+            unit="",
+        ),
+        "disk_rotation_direction": Param(
+            "Physical disk rotation direction viewed from the motor side",
+            type=none_or(oneof("CW", "CCW")),
+            default=None,
+            unit="",
+        ),
+        "parked_opening_index": Param(
+            "Index of the slit opening aligned at park_open_angle",
+            type=none_or(int),
+            default=None,
+            unit="",
+        ),
+        "tdc_resolver_position": Param(
+            "Resolver position at the TDC reference",
+            type=none_or(float),
+            default=None,
+            unit="degrees",
+        ),
+        "park_open_angle": Param(
+            "Resolver position where the parked opening is centered",
+            type=none_or(float),
+            default=None,
+            unit="degrees",
+        ),
+        "park_edge_1": Param(
+            "First resolver edge for the parked opening",
+            type=none_or(float),
+            default=None,
+            unit="degrees",
+        ),
+        "park_edge_2": Param(
+            "Second resolver edge for the parked opening",
+            type=none_or(float),
+            default=None,
+            unit="degrees",
+        ),
+        "phase_tdc_center_window_delay": Param(
+            "Phase delay that centers the configured opening at the beam guide",
+            type=none_or(float),
+            default=None,
+            unit="degrees",
+        ),
+    }
 
 
 class ChopperAlarms(EpicsParameters, Readable):
@@ -167,6 +221,7 @@ class EssChopperController(MappedMoveable):
             type=oneof("CW", "CCW"),
             default="CW",
         ),
+        **canonical_chopper_parameters(),
     }
 
     attached_devices = {
@@ -195,7 +250,7 @@ class EssChopperController(MappedMoveable):
             try:
                 target_speed = self._attached_speed._inverse_mapping.get(0, "0 Hz")
                 self._attached_speed.move(target_speed)
-            except Exception as e:
+            except Exception:
                 self.log.exception(
                     "Failed to set speed to 0 when stopping chopper. "
                     "Will still send stop command."
@@ -253,6 +308,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         "pv_root": Param(
             "PV root for device", type=str, mandatory=True, userparam=False
         ),
+        **canonical_chopper_parameters(),
     }
 
     parameter_overrides = {
@@ -394,6 +450,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         # Ignore - resetting the chopper is done via the move command.
         # What is the reset command for an ODIN chopper?
         pass
+
 
 class NmxChopperAlarms(EpicsParameters, Readable):
     """
@@ -537,6 +594,7 @@ class NmxChopperController(MappedMoveable):
             type=oneof("CW", "CCW"),
             default="CW",
         ),
+        **canonical_chopper_parameters(),
     }
 
     attached_devices = {
@@ -567,7 +625,7 @@ class NmxChopperController(MappedMoveable):
             try:
                 target_speed = self._attached_speed._inverse_mapping.get(0, "0 Hz")
                 self._attached_speed.move(target_speed)
-            except Exception as e:
+            except Exception:
                 self.log.exception(
                     "Failed to set speed to 0 when stopping chopper. "
                     "Will still send stop command."

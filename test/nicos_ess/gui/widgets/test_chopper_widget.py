@@ -378,7 +378,7 @@ def _nmx_wls_cases():
 
 def _heimdal_tpsc_pair():
     # Values from the HEIMDAL-ChpSy1 TPSC-100 pair.  The lab-provided side
-    # window delays place the single 5.20° opening 90° from the DOWN guide.
+    # window delays place the single 5.20° opening 90° left of the DOWN guide.
     # The canonical phase reference remains the calculated guide-centered delay.
     tpsc101 = _canonical(
         "tpsc101",
@@ -390,7 +390,7 @@ def _heimdal_tpsc_pair():
         park_open_angle=243.0,
         park_edge_1=240.4,
         park_edge_2=245.6,
-        phase_tdc_center_window_delay=14.9,
+        phase_tdc_center_window_delay=194.9,
         side_window_center_delay=104.9,
     )
     tpsc102 = _canonical(
@@ -403,7 +403,7 @@ def _heimdal_tpsc_pair():
         park_open_angle=59.3,
         park_edge_1=56.7,
         park_edge_2=61.9,
-        phase_tdc_center_window_delay=18.8,
+        phase_tdc_center_window_delay=198.8,
         side_window_center_delay=288.8,
     )
     return [tpsc101, tpsc102]
@@ -837,7 +837,7 @@ def test_widget_choppers_dream_psc_all_openings_render_open_at_down_guide_spinni
 
 
 @pytest.mark.parametrize("tpsc", _heimdal_tpsc_pair(), ids=lambda c: c["chopper"])
-def test_widget_heimdal_tpsc_side_window_delay_centers_opening_on_right(qapp, tpsc):
+def test_widget_heimdal_tpsc_side_window_delay_centers_opening_on_left(qapp, tpsc):
     widget = ChopperWidget(guide_pos="DOWN")
     chopper_name = tpsc["chopper"]
     widget.update_chopper_data([tpsc])
@@ -850,12 +850,12 @@ def test_widget_heimdal_tpsc_side_window_delay_centers_opening_on_right(qapp, tp
     assert draw_rotation is not None
     opening_center = _interval_center(_opening_intervals_qt(tpsc, draw_rotation)[0])
 
-    assert wrap180(opening_center - widget._guide_angle_deg) == pytest.approx(90.0)
-    assert wrap180(opening_center) == pytest.approx(0.0)
+    assert wrap180(opening_center - widget._guide_angle_deg) == pytest.approx(-90.0)
+    assert wrap180(opening_center - 180.0) == pytest.approx(0.0)
 
 
 @pytest.mark.parametrize("tpsc", _heimdal_tpsc_pair(), ids=lambda c: c["chopper"])
-def test_widget_heimdal_tpsc_side_window_delay_renders_opening_on_right(qapp, tpsc):
+def test_widget_heimdal_tpsc_side_window_delay_renders_opening_on_left(qapp, tpsc):
     widget = ChopperWidget(guide_pos="DOWN")
     widget.set_show_guide_line(False)
     chopper_name = tpsc["chopper"]
@@ -863,13 +863,13 @@ def test_widget_heimdal_tpsc_side_window_delay_renders_opening_on_right(qapp, tp
     widget.set_chopper_speed(chopper_name, 14.0)
     widget.set_chopper_angle(chopper_name, float(tpsc["side_window_center_delay"]))
 
-    assert not _rendered_probe_is_dark(widget, qapp, 0.0), (
-        f"{chopper_name}: expected opening at right-side transparent window for "
+    assert not _rendered_probe_is_dark(widget, qapp, 180.0), (
+        f"{chopper_name}: expected opening at left-side transparent window for "
         f"delay {float(tpsc['side_window_center_delay']):.1f}°, "
         "but rendered blade/coating there"
     )
-    assert _rendered_probe_is_dark(widget, qapp, 12.0)
-    assert _rendered_probe_is_dark(widget, qapp, 348.0)
+    assert _rendered_probe_is_dark(widget, qapp, 168.0)
+    assert _rendered_probe_is_dark(widget, qapp, 192.0)
 
 
 @pytest.mark.parametrize("tpsc", _heimdal_tpsc_pair(), ids=lambda c: c["chopper"])
@@ -892,7 +892,7 @@ def test_widget_heimdal_tpsc_calculated_guide_delay_renders_opening_at_down_guid
     assert _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg - 12.0)
 
 
-def test_widget_heimdal_tpsc_pair_side_window_delays_show_right_side_transmission(
+def test_widget_heimdal_tpsc_pair_side_window_delays_show_left_side_transmission(
     qapp,
 ):
     tpsc101, tpsc102 = _heimdal_tpsc_pair()
@@ -929,7 +929,7 @@ def test_widget_heimdal_tpsc_pair_side_window_delays_show_right_side_transmissio
     assert transmitted_opening
     total_opening = sum(hi - lo for lo, hi in transmitted_opening)
     assert total_opening == pytest.approx(5.2)
-    assert any(lo <= 3.0 or hi >= 357.0 for lo, hi in transmitted_opening)
+    assert any(lo <= 180.0 <= hi for lo, hi in transmitted_opening)
 
 
 def test_widget_nmx_wls2_pair_shows_small_right_side_transmission_opening(qapp):
