@@ -33,6 +33,9 @@ class SelenePanel(Panel):
 
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
+
+        self.setExpertMode(self.mainwindow.expertmode)
+
         loadUi(self, findResource("nicos_ess/estia/gui/panels/selene.ui"))
 
         screw_group_1 = [
@@ -112,3 +115,9 @@ class SelenePanel(Panel):
         self._robot_scene = RobotScene(self, client, robot_options, screw_groups)
         self.robotView.setScene(self._robot_scene)
         self.robotView.scale(0.5, 0.5)
+
+    def setExpertMode(self, expert):
+        if not expert:
+            self.close()
+        else:
+            self.show()
