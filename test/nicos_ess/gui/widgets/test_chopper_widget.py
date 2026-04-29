@@ -377,9 +377,10 @@ def _nmx_wls_cases():
 
 
 def _heimdal_tpsc_pair():
-    # Values from the HEIMDAL-ChpSy1 TPSC-100 pair.  The lab-provided side
-    # window delays place the single 5.20° opening 90° left of the DOWN guide.
-    # The canonical phase reference remains the calculated guide-centered delay.
+    # Values from the HEIMDAL-ChpSy1 TPSC-100 pair.  Markus' lab-provided
+    # side-window delay and park angles place the single 5.20° opening 90° left
+    # of the DOWN guide.  The canonical references below are beam-guide
+    # centered; the original side-window values are kept for regression tests.
     tpsc101 = _canonical(
         "tpsc101",
         slit_edges=[[0.0, 5.20]],
@@ -387,11 +388,14 @@ def _heimdal_tpsc_pair():
         disk_rotation_direction="CCW",
         parked_opening_index=0,
         tdc_resolver_position=341.3,
-        park_open_angle=243.0,
-        park_edge_1=240.4,
-        park_edge_2=245.6,
+        park_open_angle=333.0,
+        park_edge_1=330.4,
+        park_edge_2=335.6,
         phase_tdc_center_window_delay=194.9,
         side_window_center_delay=104.9,
+        side_window_center_speed=70.0,
+        side_window_park_open_angle=243.0,
+        guide_window_center_delay=194.9,
     )
     tpsc102 = _canonical(
         "tpsc102",
@@ -400,11 +404,14 @@ def _heimdal_tpsc_pair():
         disk_rotation_direction="CW",
         parked_opening_index=0,
         tdc_resolver_position=341.9,
-        park_open_angle=59.3,
-        park_edge_1=56.7,
-        park_edge_2=61.9,
-        phase_tdc_center_window_delay=198.8,
+        park_open_angle=329.3,
+        park_edge_1=326.7,
+        park_edge_2=331.9,
+        phase_tdc_center_window_delay=341.2,
         side_window_center_delay=288.8,
+        side_window_center_speed=-70.0,
+        side_window_park_open_angle=59.3,
+        guide_window_center_delay=18.8,
     )
     return [tpsc101, tpsc102]
 
@@ -841,7 +848,7 @@ def test_widget_heimdal_tpsc_side_window_delay_centers_opening_on_left(qapp, tps
     widget = ChopperWidget(guide_pos="DOWN")
     chopper_name = tpsc["chopper"]
     widget.update_chopper_data([tpsc])
-    widget.set_chopper_speed(chopper_name, 14.0)
+    widget.set_chopper_speed(chopper_name, float(tpsc["side_window_center_speed"]))
     widget.set_chopper_angle(chopper_name, float(tpsc["side_window_center_delay"]))
 
     draw_rotation = widget.get_rotation_angle_for_chopper(
@@ -860,7 +867,7 @@ def test_widget_heimdal_tpsc_side_window_delay_renders_opening_on_left(qapp, tps
     widget.set_show_guide_line(False)
     chopper_name = tpsc["chopper"]
     widget.update_chopper_data([tpsc])
-    widget.set_chopper_speed(chopper_name, 14.0)
+    widget.set_chopper_speed(chopper_name, float(tpsc["side_window_center_speed"]))
     widget.set_chopper_angle(chopper_name, float(tpsc["side_window_center_delay"]))
 
     assert not _rendered_probe_is_dark(widget, qapp, 180.0), (
@@ -873,15 +880,77 @@ def test_widget_heimdal_tpsc_side_window_delay_renders_opening_on_left(qapp, tps
 
 
 @pytest.mark.parametrize("tpsc", _heimdal_tpsc_pair(), ids=lambda c: c["chopper"])
+def test_widget_heimdal_tpsc_side_window_park_angle_centers_opening_on_left(
+    qapp, tpsc
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    chopper_name = tpsc["chopper"]
+    widget.update_chopper_data([tpsc])
+    widget.set_chopper_speed(chopper_name, 0.0)
+    widget.set_chopper_angle(
+        chopper_name, float(tpsc["side_window_park_open_angle"])
+    )
+
+    draw_rotation = widget.get_rotation_angle_for_chopper(
+        chopper_name, include_guide=True
+    )
+    assert draw_rotation is not None
+    opening_center = _interval_center(_opening_intervals_qt(tpsc, draw_rotation)[0])
+
+    assert wrap180(opening_center - widget._guide_angle_deg) == pytest.approx(-90.0)
+    assert wrap180(opening_center - 180.0) == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize("tpsc", _heimdal_tpsc_pair(), ids=lambda c: c["chopper"])
+def test_widget_heimdal_tpsc_calculated_park_open_renders_opening_at_down_guide(
+    qapp, tpsc
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    chopper_name = tpsc["chopper"]
+    guide_park_open = float(tpsc["park_open_angle"])
+    widget.update_chopper_data([tpsc])
+    widget.set_chopper_speed(chopper_name, 0.0)
+    widget.set_chopper_angle(chopper_name, guide_park_open)
+
+    assert not _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg), (
+        f"{chopper_name}: expected opening at DOWN guide for calculated park "
+        f"open angle {guide_park_open:.1f}°, but rendered blade/coating there"
+    )
+    assert _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg + 12.0)
+    assert _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg - 12.0)
+
+
+@pytest.mark.parametrize("tpsc", _heimdal_tpsc_pair(), ids=lambda c: c["chopper"])
+def test_widget_heimdal_tpsc_calculated_guide_delay_centers_opening_on_down_guide(
+    qapp, tpsc
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    chopper_name = tpsc["chopper"]
+    guide_center_delay = float(tpsc["guide_window_center_delay"])
+    widget.update_chopper_data([tpsc])
+    widget.set_chopper_speed(chopper_name, float(tpsc["side_window_center_speed"]))
+    widget.set_chopper_angle(chopper_name, guide_center_delay)
+
+    draw_rotation = widget.get_rotation_angle_for_chopper(
+        chopper_name, include_guide=True
+    )
+    assert draw_rotation is not None
+    opening_center = _interval_center(_opening_intervals_qt(tpsc, draw_rotation)[0])
+
+    assert wrap180(opening_center - widget._guide_angle_deg) == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize("tpsc", _heimdal_tpsc_pair(), ids=lambda c: c["chopper"])
 def test_widget_heimdal_tpsc_calculated_guide_delay_renders_opening_at_down_guide(
     qapp, tpsc
 ):
     widget = ChopperWidget(guide_pos="DOWN")
     widget.set_show_guide_line(False)
     chopper_name = tpsc["chopper"]
-    guide_center_delay = float(tpsc["phase_tdc_center_window_delay"])
+    guide_center_delay = float(tpsc["guide_window_center_delay"])
     widget.update_chopper_data([tpsc])
-    widget.set_chopper_speed(chopper_name, 14.0)
+    widget.set_chopper_speed(chopper_name, float(tpsc["side_window_center_speed"]))
     widget.set_chopper_angle(chopper_name, guide_center_delay)
 
     assert not _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg), (
@@ -901,7 +970,7 @@ def test_widget_heimdal_tpsc_pair_side_window_delays_show_left_side_transmission
 
     for tpsc in (tpsc101, tpsc102):
         chopper_name = tpsc["chopper"]
-        widget.set_chopper_speed(chopper_name, 14.0)
+        widget.set_chopper_speed(chopper_name, float(tpsc["side_window_center_speed"]))
         widget.set_chopper_angle(chopper_name, float(tpsc["side_window_center_delay"]))
 
     def _unwrap(interval):

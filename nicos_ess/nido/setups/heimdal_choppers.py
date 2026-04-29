@@ -4,9 +4,11 @@ pv_root_pulse_shaping_chopper_1 = "HEIMDAL-ChpSy1:Chop-TPSC-101:"
 pv_root_pulse_shaping_chopper_2 = "HEIMDAL-ChpSy1:Chop-TPSC-102:"
 chic_root_1 = "HEIMDAL-ChpSy1:Chop-CHIC-001:"
 
-# Markus' measured MechDly-S values of 104.9 deg and 288.8 deg place the 5.20
-# deg openings at the left transparent side window, 90 deg from the DOWN guide.  The
-# canonical GUI model stores the equivalent guide-centered phase references.
+# Markus measured MechDly-S values of 104.9 deg and 288.8 deg place the 5.20
+# deg openings at the left transparent side window, 90 deg from the DOWN guide,
+# when TPSC-101 spins at +70 Hz and TPSC-102 spins at -70 Hz.  The measured park
+# open/edge values are left-window references too, so the canonical GUI model
+# stores the equivalent guide-centered references.
 
 devices = dict(
     pulse_shaping_chopper_1_log=device(
@@ -48,9 +50,31 @@ devices = dict(
         writepv="{}Spd_S".format(pv_root_pulse_shaping_chopper_1),
         precision=0.1,
         mapping={
+            "-168 Hz": -168,
+            "-154 Hz": -154,
+            "-140 Hz": -140,
+            "-126 Hz": -126,
+            "-112 Hz": -112,
+            "-98 Hz": -98,
+            "-84 Hz": -84,
+            "-70 Hz": -70,
+            "-56 Hz": -56,
+            "-42 Hz": -42,
+            "-28 Hz": -28,
+            "-14 Hz": -14,
             "0 Hz": 0,
             "14 Hz": 14,
+            "28 Hz": 28,
+            "42 Hz": 42,
+            "56 Hz": 56,
             "70 Hz": 70,
+            "84 Hz": 84,
+            "98 Hz": 98,
+            "112 Hz": 112,
+            "126 Hz": 126,
+            "140 Hz": 140,
+            "154 Hz": 154,
+            "168 Hz": 168,
         },
     ),
     pulse_shaping_chopper_1_delay=device(
@@ -98,13 +122,13 @@ devices = dict(
     ),
     pulse_shaping_chopper_1_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        description="The choppers park angle.",
         readpv="{}Pos_R".format(pv_root_pulse_shaping_chopper_1),
         writepv="{}Park_S".format(pv_root_pulse_shaping_chopper_1),
         visibility=(),
         mapping={
-            "park open": 243.0,
-            "park close": 63.0,
+            "park open": 333.0,
+            "park close": 153.0,
         },
     ),
     pulse_shaping_chopper_1_park_status=device(
@@ -146,9 +170,9 @@ devices = dict(
         disk_rotation_direction="CCW",
         parked_opening_index=0,
         tdc_resolver_position=341.3,
-        park_open_angle=243.0,
-        park_edge_1=240.4,
-        park_edge_2=245.6,
+        park_open_angle=333.0,
+        park_edge_1=330.4,
+        park_edge_2=335.6,
         phase_tdc_center_window_delay=194.9,
     ),
     pulse_shaping_chopper_2_log=device(
@@ -190,9 +214,31 @@ devices = dict(
         writepv="{}Spd_S".format(pv_root_pulse_shaping_chopper_2),
         precision=0.1,
         mapping={
-            "0 Hz": 0,
-            "-14 Hz": -14,
+            "-168 Hz": -168,
+            "-154 Hz": -154,
+            "-140 Hz": -140,
+            "-126 Hz": -126,
+            "-112 Hz": -112,
+            "-98 Hz": -98,
+            "-84 Hz": -84,
             "-70 Hz": -70,
+            "-56 Hz": -56,
+            "-42 Hz": -42,
+            "-28 Hz": -28,
+            "-14 Hz": -14,
+            "0 Hz": 0,
+            "14 Hz": 14,
+            "28 Hz": 28,
+            "42 Hz": 42,
+            "56 Hz": 56,
+            "70 Hz": 70,
+            "84 Hz": 84,
+            "98 Hz": 98,
+            "112 Hz": 112,
+            "126 Hz": 126,
+            "140 Hz": 140,
+            "154 Hz": 154,
+            "168 Hz": 168,
         },
     ),
     pulse_shaping_chopper_2_delay=device(
@@ -240,13 +286,13 @@ devices = dict(
     ),
     pulse_shaping_chopper_2_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        description="The choppers park angle.",
         readpv="{}Pos_R".format(pv_root_pulse_shaping_chopper_2),
         writepv="{}Park_S".format(pv_root_pulse_shaping_chopper_2),
         visibility=(),
         mapping={
-            "park open": 59.3,
-            "park close": 239.3,
+            "park open": 329.3,
+            "park close": 149.3,
         },
     ),
     pulse_shaping_chopper_2_park_status=device(
@@ -288,9 +334,9 @@ devices = dict(
         disk_rotation_direction="CW",
         parked_opening_index=0,
         tdc_resolver_position=341.9,
-        park_open_angle=59.3,
-        park_edge_1=56.7,
-        park_edge_2=61.9,
-        phase_tdc_center_window_delay=198.8,
+        park_open_angle=329.3,
+        park_edge_1=326.7,
+        park_edge_2=331.9,
+        phase_tdc_center_window_delay=341.2,
     ),
 )
