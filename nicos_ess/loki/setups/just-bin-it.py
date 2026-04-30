@@ -9,6 +9,7 @@ devices = dict(
         event_schema="ev44",
         hist_schema="hs01",
         liveinterval=5,
+        timeoutinterval=30,
         command_topic="loki_jbi_commands",
         response_topic="loki_jbi_responses",
         statustopic=["loki_jbi_heartbeat"],
