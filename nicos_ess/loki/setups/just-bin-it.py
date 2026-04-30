@@ -31,6 +31,11 @@ devices = dict(
         ],
         timers=["timer"],
     ),
+    event_rate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="jbi_detector",
+        parameter="event_rate",
+    ),
     timer=device(
         "nicos_ess.devices.timer.TimerChannel",
         description="Timer",
