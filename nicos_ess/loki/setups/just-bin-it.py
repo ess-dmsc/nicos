@@ -31,11 +31,6 @@ devices = dict(
         ],
         timers=["timer"],
     ),
-    event_rate=device(
-        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
-        device="jbi_detector",
-        parameter="event_rate",
-    ),
     timer=device(
         "nicos_ess.devices.timer.TimerChannel",
         description="Timer",
@@ -54,6 +49,12 @@ devices = dict(
         det_height=1568,
         det_range=(1, 802816),
     ),
+    bank0_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="bank0_data",
+        parameter="event_rate",
+        copy_status=True,
+    ),
     bank1_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
@@ -65,6 +66,12 @@ devices = dict(
         det_width=512,
         det_height=448,
         det_range=(802817, 1032192),
+    ),
+    bank1_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="bank1_data",
+        parameter="event_rate",
+        copy_status=True,
     ),
     bank2_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
@@ -78,6 +85,12 @@ devices = dict(
         det_height=336,
         det_range=(1032193, 1204224),
     ),
+    bank2_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="bank2_data",
+        parameter="event_rate",
+        copy_status=True,
+    ),
     bank3_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
@@ -89,6 +102,12 @@ devices = dict(
         det_width=512,
         det_height=448,
         det_range=(1204225, 1433600),
+    ),
+    bank3_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="bank3_data",
+        parameter="event_rate",
+        copy_status=True,
     ),
     bank4_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
@@ -102,6 +121,12 @@ devices = dict(
         det_height=336,
         det_range=(1433601, 1605632),
     ),
+    bank4_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="bank4_data",
+        parameter="event_rate",
+        copy_status=True,
+    ),
     bank5_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
@@ -113,6 +138,12 @@ devices = dict(
         det_width=512,
         det_height=784,
         det_range=(1605633, 2007040),
+    ),
+    bank5_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="bank5_data",
+        parameter="event_rate",
+        copy_status=True,
     ),
     bank6_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
@@ -126,6 +157,12 @@ devices = dict(
         det_height=896,
         det_range=(2007041, 2465792),
     ),
+    bank6_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="bank6_data",
+        parameter="event_rate",
+        copy_status=True,
+    ),
     bank7_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
@@ -137,6 +174,12 @@ devices = dict(
         det_width=512,
         det_height=560,
         det_range=(2465793, 2752512),
+    ),
+    bank7_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="bank7_data",
+        parameter="event_rate",
+        copy_status=True,
     ),
     bank8_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
@@ -150,6 +193,12 @@ devices = dict(
         det_height=896,
         det_range=(2752513, 3211264),
     ),
+    bank8_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="bank8_data",
+        parameter="event_rate",
+        copy_status=True,
+    ),
     monitor0_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
@@ -159,6 +208,12 @@ devices = dict(
         unit="evts",
         hist_type="1-D TOF",
         hist_topic="loki_visualisation",
+    ),
+    monitor0_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="monitor0_data",
+        parameter="event_rate",
+        copy_status=True,
     ),
     monitor1_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
@@ -170,6 +225,12 @@ devices = dict(
         hist_type="1-D TOF",
         hist_topic="loki_visualisation",
     ),
+    monitor1_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="monitor1_data",
+        parameter="event_rate",
+        copy_status=True,
+    ),
     monitor2_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
@@ -179,6 +240,12 @@ devices = dict(
         unit="evts",
         hist_type="1-D TOF",
         hist_topic="loki_visualisation",
+    ),
+    monitor2_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="monitor2_data",
+        parameter="event_rate",
+        copy_status=True,
     ),
     monitor3_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
@@ -190,6 +257,12 @@ devices = dict(
         hist_type="1-D TOF",
         hist_topic="loki_visualisation",
     ),
+    monitor3_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="monitor3_data",
+        parameter="event_rate",
+        copy_status=True,
+    ),
     monitor4_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
@@ -199,6 +272,12 @@ devices = dict(
         unit="evts",
         hist_type="1-D TOF",
         hist_topic="loki_visualisation",
+    ),
+    monitor4_eventrate=device(
+        "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        device="monitor4_data",
+        parameter="event_rate",
+        copy_status=True,
     ),
 )
 
