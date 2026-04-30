@@ -7,7 +7,6 @@ workflow:
 default:
   tags:
     - docker
-    - ubuntu_2204
 
 variables:
   UV_LINK_MODE: copy
