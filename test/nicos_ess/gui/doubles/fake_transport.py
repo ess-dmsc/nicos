@@ -17,7 +17,9 @@ from nicos.protocols.daemon import (
 from nicos.protocols.daemon.classic import PROTO_VERSION
 
 
+# Wakes ``recv_event()`` during disconnect without looking like a daemon event.
 _EVENT_SENTINEL = object()
+# Distinguishes "command returned None" from "recv_reply() was called too soon".
 _NO_REPLY = object()
 _TEST_DIR = Path(__file__).resolve().parents[3]
 _GUI_TEST_ROOT = _TEST_DIR / "root"
@@ -25,6 +27,8 @@ _GUI_TEST_ROOT = _TEST_DIR / "root"
 
 @dataclass
 class DeviceSpec:
+    """Minimal device metadata exposed through fake daemon cache/eval replies."""
+
     name: str
     valuetype: Any
     params: dict[str, Any] = field(default_factory=dict)
@@ -209,6 +213,7 @@ class FakeDaemon:
         return message
 
     def handle(self, command, args):
+        """Return daemon-protocol replies for commands used by the real GUI."""
         self.command_log.append((command, args))
 
         if command == "authenticate":
@@ -296,6 +301,8 @@ class FakeDaemon:
 
 
 class FakeClientTransport(BaseClientTransport):
+    """ClientTransport double that keeps the real GUI client protocol intact."""
+
     def __init__(self, daemon):
         self.daemon = daemon
         self.serializer = None
@@ -315,6 +322,8 @@ class FakeClientTransport(BaseClientTransport):
         self._events.put(_EVENT_SENTINEL)
 
     def send_command(self, cmdname, args):
+        # The classic GUI client uses eventmask as a suppression list: masked
+        # event names are not delivered to this transport until eventunmask.
         if cmdname == "eventmask" and args:
             self._event_mask.update(args[0])
         elif cmdname == "eventunmask" and args:
@@ -335,5 +344,7 @@ class FakeClientTransport(BaseClientTransport):
         return item
 
     def deliver_event(self, name, data, blobs):
+        # Event masks are per transport, so two connected clients can observe
+        # different event streams from the same fake daemon.
         if name not in self._event_mask:
             self._events.put((name, data, blobs))

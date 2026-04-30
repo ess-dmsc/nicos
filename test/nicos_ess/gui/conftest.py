@@ -96,11 +96,13 @@ def fake_daemon():
 
 @pytest.fixture(scope="session", autouse=True)
 def gui_runtime_resources():
+    """Expose repository resources under the GUI test NICOS root."""
     ensure_runtime_resources(RESOURCES_DIR, TEST_ROOT / "resources")
 
 
 @pytest.fixture
 def strict_fake_daemon(fake_daemon):
+    """Fail tests that send daemon commands the fake does not implement."""
     yield
     assert fake_daemon.unknown_commands == []
 
@@ -119,6 +121,7 @@ def allow_warning_message_boxes():
 
 @pytest.fixture
 def gui_window_factory(monkeypatch, qtbot, fake_daemon):
+    """Build real ESS GUI windows connected to the in-process fake daemon."""
     from nicos.guisupport.qt import QApplication
 
     windows = []
@@ -130,6 +133,8 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
                 "gui_window_factory()"
             )
 
+        # Patch exactly the transport factory used by NicosGuiClient. The GUI
+        # client, window, panels, signals, and event thread stay real.
         monkeypatch.setattr(
             "nicos.clients.base.ClientTransport",
             lambda: FakeClientTransport(fake_daemon),
@@ -201,6 +206,7 @@ class RecordedMessageBox:
 
 @pytest.fixture(autouse=True)
 def record_modal_message_boxes(monkeypatch, request):
+    """Record static QMessageBox calls without entering a modal event loop."""
     from nicos.guisupport.qt import QMessageBox
 
     calls = []

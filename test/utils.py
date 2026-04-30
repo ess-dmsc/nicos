@@ -533,6 +533,8 @@ def cleanup():
     os.mkdir(path.join(runtime_root, "bin"))
     src = path.join(module_root, "resources")
     dst = path.join(runtime_root, "resources")
+    # Rebuilding runtime_root replaces stale resource destinations. Prefer a
+    # symlink so edits are visible immediately; copy only when symlinks fail.
     try:
         os.symlink(src, dst)
     except OSError:

@@ -5,6 +5,7 @@ style:
 
 - pure unit tests
 - harness-based device tests
+- GUI harness tests
 - full fixture/setup tests
 - smoke tests (Not yet implemented)
 - integration tests (Not yet implemented)
@@ -102,7 +103,37 @@ Why:
 - explicitly supports daemon and poller role interaction
 - no external process or network dependency
 
-### 3. Full Fixture/Setup Tests
+### 3. GUI Harness Tests
+
+Use for GUI behavior that needs the real ESS `MainWindow`, `NicosGuiClient`,
+panel classes, Qt signals, and the GUI client's event thread.
+
+GUI harness tests fake only the daemon transport. They are closer to focused
+GUI smoke/contract tests than business-logic tests: use them to prove a panel
+starts, is wired into the real client/window lifecycle, and reacts to
+daemon-shaped cache/message/status updates.
+
+Good fit:
+
+- panel startup and teardown
+- panel-to-window and panel-to-client wiring
+- real Qt signal handling and event-thread delivery
+- cache, message, setup, mode, and status update handling in panels
+
+Not a good fit:
+
+- pure device or domain logic
+- setup-file import/loading behavior
+- real daemon/cache/poller/service process integration
+- detailed business-logic matrices that can run below the GUI layer
+
+Why:
+
+- exercises real GUI production classes while staying in-process
+- catches broken panel assumptions that unit tests miss
+- avoids external services and display-server dependencies
+
+### 4. Full Fixture/Setup Tests
 
 Session fixture style (`test/conftest.py` global `session` fixture).
 
@@ -130,7 +161,7 @@ Limitations:
 - timing-sensitive behaviors (such as races between session, logger, and cache
   startup) can result in rare, hard-to-reproduce failure modes
 
-### 4. Smoke Tests
+### 5. Smoke Tests
 
 Use when validating that services start and basic paths work:
 
@@ -144,7 +175,7 @@ Good fit:
 - verifying that services come up correctly
 - basic end-to-end path checks
 
-### 5. Integration Tests (Full Stack)
+### 6. Integration Tests (Full Stack)
 
 Use when validating cross-service behavior across real services/processes:
 
@@ -170,9 +201,11 @@ Start at the lowest layer that can prove the requirement:
 1. If logic can be isolated from NICOS device classes, write pure unit tests.
 2. If behavior depends on device lifecycle/sessiontype/cache callbacks, write
    harness tests.
-3. If behavior depends on setup loading/attach chains/config wiring, add full
+3. If behavior depends on real ESS GUI classes, Qt signals, panel startup, or
+   GUI client event plumbing, write GUI harness tests.
+4. If behavior depends on setup loading/attach chains/config wiring, add full
    fixture/setup tests.
-4. If behavior depends on real processes/network startup order, add smoke tests.
+5. If behavior depends on real processes/network startup order, add smoke tests.
 
 Smoke tests are optional. Add them only when real process/network behavior is a
 requirement for confidence.
@@ -230,6 +263,26 @@ The harness API (`test/nicos_ess/device_harness.py`) exposes:
 
 ESS GUI harness tests live under `test/nicos_ess/gui` and run the real ESS
 `MainWindow`, `NicosGuiClient`, and panels against an in-process fake daemon.
+Only the daemon transport is faked; the window, client, panels, Qt signals, and
+client event thread are production code.
+
+Treat these as focused GUI smoke/contract tests. They should verify that the GUI
+surface starts and responds to daemon-shaped inputs, not carry detailed device
+or domain business logic that can be tested faster below the GUI layer.
+
+Use GUI harness tests for:
+
+- panel startup and teardown
+- panel wiring to `MainWindow` and `NicosGuiClient`
+- client/event-thread plumbing
+- panel reactions to cache, message, setup, mode, and status updates
+
+Do not use GUI harness tests for:
+
+- pure device logic
+- setup loading or setup import behavior
+- real daemon/cache/poller/service process integration
+- exhaustive business-logic cases that do not need Qt or the GUI client
 
 Use the file-based guiconfigs under `test/nicos_ess/gui/guiconfigs` only when a
 test needs a real multi-panel layout or panel-specific options:
@@ -238,15 +291,21 @@ test needs a real multi-panel layout or panel-specific options:
 - `estia/selene.py` for the ESTIA Selene panel's custom options
 - `command_console.py` for deliberate multi-panel command/console wiring
 
+### Basic patterns
+
 GUI test modules can declare:
 
 - `single_panel_guiconfig_text("pkg.Panel", option=value)` for the common
-  single-panel path
+  generated single-panel path
+- `GuiConfigSpec(text=single_panel_guiconfig_text(...))` when an indirect
+  fixture parameter should carry generated config text
 - `pytest.mark.parametrize("gui_window", [GuiConfigSpec(name="...")],
   indirect=True)` to select a file-based layout through the shared
   `gui_window` fixture
 - `pytest.mark.parametrize("gui_panel", ["pkg.Panel"], indirect=True)` when a
   file-based layout test needs the shared `gui_panel` fixture
+- `panel_case(...)` in `test_startup.py` for parametrized panel startup and
+  minimal status-transition coverage
 
 Keep widget-search helpers local to the panel test module unless at least two
 panel suites need the same helper.
@@ -279,9 +338,10 @@ pattern used in `test_devices_panel.py`.
 
 The default strict fake-daemon check asserts that unexpected daemon commands
 stay empty. Tests that intentionally exercise misses can request
-`allow_unknown_fake_daemon_calls`; otherwise, add the missing command or eval
-reply to `_seed_gui_defaults` or test-local seeding. Unknown evals are recorded
-in `fake_daemon.unknown_evals` for direct assertions.
+`allow_unknown_fake_daemon_calls`; otherwise, implement or seed the missing
+command. Unknown evals return `None` and are recorded in
+`fake_daemon.unknown_evals` for direct assertions; add expected eval replies to
+`_seed_gui_defaults` or test-local seeding.
 
 `record_modal_message_boxes` records static `QMessageBox` calls. Critical and
 warning dialogs fail by default; information and question dialogs are only
@@ -344,18 +404,21 @@ interfaces change.
 
 ## Running Tests
 
-From the workspace, prefer the package-scoped uv command:
+From the workspace, prefer uv commands that install all workspace packages.
+GUI tests also need the root `gui` extra, which provides the Qt binding used by
+`nicos.guisupport.qt`.
 
 ```bash
-uv run --package nicos_ess pytest -q test/nicos_ess
+uv run --frozen --all-packages --extra gui pytest -q test/nicos_ess
 ```
 
 Targeted runs:
 
 ```bash
-uv run --package nicos_ess pytest -q test/nicos_ess/gui
-uv run --package nicos_ess pytest -q test/nicos_ess/test_devices/epics_devices/
-uv run --package nicos_ess pytest -q test/nicos_ess/test_devices/test_forwarder.py
+uv run --frozen --all-packages --extra gui pytest -q test/nicos_ess/gui
+uv run --frozen --all-packages pytest -q test/nicos_ess/test_devices/epics_devices/
+uv run --frozen --all-packages pytest -q test/nicos_ess/test_devices/test_forwarder.py
 ```
 
-Use `--confcutdir=test/nicos_ess/` option make pytest ignore conftest files outside of nicos_ess.
+Use `--confcutdir=test/nicos_ess/` to make pytest ignore conftest files outside
+of `test/nicos_ess`.

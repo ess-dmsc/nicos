@@ -23,6 +23,8 @@ SeedDaemon = Callable[[Any], None]
 
 @dataclass(frozen=True)
 class GuiConfigSpec:
+    """Indirect-fixture value for either a checked-in or generated guiconfig."""
+
     name: str | None = None
     text: str | None = None
 
@@ -35,6 +37,8 @@ class GuiConfigSpec:
 
 @dataclass(frozen=True)
 class StartupCase:
+    """One parametrized panel startup scenario for ``test_startup.py``."""
+
     case_id: str
     panel_class: str | type
     guiconfig: GuiConfigSpec
@@ -66,6 +70,7 @@ def _validate_guiconfig_value(value: Any) -> None:
 
 
 def resolve_guiconfig_path(guiconfig_name: str) -> Path:
+    """Resolve a GUI test config name inside the checked-in guiconfig tree."""
     if not isinstance(guiconfig_name, str) or not guiconfig_name:
         raise ValueError(
             "GUI test guiconfig_name must be a non-empty relative path, "
@@ -128,6 +133,7 @@ def panel_case(
     marks=(),
     **panel_kwargs,
 ):
+    """Create a startup case from either generated text or a guiconfig file."""
     if guiconfig_name is None:
         guiconfig = GuiConfigSpec(
             text=single_panel_guiconfig_text(panel_class, **panel_kwargs)
@@ -212,6 +218,7 @@ def _build_panel(gui_window_factory, startup_case, fake_daemon, caplog):
 
 
 def assert_panel_starts_clean(gui_window_factory, startup_case, fake_daemon, caplog):
+    """Assert that a panel starts without NICOS warnings or errors."""
     window, panel = _build_panel(
         gui_window_factory=gui_window_factory,
         startup_case=startup_case,
@@ -230,6 +237,7 @@ def assert_panel_survives_minimal_status_transitions(
     caplog,
     qtbot,
 ):
+    """Assert that a panel survives setup and running/idle status events."""
     window, panel = _build_panel(
         gui_window_factory=gui_window_factory,
         startup_case=startup_case,
