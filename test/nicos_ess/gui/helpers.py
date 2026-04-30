@@ -25,13 +25,14 @@ SeedDaemon = Callable[[Any], None]
 class GuiConfigSpec:
     """Indirect-fixture value for either a checked-in or generated guiconfig."""
 
-    name: str | None = None
-    text: str | None = None
+    relative_path: str | None = None
+    source_text: str | None = None
 
     def __post_init__(self):
-        if (self.name is None) == (self.text is None):
+        if (self.relative_path is None) == (self.source_text is None):
             raise ValueError(
-                "GuiConfigSpec requires exactly one of 'name' or 'text'"
+                "GuiConfigSpec requires exactly one of 'relative_path' or "
+                "'source_text'"
             )
 
 
@@ -47,7 +48,7 @@ class StartupCase:
 
 
 def _validate_guiconfig_value(value: Any) -> None:
-    """Restrict kwargs so ``repr()`` cannot inject code at config exec time."""
+    """Restrict kwargs to deterministic values for generated config text."""
     if value is None or isinstance(value, (str, int, float, bool)):
         return
     if isinstance(value, (list, tuple)):
@@ -69,24 +70,24 @@ def _validate_guiconfig_value(value: Any) -> None:
     )
 
 
-def resolve_guiconfig_path(guiconfig_name: str) -> Path:
+def resolve_guiconfig_path(relative_path: str) -> Path:
     """Resolve a GUI test config name inside the checked-in guiconfig tree."""
-    if not isinstance(guiconfig_name, str) or not guiconfig_name:
+    if not isinstance(relative_path, str) or not relative_path:
         raise ValueError(
-            "GUI test guiconfig_name must be a non-empty relative path, "
+            "GUI test guiconfig relative_path must be non-empty, "
             "for example 'command_console.py'"
         )
-    guiconfig_path = (GUICONFIGS_DIR / guiconfig_name).resolve()
+    guiconfig_path = (GUICONFIGS_DIR / relative_path).resolve()
     try:
         guiconfig_path.relative_to(GUICONFIGS_DIR)
     except ValueError as err:
         raise ValueError(
-            f"GUI test guiconfig_name must stay inside {GUICONFIGS_DIR}: "
-            f"{guiconfig_name!r}"
+            f"GUI test guiconfig relative_path must stay inside {GUICONFIGS_DIR}: "
+            f"{relative_path!r}"
         ) from err
     if not guiconfig_path.is_file():
         raise FileNotFoundError(
-            f"GUI test guiconfig not found: {guiconfig_name!r} -> {guiconfig_path}"
+            f"GUI test guiconfig not found: {relative_path!r} -> {guiconfig_path}"
         )
     return guiconfig_path
 
@@ -96,8 +97,8 @@ def single_panel_guiconfig_text(panel_cls, **panel_kwargs):
 
     Produced text is ``exec``d by ``processGuiConfig``; kwargs are stamped via
     ``repr()`` and validated against a literal-only whitelist
-    (``_validate_guiconfig_value``) so a test cannot smuggle arbitrary code or
-    non-deterministic objects into the generated config.
+    (``_validate_guiconfig_value``) so the generated config remains
+    deterministic and reviewable.
     """
     for value in panel_kwargs.values():
         _validate_guiconfig_value(value)
@@ -125,9 +126,9 @@ def single_panel_guiconfig_text(panel_cls, **panel_kwargs):
 
 
 def panel_case(
+    *,
     case_id,
     panel_class,
-    *,
     guiconfig_name=None,
     seed_daemon=None,
     marks=(),
@@ -136,10 +137,10 @@ def panel_case(
     """Create a startup case from either generated text or a guiconfig file."""
     if guiconfig_name is None:
         guiconfig = GuiConfigSpec(
-            text=single_panel_guiconfig_text(panel_class, **panel_kwargs)
+            source_text=single_panel_guiconfig_text(panel_class, **panel_kwargs)
         )
     else:
-        guiconfig = GuiConfigSpec(name=guiconfig_name)
+        guiconfig = GuiConfigSpec(relative_path=guiconfig_name)
     return StartupCase(
         case_id=case_id,
         panel_class=panel_class,
@@ -178,12 +179,7 @@ def _is_relevant_gui_record(record):
 
 
 def _assert_no_unexpected_nicos_logs(caplog):
-    """Catch NICOS warnings/errors that do not crash panel startup.
-
-    Defense-in-depth: panel readiness is the primary signal; this catches
-    silent NICOS-level warnings/errors that would otherwise be lost, for
-    example cache lookup failures.
-    """
+    """Fail if NICOS warnings/errors leak during GUI startup or lifecycle."""
     relevant_records = [
         record for record in caplog.records if _is_relevant_gui_record(record)
     ]
@@ -207,12 +203,10 @@ def _build_panel(gui_window_factory, startup_case, fake_daemon, caplog):
         startup_case.seed_daemon(fake_daemon)
     caplog.clear()
     caplog.set_level(logging.WARNING)
-    if startup_case.guiconfig.text is not None:
-        window = gui_window_factory(guiconfig=startup_case.guiconfig.text)
+    if startup_case.guiconfig.source_text is not None:
+        window = gui_window_factory(guiconfig_text=startup_case.guiconfig.source_text)
     else:
-        window = gui_window_factory(
-            guiconfig_path=resolve_guiconfig_path(startup_case.guiconfig.name)
-        )
+        window = gui_window_factory(relative_path=startup_case.guiconfig.relative_path)
     QApplication.processEvents()
     return window, get_panel_by_class(window, startup_case.panel_class)
 
@@ -227,7 +221,6 @@ def assert_panel_starts_clean(gui_window_factory, startup_case, fake_daemon, cap
     )
     _assert_panel_is_alive(window, panel)
     _assert_no_unexpected_nicos_logs(caplog)
-    return panel
 
 
 def assert_panel_survives_minimal_status_transitions(
@@ -275,4 +268,3 @@ def assert_panel_survives_minimal_status_transitions(
     QApplication.processEvents()
 
     _assert_no_unexpected_nicos_logs(caplog)
-    return panel

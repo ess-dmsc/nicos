@@ -108,30 +108,10 @@ Why:
 Use for GUI behavior that needs the real ESS `MainWindow`, `NicosGuiClient`,
 panel classes, Qt signals, and the GUI client's event thread.
 
-GUI harness tests fake only the daemon transport. They are closer to focused
-GUI smoke/contract tests than business-logic tests: use them to prove a panel
-starts, is wired into the real client/window lifecycle, and reacts to
-daemon-shaped cache/message/status updates.
-
-Good fit:
-
-- panel startup and teardown
-- panel-to-window and panel-to-client wiring
-- real Qt signal handling and event-thread delivery
-- cache, message, setup, mode, and status update handling in panels
-
-Not a good fit:
-
-- pure device or domain logic
-- setup-file import/loading behavior
-- real daemon/cache/poller/service process integration
-- detailed business-logic matrices that can run below the GUI layer
-
-Why:
-
-- exercises real GUI production classes while staying in-process
-- catches broken panel assumptions that unit tests miss
-- avoids external services and display-server dependencies
+GUI harness tests fake only the daemon transport. They are focused
+GUI smoke/contract tests for panel startup, real client/window lifecycle, and
+daemon protocol-shaped cache/message/status updates. See the dedicated
+"GUI Harness Tests" section below for fit, fixture APIs, and strictness rules.
 
 ### 4. Full Fixture/Setup Tests
 
@@ -267,8 +247,9 @@ Only the daemon transport is faked; the window, client, panels, Qt signals, and
 client event thread are production code.
 
 Treat these as focused GUI smoke/contract tests. They should verify that the GUI
-surface starts and responds to daemon-shaped inputs, not carry detailed device
-or domain business logic that can be tested faster below the GUI layer.
+surface starts and responds to daemon protocol-shaped inputs, not carry
+detailed device or domain business logic that can be tested faster below the
+GUI layer.
 
 Use GUI harness tests for:
 
@@ -297,9 +278,9 @@ GUI test modules can declare:
 
 - `single_panel_guiconfig_text("pkg.Panel", option=value)` for the common
   generated single-panel path
-- `GuiConfigSpec(text=single_panel_guiconfig_text(...))` when an indirect
-  fixture parameter should carry generated config text
-- `pytest.mark.parametrize("gui_window", [GuiConfigSpec(name="...")],
+- `GuiConfigSpec(source_text=single_panel_guiconfig_text(...))` when an
+  indirect fixture parameter should carry generated config text
+- `pytest.mark.parametrize("gui_window", [GuiConfigSpec(relative_path="...")],
   indirect=True)` to select a file-based layout through the shared
   `gui_window` fixture
 - `pytest.mark.parametrize("gui_panel", ["pkg.Panel"], indirect=True)` when a
@@ -307,8 +288,25 @@ GUI test modules can declare:
 - `panel_case(...)` in `test_startup.py` for parametrized panel startup and
   minimal status-transition coverage
 
+`single_panel_guiconfig_text()` kwargs must be literal-safe: strings, numbers,
+booleans, `None`, lists/tuples of those values, or dicts with string keys and
+literal-safe values. For nested or richer options, check in a file-based
+guiconfig.
+
+File-based guiconfigs intentionally repeat the minimal `windows`, `tools`, and
+`options` shell so each file remains a self-contained source document for
+`processGuiConfig`. Keep those defaults aligned with
+`single_panel_guiconfig_text()`.
+
 Keep widget-search helpers local to the panel test module unless at least two
 panel suites need the same helper.
+
+`test_startup.py` is curated from production `nicos_ess/**/guiconfig.py` files.
+When a production guiconfig adds a top-level `panel(...)`, check whether the
+panel class already has a startup case; `rg "panel\\(" nicos_ess/**/guiconfig.py`
+is the quick inventory refresh. Plain `STARTUP_CASE_GROUPS` names mirror
+instrument package names, while `*-panels` groups cover reusable panel
+subpackages.
 
 ### Process-global setup
 
@@ -323,10 +321,16 @@ Two Qt log patterns are silenced globally: the platform-native system tray
 signal warning and the `propagateSizeHints()` notice. Add new global GUI noise
 to `_IGNORED_QT_MESSAGE_PATTERNS` instead of adding per-test suppressions.
 
+GUI windows are constructed with a `NicosLogger` because `MainWindow` uses NICOS
+logger helpers such as `error(..., exc=...)`. The fixture parents that logger
+into the stdlib logging tree so `caplog` still observes GUI warnings/errors.
+
 ### Fake daemon extension points
 
 Seed daemon state with `fake_daemon.add_device(DeviceSpec(...))` and
-`fake_daemon.add_setup("name", loaded=True)`. Startup cases can pass
+`fake_daemon.add_setup("name", loaded=True)`. When adding a device and setup in
+one step, use `fake_daemon.add_device(..., setup="name", loaded=True)`.
+Startup cases can pass
 `seed_daemon=` to `panel_case(...)`; `seed_spectrometer_devices` in
 `test_startup.py` is the reference example.
 
@@ -336,18 +340,13 @@ Live updates should go through the fake daemon event helpers: `push_cache`,
 wait with `qtbot.waitSignal(window.client.<signal>)` or the `qtbot.waitUntil`
 pattern used in `test_devices_panel.py`.
 
-The default strict fake-daemon check asserts that unexpected daemon commands
-stay empty. Tests that intentionally exercise misses can request
-`allow_unknown_fake_daemon_calls`; otherwise, implement or seed the missing
-command. Unknown evals return `None` and are recorded in
-`fake_daemon.unknown_evals` for direct assertions; add expected eval replies to
-`_seed_gui_defaults` or test-local seeding.
-
-`record_modal_message_boxes` records static `QMessageBox` calls. Critical and
-warning dialogs fail by default; information and question dialogs are only
-recorded. Request `allow_critical_message_boxes` or
-`allow_warning_message_boxes` only in tests that intentionally exercise those
-modal paths.
+Strictness opt-outs are explicit fixtures: request
+`allow_unknown_fake_daemon_requests` only when a test intentionally exercises an
+unknown command or eval, `allow_critical_message_boxes` or
+`allow_warning_message_boxes` only for intentional modal error/warning paths,
+and `allow_unpatched_message_boxes` only for pure transport-contract tests that
+do not construct GUI code. Otherwise, implement or seed the missing fake-daemon
+request and keep unexpected message boxes failing by default.
 
 Prefer `single_panel_guiconfig_text` over checking in a guiconfig file unless a
 panel needs nested or richer options that are clearer as a file under
@@ -356,11 +355,10 @@ panel needs nested or richer options that are clearer as a file under
 ### Runtime resources
 
 The GUI harness wires `resources/` into `test/root/resources` through
-`ensure_runtime_resources`. On platforms that cannot create symlinks, the
-helper falls back to a real copy and wipes then re-copies it at each session
-start, so source changes always propagate. This is cheap while the resources
-tree is small; if it grows substantially, switch the tests back to requiring
-symlinks.
+`link_or_copy_runtime_resources`. The helper keeps the historical
+`config.nicos_root/resources` layout available by replacing stale destinations
+with a symlink, or with a fresh copy on platforms where symlinks are
+unavailable.
 
 ## Full Fixture/Setup Guidance
 

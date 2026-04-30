@@ -26,7 +26,7 @@ from test.nicos_ess.gui.helpers import (
     get_panel_by_class,
     resolve_guiconfig_path,
 )
-from test.runtime_resources import ensure_runtime_resources
+from test.runtime_resources import link_or_copy_runtime_resources
 
 
 TEST_ROOT = Path(__file__).resolve().parents[2] / "root"
@@ -65,16 +65,21 @@ def pytest_unconfigure(config):
         os.environ["QT_QPA_PLATFORM"] = original_qt_qpa_platform
 
 
-def _event_thread_stopped(thread) -> bool:
+def wait_until_event_thread_stopped(thread, qtbot) -> None:
     from nicos.guisupport.qt import QApplication
 
     # FakeClientTransport.disconnect() interrupts recv_event(), but the thread
     # may still be finishing a queued Qt signal delivery from an earlier event.
-    QApplication.processEvents()
-    return not thread.is_alive()
+    def _stopped():
+        QApplication.processEvents()
+        return not thread.is_alive()
+
+    qtbot.waitUntil(_stopped, timeout=2000)
 
 
 def _raise_teardown_errors(teardown_errors):
+    if len(teardown_errors) == 1:
+        raise teardown_errors[0]
     raise ExceptionGroup(
         f"GUI window teardown failed with {len(teardown_errors)} error(s)",
         teardown_errors,
@@ -97,14 +102,28 @@ def fake_daemon():
 @pytest.fixture(scope="session", autouse=True)
 def gui_runtime_resources():
     """Expose repository resources under the GUI test NICOS root."""
-    ensure_runtime_resources(RESOURCES_DIR, TEST_ROOT / "resources")
+    link_or_copy_runtime_resources(RESOURCES_DIR, TEST_ROOT / "resources")
 
 
 @pytest.fixture
 def strict_fake_daemon(fake_daemon):
-    """Fail tests that send daemon commands the fake does not implement."""
+    """Fail tests that hit daemon requests the fake does not implement."""
     yield
     assert fake_daemon.unknown_commands == []
+    assert fake_daemon.unknown_evals == []
+
+
+@pytest.fixture
+def allow_unknown_fake_daemon_requests():
+    """Opt out for tests that intentionally exercise fake-daemon misses."""
+    return None
+
+
+@pytest.fixture(autouse=True)
+def strict_fake_daemon_by_default(request):
+    if "allow_unknown_fake_daemon_requests" not in request.fixturenames:
+        request.getfixturevalue("strict_fake_daemon")
+    yield
 
 
 @pytest.fixture
@@ -120,16 +139,22 @@ def allow_warning_message_boxes():
 
 
 @pytest.fixture
+def allow_unpatched_message_boxes():
+    """Opt out for tests that do not construct GUI code or dialogs."""
+    return None
+
+
+@pytest.fixture
 def gui_window_factory(monkeypatch, qtbot, fake_daemon):
     """Build real ESS GUI windows connected to the in-process fake daemon."""
     from nicos.guisupport.qt import QApplication
 
     windows = []
 
-    def _build(*, guiconfig_path=None, guiconfig=None):
-        if (guiconfig_path is None) == (guiconfig is None):
+    def _build(*, relative_path=None, guiconfig_text=None):
+        if (relative_path is None) == (guiconfig_text is None):
             raise ValueError(
-                "pass exactly one of guiconfig_path or guiconfig to "
+                "pass exactly one of relative_path or guiconfig_text to "
                 "gui_window_factory()"
             )
 
@@ -140,18 +165,16 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
             lambda: FakeClientTransport(fake_daemon),
         )
 
-        config_source = guiconfig
-        if guiconfig_path is not None:
-            config_source = Path(guiconfig_path).read_text()
+        config_source = guiconfig_text
+        if relative_path is not None:
+            config_source = resolve_guiconfig_path(relative_path).read_text()
         config = processGuiConfig(config_source.strip())
         # Keep GUI tests independent from optional stylesheet/resource lookup.
         config.stylefile = ""
 
         mainwindow_cls = importString(config.options["mainwindow_class"])
         mainwindow_log = NicosLogger("mainwindow")
-        # MainWindow uses NICOS logger helpers such as error(..., exc=...), so
-        # this must stay a NicosLogger. Parent it into the stdlib logging tree
-        # so pytest's caplog can still observe GUI warnings and errors.
+        # Keep this NicosLogger visible to pytest's stdlib caplog capture.
         mainwindow_log.parent = logging.getLogger()
         mainwindow_log.propagate = True
         window = mainwindow_cls(mainwindow_log, config)
@@ -177,9 +200,7 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
                 window.client.disconnect()
                 qtbot.waitUntil(lambda w=window: not w.client.isconnected, timeout=2000)
             if thread is not None:
-                qtbot.waitUntil(
-                    lambda t=thread: _event_thread_stopped(t), timeout=2000
-                )
+                wait_until_event_thread_stopped(thread, qtbot)
         except Exception as err:
             teardown_errors.append(err)
         finally:
@@ -207,6 +228,10 @@ class RecordedMessageBox:
 @pytest.fixture(autouse=True)
 def record_modal_message_boxes(monkeypatch, request):
     """Record static QMessageBox calls without entering a modal event loop."""
+    if "allow_unpatched_message_boxes" in request.fixturenames:
+        yield []
+        return
+
     from nicos.guisupport.qt import QMessageBox
 
     calls = []
@@ -270,15 +295,15 @@ def gui_window(request, gui_window_factory):
     """Return a window built from request.param (GuiConfigSpec) or base.py."""
     spec = getattr(request, "param", None)
     if spec is None:
-        return gui_window_factory(guiconfig_path=resolve_guiconfig_path("base.py"))
+        return gui_window_factory(relative_path="base.py")
     if not isinstance(spec, GuiConfigSpec):
         raise TypeError(
             "gui_window indirect params must be GuiConfigSpec instances, "
             f"got {type(spec).__name__}"
         )
-    if spec.text is not None:
-        return gui_window_factory(guiconfig=spec.text)
-    return gui_window_factory(guiconfig_path=resolve_guiconfig_path(spec.name))
+    if spec.source_text is not None:
+        return gui_window_factory(guiconfig_text=spec.source_text)
+    return gui_window_factory(relative_path=spec.relative_path)
 
 
 @pytest.fixture

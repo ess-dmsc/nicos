@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ast
 import queue
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -23,6 +25,54 @@ _EVENT_SENTINEL = object()
 _NO_REPLY = object()
 _TEST_DIR = Path(__file__).resolve().parents[3]
 _GUI_TEST_ROOT = _TEST_DIR / "root"
+_DEVICE_LIST_EVAL_RE = re.compile(
+    r"^list\(dn for \(dn, d\) in session\.devices\.items\(\) "
+    r"if (?P<needs_class>'[^']+') in d\.classes(?P<rest>.*)\)$"
+)
+_EXCLUDE_CLASS_RE = re.compile(r" and (?P<exclude_class>'[^']+') not in d\.classes")
+EXP_PANEL_PROPOSAL_EVAL = (
+    "session.experiment.proposal, "
+    "session.experiment.title, "
+    "session.experiment.users, "
+    "session.experiment.localcontact, "
+    "session.experiment.errorbehavior"
+)
+
+# nicos_ess/gui/mainwindow.py:update_text reads the ToolbarItem data sources.
+MAINWINDOW_TOOLBAR_EVALS = {
+    "session.instrument": "",
+    "session.experiment.title": "",
+    "session.experiment.proposal": "",
+    "session.experiment.run_title": "",
+    "session.experiment.get_current_run_number()": 0,
+}
+
+# nicos_ess/gui/panels/editor.py and devices.py read these session defaults.
+SESSION_PANEL_EVALS = {
+    "session.spMode": False,
+    "session.alias_config": {},
+    "session.experiment.scriptpath": "",
+}
+
+# nicos_ess/gui/panels/live_gr.py and live_pyqt.py need experiment metadata.
+LIVE_PANEL_EVALS = {
+    "session.experiment.name": "exp",
+    "session.experiment.detectors": [],
+}
+
+# nicos_ess/gui/panels/exp_panel.py:_update_proposal_info reads these keys.
+EXP_PANEL_EVALS = {
+    "session.experiment._canQueryProposals()": False,
+    'session.experiment.propinfo["notif_emails"]': [],
+    "session.experiment.get_samples()": [],
+    EXP_PANEL_PROPOSAL_EVAL: ("", "", [], [], "abort"),
+}
+
+# nicos_ess/gui/panels/logviewer.py reads config paths during startup.
+CONFIG_PATH_EVALS = {
+    "config.nicos_root": str(_GUI_TEST_ROOT),
+    "config.logging_path": "log",
+}
 
 
 @dataclass
@@ -91,41 +141,17 @@ class FakeDaemon:
         (test/nicos_ess/device_harness.py), which models in-process Python
         access for direct device tests.
         """
-        session_metadata = {
-            "session.instrument": "",
-            "session.spMode": False,
-            "session.alias_config": {},
-        }
-        experiment_metadata = {
-            "session.experiment.name": "exp",
-            "session.experiment.title": "",
-            "session.experiment.proposal": "",
-            "session.experiment.run_title": "",
-            "session.experiment.detectors": [],
-            "session.experiment.scriptpath": "",
-            "session.experiment.get_current_run_number()": 0,
-            "session.experiment._canQueryProposals()": False,
-            'session.experiment.propinfo["notif_emails"]': [],
-            "session.experiment.get_samples()": [],
-            # ExpPanel reads proposal/title/users/localcontact/errorbehavior
-            # in one tuple expression.
-            "session.experiment.proposal, "
-            "session.experiment.title, "
-            "session.experiment.users, "
-            "session.experiment.localcontact, "
-            "session.experiment.errorbehavior": ("", "", [], [], "abort"),
-        }
-        config_defaults = {
-            "config.nicos_root": str(_GUI_TEST_ROOT),
-            "config.logging_path": "log",
-        }
-
-        self.evals.update(session_metadata)
-        self.evals.update(experiment_metadata)
-        self.evals.update(config_defaults)
+        self.evals.update(MAINWINDOW_TOOLBAR_EVALS)
+        self.evals.update(SESSION_PANEL_EVALS)
+        self.evals.update(LIVE_PANEL_EVALS)
+        self.evals.update(EXP_PANEL_EVALS)
+        self.evals.update(CONFIG_PATH_EVALS)
         self._refresh_state_evals()
 
     def _refresh_state_evals(self):
+        # nicos_ess/gui/panels/devices.py:_read_setup_info requires
+        # session.getSetupInfo(); setups.py:on_client_connected requires
+        # session.loaded_setups, session.readSetupInfo(), and the alias map.
         self.evals["session.loaded_setups"] = set(self.loaded_setups)
         self.evals["session.devices"] = dict(self.devices)
         self.evals["session.getSetupInfo()"] = {
@@ -175,10 +201,10 @@ class FakeDaemon:
         if transport in self._transports:
             self._transports.remove(transport)
 
-    def add_device(self, device, *, setup=None, load_setup=False):
+    def add_device(self, device, *, setup=None, loaded=False):
         self.devices[device.name] = device
         if setup is not None:
-            setup_spec = self.add_setup(setup, loaded=load_setup)
+            setup_spec = self.add_setup(setup, loaded=loaded)
             if device.name not in setup_spec.devices:
                 setup_spec.devices.append(device.name)
         for param, value in device.params.items():
@@ -240,6 +266,8 @@ class FakeDaemon:
         if command == "getdataset":
             return True, list(self.datasets)
         if command == "getmessages":
+            # The fake returns all seeded backlog messages; daemon-side
+            # cutoff/filtering is intentionally outside this transport model.
             return True, list(self.messages)
         if command == "getcachekeys":
             return True, self._cache_reply(args[0])
@@ -248,13 +276,43 @@ class FakeDaemon:
         if command == "eval":
             expr, stringify = args
             if expr not in self.evals:
-                self.unknown_evals.append(expr)
-                return True, None
+                device_list = self._device_list_eval(expr)
+                if device_list is None:
+                    self.unknown_evals.append(expr)
+                    return True, None
+                value = device_list
+                return True, str(value) if stringify and value is not None else value
             value = self.evals[expr]
             return True, str(value) if stringify and value is not None else value
 
         self.unknown_commands.append(command)
         return False, f"unexpected command: {command}"
+
+    def _device_list_eval(self, expr):
+        """Handle NicosClient.getDeviceList() eval strings."""
+        match = _DEVICE_LIST_EVAL_RE.match(expr)
+        if not match:
+            return None
+
+        rest = match.group("rest")
+        exclude_classes = [
+            ast.literal_eval(exclude_match.group("exclude_class"))
+            for exclude_match in _EXCLUDE_CLASS_RE.finditer(rest)
+        ]
+        rest = _EXCLUDE_CLASS_RE.sub("", rest)
+        rest = rest.replace(" and dn in session.explicit_devices", "")
+        if rest:
+            return None
+
+        needs_class = ast.literal_eval(match.group("needs_class"))
+        return [
+            name
+            for name, device in self.devices.items()
+            if needs_class in device.params.get("classes", ["nicos.core.device.Device"])
+            and not any(
+                cls in device.params.get("classes", []) for cls in exclude_classes
+            )
+        ]
 
     def _cache_reply(self, query):
         query = query.lower()

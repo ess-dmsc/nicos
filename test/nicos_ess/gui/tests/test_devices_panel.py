@@ -13,6 +13,21 @@ guiconfig_text = single_panel_guiconfig_text(
     "nicos_ess.gui.panels.devices.DevicesPanel"
 )
 
+VISIBLE_DEVICE_PARAMS = {
+    "value": 1.0,
+    "status": (200, ""),
+    "visibility": ("namespace", "devlist"),
+}
+FORMATTED_VALUE_PARAMS = {
+    **VISIBLE_DEVICE_PARAMS,
+    "fmtstr": "%.1f",
+    "unit": "mm",
+}
+
+
+def _tas_device(params):
+    return DeviceSpec(name="tas", valuetype=float, params=params)
+
 
 def _setup_item(panel, name):
     for index in range(panel.tree.topLevelItemCount()):
@@ -35,20 +50,12 @@ def _device_item(panel, name):
 def test_device_appears_after_connect(gui_window_factory, fake_daemon, qtbot):
     """A device registered before connect shows up in the visible tree."""
     fake_daemon.add_device(
-        DeviceSpec(
-            name="tas",
-            valuetype=float,
-            params={
-                "value": 1.0,
-                "status": (200, ""),
-                "visibility": ("namespace", "devlist"),
-            },
-        ),
+        _tas_device(VISIBLE_DEVICE_PARAMS),
         setup="instrument",
-        load_setup=True,
+        loaded=True,
     )
 
-    window = gui_window_factory(guiconfig=guiconfig_text)
+    window = gui_window_factory(guiconfig_text=guiconfig_text)
     panel = get_panel_by_class(window, "nicos_ess.gui.panels.devices.DevicesPanel")
 
     qtbot.waitUntil(lambda p=panel: p.tree.topLevelItemCount() == 1, timeout=2000)
@@ -61,25 +68,16 @@ def test_device_appears_after_connect(gui_window_factory, fake_daemon, qtbot):
 def test_cache_event_updates_panel(gui_window_factory, fake_daemon, qtbot):
     """Cache events flow through the real event thread into the visible tree."""
     fake_daemon.add_device(
-        DeviceSpec(
-            name="tas",
-            valuetype=float,
-            params={
-                "value": 1.0,
-                "status": (200, ""),
-                "visibility": ("namespace", "devlist"),
-                "fmtstr": "%.1f",
-                "unit": "mm",
-            },
-        ),
+        _tas_device(FORMATTED_VALUE_PARAMS),
         setup="instrument",
-        load_setup=True,
+        loaded=True,
     )
 
-    window = gui_window_factory(guiconfig=guiconfig_text)
+    window = gui_window_factory(guiconfig_text=guiconfig_text)
     panel = get_panel_by_class(window, "nicos_ess.gui.panels.devices.DevicesPanel")
     item = _device_item(panel, "tas")
 
+    # These exact strings prove the seeded fmtstr/unit are honored.
     qtbot.waitUntil(
         lambda tree_item=item: tree_item.text(panel.col_index["VALUE"]) == "1.0 mm",
         timeout=2000,
@@ -87,6 +85,7 @@ def test_cache_event_updates_panel(gui_window_factory, fake_daemon, qtbot):
 
     fake_daemon.push_cache("tas/value", 7.5, timestamp=100.0)
 
+    # These exact strings prove the seeded fmtstr/unit are honored.
     qtbot.waitUntil(
         lambda tree_item=item: tree_item.text(panel.col_index["VALUE"]) == "7.5 mm",
         timeout=2000,

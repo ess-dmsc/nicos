@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 
-def ensure_runtime_resources(src: str | Path, dst: str | Path) -> None:
+def link_or_copy_runtime_resources(src: str | Path, dst: str | Path) -> None:
     """Wire runtime resources with a symlink, falling back to a fresh copy.
 
     Existing destinations are replaced unless they are already the correct

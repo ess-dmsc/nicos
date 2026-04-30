@@ -7,7 +7,10 @@ real daemon test suite.
 
 from __future__ import annotations
 
+import ast
 import inspect
+from logging import INFO
+from textwrap import dedent
 from time import monotonic, sleep
 
 import pytest
@@ -23,8 +26,16 @@ from nicos.protocols.daemon import (
     STATUS_IDLE,
 )
 from nicos.protocols.daemon.classic import PROTO_VERSION
+from nicos_ess.gui.panels.exp_panel import ExpPanel
 
-from test.nicos_ess.gui.doubles import FakeClientTransport
+from test.nicos_ess.gui.doubles import (
+    DeviceSpec,
+    EXP_PANEL_PROPOSAL_EVAL,
+    FakeClientTransport,
+)
+
+
+pytestmark = pytest.mark.usefixtures("allow_unpatched_message_boxes")
 
 
 TRANSPORT_METHODS = (
@@ -73,6 +84,12 @@ STATUS_KEYS = {
     "status",
     "watch",
 }
+
+IDLE_STATUS = (STATUS_IDLE, -1)
+
+
+def _daemon_message(text, *, timestamp=0.0, level=INFO, request_id=1):
+    return ("nicos", timestamp, level, text, None, request_id)
 
 
 class RecordingClient(NicosClient):
@@ -159,8 +176,11 @@ def test_fake_transport_connect_returns_the_daemon_banner(fake_daemon):
             "pw_hashing": "plain",
         }
 
-        with pytest.raises(RuntimeError, match="no pending command"):
+        # The exact sentence can change, but the error should identify the
+        # misuse clearly enough for fake-transport test failures.
+        with pytest.raises(RuntimeError) as excinfo:
             transport.recv_reply()
+        assert "no pending command" in str(excinfo.value)
     finally:
         transport.disconnect()
 
@@ -190,7 +210,7 @@ def test_fake_daemon_satisfies_the_real_client_connection_contract(
 def test_fake_daemon_returns_minimal_expected_command_shapes(
     monkeypatch, fake_daemon
 ):
-    message = ("nicos", 0.0, 20, "backlog line\n", None, 1)
+    message = _daemon_message("backlog line\n")
     dataset = {"number": 1}
     fake_daemon.add_setup("instrument", loaded=True)
     fake_daemon.set_cache("device/value", 12.5)
@@ -201,11 +221,12 @@ def test_fake_daemon_returns_minimal_expected_command_shapes(
     try:
         status = client.ask("getstatus")
         assert STATUS_KEYS <= set(status)
-        assert status["status"] == (STATUS_IDLE, -1)
+        assert status["status"] == IDLE_STATUS
         assert status["mode"] == MASTER
         assert status["setups"] == (["instrument"], ["instrument"])
 
         assert client.ask("getdataset", "*") == [dataset]
+        # The fake models backlog replay, not daemon-side cutoff/filtering.
         assert client.ask("getmessages", "10000") == [message]
         assert client.ask("getcachekeys", "device/") == [("device/value", 12.5)]
         assert client.ask("complete", "", "") == []
@@ -215,6 +236,38 @@ def test_fake_daemon_returns_minimal_expected_command_shapes(
         assert client.tell("keepalive") is True
     finally:
         _disconnect_client(client)
+
+
+def test_fake_daemon_handles_the_real_client_device_list_eval(
+    monkeypatch, fake_daemon
+):
+    fake_daemon.add_device(
+        DeviceSpec(
+            name="motor",
+            valuetype=float,
+            params={
+                "classes": [
+                    "nicos.core.device.Device",
+                    "nicos.core.device.Moveable",
+                ],
+            },
+        )
+    )
+
+    client = _connect_client(monkeypatch, fake_daemon)
+    try:
+        assert client.getDeviceList("nicos.core.device.Moveable") == ["motor"]
+        assert (
+            client.getDeviceList(
+                "nicos.core.device.Device",
+                exclude_class="nicos.core.device.Moveable",
+            )
+            == []
+        )
+    finally:
+        _disconnect_client(client)
+
+    assert fake_daemon.unknown_evals == []
 
 
 def test_fake_daemon_delivers_event_payloads_and_masks_per_transport(
@@ -242,7 +295,24 @@ def test_fake_daemon_delivers_event_payloads_and_masks_per_transport(
         _disconnect_client(unmasked)
 
 
-def test_unknown_eval_returns_none_and_is_recorded(monkeypatch, fake_daemon):
+def test_exp_panel_tuple_eval_contract_matches_production_source(fake_daemon):
+    source = dedent(inspect.getsource(ExpPanel._update_proposal_info))
+    tree = ast.parse(source)
+    eval_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "eval"
+    ]
+
+    assert ast.literal_eval(eval_calls[0].args[0]) == EXP_PANEL_PROPOSAL_EVAL
+    assert fake_daemon.evals[EXP_PANEL_PROPOSAL_EVAL] == ("", "", [], [], "abort")
+
+
+def test_unknown_eval_returns_none_and_is_recorded(
+    monkeypatch, fake_daemon, allow_unknown_fake_daemon_requests
+):
     client = _connect_client(monkeypatch, fake_daemon)
     try:
         assert client.eval("unknown.expression", None) is None
@@ -253,7 +323,7 @@ def test_unknown_eval_returns_none_and_is_recorded(monkeypatch, fake_daemon):
 
 
 def test_unknown_command_returns_error_reply_and_is_recorded(
-    monkeypatch, fake_daemon, allow_unknown_fake_daemon_calls
+    monkeypatch, fake_daemon, allow_unknown_fake_daemon_requests
 ):
     client = _connect_client(monkeypatch, fake_daemon)
     try:

@@ -17,18 +17,22 @@ guiconfig_text = single_panel_guiconfig_text(
 )
 
 
+def _daemon_message(text, *, timestamp, request_id):
+    return ("nicos", timestamp, INFO, text, None, request_id)
+
+
 def test_console_replays_backlog_and_reacts_to_live_events(
     gui_window_factory, fake_daemon, qtbot
 ):
     """Backlog queries and live daemon events should both reach the panel."""
-    backlog_message = ("nicos", 1.0, INFO, "Backlog line\n", None, 1)
-    live_message = ("nicos", 2.0, INFO, "Live line\n", None, 2)
-    sim_message = ("nicos", 3.0, INFO, "Sim line\n", None, "0")
+    backlog_message = _daemon_message("Backlog line\n", timestamp=1.0, request_id=1)
+    live_message = _daemon_message("Live line\n", timestamp=2.0, request_id=2)
+    sim_message = _daemon_message("Sim line\n", timestamp=3.0, request_id="0")
 
     fake_daemon.mode = MAINTENANCE
     fake_daemon.add_message(backlog_message)
 
-    window = gui_window_factory(guiconfig=guiconfig_text)
+    window = gui_window_factory(guiconfig_text=guiconfig_text)
     panel = get_panel_by_class(window, "nicos_ess.gui.panels.console.ConsolePanel")
 
     qtbot.waitUntil(
