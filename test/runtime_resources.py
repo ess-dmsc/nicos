@@ -12,6 +12,11 @@ def ensure_runtime_resources(src: str | Path, dst: str | Path) -> None:
     Existing destinations are replaced unless they are already the correct
     symlink, so stale copied resources or stale symlinks cannot hide source
     changes between test sessions.
+
+    This is a pragmatic bridge for tests while GUI code still resolves assets
+    through ``config.nicos_root/resources``. If the resources package later
+    exposes a stable importlib.resources-style API, this filesystem wiring can
+    be refactored away.
     """
     src_path = Path(src).resolve()
     dst_path = Path(dst)

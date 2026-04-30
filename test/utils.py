@@ -535,6 +535,8 @@ def cleanup():
     dst = path.join(runtime_root, "resources")
     # Rebuilding runtime_root replaces stale resource destinations. Prefer a
     # symlink so edits are visible immediately; copy only when symlinks fail.
+    # This can go away once resource packaging gives tests a stable package
+    # resource path instead of the historical nicos_root/resources layout.
     try:
         os.symlink(src, dst)
     except OSError:
