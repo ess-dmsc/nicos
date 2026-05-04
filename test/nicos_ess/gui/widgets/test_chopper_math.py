@@ -3,14 +3,17 @@ import pytest
 from nicos_ess.gui.widgets.chopper_math import (
     CCW,
     CW,
+    DOWNSTREAM,
+    UPSTREAM,
     ChopperRotationModel,
-    apply_motor_side_transform,
     build_rotation_model,
-    direction_to_sign,
+    compute_phase_center_delay_deg,
     has_canonical_inputs,
     parked_rotation_deg,
+    resolver_direction_sign,
     runtime_phase_sign,
     runtime_spin_sign,
+    sign_to_direction,
     spinning_rotation_deg,
     wrap180,
     wrap360,
@@ -27,132 +30,151 @@ from test.nicos_ess.gui.widgets.chopper_test_fakes import (
 def _canonical(**overrides):
     data = {
         "slit_edges": [[0.0, 86.0]],
-        "motor_position": "downstream",
-        "disk_rotation_direction": "CW",
+        "motor_position": DOWNSTREAM,
+        "positive_speed_rotation_direction": CW,
+        "resolver_positive_direction": CW,
         "parked_opening_index": 0,
         "tdc_resolver_position": 342.5,
         "park_open_angle": 195.0,
-        "phase_tdc_center_window_delay": 147.5,
+        "disk_delay": 0.0,
     }
     data.update(overrides)
     return data
 
 
+MARKUS_ACTIVE_DISC_CASES = [
+    # Values copied from /home/jonas/code/markus_chopper_scripts/*.yaml.
+    # Entries with opening=0 are absent discs in Markus' files and are omitted.
+    ("BEER FOC-201 upstream", UPSTREAM, CW, 342.0, 221.0, 175.0, 0.0, 239.0),
+    ("BIFROST PSC-100 upstream", UPSTREAM, CW, 341.7, 195.0, 170.0, 0.0, 213.3),
+    ("BIFROST PSC-100 downstream", DOWNSTREAM, CW, 342.5, 195.0, 170.0, 0.0, 147.5),
+    ("DREAM BC-201 upstream", UPSTREAM, CW, 342.0, 153.0, 73.55, 0.0, 171.0),
+    ("DREAM PSC-100 upstream disk", DOWNSTREAM, CW, 342.0, 321.5, 5.02, 0.0, 20.5),
+    ("DREAM PSC-100 downstream disk", DOWNSTREAM, CW, 342.0, 149.3, 3.94, 0.0, 192.7),
+    ("ESTIA BWC-100 upstream disk", DOWNSTREAM, CW, 341.6, 326.0, 100.06, 0.0, 15.6),
+    ("HEIMD-TPSC-100 upstream side-window config", UPSTREAM, CW, 341.3, 243.0, 5.2, 5.3, 267.0),
+    ("HEIMD-TPSC-100 downstream side-window config", DOWNSTREAM, CW, 341.9, 59.3, 5.2, 6.25, 288.85),
+    ("HEIMD-TWSC-101 upstream", UPSTREAM, CW, 342.0, 70.0, 20.0, 0.0, 88.0),
+    ("HEIMDAL TPSC-100 upstream", UPSTREAM, CCW, 341.3, 243.0, 5.2, 0.0, 98.3),
+    ("HEIMDAL TPSC-100 downstream", DOWNSTREAM, CW, 341.9, 59.3, 5.2, 0.0, 282.6),
+    ("HEIMDAL TWSC-101 upstream", UPSTREAM, CW, 342.0, 150.0, 20.0, 0.0, 168.0),
+    ("LOKI-FOC-301 downstream", DOWNSTREAM, CCW, 341.9, 239.5, 31.0, 0.0, 257.6),
+    ("LOKI-WBC-301 upstream", UPSTREAM, CCW, 341.9, 154.25, 176.5, 0.0, 187.65),
+    ("LOKI-WBC-301 downstream", DOWNSTREAM, CCW, 341.9, 154.25, 176.5, 0.0, 172.35),
+    ("MAGIC PSC-100 upstream disk", DOWNSTREAM, CW, 341.5, 223.0, 105.0, 0.0, 118.5),
+    ("MAGIC PSC-100 downstream disk", DOWNSTREAM, CW, 341.5, 331.5, 105.0, 0.0, 10.0),
+    ("MAGIC SC-101 upstream disk", DOWNSTREAM, CW, 342.0, 94.0, 20.6, 0.0, 248.0),
+]
+
+
+def _case_chopper(case):
+    _, motor, _markus_effective_dir, tdc, park, opening, disk_delay, _ = case
+    return _canonical(
+        slit_edges=[[0.0, opening]],
+        motor_position=motor,
+        positive_speed_rotation_direction=CW,
+        resolver_positive_direction=CW,
+        tdc_resolver_position=tdc,
+        park_open_angle=park,
+        disk_delay=disk_delay,
+    )
+
+
+def _spinning(chopper, phase, speed):
+    model = build_rotation_model(chopper)
+    return spinning_rotation_deg(
+        phase,
+        speed,
+        model.parked_opening_center_deg,
+        model.tdc_resolver_position_deg,
+        model.park_open_angle_deg,
+        model.motor_position,
+        model.positive_speed_rotation_direction,
+        model.disk_delay_deg,
+        model.disk_delay_cw_deg,
+        model.disk_delay_ccw_deg,
+    )
+
+
+def test_has_canonical_inputs_requires_slit_edges():
+    data = _canonical(slit_edges=[[0.0, 86.0]])
+    assert has_canonical_inputs(data)
+    assert not has_canonical_inputs(_canonical(slit_edges=None))
+
+
 @pytest.mark.parametrize(
     ("direction", "motor_position", "expected"),
-    [
-        (CW, "downstream", CCW),
-        (CCW, "downstream", CW),
-        (CW, "upstream", CW),
-        (CCW, "upstream", CCW),
-    ],
+    [(CW, UPSTREAM, 1), (CCW, UPSTREAM, -1), (CW, DOWNSTREAM, -1), (CCW, DOWNSTREAM, 1)],
 )
-def test_apply_motor_side_transform(direction, motor_position, expected):
-    assert apply_motor_side_transform(direction, motor_position) == expected
-
-
-def test_has_canonical_inputs_does_not_require_park_edges():
-    assert has_canonical_inputs(_canonical())
+def test_resolver_direction_sign_is_independent_of_spin_direction(direction, motor_position, expected):
+    assert resolver_direction_sign(direction, motor_position) == expected
 
 
 def test_build_rotation_model_user_example_values():
     model = build_rotation_model(_canonical())
 
     assert isinstance(model, ChopperRotationModel)
-    assert model.base_spin_direction == CCW
-    assert model.phase_reference_sign == -1
+    assert model.positive_speed_rotation_direction == CW
+    assert model.resolver_positive_direction == CW
+    assert model.resolver_sign == -1
     assert model.parked_opening_center_deg == pytest.approx(43.0)
     assert model.parked_opening_width_deg == pytest.approx(86.0)
     assert model.resolver_offset_deg == pytest.approx(-122.0)
-    assert model.spin_offset_deg == pytest.approx(-169.5)
-    assert model.expected_phase_delay_deg == pytest.approx(147.5)
-    assert model.phase_delay_error_deg == pytest.approx(0.0)
+    assert model.phase_tdc_center_window_delay_deg == pytest.approx(147.5)
+    assert model.disk_delay_deg == pytest.approx(0.0)
 
 
 def test_build_rotation_model_validates_optional_park_edges():
     with pytest.raises(ValueError, match="inconsistent"):
-        build_rotation_model(
-            _canonical(
-                park_edge_1=120.0,
-                park_edge_2=206.0,
-            )
-        )
+        build_rotation_model(_canonical(park_edge_1=120.0, park_edge_2=206.0))
 
 
-def test_runtime_spin_sign_uses_base_direction_and_speed_sign():
+def test_runtime_spin_sign_uses_plc_positive_direction_and_speed_sign():
     assert runtime_spin_sign(10.0, CW) == 1
     assert runtime_spin_sign(-10.0, CW) == -1
     assert runtime_spin_sign(10.0, CCW) == -1
     assert runtime_spin_sign(-10.0, CCW) == 1
+    assert runtime_phase_sign(-10.0, CW) == -1
 
 
-def test_runtime_phase_sign_includes_phase_reference_sign():
-    assert runtime_phase_sign(10.0, CW, 1) == 1
-    assert runtime_phase_sign(10.0, CW, -1) == -1
-    assert runtime_phase_sign(10.0, CCW, 1) == -1
-    assert runtime_phase_sign(10.0, CCW, -1) == 1
+def test_spinning_rotation_positive_phase_moves_opposite_effective_spin():
+    chopper = _canonical(tdc_resolver_position=0.0, park_open_angle=0.0)
+    assert wrap180(_spinning(chopper, 10.0, 10.0) - _spinning(chopper, 0.0, 10.0)) == pytest.approx(-10.0)
+    assert wrap180(_spinning(chopper, 10.0, -10.0) - _spinning(chopper, 0.0, -10.0)) == pytest.approx(10.0)
 
 
-def test_spinning_rotation_positive_phase_opposite_spin():
-    assert spinning_rotation_deg(10.0, 10.0, 0.0, CW) == pytest.approx(350.0)
-    assert spinning_rotation_deg(10.0, 10.0, 0.0, CCW) == pytest.approx(10.0)
+def test_parked_rotation_resolver_uses_resolver_sign():
+    assert parked_rotation_deg(10.0, 5.0, 1) == pytest.approx(15.0)
+    assert parked_rotation_deg(10.0, 5.0, -1) == pytest.approx(355.0)
 
 
-def test_parked_rotation_resolver_follows_base_direction():
-    assert parked_rotation_deg(10.0, 5.0, CW) == pytest.approx(355.0)
-    assert parked_rotation_deg(10.0, 5.0, CCW) == pytest.approx(15.0)
+@pytest.mark.parametrize("case", MARKUS_ACTIVE_DISC_CASES, ids=lambda c: c[0])
+def test_markus_phase_center_delay_formula_matches_script_values(case):
+    _, motor, effective_dir, tdc, park, _, disk_delay, expected = case
+    assert compute_phase_center_delay_deg(tdc, park, motor, effective_dir, disk_delay) == pytest.approx(expected)
 
 
-def test_phase_delay_wrap_error():
-    model = build_rotation_model(
-        _canonical(
-            tdc_resolver_position=10.0,
-            park_open_angle=350.0,
-            phase_tdc_center_window_delay=15.0,
-        )
+@pytest.mark.parametrize("case", MARKUS_ACTIVE_DISC_CASES, ids=lambda c: c[0])
+def test_markus_park_angle_centers_opening(case):
+    chopper = _case_chopper(case)
+    model = build_rotation_model(chopper)
+    base_rotation = parked_rotation_deg(
+        chopper["park_open_angle"], model.resolver_offset_deg, model.resolver_sign
     )
-    assert model.expected_phase_delay_deg == pytest.approx(20.0)
-    assert wrap180(model.phase_delay_error_deg) == pytest.approx(-5.0)
+    assert base_rotation == pytest.approx(model.parked_opening_center_deg)
 
 
-def test_phase_delay_reference_uses_motor_side_sign():
-    model = build_rotation_model(
-        _canonical(
-            motor_position="upstream",
-            tdc_resolver_position=341.7,
-            park_open_angle=73.0,
-            phase_tdc_center_window_delay=91.3,
-        )
+@pytest.mark.parametrize("case", MARKUS_ACTIVE_DISC_CASES, ids=lambda c: c[0])
+@pytest.mark.parametrize("effective_dir", [CW, CCW], ids=["effective-cw", "effective-ccw"])
+def test_markus_effective_cw_and_ccw_phase_centers_opening(case, effective_dir):
+    chopper = _case_chopper(case)
+    _, motor, _, tdc, park, _, disk_delay, _ = case
+    speed = 14.0 if effective_dir == chopper["positive_speed_rotation_direction"] else -14.0
+    phase = compute_phase_center_delay_deg(tdc, park, motor, effective_dir, disk_delay)
+
+    assert _spinning(chopper, phase, speed) == pytest.approx(
+        build_rotation_model(chopper).parked_opening_center_deg
     )
-    assert model.expected_phase_delay_deg == pytest.approx(91.3)
-    assert model.phase_delay_error_deg == pytest.approx(0.0)
-    assert model.phase_reference_sign == 1
-
-
-def test_build_rotation_model_requires_parked_opening_start_at_zero():
-    with pytest.raises(ValueError, match="slit_edges must start at 0 degrees"):
-        build_rotation_model(_canonical(slit_edges=[[5.0, 91.0]]))
-
-
-def test_park_open_angle_aligns_opening_center_with_beam_guide():
-    model = build_rotation_model(
-        _canonical(
-            slit_edges=[[0.0, 27.6]],
-            disk_rotation_direction="CCW",
-            motor_position="downstream",
-            park_open_angle=0.0,
-            tdc_resolver_position=0.0,
-            phase_tdc_center_window_delay=0.0,
-        )
-    )
-    center = model.parked_opening_center_deg
-    parked_at_reference = parked_rotation_deg(
-        resolver_angle_deg=0.0,
-        resolver_offset_deg=model.resolver_offset_deg,
-        base_spin_direction=model.base_spin_direction,
-        phase_reference_sign=model.phase_reference_sign,
-    )
-    assert parked_at_reference == pytest.approx(center)
 
 
 def test_nonzero_parked_opening_index_is_allowed():
@@ -162,7 +184,6 @@ def test_nonzero_parked_opening_index_is_allowed():
             parked_opening_index=1,
             park_open_angle=321.5,
             tdc_resolver_position=342.0,
-            phase_tdc_center_window_delay=20.5,
         )
     )
     assert model.parked_opening_index == 1
@@ -170,133 +191,58 @@ def test_nonzero_parked_opening_index_is_allowed():
 
 
 def test_phase_delay_reference_aligns_parked_opening_while_spinning():
-    model = build_rotation_model(
-        _canonical(
-            slit_edges=[[0.0, 2.46], [171.52, 176.54], [272.865, 276.795]],
-            parked_opening_index=1,
-            park_open_angle=321.5,
-            tdc_resolver_position=342.0,
-            phase_tdc_center_window_delay=20.5,
-        )
+    chopper = _canonical(
+        slit_edges=[[0.0, 2.46], [171.52, 176.54], [272.865, 276.795]],
+        parked_opening_index=1,
+        park_open_angle=321.5,
+        tdc_resolver_position=342.0,
     )
-    opening_center = model.parked_opening_center_deg
-    spinning_at_phase_reference = spinning_rotation_deg(
-        phase_angle_deg=20.5,
-        speed_hz=14.0,
-        spin_offset_deg=model.spin_offset_deg,
-        base_spin_direction=model.base_spin_direction,
-        phase_reference_sign=model.phase_reference_sign,
+    model = build_rotation_model(chopper)
+    assert _spinning(chopper, model.phase_tdc_center_window_delay_deg, 14.0) == pytest.approx(
+        model.parked_opening_center_deg
     )
-    expected_base = opening_center
-    assert spinning_at_phase_reference == pytest.approx(expected_base)
 
 
-@pytest.mark.parametrize(
-    "chopper",
-    [
-        _canonical(),
-        _canonical(
-            motor_position="upstream",
-            tdc_resolver_position=341.7,
-            park_open_angle=73.0,
-            phase_tdc_center_window_delay=91.3,
-        ),
-    ],
-    ids=["downstream", "upstream"],
-)
-def test_phase_perturbation_moves_opposite_runtime_phase_direction(chopper):
+def test_phase_perturbation_moves_opposite_runtime_phase_direction():
+    chopper = _canonical()
     model = build_rotation_model(chopper)
     eps = 0.2
-    phase0 = float(chopper["phase_tdc_center_window_delay"])
-    rot0 = spinning_rotation_deg(
-        phase0,
-        14.0,
-        model.spin_offset_deg,
-        model.base_spin_direction,
-        model.phase_reference_sign,
+    rot0 = _spinning(chopper, model.phase_tdc_center_window_delay_deg, 14.0)
+    rot1 = _spinning(chopper, model.phase_tdc_center_window_delay_deg + eps, 14.0)
+    assert wrap180(rot1 - rot0) == pytest.approx(
+        -runtime_phase_sign(14.0, model.positive_speed_rotation_direction) * eps
     )
-    rot1 = spinning_rotation_deg(
-        phase0 + eps,
-        14.0,
-        model.spin_offset_deg,
-        model.base_spin_direction,
-        model.phase_reference_sign,
-    )
-    expected_delta = -runtime_phase_sign(
-        14.0, model.base_spin_direction, model.phase_reference_sign
-    ) * eps
-    assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)
 
 
-@pytest.mark.parametrize(
-    "chopper",
-    [
-        _canonical(),
-        _canonical(
-            motor_position="upstream",
-            tdc_resolver_position=341.7,
-            park_open_angle=73.0,
-            phase_tdc_center_window_delay=91.3,
-        ),
-    ],
-    ids=["downstream", "upstream"],
-)
-def test_resolver_perturbation_moves_with_base_spin_direction(chopper):
+def test_resolver_perturbation_uses_resolver_polarity_not_spin_direction():
+    chopper = _canonical()
     model = build_rotation_model(chopper)
     eps = 0.2
-    resolver0 = float(chopper["park_open_angle"])
-    rot0 = parked_rotation_deg(
-        resolver0,
-        model.resolver_offset_deg,
-        model.base_spin_direction,
-        model.phase_reference_sign,
-    )
-    rot1 = parked_rotation_deg(
-        resolver0 + eps,
-        model.resolver_offset_deg,
-        model.base_spin_direction,
-        model.phase_reference_sign,
-    )
-    expected_delta = (
-        -direction_to_sign(model.base_spin_direction)
-        * int(model.phase_reference_sign)
-        * eps
-    )
-    assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)
+    rot0 = parked_rotation_deg(chopper["park_open_angle"], model.resolver_offset_deg, model.resolver_sign)
+    rot1 = parked_rotation_deg(chopper["park_open_angle"] + eps, model.resolver_offset_deg, model.resolver_sign)
+    assert wrap180(rot1 - rot0) == pytest.approx(model.resolver_sign * eps)
 
 
 def test_nmx_wls2_pair_has_small_transmitted_opening_on_right_at_82_and_0():
-    # Physical reference: standing at target and looking towards sample,
-    # WLS2A/WLS2B at 14 Hz with phases 82°/0° shows a small opening on right.
-    wls2a = {
-        "slit_edges": [[0.0, 170.0]],
-        "motor_position": "upstream",
-        "disk_rotation_direction": "CW",
-        "parked_opening_index": 0,
-        "tdc_resolver_position": 341.7,
-        "park_open_angle": 73.0,
-        "phase_tdc_center_window_delay": 91.3,
-    }
-    wls2b = {
-        "slit_edges": [[0.0, 170.0]],
-        "motor_position": "downstream",
-        "disk_rotation_direction": "CW",
-        "parked_opening_index": 0,
-        "tdc_resolver_position": 342.5,
-        "park_open_angle": 165.0,
-        "phase_tdc_center_window_delay": 177.5,
-    }
+    # Preserved NMX physical reference: WLS2A/WLS2B at 14 Hz with phases
+    # 82 deg / 0 deg shows a small transmission on the right.
+    wls2a = _canonical(
+        slit_edges=[[0.0, 170.0]],
+        motor_position=UPSTREAM,
+        positive_speed_rotation_direction=CW,
+        tdc_resolver_position=341.7,
+        park_open_angle=73.0,
+    )
+    wls2b = _canonical(
+        slit_edges=[[0.0, 170.0]],
+        motor_position=DOWNSTREAM,
+        positive_speed_rotation_direction=CW,
+        tdc_resolver_position=342.5,
+        park_open_angle=165.0,
+    )
 
     def opening_interval_qt(chopper, phase_deg):
-        model = build_rotation_model(chopper)
-        base_rotation = spinning_rotation_deg(
-            phase_deg,
-            14.0,
-            model.spin_offset_deg,
-            model.base_spin_direction,
-            model.phase_reference_sign,
-        )
-        qt_rotation = wrap360(base_rotation + 270.0)
+        qt_rotation = wrap360(_spinning(chopper, phase_deg, 14.0) + 270.0)
         start, end = chopper["slit_edges"][0]
         return wrap360(-float(end) + qt_rotation), wrap360(-float(start) + qt_rotation)
 
@@ -306,91 +252,45 @@ def test_nmx_wls2_pair_has_small_transmitted_opening_on_right_at_82_and_0():
             return [(start, 360.0), (0.0, end)]
         return [(start, end)]
 
-    open_a = opening_interval_qt(wls2a, 82.0)
-    open_b = opening_interval_qt(wls2b, 0.0)
-
-    transmitted_opening = []
-    for s1, e1 in unwrap(open_a):
-        for s2, e2 in unwrap(open_b):
+    transmitted = []
+    for s1, e1 in unwrap(opening_interval_qt(wls2a, 82.0)):
+        for s2, e2 in unwrap(opening_interval_qt(wls2b, 0.0)):
             lo = max(s1, s2)
             hi = min(e1, e2)
             if hi > lo:
-                transmitted_opening.append((lo, hi))
+                transmitted.append((lo, hi))
 
-    assert transmitted_opening
-    total_width = sum(hi - lo for lo, hi in transmitted_opening)
-    assert total_width <= 8.0
-    assert any(lo <= 10.0 or hi >= 350.0 for lo, hi in transmitted_opening)
+    assert transmitted
+    assert sum(hi - lo for lo, hi in transmitted) <= 8.0
+    assert any(lo <= 10.0 or hi >= 350.0 for lo, hi in transmitted)
 
 
 def test_fake_double_disc_parked_open_angle_opens_beam_for_both_discs():
     for chopper in fake_double_disc_choppers():
         model = build_rotation_model(chopper)
-        base_rotation = parked_rotation_deg(
-            resolver_angle_deg=180.0,
-            resolver_offset_deg=model.resolver_offset_deg,
-            base_spin_direction=model.base_spin_direction,
-            phase_reference_sign=model.phase_reference_sign,
-        )
+        base_rotation = parked_rotation_deg(180.0, model.resolver_offset_deg, model.resolver_sign)
         intervals = fake_opening_intervals_for_base_rotation(chopper, base_rotation)
-
         assert fake_interval_contains(DOWN_GUIDE_ANGLE_DEG, intervals[0])
 
 
 def test_fake_double_disc_parked_close_angle_closes_beam_for_both_discs():
     for chopper in fake_double_disc_choppers():
         model = build_rotation_model(chopper)
-        base_rotation = parked_rotation_deg(
-            resolver_angle_deg=0.0,
-            resolver_offset_deg=model.resolver_offset_deg,
-            base_spin_direction=model.base_spin_direction,
-            phase_reference_sign=model.phase_reference_sign,
-        )
+        base_rotation = parked_rotation_deg(0.0, model.resolver_offset_deg, model.resolver_sign)
         intervals = fake_opening_intervals_for_base_rotation(chopper, base_rotation)
-
-        assert not any(
-            fake_interval_contains(DOWN_GUIDE_ANGLE_DEG, interval)
-            for interval in intervals
-        )
+        assert not any(fake_interval_contains(DOWN_GUIDE_ANGLE_DEG, interval) for interval in intervals)
 
 
-@pytest.mark.parametrize(
-    ("disc_index", "speed_hz", "opening_index", "expected_phase"),
-    [
-        (0, 14.0, 0, 90.0),
-        (0, 14.0, 1, 180.0),
-        (0, -14.0, 1, 180.0),
-        (0, -14.0, 0, 270.0),
-        (1, 14.0, 1, 180.0),
-        (1, 14.0, 0, 270.0),
-        (1, -14.0, 0, 90.0),
-        (1, -14.0, 1, 180.0),
-    ],
-    ids=[
-        "disc1-pos-opening0",
-        "disc1-pos-opening1",
-        "disc1-neg-opening1",
-        "disc1-neg-opening0",
-        "disc2-pos-opening1",
-        "disc2-pos-opening0",
-        "disc2-neg-opening0",
-        "disc2-neg-opening1",
-    ],
-)
+@pytest.mark.parametrize("disc_index", [0, 1], ids=["disc1", "disc2"])
+@pytest.mark.parametrize("speed_hz", [14.0, -14.0], ids=["positive", "negative"])
+@pytest.mark.parametrize("opening_index", [0, 1], ids=["opening0", "opening1"])
 def test_fake_double_disc_tdc_opening_delay_order_follows_physical_rotation(
-    disc_index, speed_hz, opening_index, expected_phase
+    disc_index, speed_hz, opening_index
 ):
     chopper = fake_double_disc_choppers()[disc_index]
-    assert fake_expected_phase(chopper, speed_hz, opening_index) == expected_phase
-
+    expected_phase = fake_expected_phase(chopper, speed_hz, opening_index)
     model = build_rotation_model(chopper)
-    base_rotation = spinning_rotation_deg(
-        expected_phase,
-        speed_hz,
-        model.spin_offset_deg,
-        model.base_spin_direction,
-        model.phase_reference_sign,
-    )
+    base_rotation = _spinning(chopper, expected_phase, speed_hz)
     intervals = fake_opening_intervals_for_base_rotation(chopper, base_rotation)
-
     assert fake_interval_contains(DOWN_GUIDE_ANGLE_DEG, intervals[opening_index])
+    assert sign_to_direction(runtime_spin_sign(speed_hz, model.positive_speed_rotation_direction)) in (CW, CCW)

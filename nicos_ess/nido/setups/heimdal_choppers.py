@@ -4,11 +4,9 @@ pv_root_pulse_shaping_chopper_1 = "HEIMDAL-ChpSy1:Chop-TPSC-101:"
 pv_root_pulse_shaping_chopper_2 = "HEIMDAL-ChpSy1:Chop-TPSC-102:"
 chic_root_1 = "HEIMDAL-ChpSy1:Chop-CHIC-001:"
 
-# Markus measured MechDly-S values of 104.9 deg and 288.8 deg place the 5.20
-# deg openings at the left transparent side window, 90 deg from the DOWN guide,
-# when TPSC-101 spins at +70 Hz and TPSC-102 spins at -70 Hz.  The measured park
-# open/edge values are left-window references too, so the canonical GUI model
-# stores the equivalent guide-centered references.
+# Markus' park values are transparent-window references.  The chopper
+# controller metadata below stores beam-guide references for the GUI; phase
+# offsets are therefore the corresponding beam-guide center references.
 
 devices = dict(
     pulse_shaping_chopper_1_log=device(
@@ -167,13 +165,15 @@ devices = dict(
         alarms="pulse_shaping_chopper_1_alarms",
         slit_edges=[[0.0, 5.20]],
         motor_position="upstream",
-        disk_rotation_direction="CCW",
+        positive_speed_rotation_direction="CW",
+        resolver_positive_direction="CW",
         parked_opening_index=0,
         tdc_resolver_position=341.3,
         park_open_angle=333.0,
         park_edge_1=330.4,
         park_edge_2=335.6,
-        phase_tdc_center_window_delay=194.9,
+        disk_delay_cw=185.3,
+        disk_delay_ccw=186.6,
     ),
     pulse_shaping_chopper_2_log=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
@@ -331,12 +331,14 @@ devices = dict(
         alarms="pulse_shaping_chopper_2_alarms",
         slit_edges=[[0.0, 5.20]],
         motor_position="downstream",
-        disk_rotation_direction="CW",
+        positive_speed_rotation_direction="CW",
+        resolver_positive_direction="CW",
         parked_opening_index=0,
         tdc_resolver_position=341.9,
         park_open_angle=329.3,
         park_edge_1=326.7,
         park_edge_2=331.9,
-        phase_tdc_center_window_delay=341.2,
+        disk_delay_cw=186.25,
+        disk_delay_ccw=185.5,
     ),
 )

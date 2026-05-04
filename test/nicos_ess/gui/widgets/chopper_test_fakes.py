@@ -1,6 +1,16 @@
 from copy import deepcopy
 
-from nicos_ess.gui.widgets.chopper_math import wrap360
+from nicos_ess.gui.widgets.chopper_math import (
+    CCW,
+    CW,
+    build_rotation_model,
+    compute_phase_center_delay_deg,
+    disk_delay_for_direction,
+    opening_center_deg,
+    runtime_phase_sign,
+    wrap180,
+    wrap360,
+)
 
 DOWN_GUIDE_ANGLE_DEG = 270.0
 FAKE_DISC_1_NAME = "fake_disc_1"
@@ -21,23 +31,18 @@ _FAKE_DISC_1 = {
     **_FAKE_DOUBLE_DISC_BASE,
     "chopper": FAKE_DISC_1_NAME,
     "motor_position": "upstream",
-    "disk_rotation_direction": "CCW",
-    "phase_tdc_center_window_delay": 90.0,
+    "positive_speed_rotation_direction": "CW",
+    "resolver_positive_direction": "CW",
+    "disk_delay": 0.0,
 }
 
 _FAKE_DISC_2 = {
     **_FAKE_DOUBLE_DISC_BASE,
     "chopper": FAKE_DISC_2_NAME,
     "motor_position": "downstream",
-    "disk_rotation_direction": "CW",
-    "phase_tdc_center_window_delay": -90.0,
-}
-
-_EXPECTED_OPENING_PHASES = {
-    (FAKE_DISC_1_NAME, 1): {0: 90.0, 1: 180.0},
-    (FAKE_DISC_1_NAME, -1): {0: 270.0, 1: 180.0},
-    (FAKE_DISC_2_NAME, 1): {0: 270.0, 1: 180.0},
-    (FAKE_DISC_2_NAME, -1): {0: 90.0, 1: 180.0},
+    "positive_speed_rotation_direction": "CW",
+    "resolver_positive_direction": "CW",
+    "disk_delay": 0.0,
 }
 
 
@@ -48,9 +53,32 @@ def fake_double_disc_choppers() -> tuple[dict, dict]:
 def fake_expected_phase(
     chopper: dict | str, speed_hz: float, opening_index: int
 ) -> float:
-    chopper_name = chopper["chopper"] if isinstance(chopper, dict) else chopper
-    speed_sign = 1 if float(speed_hz) > 0.0 else -1
-    return _EXPECTED_OPENING_PHASES[(chopper_name, speed_sign)][int(opening_index)]
+    if not isinstance(chopper, dict):
+        chopper = {
+            FAKE_DISC_1_NAME: _FAKE_DISC_1,
+            FAKE_DISC_2_NAME: _FAKE_DISC_2,
+        }[chopper]
+    model = build_rotation_model(chopper)
+    opening_center = opening_center_deg(chopper["slit_edges"][int(opening_index)])
+    spin_sign = runtime_phase_sign(
+        speed_hz, model.positive_speed_rotation_direction
+    )
+    effective_direction = CW if spin_sign >= 0 else CCW
+    ref_phase = compute_phase_center_delay_deg(
+        model.tdc_resolver_position_deg,
+        model.park_open_angle_deg,
+        model.motor_position,
+        effective_direction,
+        disk_delay_for_direction(
+            effective_direction,
+            model.disk_delay_deg,
+            model.disk_delay_cw_deg,
+            model.disk_delay_ccw_deg,
+        ),
+    )
+    return wrap360(
+        ref_phase - spin_sign * wrap180(opening_center - model.parked_opening_center_deg)
+    )
 
 
 def fake_opening_intervals_qt(

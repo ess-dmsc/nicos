@@ -22,7 +22,7 @@ from nicos_ess.gui.widgets.chopper_math import (
     build_rotation_model,
     has_canonical_inputs,
     parked_rotation_deg,
-    runtime_phase_sign,
+    runtime_spin_sign,
     spinning_rotation_deg,
     wrap360,
 )
@@ -145,15 +145,19 @@ class ChopperWidget(QWidget):
             return spinning_rotation_deg(
                 raw_angle,
                 speed_hz,
-                model.spin_offset_deg,
-                model.base_spin_direction,
-                model.phase_reference_sign,
+                model.parked_opening_center_deg,
+                model.tdc_resolver_position_deg,
+                model.park_open_angle_deg,
+                model.motor_position,
+                model.positive_speed_rotation_direction,
+                model.disk_delay_deg,
+                model.disk_delay_cw_deg,
+                model.disk_delay_ccw_deg,
             )
         return parked_rotation_deg(
             raw_angle,
             model.resolver_offset_deg,
-            model.base_spin_direction,
-            model.phase_reference_sign,
+            model.resolver_sign,
         )
 
     def _rotation_base_deg(
@@ -198,8 +202,7 @@ class ChopperWidget(QWidget):
         tdc_base_rotation = parked_rotation_deg(
             tdc_resolver,
             model.resolver_offset_deg,
-            model.base_spin_direction,
-            model.phase_reference_sign,
+            model.resolver_sign,
         )
         tdc_qt_rotation = self._wrap360(
             tdc_base_rotation + self._default_rotation_offset
@@ -222,11 +225,7 @@ class ChopperWidget(QWidget):
             model = build_rotation_model(chopper)
         except ValueError:
             return None
-        # runtime_phase_sign is defined so positive speed is rendered as
-        # clockwise in the UI across motor-side conventions.
-        return runtime_phase_sign(
-            speed_hz, model.base_spin_direction, model.phase_reference_sign
-        )
+        return runtime_spin_sign(speed_hz, model.positive_speed_rotation_direction)
 
     def get_spin_direction_sign_for_chopper(self, chopper_name: str) -> Optional[int]:
         for chopper in self.chopper_data:

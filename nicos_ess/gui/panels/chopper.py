@@ -290,11 +290,16 @@ class ChopperPanel(Panel):
             for param in [
                 "slit_edges",
                 "motor_position",
-                "disk_rotation_direction",
+                "positive_speed_rotation_direction",
+                "resolver_positive_direction",
                 "parked_opening_index",
                 "tdc_resolver_position",
                 "park_open_angle",
-                "phase_tdc_center_window_delay",
+                "park_edge_1",
+                "park_edge_2",
+                "disk_delay",
+                "disk_delay_cw",
+                "disk_delay_ccw",
             ]:
                 value = self.client.eval(f"{dev_name}.{param}", None)
                 if value is None:

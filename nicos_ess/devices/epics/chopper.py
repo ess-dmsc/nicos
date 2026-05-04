@@ -34,16 +34,22 @@ def canonical_chopper_parameters():
             default=None,
             unit="",
         ),
-        "disk_rotation_direction": Param(
-            "Physical disk rotation direction viewed from the motor side",
-            type=none_or(oneof("CW", "CCW")),
-            default=None,
+        "positive_speed_rotation_direction": Param(
+            "Physical disk rotation direction for positive speed",
+            type=oneof("CW", "CCW"),
+            default="CW",
+            unit="",
+        ),
+        "resolver_positive_direction": Param(
+            "Resolver angle direction for positive resolver values",
+            type=oneof("CW", "CCW"),
+            default="CW",
             unit="",
         ),
         "parked_opening_index": Param(
             "Index of the slit opening aligned at park_open_angle",
-            type=none_or(int),
-            default=None,
+            type=int,
+            default=0,
             unit="",
         ),
         "tdc_resolver_position": Param(
@@ -70,8 +76,20 @@ def canonical_chopper_parameters():
             default=None,
             unit="degrees",
         ),
-        "phase_tdc_center_window_delay": Param(
-            "Phase delay that centers the configured opening at the beam guide",
+        "disk_delay": Param(
+            "Phase calibration offset added to calculated center-window delay",
+            type=float,
+            default=0.0,
+            unit="degrees",
+        ),
+        "disk_delay_cw": Param(
+            "Phase calibration offset for effective CW rotation",
+            type=none_or(float),
+            default=None,
+            unit="degrees",
+        ),
+        "disk_delay_ccw": Param(
+            "Phase calibration offset for effective CCW rotation",
             type=none_or(float),
             default=None,
             unit="degrees",

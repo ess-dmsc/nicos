@@ -1,4 +1,3 @@
-import math
 from dataclasses import dataclass
 from typing import Optional
 
@@ -8,13 +7,11 @@ UPSTREAM = "upstream"
 DOWNSTREAM = "downstream"
 
 _CANONICAL_REQUIRED_KEYS = (
+    "slit_edges",
     "motor_position",
-    "disk_rotation_direction",
     "parked_opening_index",
     "tdc_resolver_position",
     "park_open_angle",
-    "phase_tdc_center_window_delay",
-    "slit_edges",
 )
 
 
@@ -47,14 +44,6 @@ def direction_to_sign(direction: str) -> int:
     return 1 if normalize_spin_direction(direction) == CW else -1
 
 
-def apply_motor_side_transform(direction: str, motor_position: str) -> str:
-    direction = normalize_spin_direction(direction)
-    motor_position = normalize_motor_position(motor_position)
-    if motor_position == UPSTREAM:
-        return direction
-    return CCW if direction == CW else CW
-
-
 def opening_width_deg(opening: list[float]) -> float:
     start, end = opening
     return wrap360(float(end) - float(start))
@@ -71,19 +60,94 @@ def center_from_edges(park_edge_1: float, park_edge_2: float) -> float:
 
 @dataclass(frozen=True)
 class ChopperRotationModel:
-    base_spin_direction: str
-    phase_reference_sign: int
+    motor_position: str
+    positive_speed_rotation_direction: str
+    resolver_positive_direction: str
+    resolver_sign: int
     parked_opening_index: int
     parked_opening_center_deg: float
     parked_opening_width_deg: float
+    tdc_resolver_position_deg: float
+    park_open_angle_deg: float
     resolver_offset_deg: float
-    spin_offset_deg: float
-    expected_phase_delay_deg: float
-    phase_delay_error_deg: float
+    phase_tdc_center_window_delay_deg: float
+    disk_delay_deg: float
+    disk_delay_cw_deg: float
+    disk_delay_ccw_deg: float
 
 
 def has_canonical_inputs(chopper: dict) -> bool:
-    return all(chopper.get(key) is not None for key in _CANONICAL_REQUIRED_KEYS)
+    return all(
+        chopper.get(key) is not None for key in _CANONICAL_REQUIRED_KEYS
+    ) and bool(chopper.get("slit_edges"))
+
+
+def resolver_direction_sign(direction: str, motor_position: str) -> int:
+    """Map resolver CW/CCW polarity to the widget's drawing coordinate.
+
+    Resolver angle polarity is a property of the resolver/disk coordinate frame,
+    not of the current spin direction. Looking at opposite motor sides reverses
+    the visual drawing coordinate, so downstream-mounted motors get the opposite
+    sign from upstream-mounted motors for the same resolver polarity.
+    """
+    motor_sign = 1 if normalize_motor_position(motor_position) == UPSTREAM else -1
+    return direction_to_sign(direction) * motor_sign
+
+
+def compute_phase_center_delay_deg(
+    tdc_resolver_position: float,
+    park_open_angle: float,
+    motor_position: str,
+    effective_rotation_direction: str,
+    disk_delay_deg: float = 0.0,
+) -> float:
+    """Return the phase/delay angle that centers the parked opening.
+
+    Markus' CW/CCW input is the effective runtime rotation direction. The PLC
+    positive-speed convention is mapped to this before calling the formula.
+    """
+    motor_position = normalize_motor_position(motor_position)
+    rotation_direction = normalize_spin_direction(effective_rotation_direction)
+    tdc = float(tdc_resolver_position)
+    park = float(park_open_angle)
+    offset = float(disk_delay_deg)
+
+    if (
+        motor_position == UPSTREAM
+        and rotation_direction == CW
+        or motor_position == DOWNSTREAM
+        and rotation_direction == CCW
+    ):
+        delay = 360.0 - tdc + park
+    elif (
+        motor_position == DOWNSTREAM
+        and rotation_direction == CW
+        or motor_position == UPSTREAM
+        and rotation_direction == CCW
+    ):
+        delay = tdc - park
+    else:
+        raise ValueError(
+            "Invalid motor position / effective rotation direction "
+            f"combination: {motor_position!r}, {rotation_direction!r}"
+        )
+    return wrap360(delay + offset)
+
+
+def sign_to_direction(sign: int) -> str:
+    return CW if int(sign) >= 0 else CCW
+
+
+def disk_delay_for_direction(
+    direction: str,
+    disk_delay_deg: float = 0.0,
+    disk_delay_cw_deg: Optional[float] = None,
+    disk_delay_ccw_deg: Optional[float] = None,
+) -> float:
+    fallback = float(disk_delay_deg)
+    if normalize_spin_direction(direction) == CW:
+        return fallback if disk_delay_cw_deg is None else float(disk_delay_cw_deg)
+    return fallback if disk_delay_ccw_deg is None else float(disk_delay_ccw_deg)
 
 
 def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotationModel:
@@ -109,7 +173,19 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
 
     park_open_angle = float(chopper["park_open_angle"])
     tdc_resolver_position = float(chopper["tdc_resolver_position"])
-    phase_delay = float(chopper["phase_tdc_center_window_delay"])
+    disk_delay = float(chopper.get("disk_delay", 0.0))
+    disk_delay_cw = disk_delay_for_direction(
+        CW,
+        disk_delay,
+        chopper.get("disk_delay_cw"),
+        chopper.get("disk_delay_ccw"),
+    )
+    disk_delay_ccw = disk_delay_for_direction(
+        CCW,
+        disk_delay,
+        chopper.get("disk_delay_cw"),
+        chopper.get("disk_delay_ccw"),
+    )
 
     park_edge_1 = chopper.get("park_edge_1")
     park_edge_2 = chopper.get("park_edge_2")
@@ -128,44 +204,49 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
             )
 
     motor_position = normalize_motor_position(chopper["motor_position"])
-    phase_delay_sign = 1 if motor_position == DOWNSTREAM else -1
-    expected_phase_delay = wrap180(
-        phase_delay_sign * (tdc_resolver_position - park_open_angle)
+    positive_speed_direction = normalize_spin_direction(
+        chopper.get("positive_speed_rotation_direction", CW)
     )
-
-    base_spin_direction = apply_motor_side_transform(
-        chopper["disk_rotation_direction"], chopper["motor_position"]
+    resolver_direction = normalize_spin_direction(
+        chopper.get("resolver_positive_direction", CW)
     )
-    base_sign = direction_to_sign(base_spin_direction)
-    # Runtime phase-motion sign is defined opposite to the legacy
-    # motor-side phase-delay sign so configured phase references align
-    # opening centers with the beam guide for both single/multi-opening discs.
-    phase_reference_sign = -phase_delay_sign
-    phase_sign = base_sign * phase_reference_sign
-
-    resolver_sign = -phase_sign
+    resolver_sign = resolver_direction_sign(resolver_direction, motor_position)
+    positive_speed_disk_delay = disk_delay_for_direction(
+        positive_speed_direction, disk_delay, disk_delay_cw, disk_delay_ccw
+    )
+    phase_center_delay = compute_phase_center_delay_deg(
+        tdc_resolver_position,
+        park_open_angle,
+        motor_position,
+        positive_speed_direction,
+        positive_speed_disk_delay,
+    )
     # Parked reference: when resolver == park_open_angle, parked opening center
     # aligns with the beam guide in widget space.
     resolver_offset = wrap180(opening_center - resolver_sign * park_open_angle)
-    # Spinning reference: when phase equals phase_tdc_center_window_delay (for
-    # nominal spin direction), parked opening center aligns with beam guide.
-    spin_offset = wrap180(opening_center + phase_delay * phase_sign)
 
     return ChopperRotationModel(
-        base_spin_direction=base_spin_direction,
-        phase_reference_sign=phase_reference_sign,
+        motor_position=motor_position,
+        positive_speed_rotation_direction=positive_speed_direction,
+        resolver_positive_direction=resolver_direction,
+        resolver_sign=resolver_sign,
         parked_opening_index=parked_opening_index,
         parked_opening_center_deg=opening_center,
         parked_opening_width_deg=opening_width,
+        tdc_resolver_position_deg=tdc_resolver_position,
+        park_open_angle_deg=park_open_angle,
         resolver_offset_deg=resolver_offset,
-        spin_offset_deg=spin_offset,
-        expected_phase_delay_deg=expected_phase_delay,
-        phase_delay_error_deg=wrap180(phase_delay - expected_phase_delay),
+        phase_tdc_center_window_delay_deg=phase_center_delay,
+        disk_delay_deg=disk_delay,
+        disk_delay_cw_deg=disk_delay_cw,
+        disk_delay_ccw_deg=disk_delay_ccw,
     )
 
 
-def runtime_spin_sign(speed_hz: Optional[float], base_spin_direction: str) -> int:
-    base_sign = direction_to_sign(base_spin_direction)
+def runtime_spin_sign(
+    speed_hz: Optional[float], positive_speed_rotation_direction: str
+) -> int:
+    base_sign = direction_to_sign(positive_speed_rotation_direction)
     if speed_hz is None:
         return base_sign
     speed_hz = float(speed_hz)
@@ -177,18 +258,16 @@ def runtime_spin_sign(speed_hz: Optional[float], base_spin_direction: str) -> in
 
 
 def runtime_phase_sign(
-    speed_hz: Optional[float], base_spin_direction: str, phase_reference_sign: int
+    speed_hz: Optional[float], positive_speed_rotation_direction: str
 ) -> int:
-    return runtime_spin_sign(speed_hz, base_spin_direction) * int(phase_reference_sign)
+    return runtime_spin_sign(speed_hz, positive_speed_rotation_direction)
 
 
 def parked_rotation_deg(
     resolver_angle_deg: float,
     resolver_offset_deg: float,
-    base_spin_direction: str,
-    phase_reference_sign: int = 1,
+    resolver_sign: int,
 ) -> float:
-    resolver_sign = -direction_to_sign(base_spin_direction) * int(phase_reference_sign)
     return wrap360(
         resolver_sign * float(resolver_angle_deg) + float(resolver_offset_deg)
     )
@@ -197,11 +276,30 @@ def parked_rotation_deg(
 def spinning_rotation_deg(
     phase_angle_deg: float,
     speed_hz: Optional[float],
-    spin_offset_deg: float,
-    base_spin_direction: str,
-    phase_reference_sign: int = 1,
+    parked_opening_center_deg: float,
+    tdc_resolver_position_deg: float,
+    park_open_angle_deg: float,
+    motor_position: str,
+    positive_speed_rotation_direction: str,
+    disk_delay_deg: float = 0.0,
+    disk_delay_cw_deg: Optional[float] = None,
+    disk_delay_ccw_deg: Optional[float] = None,
 ) -> float:
-    # Positive phase shift moves opposite to the actual spin direction.
-    spin_sign = runtime_phase_sign(speed_hz, base_spin_direction, phase_reference_sign)
-    phase_contribution = -spin_sign * float(phase_angle_deg)
-    return wrap360(phase_contribution + float(spin_offset_deg))
+    # Markus' CW/CCW formula is based on effective runtime direction: for a PLC
+    # convention where positive speed is CW, negative speed is effective CCW.
+    spin_sign = runtime_phase_sign(speed_hz, positive_speed_rotation_direction)
+    effective_direction = sign_to_direction(spin_sign)
+    effective_disk_delay = disk_delay_for_direction(
+        effective_direction, disk_delay_deg, disk_delay_cw_deg, disk_delay_ccw_deg
+    )
+    phase_reference = compute_phase_center_delay_deg(
+        tdc_resolver_position_deg,
+        park_open_angle_deg,
+        motor_position,
+        effective_direction,
+        effective_disk_delay,
+    )
+    return wrap360(
+        float(parked_opening_center_deg)
+        - spin_sign * wrap180(float(phase_angle_deg) - phase_reference)
+    )
