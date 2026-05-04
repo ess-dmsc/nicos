@@ -689,7 +689,7 @@ class LiveDataCollector(Detector):
         Examples of a start and stop and reset command response:
 
         Start:
-        {"identifier":{"instrument":"dummy","namespace":"data_reduction","name":"total_counts","version":1},"job_number":"51d0d89b-d05f-4509-8761-392af404919b","schedule":{"start_time":null,"end_time":null},"aux_source_names":{},"params":{}}
+        {"identifier":{"instrument":"dummy","name":"total_counts","version":1},"job_number":"51d0d89b-d05f-4509-8761-392af404919b","schedule":{"start_time":null,"end_time":null},"aux_source_names":{},"params":{}}
         Stop:
         {"job_id":{"source_name":"panel_0","job_number":"51d0d89b-d05f-4509-8761-392af404919b"},"workflow_id":null,"action":"stop"}
         Reset:
@@ -809,7 +809,7 @@ class LiveDataCollector(Detector):
             }
         """
 
-        def split_workflow_path(path: str) -> tuple[str, str, str, int]:
+        def split_workflow_path(path: str) -> tuple[str, str, int]:
             i, n, v = path.split("/")
             return i, n, int(v)
 

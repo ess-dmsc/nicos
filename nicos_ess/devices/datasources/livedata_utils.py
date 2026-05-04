@@ -63,7 +63,7 @@ class Selector:
     A concrete binding to a workflow/source (and optionally a specific job/output).
 
     Format (string):
-        "<instrument>/<namespace>/<name>/<version>@<source_name>#<job_number>/<output_name>"
+        "<instrument>/<name>/<version>@<source_name>#<job_number>/<output_name>"
 
     - '#<job_number>' is optional => will bind to the latest active job.
     - '/<output_name>' is optional => channel may choose a default (e.g. "current").

@@ -35,7 +35,6 @@ _SOURCE_NAME = json.dumps(
     {
         "workflow_id": {
             "instrument": "test",
-            "namespace": "data_reduction",
             "name": "monitor_data",
             "version": 1,
         },
@@ -60,7 +59,7 @@ def _create_channel(daemon_device_harness, name="channel"):
     return daemon_device_harness.create_master(
         livedata.DataChannel,
         name=name,
-        selector="test/data_reduction/monitor_data/1@monitor/current",
+        selector="test/monitor_data/1@monitor/current",
         type="counter",
     )
 
@@ -105,7 +104,7 @@ class TestLiveDataHarness:
         """Moving the channel via its mapping should rewrite the stored selector."""
         channel = _create_channel(daemon_device_harness)
         collector = _create_collector(daemon_device_harness, ["channel"])
-        workflow = WorkflowId("test", "data_reduction", "monitor_data", 1)
+        workflow = WorkflowId("test", "monitor_data", 1)
 
         collector._registry.jobinfo_from_status(
             workflow,
@@ -134,7 +133,7 @@ class TestLiveDataHarness:
         def _prime_and_prepare():
             # Preparing only resets known jobs, so populate the registry first.
             collector._registry.jobinfo_from_status(
-                WorkflowId("test", "data_reduction", "monitor_data", 1),
+                WorkflowId("test", "monitor_data", 1),
                 job_source_name="monitor",
                 job_number="job-1",
                 state="active",
