@@ -651,12 +651,11 @@ class LiveDataCollector(Detector):
                 payload = js.get("message", js)
                 wf_str = payload.get("workflow_id", "")
                 wf_parts = wf_str.split("/") if wf_str else []
-                if len(wf_parts) == 4:
+                if len(wf_parts) == 3:
                     wf = WorkflowId(
                         instrument=wf_parts[0],
-                        namespace=wf_parts[1],
-                        name=wf_parts[2],
-                        version=int(wf_parts[3]),
+                        name=wf_parts[1],
+                        version=int(wf_parts[2]),
                     )
                     job = payload.get("job_id", {})
                     self._registry.jobinfo_from_status(
@@ -811,8 +810,8 @@ class LiveDataCollector(Detector):
         """
 
         def split_workflow_path(path: str) -> tuple[str, str, str, int]:
-            i, ns, n, v = path.split("/")
-            return i, ns, n, int(v)
+            i, n, v = path.split("/")
+            return i, n, int(v)
 
         # Preferred output ordering first
         prefer = ("current", "cumulative")
@@ -835,7 +834,7 @@ class LiveDataCollector(Detector):
             if not outputs:
                 continue
 
-            _, _, wf_name, _ = split_workflow_path(ji.workflow_path)
+            _, wf_name, _ = split_workflow_path(ji.workflow_path)
             for out in outputs:
                 label = f"{ji.source_name} ({ji.job_number.split('-')[0]}) {out}"
 
