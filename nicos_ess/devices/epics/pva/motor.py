@@ -457,6 +457,12 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._put_pv("foff", 0)
 
     def isAllowed(self, pos):
+        status_code, status_msg = self.status()
+        # UX: raise error states to provide clear feedback on (failing) move
+        # commands when e.g. movement is blocked by TwinCat. Ignore recoverable
+        # errors such as NOTREACHED.
+        if status_code in self.errorstates and not status_code == status.NOTREACHED:
+            raise self.errorstates[status_code](self, status_msg)
         if self.userlimits == (0, 0) and self.abslimits == (0, 0):
             # No limits defined
             return True, ""
