@@ -250,12 +250,15 @@ devices = dict(
     monitor3_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
+        hist_topic="loki_visualisation",
         data_topic="loki_beam_monitor",
         source="cbm3",
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
-        hist_type="1-D TOF",
-        hist_topic="loki_visualisation",
+        hist_type="2-D DET",
+        det_width=1,
+        det_height=5,
+        det_range=(1, 5),
     ),
     monitor3_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
