@@ -15,6 +15,13 @@ from nicos_ess.gui.widgets.chopper_math import (
     wrap180,
     wrap360,
 )
+from test.nicos_ess.gui.widgets.chopper_test_fakes import (
+    DOWN_GUIDE_ANGLE_DEG,
+    fake_double_disc_choppers,
+    fake_expected_phase,
+    fake_interval_contains,
+    fake_opening_intervals_for_base_rotation,
+)
 
 
 def _canonical(**overrides):
@@ -314,3 +321,76 @@ def test_nmx_wls2_pair_has_small_transmitted_opening_on_right_at_82_and_0():
     total_width = sum(hi - lo for lo, hi in transmitted_opening)
     assert total_width <= 8.0
     assert any(lo <= 10.0 or hi >= 350.0 for lo, hi in transmitted_opening)
+
+
+def test_fake_double_disc_parked_open_angle_opens_beam_for_both_discs():
+    for chopper in fake_double_disc_choppers():
+        model = build_rotation_model(chopper)
+        base_rotation = parked_rotation_deg(
+            resolver_angle_deg=180.0,
+            resolver_offset_deg=model.resolver_offset_deg,
+            base_spin_direction=model.base_spin_direction,
+            phase_reference_sign=model.phase_reference_sign,
+        )
+        intervals = fake_opening_intervals_for_base_rotation(chopper, base_rotation)
+
+        assert fake_interval_contains(DOWN_GUIDE_ANGLE_DEG, intervals[0])
+
+
+def test_fake_double_disc_parked_close_angle_closes_beam_for_both_discs():
+    for chopper in fake_double_disc_choppers():
+        model = build_rotation_model(chopper)
+        base_rotation = parked_rotation_deg(
+            resolver_angle_deg=0.0,
+            resolver_offset_deg=model.resolver_offset_deg,
+            base_spin_direction=model.base_spin_direction,
+            phase_reference_sign=model.phase_reference_sign,
+        )
+        intervals = fake_opening_intervals_for_base_rotation(chopper, base_rotation)
+
+        assert not any(
+            fake_interval_contains(DOWN_GUIDE_ANGLE_DEG, interval)
+            for interval in intervals
+        )
+
+
+@pytest.mark.parametrize(
+    ("disc_index", "speed_hz", "opening_index", "expected_phase"),
+    [
+        (0, 14.0, 0, 90.0),
+        (0, 14.0, 1, 180.0),
+        (0, -14.0, 1, 180.0),
+        (0, -14.0, 0, 270.0),
+        (1, 14.0, 1, 180.0),
+        (1, 14.0, 0, 270.0),
+        (1, -14.0, 0, 90.0),
+        (1, -14.0, 1, 180.0),
+    ],
+    ids=[
+        "disc1-pos-opening0",
+        "disc1-pos-opening1",
+        "disc1-neg-opening1",
+        "disc1-neg-opening0",
+        "disc2-pos-opening1",
+        "disc2-pos-opening0",
+        "disc2-neg-opening0",
+        "disc2-neg-opening1",
+    ],
+)
+def test_fake_double_disc_tdc_opening_delay_order_follows_physical_rotation(
+    disc_index, speed_hz, opening_index, expected_phase
+):
+    chopper = fake_double_disc_choppers()[disc_index]
+    assert fake_expected_phase(chopper, speed_hz, opening_index) == expected_phase
+
+    model = build_rotation_model(chopper)
+    base_rotation = spinning_rotation_deg(
+        expected_phase,
+        speed_hz,
+        model.spin_offset_deg,
+        model.base_spin_direction,
+        model.phase_reference_sign,
+    )
+    intervals = fake_opening_intervals_for_base_rotation(chopper, base_rotation)
+
+    assert fake_interval_contains(DOWN_GUIDE_ANGLE_DEG, intervals[opening_index])

@@ -20,6 +20,11 @@ from nicos_ess.gui.widgets.chopper_math import (
     wrap360,
 )
 from nicos_ess.gui.widgets.chopper_widget import ChopperWidget
+from test.nicos_ess.gui.widgets.chopper_test_fakes import (
+    DOWN_GUIDE_ANGLE_DEG,
+    fake_double_disc_choppers,
+    fake_expected_phase,
+)
 
 
 @pytest.fixture(scope="session")
@@ -285,6 +290,36 @@ def _interval_contains(angle, interval):
     if end < start:
         return angle >= start or angle <= end
     return start <= angle <= end
+
+
+def _unwrap_interval(interval):
+    start, end = interval
+    if end < start:
+        return [(start, 360.0), (0.0, end)]
+    return [(start, end)]
+
+
+def _combined_transmitted_intervals(*opening_groups):
+    transmitted = [
+        segment
+        for interval in opening_groups[0]
+        for segment in _unwrap_interval(interval)
+    ]
+    for opening_group in opening_groups[1:]:
+        next_transmitted = []
+        unwrapped_group = [
+            segment
+            for interval in opening_group
+            for segment in _unwrap_interval(interval)
+        ]
+        for s1, e1 in transmitted:
+            for s2, e2 in unwrapped_group:
+                lo = max(s1, s2)
+                hi = min(e1, e2)
+                if hi > lo:
+                    next_transmitted.append((lo, hi))
+        transmitted = next_transmitted
+    return transmitted
 
 
 def _interval_center(interval):
@@ -999,6 +1034,56 @@ def test_widget_heimdal_tpsc_pair_side_window_delays_show_left_side_transmission
     total_opening = sum(hi - lo for lo, hi in transmitted_opening)
     assert total_opening == pytest.approx(5.2)
     assert any(lo <= 180.0 <= hi for lo, hi in transmitted_opening)
+
+
+@pytest.mark.parametrize(
+    ("disc1_speed", "disc2_speed"),
+    [
+        (14.0, -14.0),
+        (-14.0, 14.0),
+        (14.0, 14.0),
+        (-14.0, -14.0),
+    ],
+    ids=["disc1-pos-disc2-neg", "disc1-neg-disc2-pos", "both-pos", "both-neg"],
+)
+@pytest.mark.parametrize(
+    ("opening_index", "expected_width"),
+    [(0, 40.0), (1, 20.0)],
+    ids=["opening0", "opening1"],
+)
+def test_widget_fake_double_disc_matrix_transmission_contains_down_guide(
+    qapp, disc1_speed, disc2_speed, opening_index, expected_width
+):
+    disc1, disc2 = fake_double_disc_choppers()
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.update_chopper_data([disc1, disc2])
+
+    for chopper, speed_hz in ((disc1, disc1_speed), (disc2, disc2_speed)):
+        widget.set_chopper_speed(chopper["chopper"], speed_hz)
+        widget.set_chopper_angle(
+            chopper["chopper"],
+            fake_expected_phase(chopper, speed_hz, opening_index),
+        )
+
+    opening_groups = []
+    for chopper in (disc1, disc2):
+        draw_rotation = widget.get_rotation_angle_for_chopper(
+            chopper["chopper"], include_guide=True
+        )
+        assert draw_rotation is not None
+        opening_intervals = _opening_intervals_qt(chopper, draw_rotation)
+        assert _interval_contains(
+            DOWN_GUIDE_ANGLE_DEG, opening_intervals[opening_index]
+        )
+        opening_groups.append(opening_intervals)
+
+    transmitted = _combined_transmitted_intervals(*opening_groups)
+    guide_segments = [
+        (lo, hi) for lo, hi in transmitted if lo <= DOWN_GUIDE_ANGLE_DEG <= hi
+    ]
+
+    assert guide_segments
+    assert sum(hi - lo for lo, hi in guide_segments) == pytest.approx(expected_width)
 
 
 def test_widget_nmx_wls2_pair_shows_small_right_side_transmission_opening(qapp):
