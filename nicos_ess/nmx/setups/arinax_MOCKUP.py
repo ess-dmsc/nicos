@@ -16,19 +16,19 @@ UNIPUCKS = {
 
 devices = dict(
     # General Status of ARINAX system
-    arinax_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="ARINAX System Status (mockup)",
-        readpv="NMX-mockup:getStatus",
+    arinax_state=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="ARINAX System State (mockup)",
+        readpv="NMX-mockup:getState",
         pva=False,
         monitor=True,
         pollinterval=0.5,
         maxage=None,
     ),
-    arinax_state=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="ARINAX System State (mockup)",
-        readpv="NMX-mockup:getState",
+    arinax_status=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="ARINAX System Status (mockup)",
+        readpv="NMX-mockup:getStatus",
         pva=False,
         monitor=True,
         pollinterval=0.5,
