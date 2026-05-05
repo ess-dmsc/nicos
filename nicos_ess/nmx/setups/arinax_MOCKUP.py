@@ -17,7 +17,7 @@ UNIPUCKS = {
 devices = dict(
     # General Status of ARINAX system
     arinax_status=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="ARINAX System Status (mockup)",
         readpv="NMX-mockup:getStatus",
         pva=False,
