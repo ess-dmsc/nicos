@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+
 import os
 from math import cos, radians, sin
 
@@ -476,6 +478,221 @@ def _heimdal_tpsc_pair():
     return [tpsc101, tpsc102]
 
 
+def _odin_chopper_cases():
+    # Values copied from `nicos_ess/odin/setups/chopper_sys_1.py`,
+    # `chopper_sys_2.py`, and `chopper_sys_4.py`.  ODIN's Airbus controller
+    # exposes the FAT resolver-center positions as controller-relative phase
+    # positions in the GUI model.
+    return [
+        _canonical(
+            "wfmc1_chopper",
+            slit_edges=[
+                [0.0, 5.7],
+                [48.65, 57.65],
+                [94.32, 106.32],
+                [137.1, 152.0],
+                [177.27, 194.77],
+                [214.91, 234.91],
+            ],
+            motor_position="downstream",
+            positive_speed_rotation_direction=CCW,
+            resolver_positive_direction=CCW,
+            parked_opening_index=0,
+            tdc_resolver_position=0.0,
+            park_open_angle=-5.62,
+            disk_delay=0.0,
+            opening_resolver_centers=[
+                -5.62,
+                44.68,
+                91.85,
+                136.08,
+                177.55,
+                -143.56,
+            ],
+        ),
+        _canonical(
+            "wfmc2_chopper",
+            slit_edges=[
+                [0.0, 5.7],
+                [51.89, 60.89],
+                [100.59, 112.59],
+                [146.21, 161.11],
+                [189.05, 206.55],
+                [229.19, 249.19],
+            ],
+            motor_position="upstream",
+            positive_speed_rotation_direction=CW,
+            resolver_positive_direction=CCW,
+            parked_opening_index=0,
+            tdc_resolver_position=0.0,
+            park_open_angle=76.45,
+            disk_delay=0.0,
+            opening_resolver_centers=[
+                76.45,
+                22.91,
+                -27.29,
+                -74.36,
+                -118.5,
+                -159.89,
+            ],
+        ),
+        _canonical(
+            "foc1_chopper",
+            slit_edges=[
+                [0.0, 11.06],
+                [45.7, 58.76],
+                [88.54, 103.48],
+                [128.715, 145.425],
+                [166.39, 184.75],
+                [204.9, 221.62],
+            ],
+            motor_position="downstream",
+            positive_speed_rotation_direction=CCW,
+            resolver_positive_direction=CCW,
+            parked_opening_index=0,
+            tdc_resolver_position=0.0,
+            park_open_angle=146.745,
+            disk_delay=0.0,
+            opening_resolver_centers=[
+                146.745,
+                -166.555,
+                -122.775,
+                -81.715,
+                -43.215,
+                -5.525,
+            ],
+        ),
+        _canonical(
+            "bpc1_chopper",
+            slit_edges=[[0.0, 46.71]],
+            motor_position="upstream",
+            positive_speed_rotation_direction=CW,
+            resolver_positive_direction=CCW,
+            parked_opening_index=0,
+            tdc_resolver_position=0.0,
+            park_open_angle=137.795,
+            disk_delay=0.0,
+            opening_resolver_centers=[137.795],
+        ),
+        _canonical(
+            "bpc2_chopper",
+            slit_edges=[[0.0, 67.49]],
+            motor_position="upstream",
+            positive_speed_rotation_direction=CW,
+            resolver_positive_direction=CCW,
+            parked_opening_index=0,
+            tdc_resolver_position=0.0,
+            park_open_angle=-141.795,
+            disk_delay=0.0,
+            opening_resolver_centers=[-141.795],
+        ),
+        _canonical(
+            "foc2_chopper",
+            slit_edges=[
+                [0.0, 34.31],
+                [60.625, 93.525],
+                [128.155, 161.695],
+                [191.47, 225.62],
+                [250.85, 285.22],
+                [306.54, 341.43],
+            ],
+            motor_position="downstream",
+            positive_speed_rotation_direction=CCW,
+            resolver_positive_direction=CCW,
+            parked_opening_index=0,
+            tdc_resolver_position=0.0,
+            park_open_angle=67.15,
+            disk_delay=0.0,
+            opening_resolver_centers=[
+                67.15,
+                127.07,
+                -165.08,
+                -101.46,
+                -41.97,
+                13.98,
+            ],
+        ),
+        _canonical(
+            "foc3_chopper",
+            slit_edges=[
+                [0.0, 36.06],
+                [78.95, 119.27],
+                [142.355, 181.965],
+                [201.82, 240.76],
+                [257.575, 295.885],
+                [309.86, 347.58],
+            ],
+            motor_position="upstream",
+            positive_speed_rotation_direction=CW,
+            resolver_positive_direction=CCW,
+            parked_opening_index=0,
+            tdc_resolver_position=0.0,
+            park_open_angle=-53.92,
+            disk_delay=0.0,
+            opening_resolver_centers=[
+                -53.92,
+                -135.0,
+                161.95,
+                102.82,
+                47.38,
+                -4.61,
+            ],
+        ),
+        _canonical(
+            "foc4_chopper",
+            slit_edges=[
+                [0.0, 32.98],
+                [44.52, 76.34],
+                [86.27, 117.01],
+                [125.645, 154.915],
+                [162.125, 190.895],
+                [197.66, 224.42],
+            ],
+            motor_position="upstream",
+            positive_speed_rotation_direction=CW,
+            resolver_positive_direction=CCW,
+            parked_opening_index=0,
+            tdc_resolver_position=0.0,
+            park_open_angle=-129.47,
+            disk_delay=0.0,
+            opening_resolver_centers=[
+                -129.47,
+                186.59,
+                145.38,
+                106.74,
+                70.51,
+                35.98,
+            ],
+        ),
+        _canonical(
+            "foc5_chopper",
+            slit_edges=[
+                [0.0, 50.81],
+                [62.36, 110.91],
+                [120.83, 166.32],
+                [176.995, 218.315],
+                [229.21, 266.66],
+                [278.355, 316.095],
+            ],
+            motor_position="upstream",
+            positive_speed_rotation_direction=CW,
+            resolver_positive_direction=CCW,
+            parked_opening_index=0,
+            tdc_resolver_position=0.0,
+            park_open_angle=16.955,
+            disk_delay=0.0,
+            opening_resolver_centers=[
+                16.955,
+                -44.275,
+                -101.215,
+                -155.295,
+                154.425,
+                105.135,
+            ],
+        ),
+    ]
+
+
 def test_widget_returns_none_for_missing_canonical(qapp):
     widget = ChopperWidget()
     widget.update_chopper_data([{"chopper": "c1", "slit_edges": [[0.0, 90.0]]}])
@@ -554,7 +771,9 @@ def test_widget_spin_indicator_drawing_executes(qapp):
     ],
     ids=lambda c: c["chopper"],
 )
-def test_widget_phase_perturbation_moves_opposite_runtime_phase_direction(qapp, chopper):
+def test_widget_phase_perturbation_moves_opposite_runtime_phase_direction(
+    qapp, chopper
+):
     widget = ChopperWidget()
     widget.update_chopper_data([chopper])
     name = chopper["chopper"]
@@ -756,7 +975,7 @@ def test_widget_ymir_overlap_parked_reference_centers_opening_on_guide(qapp):
 
 
 @pytest.mark.parametrize("psc", _dream_psc_cases(), ids=lambda p: p["chopper"])
-def test_widget_choppers_dream_psc_resolver_alignment_keeps_guide_uncoated_for_each_opening(
+def test_widget_choppers_dream_psc_resolver_alignment_keeps_guide_uncoated(
     qapp, psc
 ):
     widget = ChopperWidget(guide_pos="DOWN")
@@ -776,12 +995,13 @@ def test_widget_choppers_dream_psc_resolver_alignment_keeps_guide_uncoated_for_e
         resolver_angle, draw_rotation = hit
         assert not _coating_covers_guide(widget, psc, draw_rotation), (
             f"{chopper_name}: opening index {opening_index} should be centered "
-            f"on guide at resolver {resolver_angle:.3f}°, but coating still covers guide"
+            f"on guide at resolver {resolver_angle:.3f}°, "
+            "but coating still covers guide"
         )
 
 
 @pytest.mark.parametrize("psc", _dream_psc_cases(), ids=lambda p: p["chopper"])
-def test_widget_choppers_dream_psc_spinning_phase_alignment_keeps_guide_uncoated_for_each_opening(
+def test_widget_choppers_dream_psc_spinning_phase_alignment_keeps_guide_uncoated(
     qapp, psc
 ):
     widget = ChopperWidget(guide_pos="DOWN")
@@ -890,6 +1110,60 @@ def test_widget_choppers_dream_psc_all_openings_render_open_at_down_guide_spinni
         assert not _rendered_guide_probe_is_dark(widget, qapp), (
             f"{chopper_name}: opening index {opening_index} at spinning phase "
             f"{phase_angle:.3f}° renders coated at DOWN guide"
+        )
+
+
+@pytest.mark.parametrize("chopper", _odin_chopper_cases(), ids=lambda c: c["chopper"])
+def test_widget_odin_fat_park_positions_center_correct_openings_while_parked(
+    qapp, chopper
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    chopper_name = chopper["chopper"]
+    widget.update_chopper_data([chopper])
+    widget.set_chopper_speed(chopper_name, 0.0)
+
+    for opening_index, resolver_angle in enumerate(chopper["opening_resolver_centers"]):
+        widget.set_chopper_angle(chopper_name, resolver_angle)
+        draw_rotation = widget.get_rotation_angle_for_chopper(
+            chopper_name, include_guide=True
+        )
+        assert draw_rotation is not None
+        opening_center = _interval_center(
+            _opening_intervals_qt(chopper, draw_rotation)[opening_index]
+        )
+
+        assert wrap180(opening_center - widget._guide_angle_deg) == pytest.approx(0.0)
+        assert not _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg), (
+            f"{chopper_name}: FAT park position {resolver_angle:.3f}° for "
+            f"opening {opening_index} renders coated at the DOWN guide"
+        )
+
+
+@pytest.mark.parametrize("chopper", _odin_chopper_cases(), ids=lambda c: c["chopper"])
+def test_widget_odin_fat_phase_positions_center_correct_openings_while_spinning(
+    qapp, chopper
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    chopper_name = chopper["chopper"]
+    widget.update_chopper_data([chopper])
+    widget.set_chopper_speed(chopper_name, 14.0)
+
+    for opening_index, phase_angle in enumerate(chopper["opening_resolver_centers"]):
+        widget.set_chopper_angle(chopper_name, phase_angle)
+        draw_rotation = widget.get_rotation_angle_for_chopper(
+            chopper_name, include_guide=True
+        )
+        assert draw_rotation is not None
+        opening_center = _interval_center(
+            _opening_intervals_qt(chopper, draw_rotation)[opening_index]
+        )
+
+        assert wrap180(opening_center - widget._guide_angle_deg) == pytest.approx(0.0)
+        assert not _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg), (
+            f"{chopper_name}: FAT phase position {phase_angle:.3f}° for "
+            f"opening {opening_index} renders coated at the DOWN guide"
         )
 
 

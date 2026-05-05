@@ -4,11 +4,31 @@ bpc2_pv_root = "ODIN-ChpSy2:Chop-BPC-202:"
 foc2_pv_root = "ODIN-ChpSy2:Chop-FOC-201:"
 foc3_pv_root = "ODIN-ChpSy2:Chop-FOC-301:"
 foc4_pv_root = "ODIN-ChpSy2:Chop-FOC-401:"
-# chic_root = "TBL-ChpSy1:Chop-CHIC-001:"
+chic_root = "ODIN-ChpSy2:Chop-CHIC-001:"
 vacuum_pv_root = "ODIN-VacBnkr:Vac-VGP-"
 
+# The Airbus controller owns the physical TDC parameterization.  The canonical
+# GUI model uses 0.0 as the controller-relative Airbus phase zero.
 
 devices = dict(
+    bpc2_chopper_log=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The logs from chopper controller",
+        readpv="{}Log_R".format(bpc2_pv_root),
+        visibility=(),
+    ),
+    bpc2_chopper_levitation_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper levitation status.",
+        readpv="{}LeviStatus_R".format(bpc2_pv_root),
+        visibility=(),
+    ),
+    bpc2_chopper_motor_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The temperature of the motor of the chopper",
+        readpv="{}MtrTemp_R".format(bpc2_pv_root),
+        visibility=(),
+    ),
     bpc2_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
@@ -16,7 +36,7 @@ devices = dict(
         visibility=(),
     ),
     bpc2_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",  # Should be EpicsAnalogMoveable later
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(bpc2_pv_root),
         writepv="{}Spd_S".format(bpc2_pv_root),
@@ -29,6 +49,16 @@ devices = dict(
         readpv="{}ChopDly-S".format(bpc2_pv_root),
         writepv="{}ChopDly-S".format(bpc2_pv_root),
         abslimits=(0.0, 0.0),
+    ),
+    bpc2_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(bpc2_pv_root),
+        visibility=("metadata", "namespace"),
     ),
     bpc2_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
@@ -43,10 +73,7 @@ devices = dict(
         description="The current delay.",
         readpv="{}DiffTSSamples".format(bpc2_pv_root),
         unit="ns",
-        visibility=(
-            "metadata",
-            "namespace",
-        ),
+        visibility=("metadata", "namespace"),
     ),
     bpc2_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -54,15 +81,43 @@ devices = dict(
         readpv="{}InPhs_R".format(bpc2_pv_root),
     ),
     bpc2_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(bpc2_pv_root),
         writepv="{}ParkAngle_S".format(bpc2_pv_root),
+        visibility=(),
+        mapping={"park opening 0": -141.795},
+    ),
+    bpc2_chopper_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the BPC2 chopper.",
+        readpv="{}ParkStatus_R".format(bpc2_pv_root),
+    ),
+    bpc2_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the BPC2 chopper.",
+        readpv="{}C_Park".format(bpc2_pv_root),
+        writepv="{}C_Park".format(bpc2_pv_root),
+    ),
+    bpc2_chopper_chic=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The status of the CHIC connection.",
+        readpv="{}ConnectedR".format(chic_root),
+        visibility=(),
+        pva=True,
+    ),
+    bpc2_chopper_alarms=device(
+        "nicos_ess.devices.epics.chopper.ChopperAlarmsV2",
+        description="The chopper alarms",
+        pv_root=bpc2_pv_root,
+        visibility=(),
     ),
     bpc2_chopper=device(
         "nicos_ess.devices.epics.chopper.OdinChopperController",
         description="The chopper controller",
         pv_root=bpc2_pv_root,
+        pollinterval=0.5,
+        maxage=None,
         monitor=True,
         slit_edges=[[0.0, 67.49]],
         mapping={
@@ -72,15 +127,42 @@ devices = dict(
             "Park": "park",
         },
         speed="bpc2_chopper_speed",
-        resolver_offset=108.05,
-        tdc_offset=108.05,
-        spin_direction="CW",
+        total_delay="bpc2_chopper_total_delay",
+        park_angle="bpc2_chopper_park_angle",
+        delay_errors="bpc2_chopper_delay_errors",
+        chic_conn="bpc2_chopper_chic",
+        alarms="bpc2_chopper_alarms",
+        motor_position="upstream",
+        positive_speed_rotation_direction="CW",
+        resolver_positive_direction="CCW",
+        parked_opening_index=0,
+        tdc_resolver_position=0.0,
+        park_open_angle=-141.795,
+        disk_delay=0.0,
     ),
     bpc2_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The vacuum pressure",
         readpv="{}103:PrsR".format(vacuum_pv_root),
         fmtstr="%.2e",
+    ),
+    foc2_chopper_log=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The logs from chopper controller",
+        readpv="{}Log_R".format(foc2_pv_root),
+        visibility=(),
+    ),
+    foc2_chopper_levitation_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper levitation status.",
+        readpv="{}LeviStatus_R".format(foc2_pv_root),
+        visibility=(),
+    ),
+    foc2_chopper_motor_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The temperature of the motor of the chopper",
+        readpv="{}MtrTemp_R".format(foc2_pv_root),
+        visibility=(),
     ),
     foc2_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -103,6 +185,16 @@ devices = dict(
         writepv="{}ChopDly-S".format(foc2_pv_root),
         abslimits=(0.0, 0.0),
     ),
+    foc2_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(foc2_pv_root),
+        visibility=("metadata", "namespace"),
+    ),
     foc2_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -124,15 +216,50 @@ devices = dict(
         readpv="{}InPhs_R".format(foc2_pv_root),
     ),
     foc2_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(foc2_pv_root),
         writepv="{}ParkAngle_S".format(foc2_pv_root),
+        visibility=(),
+        mapping={
+            "park opening 0": 67.15,
+            "park opening 1": 127.07,
+            "park opening 2": -165.08,
+            "park opening 3": -101.46,
+            "park opening 4": -41.97,
+            "park opening 5": 13.98,
+        },
+    ),
+    foc2_chopper_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the FOC2 chopper.",
+        readpv="{}ParkStatus_R".format(foc2_pv_root),
+    ),
+    foc2_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the FOC2 chopper.",
+        readpv="{}C_Park".format(foc2_pv_root),
+        writepv="{}C_Park".format(foc2_pv_root),
+    ),
+    foc2_chopper_chic=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The status of the CHIC connection.",
+        readpv="{}ConnectedR".format(chic_root),
+        visibility=(),
+        pva=True,
+    ),
+    foc2_chopper_alarms=device(
+        "nicos_ess.devices.epics.chopper.ChopperAlarmsV2",
+        description="The chopper alarms",
+        pv_root=foc2_pv_root,
+        visibility=(),
     ),
     foc2_chopper=device(
         "nicos_ess.devices.epics.chopper.OdinChopperController",
         description="The chopper controller",
         pv_root=foc2_pv_root,
+        pollinterval=0.5,
+        maxage=None,
         monitor=True,
         slit_edges=[
             [0.0, 34.31],
@@ -144,15 +271,42 @@ devices = dict(
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
         speed="foc2_chopper_speed",
-        resolver_offset=49.995,
-        tdc_offset=49.995,
-        spin_direction="CCW",
+        total_delay="foc2_chopper_total_delay",
+        park_angle="foc2_chopper_park_angle",
+        delay_errors="foc2_chopper_delay_errors",
+        chic_conn="foc2_chopper_chic",
+        alarms="foc2_chopper_alarms",
+        motor_position="downstream",
+        positive_speed_rotation_direction="CCW",
+        resolver_positive_direction="CCW",
+        parked_opening_index=0,
+        tdc_resolver_position=0.0,
+        park_open_angle=67.15,
+        disk_delay=0.0,
     ),
     foc2_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The vacuum pressure",
         readpv="{}103:PrsR".format(vacuum_pv_root),
         fmtstr="%.2e",
+    ),
+    foc3_chopper_log=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The logs from chopper controller",
+        readpv="{}Log_R".format(foc3_pv_root),
+        visibility=(),
+    ),
+    foc3_chopper_levitation_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper levitation status.",
+        readpv="{}LeviStatus_R".format(foc3_pv_root),
+        visibility=(),
+    ),
+    foc3_chopper_motor_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The temperature of the motor of the chopper",
+        readpv="{}MtrTemp_R".format(foc3_pv_root),
+        visibility=(),
     ),
     foc3_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -175,6 +329,16 @@ devices = dict(
         writepv="{}ChopDly-S".format(foc3_pv_root),
         abslimits=(0.0, 0.0),
     ),
+    foc3_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(foc3_pv_root),
+        visibility=("metadata", "namespace"),
+    ),
     foc3_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -196,15 +360,50 @@ devices = dict(
         readpv="{}InPhs_R".format(foc3_pv_root),
     ),
     foc3_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(foc3_pv_root),
         writepv="{}ParkAngle_S".format(foc3_pv_root),
+        visibility=(),
+        mapping={
+            "park opening 0": -53.92,
+            "park opening 1": -135.0,
+            "park opening 2": 161.95,
+            "park opening 3": 102.82,
+            "park opening 4": 47.38,
+            "park opening 5": -4.61,
+        },
+    ),
+    foc3_chopper_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the FOC3 chopper.",
+        readpv="{}ParkStatus_R".format(foc3_pv_root),
+    ),
+    foc3_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the FOC3 chopper.",
+        readpv="{}C_Park".format(foc3_pv_root),
+        writepv="{}C_Park".format(foc3_pv_root),
+    ),
+    foc3_chopper_chic=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The status of the CHIC connection.",
+        readpv="{}ConnectedR".format(chic_root),
+        visibility=(),
+        pva=True,
+    ),
+    foc3_chopper_alarms=device(
+        "nicos_ess.devices.epics.chopper.ChopperAlarmsV2",
+        description="The chopper alarms",
+        pv_root=foc3_pv_root,
+        visibility=(),
     ),
     foc3_chopper=device(
         "nicos_ess.devices.epics.chopper.OdinChopperController",
         description="The chopper controller",
         pv_root=foc3_pv_root,
+        pollinterval=0.5,
+        maxage=None,
         monitor=True,
         slit_edges=[
             [0.0, 36.06],
@@ -216,15 +415,42 @@ devices = dict(
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
         speed="foc3_chopper_speed",
-        resolver_offset=35.89,
-        tdc_offset=35.89,
-        spin_direction="CW",
+        total_delay="foc3_chopper_total_delay",
+        park_angle="foc3_chopper_park_angle",
+        delay_errors="foc3_chopper_delay_errors",
+        chic_conn="foc3_chopper_chic",
+        alarms="foc3_chopper_alarms",
+        motor_position="upstream",
+        positive_speed_rotation_direction="CW",
+        resolver_positive_direction="CCW",
+        parked_opening_index=0,
+        tdc_resolver_position=0.0,
+        park_open_angle=-53.92,
+        disk_delay=0.0,
     ),
     foc3_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The vacuum pressure",
         readpv="{}105:PrsR".format(vacuum_pv_root),
         fmtstr="%.2e",
+    ),
+    foc4_chopper_log=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The logs from chopper controller",
+        readpv="{}Log_R".format(foc4_pv_root),
+        visibility=(),
+    ),
+    foc4_chopper_levitation_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper levitation status.",
+        readpv="{}LeviStatus_R".format(foc4_pv_root),
+        visibility=(),
+    ),
+    foc4_chopper_motor_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The temperature of the motor of the chopper",
+        readpv="{}MtrTemp_R".format(foc4_pv_root),
+        visibility=(),
     ),
     foc4_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -247,6 +473,16 @@ devices = dict(
         writepv="{}ChopDly-S".format(foc4_pv_root),
         abslimits=(0.0, 0.0),
     ),
+    foc4_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(foc4_pv_root),
+        visibility=("metadata", "namespace"),
+    ),
     foc4_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -268,15 +504,50 @@ devices = dict(
         readpv="{}InPhs_R".format(foc4_pv_root),
     ),
     foc4_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(foc4_pv_root),
         writepv="{}ParkAngle_S".format(foc4_pv_root),
+        visibility=(),
+        mapping={
+            "park opening 0": -129.47,
+            "park opening 1": 186.59,
+            "park opening 2": 145.38,
+            "park opening 3": 106.74,
+            "park opening 4": 70.51,
+            "park opening 5": 35.98,
+        },
+    ),
+    foc4_chopper_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the FOC4 chopper.",
+        readpv="{}ParkStatus_R".format(foc4_pv_root),
+    ),
+    foc4_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the FOC4 chopper.",
+        readpv="{}C_Park".format(foc4_pv_root),
+        writepv="{}C_Park".format(foc4_pv_root),
+    ),
+    foc4_chopper_chic=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The status of the CHIC connection.",
+        readpv="{}ConnectedR".format(chic_root),
+        visibility=(),
+        pva=True,
+    ),
+    foc4_chopper_alarms=device(
+        "nicos_ess.devices.epics.chopper.ChopperAlarmsV2",
+        description="The chopper alarms",
+        pv_root=foc4_pv_root,
+        visibility=(),
     ),
     foc4_chopper=device(
         "nicos_ess.devices.epics.chopper.OdinChopperController",
         description="The chopper controller",
         pv_root=foc4_pv_root,
+        pollinterval=0.5,
+        maxage=None,
         monitor=True,
         slit_edges=[
             [0.0, 32.98],
@@ -288,9 +559,18 @@ devices = dict(
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
         speed="foc4_chopper_speed",
-        resolver_offset=112.98,
-        tdc_offset=112.98,
-        spin_direction="CW",
+        total_delay="foc4_chopper_total_delay",
+        park_angle="foc4_chopper_park_angle",
+        delay_errors="foc4_chopper_delay_errors",
+        chic_conn="foc4_chopper_chic",
+        alarms="foc4_chopper_alarms",
+        motor_position="upstream",
+        positive_speed_rotation_direction="CW",
+        resolver_positive_direction="CCW",
+        parked_opening_index=0,
+        tdc_resolver_position=0.0,
+        park_open_angle=-129.47,
+        disk_delay=0.0,
     ),
     foc4_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

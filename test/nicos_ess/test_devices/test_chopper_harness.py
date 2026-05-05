@@ -117,6 +117,26 @@ def attached_chopper_devices(device_harness, fake_backend):
             "pva": True,
         },
     )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="odin_total_delay",
+        shared={"initial": "25.0"},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="odin_park_angle",
+        shared={"initial": "137.795"},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="odin_delay_errors",
+        shared={"initial": ""},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="odin_chic_conn",
+        shared={"initial": "Connected"},
+    )
 
 
 def ess_chopper_config(**overrides):
@@ -133,6 +153,35 @@ def ess_chopper_config(**overrides):
         "tdc_resolver_position": 60.0,
         "park_open_angle": 30.0,
         "disk_delay": 1.5,
+    }
+    config.update(overrides)
+    return config
+
+
+def odin_chopper_config(**overrides):
+    config = {
+        "pv_root": "SIM:CHOP:",
+        "speed": "odin_speed",
+        "total_delay": "odin_total_delay",
+        "park_angle": "odin_park_angle",
+        "delay_errors": "odin_delay_errors",
+        "chic_conn": "odin_chic_conn",
+        "mapping": {
+            "stop": "stop",
+            "start": "start",
+            "a_start": "a_start",
+            "park": "park",
+        },
+        "monitor": True,
+        "pva": True,
+        "slit_edges": [[0.0, 46.71]],
+        "motor_position": "downstream",
+        "positive_speed_rotation_direction": "CW",
+        "resolver_positive_direction": "CW",
+        "parked_opening_index": 0,
+        "tdc_resolver_position": 0.0,
+        "park_open_angle": 137.795,
+        "disk_delay": 0.0,
     }
     config.update(overrides)
     return config
@@ -177,7 +226,7 @@ class TestEssChopperControllerHarness:
             shared=ess_chopper_config(delay_errors="ess_delay_errors"),
         )
 
-        info = device_harness.run_daemon(daemon_device.chopperGuiInfo)
+        info = device_harness.run_daemon(daemon_device.get_chopper_gui_info)
 
         assert info[CHOPPER_GUI_CHOPPER] == "ess_chopper"
         assert info[CHOPPER_GUI_SPEED_KEY] == (
@@ -205,7 +254,7 @@ class TestEssChopperControllerHarness:
             shared=ess_chopper_config(),
         )
 
-        info = device_harness.run_daemon(daemon_device.chopperGuiInfo)
+        info = device_harness.run_daemon(daemon_device.get_chopper_gui_info)
 
         assert info[CHOPPER_GUI_DELAY_ERRORS_KEY] is None
 
@@ -216,19 +265,36 @@ class TestOdinChopperControllerHarness:
         daemon_device, poller_device = device_harness.create_pair(
             chopper_mod.OdinChopperController,
             name="odin_chopper",
-            shared={
-                "pv_root": "SIM:CHOP:",
-                "speed": "odin_speed",
-                "mapping": {
-                    "stop": "stop",
-                    "start": "start",
-                    "a_start": "a_start",
-                    "park": "park",
-                },
-                "monitor": True,
-                "pva": True,
-            },
+            shared=odin_chopper_config(),
         )
 
         assert daemon_device is not None
         assert poller_device is not None
+
+    def test_chopper_gui_info_uses_attached_device_names(
+        self, device_harness, fake_backend, attached_chopper_devices
+    ):
+        del fake_backend, attached_chopper_devices
+        daemon_device, _poller_device = device_harness.create_pair(
+            chopper_mod.OdinChopperController,
+            name="odin_chopper",
+            shared=odin_chopper_config(),
+        )
+
+        info = device_harness.run_daemon(daemon_device.get_chopper_gui_info)
+
+        assert info[CHOPPER_GUI_CHOPPER] == "odin_chopper"
+        assert info[CHOPPER_GUI_SPEED_KEY] == (
+            f"odin_speed/{CHOPPER_CACHE_VALUE_PARAM}"
+        )
+        assert info[CHOPPER_GUI_TOTAL_DELAY_KEY] == (
+            f"odin_total_delay/{CHOPPER_CACHE_VALUE_PARAM}"
+        )
+        assert info[CHOPPER_GUI_PARK_ANGLE_KEY] == (
+            f"odin_park_angle/{CHOPPER_CACHE_VALUE_PARAM}"
+        )
+        assert info[CHOPPER_GUI_DELAY_ERRORS_KEY] == (
+            f"odin_delay_errors/{CHOPPER_CACHE_RAW_ERRORS_PARAM}"
+        )
+        for field in CHOPPER_GUI_METADATA_FIELDS:
+            assert field in info

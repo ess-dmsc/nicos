@@ -16,7 +16,6 @@ from nicos.core import (
 )
 from nicos.devices.abstract import MappedMoveable
 from nicos_ess.devices.epics.pva.epics_devices import (
-    EpicsManualMappedAnalogMoveable,
     EpicsParameters,
     RecordInfo,
     RecordType,
@@ -24,7 +23,7 @@ from nicos_ess.devices.epics.pva.epics_devices import (
     get_from_cache_or,
 )
 
-CHOPPER_GUI_INFO_METHOD = "chopperGuiInfo"
+CHOPPER_GUI_INFO_METHOD = "get_chopper_gui_info"
 
 CHOPPER_GUI_CHOPPER = "chopper"
 CHOPPER_GUI_SPEED_KEY = "speed_key"
@@ -45,6 +44,33 @@ CHOPPER_GUI_METADATA_FIELDS = (
     "park_open_angle",
     "disk_delay",
 )
+
+
+def get_chopper_gui_info_for(controller):
+    info = {
+        CHOPPER_GUI_CHOPPER: controller.name,
+        CHOPPER_GUI_SPEED_KEY: _cache_key(
+            controller._attached_speed, CHOPPER_CACHE_VALUE_PARAM
+        ),
+        CHOPPER_GUI_TOTAL_DELAY_KEY: _cache_key(
+            controller._attached_total_delay, CHOPPER_CACHE_VALUE_PARAM
+        ),
+        CHOPPER_GUI_PARK_ANGLE_KEY: _cache_key(
+            controller._attached_park_angle, CHOPPER_CACHE_VALUE_PARAM
+        ),
+        CHOPPER_GUI_DELAY_ERRORS_KEY: None,
+    }
+    if controller._attached_delay_errors is not None:
+        info[CHOPPER_GUI_DELAY_ERRORS_KEY] = _cache_key(
+            controller._attached_delay_errors, CHOPPER_CACHE_RAW_ERRORS_PARAM
+        )
+    for param in CHOPPER_GUI_METADATA_FIELDS:
+        info[param] = getattr(controller, param)
+    return info
+
+
+def _cache_key(device, parameter):
+    return f"{device.name}/{parameter}"
 
 
 def canonical_chopper_parameters():
@@ -287,30 +313,8 @@ class EssChopperController(MappedMoveable):
     def doReadMapping(self):
         return self._attached_command.mapping
 
-    def chopperGuiInfo(self):
-        info = {
-            CHOPPER_GUI_CHOPPER: self.name,
-            CHOPPER_GUI_SPEED_KEY: self._cache_key(
-                self._attached_speed, CHOPPER_CACHE_VALUE_PARAM
-            ),
-            CHOPPER_GUI_TOTAL_DELAY_KEY: self._cache_key(
-                self._attached_total_delay, CHOPPER_CACHE_VALUE_PARAM
-            ),
-            CHOPPER_GUI_PARK_ANGLE_KEY: self._cache_key(
-                self._attached_park_angle, CHOPPER_CACHE_VALUE_PARAM
-            ),
-            CHOPPER_GUI_DELAY_ERRORS_KEY: None,
-        }
-        if self._attached_delay_errors is not None:
-            info[CHOPPER_GUI_DELAY_ERRORS_KEY] = self._cache_key(
-                self._attached_delay_errors, CHOPPER_CACHE_RAW_ERRORS_PARAM
-            )
-        for param in CHOPPER_GUI_METADATA_FIELDS:
-            info[param] = getattr(self, param)
-        return info
-
-    def _cache_key(self, device, parameter):
-        return f"{device.name}/{parameter}"
+    def get_chopper_gui_info(self):
+        return get_chopper_gui_info_for(self)
 
 
 class OdinChopperController(EpicsParameters, MappedMoveable):
@@ -329,7 +333,12 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
     }
 
     attached_devices = {
-        "speed": Attach("Speed PV of the chopper", EpicsManualMappedAnalogMoveable),
+        "alarms": Attach("Alarms of the chopper", Readable, optional=True),
+        "speed": Attach("Speed PV of the chopper", MappedMoveable),
+        "total_delay": Attach("Total applied chopper delay", Readable),
+        "park_angle": Attach("Resolver park angle", Readable),
+        "delay_errors": Attach("Delay-error samples", Readable, optional=True),
+        "chic_conn": Attach("Status of the CHIC connection", Readable, optional=True),
     }
 
     hardware_access = True
@@ -403,6 +412,13 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
             raise ValueError(f"Unknown command '{target}' for ODIN chopper")
 
     def doStatus(self, maxage=0):
+        if self._attached_alarms:
+            stat, msg = self._attached_alarms.status(maxage)
+            if stat != status.OK:
+                return stat, msg
+        if self._attached_chic_conn and self._attached_chic_conn.read() != "Connected":
+            return status.ERROR, "no connection to the CHIC"
+
         def _func():
             try:
                 severity, msg = self._epics_wrapper.get_alarm_status(
@@ -415,6 +431,9 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
             return status.OK, msg
 
         return get_from_cache_or(self, "status", _func)
+
+    def get_chopper_gui_info(self):
+        return get_chopper_gui_info_for(self)
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
