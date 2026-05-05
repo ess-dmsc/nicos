@@ -97,8 +97,9 @@ def compute_phase_center_delay_deg(
 ) -> float:
     """Return the phase/delay angle that centers the parked opening.
 
-    Markus' CW/CCW input is the effective runtime rotation direction. The PLC
-    positive-speed convention is mapped to this before calling the formula.
+    The chopper group CW/CCW input is the effective runtime rotation direction.
+    The PLC positive-speed convention is mapped to this before calling the
+    formula.
     """
     motor_position = normalize_motor_position(motor_position)
     rotation_direction = normalize_spin_direction(effective_rotation_direction)
@@ -232,8 +233,9 @@ def spinning_rotation_deg(
     positive_speed_rotation_direction: str,
     disk_delay_deg: float = 0.0,
 ) -> float:
-    # Markus' CW/CCW formula is based on effective runtime direction: for a PLC
-    # convention where positive speed is CW, negative speed is effective CCW.
+    # The chopper group CW/CCW formula is based on effective runtime direction:
+    # for a PLC convention where positive speed is CW, negative speed is
+    # effective CCW.
     spin_sign = runtime_phase_sign(speed_hz, positive_speed_rotation_direction)
     effective_direction = sign_to_direction(spin_sign)
     phase_reference = compute_phase_center_delay_deg(

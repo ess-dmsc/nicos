@@ -431,7 +431,7 @@ def _nmx_wls_cases():
 
 
 def _heimdal_tpsc_pair():
-    # Values from the HEIMDAL-ChpSy1 TPSC-100 pair.  Markus' park values
+    # Values from the HEIMDAL-ChpSy1 TPSC-100 pair.  The chopper group values
     # 243.0 and 59.3 are transparent-window references; the canonical
     # park_open_angle values here are the corresponding DOWN beam-guide
     # references.
@@ -517,12 +517,12 @@ def test_widget_spin_direction_sign_tracks_runtime_phase_sign(qapp):
 
 def test_widget_spin_indicator_arc_moves_with_guide_position(qapp):
     widget = ChopperWidget(guide_pos="DOWN")
-    assert widget._spin_indicator_arc_angles(1) == pytest.approx((306.0, 234.0))
-    assert widget._spin_indicator_arc_angles(-1) == pytest.approx((234.0, 306.0))
+    assert widget._spin_indicator_arc_angles(1) == pytest.approx((234.0, 306.0))
+    assert widget._spin_indicator_arc_angles(-1) == pytest.approx((306.0, 234.0))
 
     widget.set_guide_position("RIGHT")
-    assert widget._spin_indicator_arc_angles(1) == pytest.approx((36.0, 324.0))
-    assert widget._spin_indicator_arc_angles(-1) == pytest.approx((324.0, 36.0))
+    assert widget._spin_indicator_arc_angles(1) == pytest.approx((324.0, 36.0))
+    assert widget._spin_indicator_arc_angles(-1) == pytest.approx((36.0, 324.0))
 
 
 def test_widget_spin_indicator_drawing_executes(qapp):

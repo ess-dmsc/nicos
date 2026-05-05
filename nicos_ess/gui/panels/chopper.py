@@ -207,8 +207,8 @@ class ChopperPanel(Panel):
         if chopper_name not in loaded_choppers:
             return
 
-        if device_name.endswith("_delay"):
-            self._handle_delay_update(chopper_name, value)
+        if device_name.endswith("_total_delay"):
+            self._handle_total_delay_update(chopper_name, value)
         elif device_name.endswith("_speed"):
             self._handle_speed_update(chopper_name, value)
         elif device_name.endswith("_park_angle"):
@@ -217,13 +217,19 @@ class ChopperPanel(Panel):
             self._update_delay_errors(device_name)
 
     def _extract_chopper_name(self, device_name):
-        suffixes = ["_delay", "_speed", "_delay_errors", "_park_angle"]
+        suffixes = [
+            "_total_delay",
+            "_speed",
+            "_delay_errors",
+            "_delay",
+            "_park_angle",
+        ]
         for suffix in suffixes:
             if device_name.endswith(suffix):
                 return device_name[: -len(suffix)]
         return device_name
 
-    def _handle_delay_update(self, chopper_name, delay_value):
+    def _handle_total_delay_update(self, chopper_name, delay_value):
         delay = float(delay_value)
         frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
         if frequency is not None and abs(frequency) >= 2:
@@ -234,7 +240,9 @@ class ChopperPanel(Panel):
         frequency = float(speed_value)
         self.chopper_widget.set_chopper_speed(chopper_name, frequency)
         if abs(frequency) >= 2:
-            delay = self.eval_command(f"{chopper_name}_delay.read()", default=None)
+            delay = self.eval_command(
+                f"{chopper_name}_total_delay.read()", default=None
+            )
             if delay is not None:
                 delay = float(delay)
                 self._update_chopper_angle(chopper_name, delay, frequency)
@@ -262,7 +270,7 @@ class ChopperPanel(Panel):
         self.handle_delay_errors((time.time(), f"{device_name}/raw_errors", array))
 
     def _poll_all_choppers(self):
-        signal_suffixes = ["_delay", "_speed", "_park_angle"]
+        signal_suffixes = ["_total_delay", "_speed", "_park_angle"]
         for chopper_name in self._get_loaded_choppers():
             for suffix in signal_suffixes:
                 _ = self.eval_command(f"{chopper_name}{suffix}.poll()", default=None)

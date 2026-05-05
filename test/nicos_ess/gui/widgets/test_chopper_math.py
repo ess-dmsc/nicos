@@ -42,9 +42,9 @@ def _canonical(**overrides):
     return data
 
 
-MARKUS_ACTIVE_DISC_CASES = [
-    # Values copied from /home/jonas/code/markus_chopper_scripts/*.yaml.
-    # Entries with opening=0 are absent discs in Markus' files and are omitted.
+CHOPPER_GROUP_ACTIVE_DISC_CASES = [
+    # Values from the chopper group. Entries with opening=0 are absent discs
+    # in the source files and are omitted.
     ("BEER FOC-201 upstream", UPSTREAM, CW, 342.0, 221.0, 175.0, 0.0, 239.0),
     ("BIFROST PSC-100 upstream", UPSTREAM, CW, 341.7, 195.0, 170.0, 0.0, 213.3),
     ("BIFROST PSC-100 downstream", DOWNSTREAM, CW, 342.5, 195.0, 170.0, 0.0, 147.5),
@@ -68,7 +68,7 @@ MARKUS_ACTIVE_DISC_CASES = [
 
 
 def _case_chopper(case):
-    _, motor, _markus_effective_dir, tdc, park, opening, disk_delay, _ = case
+    _, motor, _configured_effective_dir, tdc, park, opening, disk_delay, _ = case
     return _canonical(
         slit_edges=[[0.0, opening]],
         motor_position=motor,
@@ -141,14 +141,14 @@ def test_parked_rotation_resolver_uses_resolver_sign():
     assert parked_rotation_deg(10.0, 5.0, -1) == pytest.approx(355.0)
 
 
-@pytest.mark.parametrize("case", MARKUS_ACTIVE_DISC_CASES, ids=lambda c: c[0])
-def test_markus_phase_center_delay_formula_matches_script_values(case):
+@pytest.mark.parametrize("case", CHOPPER_GROUP_ACTIVE_DISC_CASES, ids=lambda c: c[0])
+def test_chopper_group_phase_center_delay_formula_matches_source_values(case):
     _, motor, effective_dir, tdc, park, _, disk_delay, expected = case
     assert compute_phase_center_delay_deg(tdc, park, motor, effective_dir, disk_delay) == pytest.approx(expected)
 
 
-@pytest.mark.parametrize("case", MARKUS_ACTIVE_DISC_CASES, ids=lambda c: c[0])
-def test_markus_park_angle_centers_opening(case):
+@pytest.mark.parametrize("case", CHOPPER_GROUP_ACTIVE_DISC_CASES, ids=lambda c: c[0])
+def test_chopper_group_park_angle_centers_opening(case):
     chopper = _case_chopper(case)
     model = build_rotation_model(chopper)
     base_rotation = parked_rotation_deg(
@@ -157,9 +157,9 @@ def test_markus_park_angle_centers_opening(case):
     assert base_rotation == pytest.approx(model.parked_opening_center_deg)
 
 
-@pytest.mark.parametrize("case", MARKUS_ACTIVE_DISC_CASES, ids=lambda c: c[0])
+@pytest.mark.parametrize("case", CHOPPER_GROUP_ACTIVE_DISC_CASES, ids=lambda c: c[0])
 @pytest.mark.parametrize("effective_dir", [CW, CCW], ids=["effective-cw", "effective-ccw"])
-def test_markus_effective_cw_and_ccw_phase_centers_opening(case, effective_dir):
+def test_chopper_group_effective_cw_and_ccw_phase_centers_opening(case, effective_dir):
     chopper = _case_chopper(case)
     _, motor, _, tdc, park, _, disk_delay, _ = case
     speed = 14.0 if effective_dir == chopper["positive_speed_rotation_direction"] else -14.0

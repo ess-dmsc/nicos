@@ -238,11 +238,11 @@ class ChopperWidget(QWidget):
     ) -> tuple[float, float]:
         half_span = span_deg / 2.0
         if spin_sign >= 0:
-            start = self._guide_angle_deg + half_span
-            end = self._guide_angle_deg - half_span
-        else:
             start = self._guide_angle_deg - half_span
             end = self._guide_angle_deg + half_span
+        else:
+            start = self._guide_angle_deg + half_span
+            end = self._guide_angle_deg - half_span
         return self._wrap360(start), self._wrap360(end)
 
     def _point_on_circle(

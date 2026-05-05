@@ -5,7 +5,7 @@ pv_root_pulse_shaping_chopper_2 = "HEIMDAL-ChpSy1:Chop-TPSC-102:"
 chic_root_1 = "HEIMDAL-ChpSy1:Chop-CHIC-001:"
 
 # HEIMDAL TPSC park values are the beam-guide references.  The disk delays here
-# are the Markus CCW values because NIDO runs these choppers at -14 Hz.
+# are the chopper group CCW values because NIDO runs these choppers at -14 Hz.
 
 devices = dict(
     pulse_shaping_chopper_1_log=device(
