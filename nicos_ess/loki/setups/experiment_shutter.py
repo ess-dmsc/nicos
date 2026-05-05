@@ -11,13 +11,6 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        mapping={
-            "out-of-beam": 0,
-            "moving-out": 1,
-            "moving-in": 2,
-            "in-beam": 3,
-            "in-the-middle": 4,
-        },
     ),
     experiment_shutter=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
@@ -28,6 +21,5 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        mapping={"out-of-beam": 0, "in-beam": 1},
     ),
 )
