@@ -295,11 +295,7 @@ class ChopperPanel(Panel):
                 "parked_opening_index",
                 "tdc_resolver_position",
                 "park_open_angle",
-                "park_edge_1",
-                "park_edge_2",
                 "disk_delay",
-                "disk_delay_cw",
-                "disk_delay_ccw",
             ]:
                 value = self.client.eval(f"{dev_name}.{param}", None)
                 if value is None:

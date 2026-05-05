@@ -4,9 +4,8 @@ pv_root_pulse_shaping_chopper_1 = "HEIMDAL-ChpSy1:Chop-TPSC-101:"
 pv_root_pulse_shaping_chopper_2 = "HEIMDAL-ChpSy1:Chop-TPSC-102:"
 chic_root_1 = "HEIMDAL-ChpSy1:Chop-CHIC-001:"
 
-# Markus' park values are transparent-window references.  The chopper
-# controller metadata below stores beam-guide references for the GUI; phase
-# offsets are therefore the corresponding beam-guide center references.
+# HEIMDAL TPSC park values are the beam-guide references.  The disk delays here
+# are the Markus CCW values because NIDO runs these choppers at -14 Hz.
 
 devices = dict(
     pulse_shaping_chopper_1_log=device(
@@ -165,15 +164,9 @@ devices = dict(
         alarms="pulse_shaping_chopper_1_alarms",
         slit_edges=[[0.0, 5.20]],
         motor_position="upstream",
-        positive_speed_rotation_direction="CW",
-        resolver_positive_direction="CW",
-        parked_opening_index=0,
         tdc_resolver_position=341.3,
         park_open_angle=333.0,
-        park_edge_1=330.4,
-        park_edge_2=335.6,
-        disk_delay_cw=185.3,
-        disk_delay_ccw=186.6,
+        disk_delay=6.6,
     ),
     pulse_shaping_chopper_2_log=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
@@ -331,14 +324,8 @@ devices = dict(
         alarms="pulse_shaping_chopper_2_alarms",
         slit_edges=[[0.0, 5.20]],
         motor_position="downstream",
-        positive_speed_rotation_direction="CW",
-        resolver_positive_direction="CW",
-        parked_opening_index=0,
         tdc_resolver_position=341.9,
         park_open_angle=329.3,
-        park_edge_1=326.7,
-        park_edge_2=331.9,
-        disk_delay_cw=186.25,
-        disk_delay_ccw=185.5,
+        disk_delay=5.5,
     ),
 )

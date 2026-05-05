@@ -91,8 +91,6 @@ def _spinning(chopper, phase, speed):
         model.motor_position,
         model.positive_speed_rotation_direction,
         model.disk_delay_deg,
-        model.disk_delay_cw_deg,
-        model.disk_delay_ccw_deg,
     )
 
 
@@ -122,11 +120,6 @@ def test_build_rotation_model_user_example_values():
     assert model.resolver_offset_deg == pytest.approx(-122.0)
     assert model.phase_tdc_center_window_delay_deg == pytest.approx(147.5)
     assert model.disk_delay_deg == pytest.approx(0.0)
-
-
-def test_build_rotation_model_validates_optional_park_edges():
-    with pytest.raises(ValueError, match="inconsistent"):
-        build_rotation_model(_canonical(park_edge_1=120.0, park_edge_2=206.0))
 
 
 def test_runtime_spin_sign_uses_plc_positive_direction_and_speed_sign():
@@ -171,6 +164,8 @@ def test_markus_effective_cw_and_ccw_phase_centers_opening(case, effective_dir):
     _, motor, _, tdc, park, _, disk_delay, _ = case
     speed = 14.0 if effective_dir == chopper["positive_speed_rotation_direction"] else -14.0
     phase = compute_phase_center_delay_deg(tdc, park, motor, effective_dir, disk_delay)
+    if speed < 0:
+        phase = wrap360(phase + 180.0)
 
     assert _spinning(chopper, phase, speed) == pytest.approx(
         build_rotation_model(chopper).parked_opening_center_deg

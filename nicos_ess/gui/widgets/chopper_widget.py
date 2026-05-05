@@ -151,8 +151,6 @@ class ChopperWidget(QWidget):
                 model.motor_position,
                 model.positive_speed_rotation_direction,
                 model.disk_delay_deg,
-                model.disk_delay_cw_deg,
-                model.disk_delay_ccw_deg,
             )
         return parked_rotation_deg(
             raw_angle,

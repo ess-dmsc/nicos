@@ -5,7 +5,6 @@ from nicos_ess.gui.widgets.chopper_math import (
     CW,
     build_rotation_model,
     compute_phase_center_delay_deg,
-    disk_delay_for_direction,
     opening_center_deg,
     runtime_phase_sign,
     wrap180,
@@ -20,8 +19,6 @@ FAKE_DISC_2_NAME = "fake_disc_2"
 _FAKE_DOUBLE_DISC_BASE = {
     "slit_edges": [[0.0, 40.0], [100.0, 120.0]],
     "parked_opening_index": 0,
-    "park_edge_1": 160.0,
-    "park_edge_2": 200.0,
     "park_open_angle": 180.0,
     "park_close_angle": 0.0,
     "tdc_resolver_position": 90.0,
@@ -69,13 +66,10 @@ def fake_expected_phase(
         model.park_open_angle_deg,
         model.motor_position,
         effective_direction,
-        disk_delay_for_direction(
-            effective_direction,
-            model.disk_delay_deg,
-            model.disk_delay_cw_deg,
-            model.disk_delay_ccw_deg,
-        ),
+        model.disk_delay_deg,
     )
+    if spin_sign != (1 if model.positive_speed_rotation_direction == CW else -1):
+        ref_phase = wrap360(ref_phase + 180.0)
     return wrap360(
         ref_phase - spin_sign * wrap180(opening_center - model.parked_opening_center_deg)
     )

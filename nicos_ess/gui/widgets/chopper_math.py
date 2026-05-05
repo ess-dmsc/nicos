@@ -54,10 +54,6 @@ def opening_center_deg(opening: list[float]) -> float:
     return wrap360(float(start) + opening_width_deg(opening) / 2.0)
 
 
-def center_from_edges(park_edge_1: float, park_edge_2: float) -> float:
-    return opening_center_deg([park_edge_1, park_edge_2])
-
-
 @dataclass(frozen=True)
 class ChopperRotationModel:
     motor_position: str
@@ -72,8 +68,6 @@ class ChopperRotationModel:
     resolver_offset_deg: float
     phase_tdc_center_window_delay_deg: float
     disk_delay_deg: float
-    disk_delay_cw_deg: float
-    disk_delay_ccw_deg: float
 
 
 def has_canonical_inputs(chopper: dict) -> bool:
@@ -138,18 +132,6 @@ def sign_to_direction(sign: int) -> str:
     return CW if int(sign) >= 0 else CCW
 
 
-def disk_delay_for_direction(
-    direction: str,
-    disk_delay_deg: float = 0.0,
-    disk_delay_cw_deg: Optional[float] = None,
-    disk_delay_ccw_deg: Optional[float] = None,
-) -> float:
-    fallback = float(disk_delay_deg)
-    if normalize_spin_direction(direction) == CW:
-        return fallback if disk_delay_cw_deg is None else float(disk_delay_cw_deg)
-    return fallback if disk_delay_ccw_deg is None else float(disk_delay_ccw_deg)
-
-
 def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotationModel:
     slit_edges = chopper["slit_edges"]
     if not slit_edges:
@@ -174,34 +156,6 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
     park_open_angle = float(chopper["park_open_angle"])
     tdc_resolver_position = float(chopper["tdc_resolver_position"])
     disk_delay = float(chopper.get("disk_delay", 0.0))
-    disk_delay_cw = disk_delay_for_direction(
-        CW,
-        disk_delay,
-        chopper.get("disk_delay_cw"),
-        chopper.get("disk_delay_ccw"),
-    )
-    disk_delay_ccw = disk_delay_for_direction(
-        CCW,
-        disk_delay,
-        chopper.get("disk_delay_cw"),
-        chopper.get("disk_delay_ccw"),
-    )
-
-    park_edge_1 = chopper.get("park_edge_1")
-    park_edge_2 = chopper.get("park_edge_2")
-    if park_edge_1 is not None and park_edge_2 is not None:
-        park_center = center_from_edges(float(park_edge_1), float(park_edge_2))
-        park_width = opening_width_deg([float(park_edge_1), float(park_edge_2)])
-        if abs(wrap180(park_center - park_open_angle)) > tol_deg:
-            raise ValueError(
-                "park_open_angle is inconsistent with park_edge_1/park_edge_2 "
-                f"(center={park_center}, park_open={park_open_angle})"
-            )
-        if abs(wrap180(park_width - opening_width)) > tol_deg:
-            raise ValueError(
-                "Parked opening width does not match slit_edges at parked_opening_index "
-                f"(park_width={park_width}, slit_width={opening_width})"
-            )
 
     motor_position = normalize_motor_position(chopper["motor_position"])
     positive_speed_direction = normalize_spin_direction(
@@ -211,15 +165,12 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
         chopper.get("resolver_positive_direction", CW)
     )
     resolver_sign = resolver_direction_sign(resolver_direction, motor_position)
-    positive_speed_disk_delay = disk_delay_for_direction(
-        positive_speed_direction, disk_delay, disk_delay_cw, disk_delay_ccw
-    )
     phase_center_delay = compute_phase_center_delay_deg(
         tdc_resolver_position,
         park_open_angle,
         motor_position,
         positive_speed_direction,
-        positive_speed_disk_delay,
+        disk_delay,
     )
     # Parked reference: when resolver == park_open_angle, parked opening center
     # aligns with the beam guide in widget space.
@@ -238,8 +189,6 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
         resolver_offset_deg=resolver_offset,
         phase_tdc_center_window_delay_deg=phase_center_delay,
         disk_delay_deg=disk_delay,
-        disk_delay_cw_deg=disk_delay_cw,
-        disk_delay_ccw_deg=disk_delay_ccw,
     )
 
 
@@ -282,23 +231,20 @@ def spinning_rotation_deg(
     motor_position: str,
     positive_speed_rotation_direction: str,
     disk_delay_deg: float = 0.0,
-    disk_delay_cw_deg: Optional[float] = None,
-    disk_delay_ccw_deg: Optional[float] = None,
 ) -> float:
     # Markus' CW/CCW formula is based on effective runtime direction: for a PLC
     # convention where positive speed is CW, negative speed is effective CCW.
     spin_sign = runtime_phase_sign(speed_hz, positive_speed_rotation_direction)
     effective_direction = sign_to_direction(spin_sign)
-    effective_disk_delay = disk_delay_for_direction(
-        effective_direction, disk_delay_deg, disk_delay_cw_deg, disk_delay_ccw_deg
-    )
     phase_reference = compute_phase_center_delay_deg(
         tdc_resolver_position_deg,
         park_open_angle_deg,
         motor_position,
         effective_direction,
-        effective_disk_delay,
+        disk_delay_deg,
     )
+    if spin_sign != direction_to_sign(positive_speed_rotation_direction):
+        phase_reference = wrap360(phase_reference + 180.0)
     return wrap360(
         float(parked_opening_center_deg)
         - spin_sign * wrap180(float(phase_angle_deg) - phase_reference)

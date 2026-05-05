@@ -16,7 +16,6 @@ from nicos_ess.gui.widgets.chopper_math import (
     CW,
     build_rotation_model,
     compute_phase_center_delay_deg,
-    disk_delay_for_direction,
     opening_center_deg,
     runtime_phase_sign,
     wrap180,
@@ -148,13 +147,10 @@ def _phase_angles_for_all_openings_from_reference(
         model.park_open_angle_deg,
         model.motor_position,
         effective_direction,
-        disk_delay_for_direction(
-            effective_direction,
-            model.disk_delay_deg,
-            model.disk_delay_cw_deg,
-            model.disk_delay_ccw_deg,
-        ),
+        model.disk_delay_deg,
     )
+    if spin_sign != (1 if model.positive_speed_rotation_direction == CW else -1):
+        ref_phase = wrap360(ref_phase + 180.0)
     return {
         opening_index: wrap360(ref_phase - spin_sign * wrap180(center - ref_center))
         for opening_index, center in enumerate(centers)
@@ -448,10 +444,7 @@ def _heimdal_tpsc_pair():
         parked_opening_index=0,
         tdc_resolver_position=341.3,
         park_open_angle=333.0,
-        park_edge_1=330.4,
-        park_edge_2=335.6,
-        disk_delay_cw=185.3,
-        disk_delay_ccw=186.6,
+        disk_delay=6.6,
         left_window_ccw_center_delay=104.9,
         left_window_park_resolver_angle=243.0,
         down_park_resolver_angle=333.0,
@@ -465,10 +458,7 @@ def _heimdal_tpsc_pair():
         parked_opening_index=0,
         tdc_resolver_position=341.9,
         park_open_angle=329.3,
-        park_edge_1=326.7,
-        park_edge_2=331.9,
-        disk_delay_cw=186.25,
-        disk_delay_ccw=185.5,
+        disk_delay=5.5,
         left_window_ccw_center_delay=82.9,
         left_window_park_resolver_angle=59.3,
         down_park_resolver_angle=329.3,

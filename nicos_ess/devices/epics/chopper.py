@@ -11,7 +11,6 @@ from nicos.core import (
     Readable,
     Waitable,
     listof,
-    none_or,
     oneof,
     status,
 )
@@ -30,8 +29,8 @@ def canonical_chopper_parameters():
     return {
         "motor_position": Param(
             "Motor mounting side for chopper drawing",
-            type=none_or(oneof("upstream", "downstream")),
-            default=None,
+            type=oneof("upstream", "downstream"),
+            mandatory=True,
             unit="",
         ),
         "positive_speed_rotation_direction": Param(
@@ -54,44 +53,20 @@ def canonical_chopper_parameters():
         ),
         "tdc_resolver_position": Param(
             "Resolver position at the TDC reference",
-            type=none_or(float),
-            default=None,
+            type=float,
+            mandatory=True,
             unit="degrees",
         ),
         "park_open_angle": Param(
             "Resolver position where the parked opening is centered",
-            type=none_or(float),
-            default=None,
-            unit="degrees",
-        ),
-        "park_edge_1": Param(
-            "First resolver edge for the parked opening",
-            type=none_or(float),
-            default=None,
-            unit="degrees",
-        ),
-        "park_edge_2": Param(
-            "Second resolver edge for the parked opening",
-            type=none_or(float),
-            default=None,
+            type=float,
+            mandatory=True,
             unit="degrees",
         ),
         "disk_delay": Param(
             "Phase calibration offset added to calculated center-window delay",
             type=float,
-            default=0.0,
-            unit="degrees",
-        ),
-        "disk_delay_cw": Param(
-            "Phase calibration offset for effective CW rotation",
-            type=none_or(float),
-            default=None,
-            unit="degrees",
-        ),
-        "disk_delay_ccw": Param(
-            "Phase calibration offset for effective CCW rotation",
-            type=none_or(float),
-            default=None,
+            mandatory=True,
             unit="degrees",
         ),
     }
@@ -220,24 +195,7 @@ class EssChopperController(MappedMoveable):
 
     parameters = {
         "slit_edges": Param(
-            "Slit edges of the chopper", type=listof(listof(float)), default=[]
-        ),
-        "resolver_offset": Param(
-            "Offset of the resolver in degrees",
-            type=float,
-            default=0.0,
-            unit="degrees",
-        ),
-        "tdc_offset": Param(
-            "Offset of the TDC in degrees",
-            type=float,
-            default=0.0,
-            unit="degrees",
-        ),
-        "spin_direction": Param(
-            "Direction of rotation of the chopper",
-            type=oneof("CW", "CCW"),
-            default="CW",
+            "Slit edges of the chopper", type=listof(listof(float)), mandatory=True
         ),
         **canonical_chopper_parameters(),
     }
@@ -304,24 +262,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
 
     parameters = {
         "slit_edges": Param(
-            "Slit edges of the chopper", type=listof(listof(float)), default=[]
-        ),
-        "resolver_offset": Param(
-            "Offset of the resolver in degrees",
-            type=float,
-            default=0.0,
-            unit="degrees",
-        ),
-        "tdc_offset": Param(
-            "Offset of the TDC in degrees",
-            type=float,
-            default=0.0,
-            unit="degrees",
-        ),
-        "spin_direction": Param(
-            "Direction of rotation of the chopper",
-            type=oneof("CW", "CCW"),
-            default="CW",
+            "Slit edges of the chopper", type=listof(listof(float)), mandatory=True
         ),
         "pv_root": Param(
             "PV root for device", type=str, mandatory=True, userparam=False
@@ -593,24 +534,7 @@ class NmxChopperController(MappedMoveable):
 
     parameters = {
         "slit_edges": Param(
-            "Slit edges of the chopper", type=listof(listof(float)), default=[]
-        ),
-        "resolver_offset": Param(
-            "Offset of the resolver in degrees",
-            type=float,
-            default=0.0,
-            unit="degrees",
-        ),
-        "tdc_offset": Param(
-            "Offset of the TDC in degrees",
-            type=float,
-            default=0.0,
-            unit="degrees",
-        ),
-        "spin_direction": Param(
-            "Direction of rotation of the chopper",
-            type=oneof("CW", "CCW"),
-            default="CW",
+            "Slit edges of the chopper", type=listof(listof(float)), mandatory=True
         ),
         **canonical_chopper_parameters(),
     }
