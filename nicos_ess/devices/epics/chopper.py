@@ -203,7 +203,7 @@ class EssChopperController(MappedMoveable):
     attached_devices = {
         "state": Attach("Current state of the chopper", Readable),
         "command": Attach("Command PV of the chopper", MappedMoveable),
-        "alarms": Attach("Alarms of the chopper", ChopperAlarms, optional=True),
+        "alarms": Attach("Alarms of the chopper", Readable, optional=True),
         "speed": Attach("Speed PV of the chopper", MappedMoveable),
         "chic_conn": Attach("Status of the CHIC connection", Readable),
     }
@@ -211,7 +211,9 @@ class EssChopperController(MappedMoveable):
     parameter_overrides = {
         "fmtstr": Override(default="%s"),
         "unit": Override(mandatory=False),
-        "mapping": Override(mandatory=False, userparam=False, volatile=True),
+        "mapping": Override(
+            mandatory=False, settable=False, userparam=False, volatile=True
+        ),
     }
 
     hardware_access = False
@@ -411,7 +413,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         pass
 
 
-class NmxChopperAlarms(EpicsParameters, Readable):
+class ChopperAlarmsV2(EpicsParameters, Readable):
     """
     This device handles chopper alarms.
     """
@@ -527,72 +529,3 @@ class NmxChopperAlarms(EpicsParameters, Readable):
             self.log.error("%s (%s)", name, message)
         elif severity == status.WARN:
             self.log.warning("%s (%s)", name, message)
-
-
-class NmxChopperController(MappedMoveable):
-    """Handles the status and hardware control for an ESS chopper system"""
-
-    parameters = {
-        "slit_edges": Param(
-            "Slit edges of the chopper", type=listof(listof(float)), mandatory=True
-        ),
-        **canonical_chopper_parameters(),
-    }
-
-    attached_devices = {
-        "state": Attach("Current state of the chopper", Readable),
-        "command": Attach("Command PV of the chopper", MappedMoveable),
-        "alarms": Attach("Alarms of the chopper", NmxChopperAlarms, optional=True),
-        "speed": Attach("Speed PV of the chopper", MappedMoveable),
-        "chic_conn": Attach("Status of the CHIC connection", Readable),
-    }
-
-    parameter_overrides = {
-        "fmtstr": Override(default="%s"),
-        "unit": Override(mandatory=False),
-        "mapping": Override(
-            mandatory=False, settable=False, userparam=False, volatile=True
-        ),
-    }
-
-    hardware_access = False
-    valuetype = str
-
-    def doRead(self, maxage=0):
-        return self._attached_state.read()
-
-    def doStart(self, target):
-        if target.lower() == "stop":
-            # Set the speed to zero to keep EPICS behaviour consistent.
-            try:
-                target_speed = self._attached_speed._inverse_mapping.get(0, "0 Hz")
-                self._attached_speed.move(target_speed)
-            except Exception:
-                self.log.exception(
-                    "Failed to set speed to 0 when stopping chopper. "
-                    "Will still send stop command."
-                )
-        self._attached_command.move(target)
-
-    def doStop(self):
-        # Ignore - stopping the chopper is done via the move command.
-        pass
-
-    def doReset(self):
-        # Ignore - resetting the chopper is done via the move command.
-        pass
-
-    def doStatus(self, maxage=0):
-        if self._attached_alarms:
-            stat, msg = self._attached_alarms.status(maxage)
-            if stat != status.OK:
-                return stat, msg
-        if self._attached_chic_conn.read() != "Connected":
-            return status.ERROR, "no connection to the CHIC"
-        stat, msg = Waitable.doStatus(self, maxage)
-        if stat != status.OK:
-            return stat, msg
-        return status.OK, ""
-
-    def doReadMapping(self):
-        return self._attached_command.mapping

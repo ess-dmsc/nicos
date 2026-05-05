@@ -147,13 +147,13 @@ devices = dict(
         pva=True,
     ),
     pulse_shaping_chopper_1_alarms=device(
-        "nicos_ess.devices.epics.chopper.NmxChopperAlarms",
+        "nicos_ess.devices.epics.chopper.ChopperAlarmsV2",
         description="The chopper alarms",
         pv_root=pv_root_pulse_shaping_chopper_1,
         visibility=(),
     ),
     pulse_shaping_chopper_1=device(
-        "nicos_ess.devices.epics.chopper.NmxChopperController",
+        "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
         pollinterval=0.5,
         maxage=None,
@@ -307,13 +307,13 @@ devices = dict(
         pva=True,
     ),
     pulse_shaping_chopper_2_alarms=device(
-        "nicos_ess.devices.epics.chopper.NmxChopperAlarms",
+        "nicos_ess.devices.epics.chopper.ChopperAlarmsV2",
         description="The chopper alarms",
         pv_root=pv_root_pulse_shaping_chopper_2,
         visibility=(),
     ),
     pulse_shaping_chopper_2=device(
-        "nicos_ess.devices.epics.chopper.NmxChopperController",
+        "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
         pollinterval=0.5,
         maxage=None,

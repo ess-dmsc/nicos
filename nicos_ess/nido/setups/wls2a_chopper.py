@@ -119,13 +119,13 @@ devices = dict(
         pva=True,
     ),
     wls2a_chopper_alarms=device(
-        "nicos_ess.devices.epics.chopper.NmxChopperAlarms",
+        "nicos_ess.devices.epics.chopper.ChopperAlarmsV2",
         description="The chopper alarms",
         pv_root=pv_root_1,
         visibility=(),
     ),
     wls2a_chopper=device(
-        "nicos_ess.devices.epics.chopper.NmxChopperController",
+        "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
         pollinterval=0.5,
         maxage=None,
