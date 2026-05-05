@@ -12,8 +12,9 @@ variables:
   UV_LINK_MODE: copy
 
 stages:
-  - test
   - publish
+  - lint
+  - test
 
 tests_py312_cov:
   stage: test
@@ -52,6 +53,7 @@ tests_py3xx:
   variables:
     UV_PYTHON: $PYTHON_VERSION
 
+
 publish:
   stage: publish
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
@@ -65,3 +67,57 @@ publish:
   variables:
     UV_PUBLISH_USERNAME: "ecdc"
     UV_PUBLISH_PASSWORD: "$ESS_ARTIFACTORY_ECDC_PYPI_TOKEN"
+
+
+.lint:
+  stage: lint
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - uv sync --extra gui --all-packages
+    - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA  # Fetching only up to the closest merge-base to save time
+    - export CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA)  # Diff only changed files within MR
+    - export PY_CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA | grep -e '\.py$')
+  variables:
+    UV_PYTHON: 3.12
+  allow_failure:
+    exit_codes: # User defined exit code
+      - 100
+
+lint:check_setups:
+  extends:
+    - .lint
+  script:
+    - find ./nicos_ess -type d -name setups -exec uv run tools/check-setups \{\} \;  > >(tee -a check_setups_stdout.log) 2> >(tee -a check_setups_stderr.log >&2)
+    - test -z "$(cat check_setups_stdout.log | grep ERROR)" || exit 1 # errors found
+    - test ! -s check_setups_stderr.log || exit 1  # failure on check
+    - test ! -s check_setups_stdout.log || exit 100 # warnings found
+
+lint:ruff_check:
+  extends:
+    - .lint
+  script:
+    - echo 'Changed files (to be linted):'
+    - echo "$PY_CHANGES"
+    - if [ -z "$PY_CHANGES" ]; then echo "No modified Python files to be checked"; exit 100; fi;
+    - uv run ruff check --output-format=gitlab $(echo $PY_CHANGES) | tee code-quality-report.json
+  artifacts:
+    reports:
+      codequality: code-quality-report.json
+
+lint:codespell:
+  extends:
+    - .lint
+  script:
+    - echo 'Changed files (to be linted):'
+    - echo "$CHANGES"
+    - uv run python -m codespell_lib --count $CHANGES
+
+lint:ruff_format:
+  extends:
+    - .lint
+  script:
+    - echo 'Changed files (to be linted):'
+    - echo "$PY_CHANGES"
+    - if [ -z "$PY_CHANGES" ]; then echo "No modified Python files to be checked"; exit 100; fi;
+    - uv run ruff format --diff $(echo $PY_CHANGES)
