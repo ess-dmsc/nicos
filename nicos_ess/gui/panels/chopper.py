@@ -1,7 +1,5 @@
 """NICOS livewidget with pyqtgraph."""
 
-import time
-
 import numpy as np
 
 from nicos.clients.gui.panels import Panel
@@ -60,7 +58,10 @@ class ChopperPanel(Panel):
         self.trend_widget = TrendViewer(parent=self)
 
         self._db = MiniDB()
-        self._selected_chopper = None
+        self._registered_chopper_keys = set()
+        self._speeds = {}
+        self._total_delays = {}
+        self._park_angles = {}
 
         self.initialize_ui()
         self.build_ui()
@@ -92,7 +93,6 @@ class ChopperPanel(Panel):
         self.layout().addWidget(self.view_splitter)
 
     def setup_connections(self, client):
-        client.cache.connect(self.on_client_cache)
         client.connected.connect(self.on_client_connected)
         client.setup.connect(self.on_client_setup)
         client.disconnected.connect(self.on_client_disconnect)
@@ -102,15 +102,19 @@ class ChopperPanel(Panel):
         )
 
     def _update_selected_chopper_name(self, name):
-        self._selected_chopper = name
         if name is None:
             self.histogram_widget.clear()
             self.trend_widget.clear()
             return
-        self._update_delay_errors(f"{name}_delay_errors")
+        if f"{name}/x" in self._db.DB:
+            self._update_selected_chopper()
+        else:
+            self.histogram_widget.clear()
+            self.trend_widget.clear()
 
-    def handle_delay_errors(self, data):
+    def _handle_delay_errors(self, data):
         timestamp, key, value = data
+        value = np.asarray(value)
         if value.size == 0:
             return
 
@@ -138,21 +142,23 @@ class ChopperPanel(Panel):
 
     def _update_selected_chopper(self):
         selected = self.chopper_widget.get_selected_chopper()
-        if selected:
-            dev_name = selected
-            x = self._db.DB[f"{dev_name}/x"][-1]
-            y = self._db.DB[f"{dev_name}/y"][-1]
-            timestamps = self._db.DB[f"{dev_name}/timestamps"]
-            mean = self._db.DB[f"{dev_name}/mean"]
-            stddev = self._db.DB[f"{dev_name}/stddev"]
-            fwhm = self._db.DB[f"{dev_name}/fwhm"]
-            left_bin_edge = self._db.DB[f"{dev_name}/left_bin_edges"][-1]
-            right_bin_edge = self._db.DB[f"{dev_name}/right_bin_edges"][-1]
+        if not selected or f"{selected}/x" not in self._db.DB:
+            return
 
-            self.histogram_widget.receive_data(
-                x, y, mean[-1], stddev[-1], fwhm[-1], left_bin_edge, right_bin_edge
-            )
-            self.trend_widget.receive_data(timestamps, mean, stddev, fwhm)
+        dev_name = selected
+        x = self._db.DB[f"{dev_name}/x"][-1]
+        y = self._db.DB[f"{dev_name}/y"][-1]
+        timestamps = self._db.DB[f"{dev_name}/timestamps"]
+        mean = self._db.DB[f"{dev_name}/mean"]
+        stddev = self._db.DB[f"{dev_name}/stddev"]
+        fwhm = self._db.DB[f"{dev_name}/fwhm"]
+        left_bin_edge = self._db.DB[f"{dev_name}/left_bin_edges"][-1]
+        right_bin_edge = self._db.DB[f"{dev_name}/right_bin_edges"][-1]
+
+        self.histogram_widget.receive_data(
+            x, y, mean[-1], stddev[-1], fwhm[-1], left_bin_edge, right_bin_edge
+        )
+        self.trend_widget.receive_data(timestamps, mean, stddev, fwhm)
 
     def _calc_stats(self, data_array):
         num_bins = int((max(data_array) - min(data_array)) / BIN_WIDTH)
@@ -188,101 +194,113 @@ class ChopperPanel(Panel):
         fwhm = bin_edges[right_idx] - bin_edges[left_idx]
         return fwhm, left_idx, right_idx
 
-    def eval_command(self, command, *args, **kwargs):
-        return self.client.eval(command, *args, **kwargs)
-
     def _get_loaded_choppers(self):
         return [chopper["chopper"] for chopper in self.chopper_widget.chopper_data]
 
-    def on_client_cache(self, data):
-        timestamp, key, _, value = data
-
-        device_name, parameter_name = key.split("/")
-
-        if parameter_name != "value":
+    def on_keyChange(self, key, value, timestamp, expired):
+        if key == "session/mastersetup":
+            super().on_keyChange(key, value, timestamp, expired)
             return
 
-        chopper_name = self._extract_chopper_name(device_name)
+        if "/" not in key:
+            return
 
-        loaded_choppers = self._get_loaded_choppers()
-        if chopper_name not in loaded_choppers:
+        device_name, parameter_name = key.split("/", 1)
+
+        if parameter_name == "raw_errors" and device_name.endswith("_delay_errors"):
+            chopper_name = device_name[: -len("_delay_errors")]
+            if value is None:
+                if self.chopper_widget.get_selected_chopper() == chopper_name:
+                    self.histogram_widget.clear()
+                    self.trend_widget.clear()
+                return
+            self._handle_delay_errors(
+                (timestamp, f"{chopper_name}_delay_errors/raw_errors", value)
+            )
+            return
+
+        if parameter_name != "value" or value is None:
             return
 
         if device_name.endswith("_total_delay"):
+            chopper_name = device_name[: -len("_total_delay")]
             self._handle_total_delay_update(chopper_name, value)
         elif device_name.endswith("_speed"):
+            chopper_name = device_name[: -len("_speed")]
             self._handle_speed_update(chopper_name, value)
         elif device_name.endswith("_park_angle"):
+            chopper_name = device_name[: -len("_park_angle")]
             self._handle_park_angle_update(chopper_name, value)
-        elif device_name.endswith("_delay_errors"):
-            self._update_delay_errors(device_name)
-
-    def _extract_chopper_name(self, device_name):
-        suffixes = [
-            "_total_delay",
-            "_speed",
-            "_delay_errors",
-            "_delay",
-            "_park_angle",
-        ]
-        for suffix in suffixes:
-            if device_name.endswith(suffix):
-                return device_name[: -len(suffix)]
-        return device_name
 
     def _handle_total_delay_update(self, chopper_name, delay_value):
         delay = float(delay_value)
-        frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
-        if frequency is not None and abs(frequency) >= 2:
-            frequency = float(frequency)
-            angle = nanoseconds_to_degrees(delay, frequency)
-            self.chopper_widget.set_chopper_angle(chopper_name, angle)
+        self._total_delays[chopper_name] = delay
+        self._update_chopper_angle(chopper_name)
 
     def _handle_speed_update(self, chopper_name, speed_value):
         frequency = float(speed_value)
+        self._speeds[chopper_name] = frequency
         self.chopper_widget.set_chopper_speed(chopper_name, frequency)
-        if abs(frequency) >= 2:
-            delay = self.eval_command(
-                f"{chopper_name}_total_delay.read()", default=None
-            )
-            if delay is not None:
-                delay = float(delay)
-                angle = nanoseconds_to_degrees(delay, frequency)
-                self.chopper_widget.set_chopper_angle(chopper_name, angle)
+        self._update_chopper_angle(chopper_name)
 
     def _handle_park_angle_update(self, chopper_name, park_angle_value):
         park_angle = float(park_angle_value)
+        self._park_angles[chopper_name] = park_angle
         self.chopper_widget.set_chopper_park_angle(chopper_name, park_angle)
-        frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
-        if frequency is not None:
-            frequency = float(frequency)
-            if abs(frequency) < 2:
-                self.chopper_widget.set_chopper_angle(chopper_name, park_angle)
+        self._update_chopper_angle(chopper_name)
 
-    def _update_delay_errors(self, device_name):
-        array = self.eval_command(f"{device_name}.raw_errors", default=None)
-        if array is None:
-            if self._selected_chopper and device_name.startswith(
-                self._selected_chopper
-            ):
-                self.histogram_widget.clear()
-                self.trend_widget.clear()
+    def _update_chopper_angle(self, chopper_name):
+        frequency = self._speeds.get(chopper_name)
+        if frequency is None:
             return
-        self.handle_delay_errors((time.time(), f"{device_name}/raw_errors", array))
 
-    def _poll_all_choppers(self):
-        signal_suffixes = ["_total_delay", "_speed", "_park_angle"]
+        if abs(frequency) >= 2:
+            delay = self._total_delays.get(chopper_name)
+            if delay is not None:
+                angle = nanoseconds_to_degrees(delay, frequency)
+                self.chopper_widget.set_chopper_angle(chopper_name, angle)
+            return
+
+        park_angle = self._park_angles.get(chopper_name)
+        if park_angle is not None:
+            self.chopper_widget.set_chopper_angle(chopper_name, park_angle)
+
+    def _register_chopper_keys(self):
+        registered_new_keys = False
         for chopper_name in self._get_loaded_choppers():
-            for suffix in signal_suffixes:
-                _ = self.eval_command(f"{chopper_name}{suffix}.poll()", default=None)
+            keys = [
+                f"{chopper_name}_speed/value",
+                f"{chopper_name}_total_delay/value",
+                f"{chopper_name}_park_angle/value",
+                f"{chopper_name}_delay_errors/raw_errors",
+            ]
+            for key in keys:
+                if key.lower() in self._registered_chopper_keys:
+                    continue
+                self._registered_chopper_keys.add(self.client.register(self, key))
+                registered_new_keys = True
+        return registered_new_keys
+
+    def _load_choppers(self):
+        self._get_chopper_info()
+        if self._register_chopper_keys():
+            self.client.on_connected_event()
+        for chopper_name in self._get_loaded_choppers():
+            if chopper_name in self._speeds:
+                self.chopper_widget.set_chopper_speed(
+                    chopper_name, self._speeds[chopper_name]
+                )
+            if chopper_name in self._park_angles:
+                self.chopper_widget.set_chopper_park_angle(
+                    chopper_name, self._park_angles[chopper_name]
+                )
+            self._update_chopper_angle(chopper_name)
 
     def on_client_connected(self):
-        self._get_chopper_info()
-        self._poll_all_choppers()
+        self._load_choppers()
 
     def on_client_setup(self, setup):
-        self._get_chopper_info()
-        self._poll_all_choppers()
+        self._load_choppers()
 
     def on_client_disconnect(self):
         self.chopper_widget.clear()
