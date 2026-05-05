@@ -48,7 +48,7 @@ devices = dict(
         # Just for testing, coudl be removed later.
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="ARINAX DPU Configuration, setpoint readback (mockup)",
-        readpv="NMX-mockup:getDPUConfiguration",
+        readpv="NMX-mockup:setDPUConfiguration",
         pva=False,
         monitor=True,
         pollinterval=0.5,
