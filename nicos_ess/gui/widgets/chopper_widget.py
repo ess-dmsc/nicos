@@ -1,11 +1,8 @@
-import json
 import math
-import sys
 from enum import Enum
 from typing import Optional
 
 from nicos.guisupport.qt import (
-    QApplication,
     QBrush,
     QColor,
     QPainter,
@@ -37,7 +34,7 @@ class Colors(Enum):
 
 
 class ChopperWidget(QWidget):
-    onChopperSelected = pyqtSignal(str)
+    onChopperSelected = pyqtSignal(object)
 
     GUIDE_DIRS = {"RIGHT": 0.0, "UP": 90.0, "LEFT": 180.0, "DOWN": 270.0}
 
@@ -51,8 +48,6 @@ class ChopperWidget(QWidget):
         self._guide_angle_deg = self._to_guide_deg(guide_pos)
         self._detailed_view = False
         self._show_guide_line = True
-
-        self._default_rotation_offset = self._guide_angle_deg
 
     def get_selected_chopper(self):
         return self._selected_chopper
@@ -88,7 +83,6 @@ class ChopperWidget(QWidget):
         new_deg = self._to_guide_deg(pos)
         self._guide_pos = pos
         self._guide_angle_deg = new_deg
-        self._default_rotation_offset = new_deg
         self.update()
 
     def set_detailed_view(self, enabled: bool) -> None:
@@ -102,36 +96,27 @@ class ChopperWidget(QWidget):
         self._show_guide_line = bool(enabled)
         self.update()
 
-    def _wrap360(self, x: float) -> float:
-        return wrap360(x)
-
     def set_chopper_angle(self, chopper_name, angle):
         # Store raw device angle; mode-specific direction/offset handling happens
         # in paint-time bookkeeping based on speed and canonical metadata.
         for i, chopper in enumerate(self.chopper_data):
             if chopper["chopper"] == chopper_name:
-                self.angles[i] = self._wrap360(float(angle))
+                self.angles[i] = wrap360(float(angle))
         self.update()
 
     def set_chopper_speed(self, chopper_name, speed):
-        try:
-            for i, chopper in enumerate(self.chopper_data):
-                if chopper["chopper"] == chopper_name:
-                    chopper["speed"] = speed
-                    self.update()
-                    return
-        except KeyError:
-            pass
+        for chopper in self.chopper_data:
+            if chopper["chopper"] == chopper_name:
+                chopper["speed"] = speed
+                self.update()
+                return
 
     def set_chopper_park_angle(self, chopper_name, angle):
-        try:
-            for i, chopper in enumerate(self.chopper_data):
-                if chopper["chopper"] == chopper_name:
-                    chopper["parking_angle"] = angle
-                    self.update()
-                    return
-        except KeyError:
-            pass
+        for chopper in self.chopper_data:
+            if chopper["chopper"] == chopper_name:
+                chopper["parking_angle"] = angle
+                self.update()
+                return
 
     def _canonical_rotation_base(
         self, chopper: dict, raw_angle: float, speed_hz: Optional[float], moving: bool
@@ -158,11 +143,6 @@ class ChopperWidget(QWidget):
             model.resolver_sign,
         )
 
-    def _rotation_base_deg(
-        self, chopper: dict, raw_angle: float, speed_hz: Optional[float], moving: bool
-    ) -> float:
-        return self._canonical_rotation_base(chopper, raw_angle, speed_hz, moving)
-
     def get_rotation_angle_for_chopper(
         self, chopper_name: str, include_guide: bool = False
     ) -> Optional[float]:
@@ -178,15 +158,15 @@ class ChopperWidget(QWidget):
             moving = speed_hz is not None and abs(float(speed_hz)) >= 2
             raw_angle = float(self.angles.get(i, 0.0))
             try:
-                base_rotation = self._rotation_base_deg(
+                base_rotation = self._canonical_rotation_base(
                     chopper, raw_angle, speed_hz, moving
                 )
             except ValueError:
                 return None
             if include_guide:
                 # Geometry conversion from engineering CW+ to Qt math-CCW.
-                return self._wrap360(base_rotation + self._default_rotation_offset)
-            return self._wrap360(base_rotation)
+                return wrap360(base_rotation + self._guide_angle_deg)
+            return wrap360(base_rotation)
         return None
 
     def _tdc_marker_angle_for_chopper(self, chopper: dict) -> Optional[float]:
@@ -202,11 +182,9 @@ class ChopperWidget(QWidget):
             model.resolver_offset_deg,
             model.resolver_sign,
         )
-        tdc_qt_rotation = self._wrap360(
-            tdc_base_rotation + self._default_rotation_offset
-        )
+        tdc_qt_rotation = wrap360(tdc_base_rotation + self._guide_angle_deg)
         # Opening-center world angle at TDC reference.
-        return self._wrap360(-model.parked_opening_center_deg + tdc_qt_rotation)
+        return wrap360(-model.parked_opening_center_deg + tdc_qt_rotation)
 
     def get_tdc_marker_angle_for_chopper(self, chopper_name: str) -> Optional[float]:
         for chopper in self.chopper_data:
@@ -243,7 +221,7 @@ class ChopperWidget(QWidget):
         else:
             start = self._guide_angle_deg + half_span
             end = self._guide_angle_deg - half_span
-        return self._wrap360(start), self._wrap360(end)
+        return wrap360(start), wrap360(end)
 
     def _point_on_circle(
         self, center: QPointF, radius: float, angle_deg: float
@@ -339,13 +317,13 @@ class ChopperWidget(QWidget):
             is_moving = current_speed is not None and abs(float(current_speed)) >= 2
             raw_angle = float(self.angles.get(i, 0.0))
             try:
-                base_rotation = self._rotation_base_deg(
+                base_rotation = self._canonical_rotation_base(
                     chopper, raw_angle, current_speed, is_moving
                 )
             except ValueError:
                 continue
             # Convert canonical engineering CW+ rotation to Qt math-CCW.
-            angle = self._wrap360(base_rotation + self._default_rotation_offset)
+            angle = wrap360(base_rotation + self._guide_angle_deg)
 
             self.draw_chopper(
                 painter,
@@ -362,8 +340,6 @@ class ChopperWidget(QWidget):
 
             if self._show_guide_line:
                 painter.setPen(QPen(Colors.BLUE.value, 4))
-                # line_x = center.x()
-                # line_y = center.y() - line_length
                 theta = math.radians(
                     self._guide_angle_deg
                 )  # 0=right, 90=up, 180=left, 270=down
@@ -738,9 +714,7 @@ class ChopperWidget(QWidget):
 
     def update_chopper_data(self, chopper_data):
         self.chopper_data = chopper_data
-        self.angles = {
-            i: self._default_rotation_offset for i in range(len(self.chopper_data))
-        }
+        self.angles = {i: self._guide_angle_deg for i in range(len(self.chopper_data))}
         self.update()
 
     def clear(self):
@@ -748,94 +722,3 @@ class ChopperWidget(QWidget):
         self.angles = {}
         self._selected_chopper = None
         self.update()
-
-
-def traverse_json(json_obj, condition_fn, action_fn, path=[]) -> None:
-    """
-    Recursively traverse the JSON object applying a condition function
-    at each node. If the condition is met, applies an action function.
-
-    :param json_obj: The JSON object or part of it being traversed.
-    :param condition_fn: A function that takes a node and returns
-    True if the condition is met.
-    :param action_fn: A function that performs an action
-     on nodes that meet the condition.
-    :param path: The current path to the node, used for
-    tracking the node's location within the JSON.
-    """
-    if condition_fn(json_obj):
-        action_fn(json_obj, path)
-
-    if isinstance(json_obj, dict):
-        for key, value in json_obj.items():
-            traverse_json(value, condition_fn, action_fn, path + [key])
-    elif isinstance(json_obj, list):
-        for index, item in enumerate(json_obj):
-            traverse_json(item, condition_fn, action_fn, path + [index])
-
-
-def find_all_nxdisk_choppers(json_obj) -> list[dict]:
-    found_choppers = []
-
-    def condition_fn(node):
-        return (
-            isinstance(node, dict)
-            and "attributes" in node
-            and any(
-                attr.get("name") == "NX_class"
-                and attr.get("values") == "NXdisk_chopper"
-                for attr in node["attributes"]
-            )
-        )
-
-    def action_fn(node, path):
-        found_choppers.append(node)
-
-    traverse_json(json_obj, condition_fn, action_fn)
-    return found_choppers
-
-
-def get_edges_from_nxdisk_choppers(choppers) -> dict[str, list[list[float]]]:
-    edges = {}
-
-    for chopper in choppers:
-        for child in chopper.get("children", []):
-            if (
-                isinstance(child, dict)
-                and "module" in child
-                and child["module"] == "dataset"
-            ):
-                name = child.get("config", {}).get("name")
-                if name == "slit_edges":
-                    values = child.get("config", {}).get("values")
-                    chopper_name = chopper.get("name", "Unknown Chopper")
-                    edge_pairs = [
-                        [values[i], values[i + 1]] for i in range(0, len(values), 2)
-                    ]
-                    edges[chopper_name] = edge_pairs
-
-    return edges
-
-
-def format_slit_edges(edge_data):
-    return [{"slit_edges": data, "chopper": name} for name, data in edge_data.items()]
-
-
-if __name__ == "__main__":
-    json_path = "/home/jonas/code/nexus-json-templates/bifrost/bifrost-dynamic.json"
-    with open(json_path, "r") as file:
-        data = json.load(file)
-
-    choppers = find_all_nxdisk_choppers(data)
-    edges = get_edges_from_nxdisk_choppers(choppers)
-    formatted_edges = format_slit_edges(edges)
-
-    print(formatted_edges)
-
-    app = QApplication(sys.argv)
-
-    window = ChopperWidget()
-    window.update_chopper_data(formatted_edges)
-    window.show()
-
-    sys.exit(app.exec_())

@@ -9,9 +9,9 @@ from nicos_ess.gui.widgets.chopper_math import (
     build_rotation_model,
     compute_phase_center_delay_deg,
     has_canonical_inputs,
+    opening_width_deg,
     parked_rotation_deg,
     resolver_direction_sign,
-    runtime_phase_sign,
     runtime_spin_sign,
     sign_to_direction,
     spinning_rotation_deg,
@@ -94,6 +94,17 @@ def _spinning(chopper, phase, speed):
     )
 
 
+def _positive_speed_phase_reference(chopper):
+    model = build_rotation_model(chopper)
+    return compute_phase_center_delay_deg(
+        model.tdc_resolver_position_deg,
+        model.park_open_angle_deg,
+        model.motor_position,
+        model.positive_speed_rotation_direction,
+        model.disk_delay_deg,
+    )
+
+
 def test_has_canonical_inputs_requires_slit_edges():
     data = _canonical(slit_edges=[[0.0, 86.0]])
     assert has_canonical_inputs(data)
@@ -113,13 +124,11 @@ def test_build_rotation_model_user_example_values():
 
     assert isinstance(model, ChopperRotationModel)
     assert model.positive_speed_rotation_direction == CW
-    assert model.resolver_positive_direction == CW
     assert model.resolver_sign == -1
     assert model.parked_opening_center_deg == pytest.approx(43.0)
-    assert model.parked_opening_width_deg == pytest.approx(86.0)
     assert model.resolver_offset_deg == pytest.approx(-122.0)
-    assert model.phase_tdc_center_window_delay_deg == pytest.approx(147.5)
     assert model.disk_delay_deg == pytest.approx(0.0)
+    assert _positive_speed_phase_reference(_canonical()) == pytest.approx(147.5)
 
 
 def test_runtime_spin_sign_uses_plc_positive_direction_and_speed_sign():
@@ -127,7 +136,6 @@ def test_runtime_spin_sign_uses_plc_positive_direction_and_speed_sign():
     assert runtime_spin_sign(-10.0, CW) == -1
     assert runtime_spin_sign(10.0, CCW) == -1
     assert runtime_spin_sign(-10.0, CCW) == 1
-    assert runtime_phase_sign(-10.0, CW) == -1
 
 
 def test_spinning_rotation_positive_phase_moves_opposite_effective_spin():
@@ -173,16 +181,17 @@ def test_chopper_group_effective_cw_and_ccw_phase_centers_opening(case, effectiv
 
 
 def test_nonzero_parked_opening_index_is_allowed():
+    slit_edges = [[0.0, 2.46], [171.52, 176.54], [272.865, 276.795]]
     model = build_rotation_model(
         _canonical(
-            slit_edges=[[0.0, 2.46], [171.52, 176.54], [272.865, 276.795]],
+            slit_edges=slit_edges,
             parked_opening_index=1,
             park_open_angle=321.5,
             tdc_resolver_position=342.0,
         )
     )
-    assert model.parked_opening_index == 1
-    assert model.parked_opening_width_deg == pytest.approx(5.02)
+    assert model.parked_opening_center_deg == pytest.approx(174.03)
+    assert opening_width_deg(slit_edges[1]) == pytest.approx(5.02)
 
 
 def test_phase_delay_reference_aligns_parked_opening_while_spinning():
@@ -193,7 +202,8 @@ def test_phase_delay_reference_aligns_parked_opening_while_spinning():
         tdc_resolver_position=342.0,
     )
     model = build_rotation_model(chopper)
-    assert _spinning(chopper, model.phase_tdc_center_window_delay_deg, 14.0) == pytest.approx(
+    phase_reference = _positive_speed_phase_reference(chopper)
+    assert _spinning(chopper, phase_reference, 14.0) == pytest.approx(
         model.parked_opening_center_deg
     )
 
@@ -202,10 +212,11 @@ def test_phase_perturbation_moves_opposite_runtime_phase_direction():
     chopper = _canonical()
     model = build_rotation_model(chopper)
     eps = 0.2
-    rot0 = _spinning(chopper, model.phase_tdc_center_window_delay_deg, 14.0)
-    rot1 = _spinning(chopper, model.phase_tdc_center_window_delay_deg + eps, 14.0)
+    phase_reference = _positive_speed_phase_reference(chopper)
+    rot0 = _spinning(chopper, phase_reference, 14.0)
+    rot1 = _spinning(chopper, phase_reference + eps, 14.0)
     assert wrap180(rot1 - rot0) == pytest.approx(
-        -runtime_phase_sign(14.0, model.positive_speed_rotation_direction) * eps
+        -runtime_spin_sign(14.0, model.positive_speed_rotation_direction) * eps
     )
 
 

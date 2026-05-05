@@ -58,15 +58,11 @@ def opening_center_deg(opening: list[float]) -> float:
 class ChopperRotationModel:
     motor_position: str
     positive_speed_rotation_direction: str
-    resolver_positive_direction: str
     resolver_sign: int
-    parked_opening_index: int
     parked_opening_center_deg: float
-    parked_opening_width_deg: float
     tdc_resolver_position_deg: float
     park_open_angle_deg: float
     resolver_offset_deg: float
-    phase_tdc_center_window_delay_deg: float
     disk_delay_deg: float
 
 
@@ -114,18 +110,8 @@ def compute_phase_center_delay_deg(
         and rotation_direction == CCW
     ):
         delay = 360.0 - tdc + park
-    elif (
-        motor_position == DOWNSTREAM
-        and rotation_direction == CW
-        or motor_position == UPSTREAM
-        and rotation_direction == CCW
-    ):
-        delay = tdc - park
     else:
-        raise ValueError(
-            "Invalid motor position / effective rotation direction "
-            f"combination: {motor_position!r}, {rotation_direction!r}"
-        )
+        delay = tdc - park
     return wrap360(delay + offset)
 
 
@@ -152,7 +138,6 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
         )
     parked_opening = slit_edges[parked_opening_index]
     opening_center = opening_center_deg(parked_opening)
-    opening_width = opening_width_deg(parked_opening)
 
     park_open_angle = float(chopper["park_open_angle"])
     tdc_resolver_position = float(chopper["tdc_resolver_position"])
@@ -166,13 +151,6 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
         chopper.get("resolver_positive_direction", CW)
     )
     resolver_sign = resolver_direction_sign(resolver_direction, motor_position)
-    phase_center_delay = compute_phase_center_delay_deg(
-        tdc_resolver_position,
-        park_open_angle,
-        motor_position,
-        positive_speed_direction,
-        disk_delay,
-    )
     # Parked reference: when resolver == park_open_angle, parked opening center
     # aligns with the beam guide in widget space.
     resolver_offset = wrap180(opening_center - resolver_sign * park_open_angle)
@@ -180,15 +158,11 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
     return ChopperRotationModel(
         motor_position=motor_position,
         positive_speed_rotation_direction=positive_speed_direction,
-        resolver_positive_direction=resolver_direction,
         resolver_sign=resolver_sign,
-        parked_opening_index=parked_opening_index,
         parked_opening_center_deg=opening_center,
-        parked_opening_width_deg=opening_width,
         tdc_resolver_position_deg=tdc_resolver_position,
         park_open_angle_deg=park_open_angle,
         resolver_offset_deg=resolver_offset,
-        phase_tdc_center_window_delay_deg=phase_center_delay,
         disk_delay_deg=disk_delay,
     )
 
@@ -205,12 +179,6 @@ def runtime_spin_sign(
     if speed_hz < 0:
         return -base_sign
     return base_sign
-
-
-def runtime_phase_sign(
-    speed_hz: Optional[float], positive_speed_rotation_direction: str
-) -> int:
-    return runtime_spin_sign(speed_hz, positive_speed_rotation_direction)
 
 
 def parked_rotation_deg(
@@ -236,7 +204,7 @@ def spinning_rotation_deg(
     # The chopper group CW/CCW formula is based on effective runtime direction:
     # for a PLC convention where positive speed is CW, negative speed is
     # effective CCW.
-    spin_sign = runtime_phase_sign(speed_hz, positive_speed_rotation_direction)
+    spin_sign = runtime_spin_sign(speed_hz, positive_speed_rotation_direction)
     effective_direction = sign_to_direction(spin_sign)
     phase_reference = compute_phase_center_delay_deg(
         tdc_resolver_position_deg,

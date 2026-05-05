@@ -17,7 +17,7 @@ from nicos_ess.gui.widgets.chopper_math import (
     build_rotation_model,
     compute_phase_center_delay_deg,
     opening_center_deg,
-    runtime_phase_sign,
+    runtime_spin_sign,
     wrap180,
     wrap360,
 )
@@ -117,6 +117,17 @@ def _opening_centers(chopper: dict) -> list[float]:
     return [opening_center_deg(edges) for edges in chopper["slit_edges"]]
 
 
+def _positive_speed_phase_reference(chopper: dict) -> float:
+    model = build_rotation_model(chopper)
+    return compute_phase_center_delay_deg(
+        model.tdc_resolver_position_deg,
+        model.park_open_angle_deg,
+        model.motor_position,
+        model.positive_speed_rotation_direction,
+        model.disk_delay_deg,
+    )
+
+
 def _resolver_angles_for_all_openings_from_reference(chopper: dict) -> dict[int, float]:
     """Resolver setpoints derived from park reference and opening centers."""
     centers = _opening_centers(chopper)
@@ -140,7 +151,7 @@ def _phase_angles_for_all_openings_from_reference(
     ref_idx = int(chopper["parked_opening_index"])
     ref_center = centers[ref_idx]
     model = build_rotation_model(chopper)
-    spin_sign = runtime_phase_sign(speed_hz, model.positive_speed_rotation_direction)
+    spin_sign = runtime_spin_sign(speed_hz, model.positive_speed_rotation_direction)
     effective_direction = CW if spin_sign >= 0 else CCW
     ref_phase = compute_phase_center_delay_deg(
         model.tdc_resolver_position_deg,
@@ -424,7 +435,6 @@ def _nmx_wls_cases():
         tdc_resolver_position=342.5,
         park_open_angle=5.0,
         disk_delay=-70.0,
-        legacy_phase_reference=-47.5,
     )
     wls2a, wls2b = _nmx_wls2_pair()
     return [wls1, wls2a, wls2b]
@@ -498,7 +508,7 @@ def test_widget_tdc_marker_angle_missing_for_noncanonical_inputs(qapp):
     assert widget.get_tdc_marker_angle_for_chopper("c1") is None
 
 
-def test_widget_spin_direction_sign_tracks_runtime_phase_sign(qapp):
+def test_widget_spin_direction_sign_tracks_runtime_spin_sign(qapp):
     down = _canonical("downstream", motor_position="downstream")
     up = _canonical("upstream", motor_position="upstream")
     widget = ChopperWidget()
@@ -551,7 +561,7 @@ def test_widget_phase_perturbation_moves_opposite_runtime_phase_direction(qapp, 
     speed_hz = 14.0
     eps = 0.2
     model = build_rotation_model(chopper)
-    phase0 = model.phase_tdc_center_window_delay_deg
+    phase0 = _positive_speed_phase_reference(chopper)
 
     widget.set_chopper_speed(name, speed_hz)
     widget.set_chopper_angle(name, phase0)
@@ -561,7 +571,7 @@ def test_widget_phase_perturbation_moves_opposite_runtime_phase_direction(qapp, 
     assert rot0 is not None
     assert rot1 is not None
 
-    expected_delta = -runtime_phase_sign(
+    expected_delta = -runtime_spin_sign(
         speed_hz, model.positive_speed_rotation_direction
     ) * eps
     assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)
@@ -581,7 +591,7 @@ def test_widget_phase_perturbation_moves_opposite_displayed_spin_arrow(qapp, cho
     name = chopper["chopper"]
     speed_hz = 14.0
     eps = 0.2
-    phase0 = build_rotation_model(chopper).phase_tdc_center_window_delay_deg
+    phase0 = _positive_speed_phase_reference(chopper)
 
     widget.set_chopper_speed(name, speed_hz)
     arrow_sign = widget.get_spin_direction_sign_for_chopper(name)
@@ -651,10 +661,10 @@ def test_widget_spinning_phase_direction_follows_motor_side(qapp):
     down_model = build_rotation_model(choppers[0])
     up_model = build_rotation_model(choppers[1])
 
-    expected_down = -runtime_phase_sign(
+    expected_down = -runtime_spin_sign(
         10.0, down_model.positive_speed_rotation_direction
     ) * 10.0
-    expected_up = -runtime_phase_sign(
+    expected_up = -runtime_spin_sign(
         10.0, up_model.positive_speed_rotation_direction
     ) * 10.0
 
@@ -818,7 +828,7 @@ def test_widget_choppers_dream_psc_phase_reference_renders_open_at_down_guide(
     widget = ChopperWidget(guide_pos="DOWN")
     widget.set_show_guide_line(False)
     chopper_name = psc["chopper"]
-    phase_ref = build_rotation_model(psc).phase_tdc_center_window_delay_deg
+    phase_ref = _positive_speed_phase_reference(psc)
     widget.update_chopper_data([psc])
     widget.set_chopper_speed(chopper_name, 14.0)
     widget.set_chopper_angle(chopper_name, phase_ref)
@@ -1117,22 +1127,7 @@ def test_widget_nmx_wls2_pair_shows_small_right_side_transmission_opening(qapp):
     assert min(abs(wrap180(open_b[0])), abs(wrap180(open_b[1]))) <= 8.0
 
     # Pair contract: combined transmitted opening is a small window on right.
-    a_start, a_end = open_a
-    b_start, b_end = open_b
-
-    def _unwrap(interval):
-        start, end = interval
-        if end < start:
-            return [(start, 360.0), (0.0, end)]
-        return [(start, end)]
-
-    transmitted_opening = []
-    for s1, e1 in _unwrap((a_start, a_end)):
-        for s2, e2 in _unwrap((b_start, b_end)):
-            lo = max(s1, s2)
-            hi = min(e1, e2)
-            if hi > lo:
-                transmitted_opening.append((lo, hi))
+    transmitted_opening = _combined_transmitted_intervals([open_a], [open_b])
 
     assert transmitted_opening
     total_opening = sum(hi - lo for lo, hi in transmitted_opening)
@@ -1158,7 +1153,7 @@ def test_widget_nmx_wls2_pair_direction_contract(qapp):
         assert rot1 is not None
         chopper = wls2a if name == "wls2a" else wls2b
         model = build_rotation_model(chopper)
-        expected_delta = -runtime_phase_sign(
+        expected_delta = -runtime_spin_sign(
             14.0, model.positive_speed_rotation_direction
         ) * eps
         assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)
@@ -1205,7 +1200,7 @@ def test_widget_nmx_wls_phase_reference_renders_centered_opening_at_down_guide(
     widget = ChopperWidget(guide_pos="DOWN")
     widget.set_show_guide_line(False)
     name = wls["chopper"]
-    phase_ref = build_rotation_model(wls).phase_tdc_center_window_delay_deg
+    phase_ref = _positive_speed_phase_reference(wls)
 
     widget.update_chopper_data([wls])
     widget.set_chopper_speed(name, 14.0)

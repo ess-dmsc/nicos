@@ -6,7 +6,7 @@ from nicos_ess.gui.widgets.chopper_math import (
     build_rotation_model,
     compute_phase_center_delay_deg,
     opening_center_deg,
-    runtime_phase_sign,
+    runtime_spin_sign,
     wrap180,
     wrap360,
 )
@@ -20,7 +20,6 @@ _FAKE_DOUBLE_DISC_BASE = {
     "slit_edges": [[0.0, 40.0], [100.0, 120.0]],
     "parked_opening_index": 0,
     "park_open_angle": 180.0,
-    "park_close_angle": 0.0,
     "tdc_resolver_position": 90.0,
 }
 
@@ -57,9 +56,7 @@ def fake_expected_phase(
         }[chopper]
     model = build_rotation_model(chopper)
     opening_center = opening_center_deg(chopper["slit_edges"][int(opening_index)])
-    spin_sign = runtime_phase_sign(
-        speed_hz, model.positive_speed_rotation_direction
-    )
+    spin_sign = runtime_spin_sign(speed_hz, model.positive_speed_rotation_direction)
     effective_direction = CW if spin_sign >= 0 else CCW
     ref_phase = compute_phase_center_delay_deg(
         model.tdc_resolver_position_deg,

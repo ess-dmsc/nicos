@@ -32,8 +32,7 @@ def nanoseconds_to_degrees(timedelta, frequency):
 
 class MiniDB:
     """
-    A simple key value store with a max size.
-    Later this should be replaced with the nicos cache / redis timeseries.
+    Bounded in-memory store for recent histogram and trend values.
     """
 
     def __init__(self):
@@ -61,6 +60,7 @@ class ChopperPanel(Panel):
         self.trend_widget = TrendViewer(parent=self)
 
         self._db = MiniDB()
+        self._selected_chopper = None
 
         self.initialize_ui()
         self.build_ui()
@@ -103,6 +103,10 @@ class ChopperPanel(Panel):
 
     def _update_selected_chopper_name(self, name):
         self._selected_chopper = name
+        if name is None:
+            self.histogram_widget.clear()
+            self.trend_widget.clear()
+            return
         self._update_delay_errors(f"{name}_delay_errors")
 
     def handle_delay_errors(self, data):
@@ -184,9 +188,6 @@ class ChopperPanel(Panel):
         fwhm = bin_edges[right_idx] - bin_edges[left_idx]
         return fwhm, left_idx, right_idx
 
-    def exec_command(self, command):
-        self.client.tell("exec", command)
-
     def eval_command(self, command, *args, **kwargs):
         return self.client.eval(command, *args, **kwargs)
 
@@ -234,7 +235,8 @@ class ChopperPanel(Panel):
         frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
         if frequency is not None and abs(frequency) >= 2:
             frequency = float(frequency)
-            self._update_chopper_angle(chopper_name, delay, frequency)
+            angle = nanoseconds_to_degrees(delay, frequency)
+            self.chopper_widget.set_chopper_angle(chopper_name, angle)
 
     def _handle_speed_update(self, chopper_name, speed_value):
         frequency = float(speed_value)
@@ -245,7 +247,8 @@ class ChopperPanel(Panel):
             )
             if delay is not None:
                 delay = float(delay)
-                self._update_chopper_angle(chopper_name, delay, frequency)
+                angle = nanoseconds_to_degrees(delay, frequency)
+                self.chopper_widget.set_chopper_angle(chopper_name, angle)
 
     def _handle_park_angle_update(self, chopper_name, park_angle_value):
         park_angle = float(park_angle_value)
@@ -256,14 +259,12 @@ class ChopperPanel(Panel):
             if abs(frequency) < 2:
                 self.chopper_widget.set_chopper_angle(chopper_name, park_angle)
 
-    def _update_chopper_angle(self, chopper_name, delay, frequency):
-        angle = nanoseconds_to_degrees(delay, frequency)
-        self.chopper_widget.set_chopper_angle(chopper_name, angle)
-
     def _update_delay_errors(self, device_name):
         array = self.eval_command(f"{device_name}.raw_errors", default=None)
         if array is None:
-            if device_name.startswith(self._selected_chopper):
+            if self._selected_chopper and device_name.startswith(
+                self._selected_chopper
+            ):
                 self.histogram_widget.clear()
                 self.trend_widget.clear()
             return
