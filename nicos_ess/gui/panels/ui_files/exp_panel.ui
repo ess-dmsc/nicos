@@ -91,6 +91,29 @@
           </item>
          </layout>
         </item>
+        <item row="2" column="1">
+         <widget class="QPushButton" name="refreshButton">
+          <property name="maximumSize">
+           <size>
+            <width>400</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>16</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Re-fetch this proposal from SciCat and update the local cache.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="text">
+           <string>Reload from SciCat</string>
+          </property>
+         </widget>
+        </item>
         <item row="2" column="0">
          <widget class="QPushButton" name="queryDBButton">
           <property name="maximumSize">

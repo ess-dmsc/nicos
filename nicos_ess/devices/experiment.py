@@ -1,6 +1,8 @@
 """ESS Experiment device."""
 
 import time
+import urllib.error
+import urllib.request
 from os import path
 
 from yuos_query.exceptions import BaseYuosException
@@ -73,6 +75,13 @@ class EssExperiment(Device):
             type=str,
             category="experiment",
             mandatory=True,
+            userparam=False,
+        ),
+        "yuos_server_url": Param(
+            "Base URL of the YuosServer HTTP endpoint for on-demand proposal reload "
+            "(e.g. 'http://localhost:14870'). Leave empty to disable.",
+            type=str,
+            default="",
             userparam=False,
         ),
         "update_interval": Param(
@@ -280,6 +289,37 @@ class EssExperiment(Device):
         if self._yuos_client:
             return True
         return False
+
+    def reload_proposal(self, proposal_id: str):
+        """Re-fetch a single proposal from SciCat via the YuosServer HTTP endpoint
+        and update the in-memory proposal cache.
+
+        Requires ``yuos_server_url`` to be configured in the setup file.
+        """
+        if not self.yuos_server_url:
+            raise UsageError(
+                "yuos_server_url is not configured; cannot reload proposal"
+            )
+        url = f"{self.yuos_server_url.rstrip('/')}/reload-proposal/{proposal_id}"
+        try:
+            req = urllib.request.Request(url, method="POST")
+            with urllib.request.urlopen(req, timeout=30):
+                pass
+        except urllib.error.HTTPError as e:
+            raise UsageError(
+                f"YuosServer returned error {e.code} for proposal {proposal_id}: {e.reason}"
+            ) from e
+        except urllib.error.URLError as e:
+            raise UsageError(
+                f"Could not reach YuosServer at {self.yuos_server_url}: {e.reason}"
+            ) from e
+
+        if self._yuos_client:
+            self._yuos_client.update_cache()
+            self._pollParam("title")
+            self._pollParam("users")
+            self._pollParam("localcontact")
+            self.log.info("Proposal %s reloaded from SciCat", proposal_id)
 
     def _update_proposal_cache(self):
         while True:

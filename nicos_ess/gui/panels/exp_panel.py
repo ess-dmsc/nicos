@@ -219,6 +219,10 @@ class ExpPanel(PanelBase):
     def _is_proposal_system_available(self):
         available = self.client.eval("session.experiment._canQueryProposals()", False)
         self.queryDBButton.setVisible(available)
+        reload_available = available and bool(
+            self.client.eval("session.experiment.yuos_server_url", "")
+        )
+        self.refreshButton.setVisible(reload_available)
         self.proposalNum.setReadOnly(available)
         self.propTitle.setReadOnly(available)
         self.addUserButton.setVisible(not available)
@@ -258,7 +262,6 @@ class ExpPanel(PanelBase):
         self.errorAbortBox.setEnabled(not viewonly)
         self.queryDBButton.setEnabled(not viewonly)
         self.addUserButton.setEnabled(not viewonly)
-        self.queryDBButton.setEnabled(not viewonly)
         self.deleteUserButton.setEnabled(not viewonly)
         self.addSampleButton.setEnabled(not viewonly)
         self.deleteSampleButton.setEnabled(not viewonly)
@@ -347,6 +350,20 @@ class ExpPanel(PanelBase):
             if index.isValid() and index.row() < self.users_model.num_entries
         }
         self.users_model.remove_rows(to_remove)
+
+    @pyqtSlot()
+    def on_refreshButton_clicked(self):
+        proposal_id = self.proposalNum.text().strip()
+        if not proposal_id:
+            self.showError("Enter a proposal number before reloading.")
+            return
+        try:
+            self.client.eval(
+                f"session.experiment.reload_proposal('{proposal_id}')"
+            )
+        except Exception as e:
+            self.log.warning("error reloading proposal", exc=1)
+            self.showError(f"Reloading proposal failed: {e}")
 
     @pyqtSlot()
     def on_queryDBButton_clicked(self):
