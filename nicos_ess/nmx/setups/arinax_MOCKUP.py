@@ -35,25 +35,6 @@ devices = dict(
         maxage=None,
     ),
     # DPU Config
-    detector_config_readback=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="ARINAX DPU Configuration, readback (mockup)",
-        readpv="NMX-mockup:getDPUConfiguration",
-        pva=False,
-        monitor=True,
-        pollinterval=0.5,
-        maxage=None,
-    ),
-    detector_config_setpoint=device(
-        # Just for testing, coudl be removed later.
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="ARINAX DPU Configuration, setpoint readback (mockup)",
-        readpv="NMX-mockup:setDPUConfiguration",
-        pva=False,
-        monitor=True,
-        pollinterval=0.5,
-        maxage=None,
-    ),
     detector_config_control=device(
         # Showing only the index!
         # This class seems to be the best so far for read/write the DPU config PV.
@@ -84,20 +65,39 @@ devices = dict(
             'CONFIG11':"CONFIG11",
             }
     ),
-    # Sample centring motion
-    sample_centring_phi=device(
-        "nicos.devices.epics.pva.EpicsAnalogMoveable",
-        description="ARINAX sample motor Phi (mockup)",
-        readpv="NMX-mockup:getPhiPosition",
-        writepv="NMX-mockup:setPhiPosition", # String type, incompatible here.
-        unit="mm",
+    detector_config_readback=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="ARINAX DPU Configuration, readback (mockup)",
+        readpv="NMX-mockup:getDPUConfiguration",
         pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
+    detector_config_setpoint=device(
+        # Just for testing, coudl be removed later.
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="ARINAX DPU Configuration, setpoint readback (mockup)",
+        readpv="NMX-mockup:setDPUConfiguration",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+    ),
+    # Sample centring motion
     sample_centring_chi=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample motor Chi (mockup)",
         readpv="NMX-mockup:getChiPosition",
         writepv="NMX-mockup:setChiPosition",
+        unit="mm",
+        pva=False,
+    ),
+    sample_centring_phi=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX sample motor Phi (mockup)",
+        readpv="NMX-mockup:getPhiPosition",
+        writepv="NMX-mockup:setPhiPosition", # String type, incompatible here.
         unit="mm",
         pva=False,
     ),
@@ -109,54 +109,7 @@ devices = dict(
         unit="mm",
         pva=False,
     ),
-    # Sample tool
-    sample_tool__load_tool=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="ARINAX SPU desired tool loading, control (mockup)",
-        readpv="NMX-mockup:LoadTool",
-        writepv="NMX-mockup:LoadTool",
-        pva=False,
-        monitor=True,
-        pollinterval=0.5,
-        maxage=None,
-        mapping={
-            "GoniometerEmpty": "GoniometerEmpty",
-            "CustomToolEmpty": "CustomToolEmpty",
-            "TouchProbe": "TouchProbe",
-            "ToolChanger": "ToolChanger",
-            "GoniometerSample": "GoniometerSample",
-            "CustomToolSample": "CustomToolSample",
-            "None": "None",
-        },
-    ),
-    sample_tool__current_tool=device(
-        # Only index is showing.
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="ARINAX SPU current mounted tool, readback (mockup)",
-        readpv="NMX-mockup:getCurrentTool",
-        pva=False,
-        monitor=True,
-        pollinterval=0.5,
-        maxage=None,
-        mapping={
-            'No': 0,
-            'Yes': 1,
-            },
-    ),
     # Sample load
-    sample_load__sample_is_loaded=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="ARINAX SPU sample is mounted, readback (mockup)",
-        readpv="NMX-mockup:getIsSampleLoaded",
-        pva=False,
-        monitor=True,
-        pollinterval=0.5,
-        maxage=None,
-        mapping={
-            'No': 0,
-            'Yes': 1,
-            },
-    ),
     sample_load__load_SS_sample=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU load sample from storage, control (mockup)",
@@ -179,6 +132,19 @@ devices = dict(
         maxage=None,
         mapping=UNIPUCKS,
     ),
+    sample_load__sample_is_loaded=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="ARINAX SPU sample is mounted, readback (mockup)",
+        readpv="NMX-mockup:getIsSampleLoaded",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            'No': 0,
+            'Yes': 1,
+            },
+    ),
     sample_load__unload_sample=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU unload sample, control (mockup)",
@@ -191,6 +157,40 @@ devices = dict(
         mapping={
             'Unload sample': "1", # Any string should be okay.
             },
+    ),
+    # Sample tool
+    sample_tool__current_tool=device(
+        # Only index is showing.
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="ARINAX SPU current mounted tool, readback (mockup)",
+        readpv="NMX-mockup:getCurrentTool",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            'No': 0,
+            'Yes': 1,
+            },
+    ),
+    sample_tool__load_tool=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="ARINAX SPU desired tool loading, control (mockup)",
+        readpv="NMX-mockup:LoadTool",
+        writepv="NMX-mockup:LoadTool",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            "GoniometerEmpty": "GoniometerEmpty",
+            "CustomToolEmpty": "CustomToolEmpty",
+            "TouchProbe": "TouchProbe",
+            "ToolChanger": "ToolChanger",
+            "GoniometerSample": "GoniometerSample",
+            "CustomToolSample": "CustomToolSample",
+            "None": "None",
+        },
     ),
 
 )
