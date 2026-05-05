@@ -159,7 +159,7 @@ devices = dict(
             },
     ),
     # Sample tool
-    sample_tool__current_tool=device(
+    sample_tool__current_tool_=device(
         # Only index is showing.
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="ARINAX SPU current mounted tool, readback (mockup)",
