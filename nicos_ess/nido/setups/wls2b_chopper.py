@@ -94,10 +94,8 @@ devices = dict(
         writepv="{}Park_S".format(pv_root_2),
         visibility=(),
         mapping={
-            "park pos 0": 0,
-            "park pos 1": 90,
-            "park pos 2": 180,
-            "park pos 3": 270,
+            "park open": 165.0,
+            "park close": 345.0,
         },
     ),
     wls2b_chopper_park_status=device(
@@ -131,6 +129,9 @@ devices = dict(
         state="wls2b_chopper_status",
         command="wls2b_chopper_control",
         speed="wls2b_chopper_speed",
+        total_delay="wls2b_chopper_total_delay",
+        park_angle="wls2b_chopper_park_angle",
+        delay_errors="wls2b_chopper_delay_errors",
         chic_conn="wls2b_chopper_chic",
         alarms="wls2b_chopper_alarms",
         slit_edges=[[0.0, 170.0]],

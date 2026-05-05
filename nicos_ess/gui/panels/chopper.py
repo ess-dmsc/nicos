@@ -10,6 +10,14 @@ from nicos.guisupport.qt import (
     Qt,
     QVBoxLayout,
 )
+from nicos_ess.devices.epics.chopper import (
+    CHOPPER_GUI_CHOPPER,
+    CHOPPER_GUI_DELAY_ERRORS_KEY,
+    CHOPPER_GUI_INFO_METHOD,
+    CHOPPER_GUI_PARK_ANGLE_KEY,
+    CHOPPER_GUI_SPEED_KEY,
+    CHOPPER_GUI_TOTAL_DELAY_KEY,
+)
 from nicos_ess.gui.widgets.chopper_math import has_canonical_inputs
 from nicos_ess.gui.widgets.chopper_widget import (
     ChopperWidget,
@@ -20,6 +28,18 @@ from nicos_ess.gui.widgets.pyqtgraph.histogram_data_viewer import (
 )
 
 BIN_WIDTH = 100
+
+CHOPPER_KEY_ROLE_SPEED = "speed"
+CHOPPER_KEY_ROLE_TOTAL_DELAY = "total_delay"
+CHOPPER_KEY_ROLE_PARK_ANGLE = "park_angle"
+CHOPPER_KEY_ROLE_DELAY_ERRORS = "delay_errors"
+
+CHOPPER_GUI_KEY_FIELDS = (
+    (CHOPPER_GUI_SPEED_KEY, CHOPPER_KEY_ROLE_SPEED),
+    (CHOPPER_GUI_TOTAL_DELAY_KEY, CHOPPER_KEY_ROLE_TOTAL_DELAY),
+    (CHOPPER_GUI_PARK_ANGLE_KEY, CHOPPER_KEY_ROLE_PARK_ANGLE),
+    (CHOPPER_GUI_DELAY_ERRORS_KEY, CHOPPER_KEY_ROLE_DELAY_ERRORS),
+)
 
 
 def nanoseconds_to_degrees(timedelta, frequency):
@@ -59,6 +79,8 @@ class ChopperPanel(Panel):
 
         self._db = MiniDB()
         self._registered_chopper_keys = set()
+        self._chopper_cache_keys = {}
+        self._chopper_key_roles = {}
         self._speeds = {}
         self._total_delays = {}
         self._park_angles = {}
@@ -112,14 +134,10 @@ class ChopperPanel(Panel):
             self.histogram_widget.clear()
             self.trend_widget.clear()
 
-    def _handle_delay_errors(self, data):
-        timestamp, key, value = data
+    def _handle_delay_errors(self, timestamp, chopper_name, value):
         value = np.asarray(value)
         if value.size == 0:
             return
-
-        dev_name = key.split("/")[0]
-        dev_name = dev_name.replace("_delay_errors", "")
 
         x, y, mean, stddev, fwhm, left_bin_edge, right_bin_edge = self._calc_stats(
             value
@@ -136,7 +154,7 @@ class ChopperPanel(Panel):
             ("right_bin_edges", right_bin_edge),
         ]
         for param_key, param in params:
-            self._db.add(f"{dev_name}/{param_key}", param)
+            self._db.add(f"{chopper_name}/{param_key}", param)
 
         self._update_selected_chopper()
 
@@ -195,41 +213,37 @@ class ChopperPanel(Panel):
         return fwhm, left_idx, right_idx
 
     def _get_loaded_choppers(self):
-        return [chopper["chopper"] for chopper in self.chopper_widget.chopper_data]
+        return [
+            chopper[CHOPPER_GUI_CHOPPER] for chopper in self.chopper_widget.chopper_data
+        ]
 
     def on_keyChange(self, key, value, timestamp, expired):
         if key == "session/mastersetup":
             super().on_keyChange(key, value, timestamp, expired)
             return
 
-        if "/" not in key:
+        role_info = self._chopper_key_roles.get(key.lower())
+        if role_info is None:
             return
 
-        device_name, parameter_name = key.split("/", 1)
-
-        if parameter_name == "raw_errors" and device_name.endswith("_delay_errors"):
-            chopper_name = device_name[: -len("_delay_errors")]
+        chopper_name, role = role_info
+        if role == CHOPPER_KEY_ROLE_DELAY_ERRORS:
             if value is None:
                 if self.chopper_widget.get_selected_chopper() == chopper_name:
                     self.histogram_widget.clear()
                     self.trend_widget.clear()
                 return
-            self._handle_delay_errors(
-                (timestamp, f"{chopper_name}_delay_errors/raw_errors", value)
-            )
+            self._handle_delay_errors(timestamp, chopper_name, value)
             return
 
-        if parameter_name != "value" or value is None:
+        if value is None:
             return
 
-        if device_name.endswith("_total_delay"):
-            chopper_name = device_name[: -len("_total_delay")]
-            self._handle_total_delay_update(chopper_name, value)
-        elif device_name.endswith("_speed"):
-            chopper_name = device_name[: -len("_speed")]
+        if role == CHOPPER_KEY_ROLE_SPEED:
             self._handle_speed_update(chopper_name, value)
-        elif device_name.endswith("_park_angle"):
-            chopper_name = device_name[: -len("_park_angle")]
+        elif role == CHOPPER_KEY_ROLE_TOTAL_DELAY:
+            self._handle_total_delay_update(chopper_name, value)
+        elif role == CHOPPER_KEY_ROLE_PARK_ANGLE:
             self._handle_park_angle_update(chopper_name, value)
 
     def _handle_total_delay_update(self, chopper_name, delay_value):
@@ -267,18 +281,12 @@ class ChopperPanel(Panel):
 
     def _register_chopper_keys(self):
         registered_new_keys = False
-        for chopper_name in self._get_loaded_choppers():
-            keys = [
-                f"{chopper_name}_speed/value",
-                f"{chopper_name}_total_delay/value",
-                f"{chopper_name}_park_angle/value",
-                f"{chopper_name}_delay_errors/raw_errors",
-            ]
-            for key in keys:
-                if key.lower() in self._registered_chopper_keys:
-                    continue
-                self._registered_chopper_keys.add(self.client.register(self, key))
-                registered_new_keys = True
+        for normalized_key, key in self._chopper_cache_keys.items():
+            if normalized_key in self._registered_chopper_keys:
+                continue
+            registered_key = self.client.register(self, key)
+            self._registered_chopper_keys.add(registered_key.lower())
+            registered_new_keys = True
         return registered_new_keys
 
     def _load_choppers(self):
@@ -311,26 +319,39 @@ class ChopperPanel(Panel):
         devices = self.client.eval("session.devices", {})
 
         chopper_info = []
+        self._chopper_cache_keys = {}
+        self._chopper_key_roles = {}
 
         for dev_name in devices.keys():
-            disc_info = {"chopper": dev_name}
-            for param in [
-                "slit_edges",
-                "motor_position",
-                "positive_speed_rotation_direction",
-                "resolver_positive_direction",
-                "parked_opening_index",
-                "tdc_resolver_position",
-                "park_open_angle",
-                "disk_delay",
-            ]:
-                value = self.client.eval(f"{dev_name}.{param}", None)
-                if value is None:
-                    continue
+            has_contract = self.client.eval(
+                "hasattr(session.devices[%r], %r)"
+                % (dev_name, CHOPPER_GUI_INFO_METHOD),
+                False,
+            )
+            if not has_contract:
+                continue
 
-                disc_info[param] = value
+            disc_info = self.client.eval(
+                "session.devices[%r].%s()" % (dev_name, CHOPPER_GUI_INFO_METHOD),
+                None,
+            )
+            if not isinstance(disc_info, dict) or not has_canonical_inputs(disc_info):
+                continue
 
-            if has_canonical_inputs(disc_info):
-                chopper_info.append(disc_info)
+            chopper_name = disc_info.get(CHOPPER_GUI_CHOPPER)
+            if not chopper_name:
+                continue
+
+            self._add_chopper_key_roles(chopper_name, disc_info)
+            chopper_info.append(disc_info)
 
         self.chopper_widget.update_chopper_data(chopper_info)
+
+    def _add_chopper_key_roles(self, chopper_name, disc_info):
+        for field, role in CHOPPER_GUI_KEY_FIELDS:
+            key = disc_info.get(field)
+            if not key:
+                continue
+            normalized_key = key.lower()
+            self._chopper_cache_keys[normalized_key] = key
+            self._chopper_key_roles[normalized_key] = (chopper_name, role)

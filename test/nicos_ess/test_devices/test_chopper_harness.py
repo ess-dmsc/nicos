@@ -25,6 +25,16 @@
 import pytest
 
 from nicos_ess.devices.epics import chopper as chopper_mod
+from nicos_ess.devices.epics.chopper import (
+    CHOPPER_CACHE_RAW_ERRORS_PARAM,
+    CHOPPER_CACHE_VALUE_PARAM,
+    CHOPPER_GUI_CHOPPER,
+    CHOPPER_GUI_DELAY_ERRORS_KEY,
+    CHOPPER_GUI_METADATA_FIELDS,
+    CHOPPER_GUI_PARK_ANGLE_KEY,
+    CHOPPER_GUI_SPEED_KEY,
+    CHOPPER_GUI_TOTAL_DELAY_KEY,
+)
 from nicos_ess.devices.epics.pva import epics_devices
 from nicos_ess.devices.epics.pva.epics_devices import EpicsManualMappedAnalogMoveable
 from test.nicos_ess.test_devices.doubles import (
@@ -78,6 +88,21 @@ def attached_chopper_devices(device_harness, fake_backend):
     )
     device_harness.create_pair(
         HarnessReadable,
+        name="ess_total_delay",
+        shared={"initial": "12.5"},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_park_angle",
+        shared={"initial": "30.0"},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_delay_errors",
+        shared={"initial": ""},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
         name="ess_chic_conn",
         shared={"initial": "Connected"},
     )
@@ -92,6 +117,25 @@ def attached_chopper_devices(device_harness, fake_backend):
             "pva": True,
         },
     )
+
+
+def ess_chopper_config(**overrides):
+    config = {
+        "state": "ess_state",
+        "command": "ess_command",
+        "speed": "ess_speed",
+        "total_delay": "ess_total_delay",
+        "park_angle": "ess_park_angle",
+        "chic_conn": "ess_chic_conn",
+        "mapping": {"stop": "stop", "start": "start"},
+        "slit_edges": [[0.0, 90.0]],
+        "motor_position": "downstream",
+        "tdc_resolver_position": 60.0,
+        "park_open_angle": 30.0,
+        "disk_delay": 1.5,
+    }
+    config.update(overrides)
+    return config
 
 
 class TestChopperAlarmsHarness:
@@ -117,17 +161,53 @@ class TestEssChopperControllerHarness:
         daemon_device, poller_device = device_harness.create_pair(
             chopper_mod.EssChopperController,
             name="ess_chopper",
-            shared={
-                "state": "ess_state",
-                "command": "ess_command",
-                "speed": "ess_speed",
-                "chic_conn": "ess_chic_conn",
-                "mapping": {"stop": "stop", "start": "start"},
-            },
+            shared=ess_chopper_config(),
         )
 
         assert daemon_device is not None
         assert poller_device is not None
+
+    def test_chopper_gui_info_uses_attached_device_names(
+        self, device_harness, fake_backend, attached_chopper_devices
+    ):
+        del fake_backend, attached_chopper_devices
+        daemon_device, _poller_device = device_harness.create_pair(
+            chopper_mod.EssChopperController,
+            name="ess_chopper",
+            shared=ess_chopper_config(delay_errors="ess_delay_errors"),
+        )
+
+        info = device_harness.run_daemon(daemon_device.chopperGuiInfo)
+
+        assert info[CHOPPER_GUI_CHOPPER] == "ess_chopper"
+        assert info[CHOPPER_GUI_SPEED_KEY] == (
+            f"ess_speed/{CHOPPER_CACHE_VALUE_PARAM}"
+        )
+        assert info[CHOPPER_GUI_TOTAL_DELAY_KEY] == (
+            f"ess_total_delay/{CHOPPER_CACHE_VALUE_PARAM}"
+        )
+        assert info[CHOPPER_GUI_PARK_ANGLE_KEY] == (
+            f"ess_park_angle/{CHOPPER_CACHE_VALUE_PARAM}"
+        )
+        assert info[CHOPPER_GUI_DELAY_ERRORS_KEY] == (
+            f"ess_delay_errors/{CHOPPER_CACHE_RAW_ERRORS_PARAM}"
+        )
+        for field in CHOPPER_GUI_METADATA_FIELDS:
+            assert field in info
+
+    def test_chopper_gui_info_allows_missing_delay_errors(
+        self, device_harness, fake_backend, attached_chopper_devices
+    ):
+        del fake_backend, attached_chopper_devices
+        daemon_device, _poller_device = device_harness.create_pair(
+            chopper_mod.EssChopperController,
+            name="ess_chopper",
+            shared=ess_chopper_config(),
+        )
+
+        info = device_harness.run_daemon(daemon_device.chopperGuiInfo)
+
+        assert info[CHOPPER_GUI_DELAY_ERRORS_KEY] is None
 
 
 class TestOdinChopperControllerHarness:
