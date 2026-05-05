@@ -26,7 +26,14 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 
 
 def canonical_chopper_parameters():
+    """
+    All parameters needed to correctly draw the chopper in
+    the GUI.
+    """
     return {
+        "slit_edges": Param(
+            "Slit edges of the chopper", type=listof(listof(float)), mandatory=True
+        ),
         "motor_position": Param(
             "Motor mounting side for chopper drawing",
             type=oneof("upstream", "downstream"),
@@ -194,9 +201,6 @@ class EssChopperController(MappedMoveable):
     """Handles the status and hardware control for an ESS chopper system"""
 
     parameters = {
-        "slit_edges": Param(
-            "Slit edges of the chopper", type=listof(listof(float)), mandatory=True
-        ),
         **canonical_chopper_parameters(),
     }
 
@@ -263,9 +267,6 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
     """Handles the status and hardware control for an ESS ODIN chopper system"""
 
     parameters = {
-        "slit_edges": Param(
-            "Slit edges of the chopper", type=listof(listof(float)), mandatory=True
-        ),
         "pv_root": Param(
             "PV root for device", type=str, mandatory=True, userparam=False
         ),
