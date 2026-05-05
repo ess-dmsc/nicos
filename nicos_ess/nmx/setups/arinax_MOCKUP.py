@@ -168,10 +168,6 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        mapping={
-            'No': 0,
-            'Yes': 1,
-            },
     ),
     sample_tool__load_tool=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
