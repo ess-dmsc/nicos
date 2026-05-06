@@ -34,6 +34,16 @@ devices = dict(
         writepv="{}ChopDly-S".format(pv_root_1),
         abslimits=(0.0, 0.0),
     ),
+    bwc1_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(pv_root_1),
+        visibility=("metadata", "namespace"),
+    ),
     bwc1_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -85,9 +95,19 @@ devices = dict(
         state="bwc1_chopper_status",
         command="bwc1_chopper_control",
         speed="bwc1_chopper_speed",
+        total_delay="bwc1_chopper_total_delay",
+        park_angle="bwc1_chopper_park_angle",
+        delay_errors="bwc1_chopper_delay_errors",
         chic_conn="bwc1_chopper_chic",
         alarms="bwc1_chopper_alarms",
         slit_edges=[[0.0, 161.0]],
+        motor_position="upstream",
+        positive_speed_rotation_direction="CW",
+        resolver_positive_direction="CW",
+        parked_opening_index=0,
+        tdc_resolver_position=342.0,
+        park_open_angle=80.5,
+        disk_delay=0.0,
     ),
     bwc2_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -117,6 +137,16 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_2),
         writepv="{}ChopDly-S".format(pv_root_2),
         abslimits=(0.0, 0.0),
+    ),
+    bwc2_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(pv_root_2),
+        visibility=("metadata", "namespace"),
     ),
     bwc2_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
@@ -168,8 +198,18 @@ devices = dict(
         state="bwc2_chopper_status",
         command="bwc2_chopper_control",
         speed="bwc2_chopper_speed",
+        total_delay="bwc2_chopper_total_delay",
+        park_angle="bwc2_chopper_park_angle",
+        delay_errors="bwc2_chopper_delay_errors",
         chic_conn="bwc2_chopper_chic",
         alarms="bwc2_chopper_alarms",
         slit_edges=[[0.0, 161.0]],
+        motor_position="downstream",
+        positive_speed_rotation_direction="CW",
+        resolver_positive_direction="CW",
+        parked_opening_index=0,
+        tdc_resolver_position=342.0,
+        park_open_angle=-80.5,
+        disk_delay=0.0,
     ),
 )
