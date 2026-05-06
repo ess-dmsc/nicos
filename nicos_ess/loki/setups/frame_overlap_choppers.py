@@ -34,6 +34,16 @@ devices = dict(
         writepv="{}ChopDly-S".format(pv_root_1),
         abslimits=(0.0, 0.0),
     ),
+    foc1_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(pv_root_1),
+        visibility=("metadata", "namespace"),
+    ),
     foc1_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -91,10 +101,19 @@ devices = dict(
         state="foc1_status",
         command="foc1_control",
         speed="foc1_speed",
+        total_delay="foc1_total_delay",
+        park_angle="foc1_park_angle",
+        delay_errors="foc1_delay_errors",
         chic_conn="foc1_chic",
         alarms="foc1_alarms",
-        slit_edges=[[0, 190]],
-        resolver_offset=-145,
+        slit_edges=[[0.0, 190.0]],
+        motor_position="upstream",
+        positive_speed_rotation_direction="CW",
+        resolver_positive_direction="CW",
+        parked_opening_index=0,
+        tdc_resolver_position=270.0,
+        park_open_angle=90.0,
+        disk_delay=0.0,
     ),
     foc2_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -124,6 +143,16 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_2),
         writepv="{}ChopDly-S".format(pv_root_2),
         abslimits=(0.0, 0.0),
+    ),
+    foc2_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(pv_root_2),
+        visibility=("metadata", "namespace"),
     ),
     foc2_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
@@ -181,9 +210,18 @@ devices = dict(
         state="foc2_status",
         command="foc2_control",
         speed="foc2_speed",
+        total_delay="foc2_total_delay",
+        park_angle="foc2_park_angle",
+        delay_errors="foc2_delay_errors",
         chic_conn="foc2_chic",
         alarms="foc2_alarms",
-        slit_edges=[[0, 190]],
-        resolver_offset=35,
+        slit_edges=[[0.0, 190.0]],
+        motor_position="downstream",
+        positive_speed_rotation_direction="CW",
+        resolver_positive_direction="CW",
+        parked_opening_index=0,
+        tdc_resolver_position=90.0,
+        park_open_angle=270.0,
+        disk_delay=0.0,
     ),
 )
