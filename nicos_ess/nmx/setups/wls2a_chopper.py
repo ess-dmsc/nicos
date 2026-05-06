@@ -51,6 +51,16 @@ devices = dict(
         writepv="{}ChopDly-S".format(pv_root_1),
         abslimits=(0.0, 0.0),
     ),
+    wls2a_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(pv_root_1),
+        visibility=("metadata", "namespace"),
+    ),
     wls2a_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -119,11 +129,18 @@ devices = dict(
         state="wls2a_chopper_status",
         command="wls2a_chopper_control",
         speed="wls2a_chopper_speed",
+        total_delay="wls2a_chopper_total_delay",
+        park_angle="wls2a_chopper_park_angle",
+        delay_errors="wls2a_chopper_delay_errors",
         chic_conn="wls2a_chopper_chic",
         alarms="wls2a_chopper_alarms",
-        slit_edges=[[0, 170]],
-        resolver_offset=158.0,
-        tdc_offset=176.3,
-        spin_direction="CCW",
+        slit_edges=[[0.0, 170.0]],
+        motor_position="upstream",
+        positive_speed_rotation_direction="CW",
+        resolver_positive_direction="CW",
+        parked_opening_index=0,
+        tdc_resolver_position=341.7,
+        park_open_angle=73.0,
+        disk_delay=0.0,
     ),
 )
