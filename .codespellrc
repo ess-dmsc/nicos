@@ -1,4 +1,4 @@
 [codespell]
-skip = .git,.ci,test/root,nicos_mlz/*,nicos/authors.py,*.svg,*venv,uv.lock
+skip = ./.git,./.ci,./test/root,./nicos_mlz/*,./nicos/authors.py,*.svg,*venv,uv.lock,./log/*,./nicos/guisupport/gui_rc_qt*.py,./data/*
 quiet-level = 2
-ignore-words-list = mot,esponsible,LiveTime
+ignore-words-list = mot,esponsible,LiveTime,rmove,inout,inbetween
