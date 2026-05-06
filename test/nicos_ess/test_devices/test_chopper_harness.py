@@ -24,6 +24,7 @@
 
 import pytest
 
+from nicos.core import status
 from nicos_ess.devices.epics import chopper as chopper_mod
 from nicos_ess.devices.epics.chopper import (
     CHOPPER_CACHE_RAW_ERRORS_PARAM,
@@ -215,6 +216,34 @@ class TestEssChopperControllerHarness:
 
         assert daemon_device is not None
         assert poller_device is not None
+
+    @pytest.mark.parametrize(
+        "alarm_cls",
+        [chopper_mod.ChopperAlarms, chopper_mod.ChopperAlarmsV2],
+        ids=["legacy-alarms", "alarms-v2"],
+    )
+    def test_accepts_legacy_and_v2_alarm_devices(
+        self, alarm_cls, device_harness, fake_backend, attached_chopper_devices
+    ):
+        del fake_backend, attached_chopper_devices
+        device_harness.create_pair(
+            alarm_cls,
+            name="ess_alarms",
+            shared={
+                "pv_root": "SIM:CHOP:",
+                "monitor": True,
+                "pva": True,
+            },
+        )
+        daemon_device, poller_device = device_harness.create_pair(
+            chopper_mod.EssChopperController,
+            name="ess_chopper",
+            shared=ess_chopper_config(alarms="ess_alarms"),
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
+        assert device_harness.run_daemon(daemon_device.status, 0) == (status.OK, "")
 
     def test_chopper_gui_info_uses_attached_device_names(
         self, device_harness, fake_backend, attached_chopper_devices
