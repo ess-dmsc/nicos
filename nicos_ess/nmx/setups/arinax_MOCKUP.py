@@ -213,7 +213,7 @@ devices = dict(
     sample_tool__load_tool=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU desired tool loading, control (mockup)",
-        readpv="NMX-mockup:LoadTool",
+        readpv="NMX-mockup:getCurrentTool",
         writepv="NMX-mockup:LoadTool",
         pva=False,
         monitor=True,
