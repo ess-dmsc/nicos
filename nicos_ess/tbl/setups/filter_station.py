@@ -14,7 +14,7 @@ devices = dict(
     ),
     config_bank_1=device(
         "nicos_ess.devices.mapped_controller.MappedController",
-        description="Filter bank 1 discrete postions",
+        description="Filter bank 1 discrete positions",
         controlled_device="bank_1_axis",
         mapping={
             "Blank": 1,
@@ -36,7 +36,7 @@ devices = dict(
     ),
     config_bank_2=device(
         "nicos_ess.devices.mapped_controller.MappedController",
-        description="Filter bank 2 discrete postions",
+        description="Filter bank 2 discrete positions",
         controlled_device="bank_2_axis",
         mapping={
             "Blank": 1,
@@ -58,7 +58,7 @@ devices = dict(
     ),
     config_bank_3=device(
         "nicos_ess.devices.mapped_controller.MappedController",
-        description="Filter bank 3 discrete postions",
+        description="Filter bank 3 discrete positions",
         controlled_device="bank_3_axis",
         mapping={
             "Blank": 1,

@@ -1202,7 +1202,7 @@ class ControlDialog(QDialog):
                 self.devname,
                 ", param_list=[%r]" % item.text(0) if action == refreshAction else "",
             )
-            # poll even non volatile parameter as requested explicitely
+            # poll even non volatile parameter as requested explicitly
             self.client.eval(cmd, None)
 
     @pyqtSlot()

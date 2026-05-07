@@ -76,10 +76,10 @@ def recCell(a, b=None, c=None, alpha=90.0, beta=90.0, gamma=90.0):
         (np.cos(cell.alpha) * np.cos(cell.beta) - np.cos(cell.gamma))
         / (np.sin(cell.alpha) * np.sin(cell.beta))
     )
-    aas = 1.0 / (cell.a * np.sin(cell.beta) * np.sin(gammas))
+    aas = 1.0 / (cell.a * np.sin(cell.beta) * np.sin(gammas))  # codespell:ignore
     bs = 1.0 / (cell.b * np.sin(cell.alpha) * np.sin(gammas))
     cs = 1.0 / (cell.c * np.sin(cell.alpha) * np.sin(betas))
-    return CellParam(aas, bs, cs, alphas, betas, gammas)
+    return CellParam(aas, bs, cs, alphas, betas, gammas)  # codespell:ignore
 
 
 def matrixfromcell(a, b=None, c=None, alpha=90.0, beta=90.0, gamma=90.0):

@@ -53,7 +53,7 @@ devices = dict(
     ),
     focus_mot=device(
         "nicos.devices.generic.VirtualMotor",
-        description="Camera lens roation axis (focus)",
+        description="Camera lens rotation axis (focus)",
         abslimits=(-100, 100),
         visibility=(),
         unit="deg",
@@ -61,7 +61,7 @@ devices = dict(
     ),
     focus=device(
         "nicos.devices.generic.Axis",
-        description="Camera lens roation axis (focus)",
+        description="Camera lens rotation axis (focus)",
         pollinterval=5,
         maxage=12,
         fmtstr="%.2f",

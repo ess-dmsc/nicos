@@ -284,7 +284,7 @@ def sigmoid(*columns):
 
         ((a, b, x0, c), (d_a, d_b, d_x0, d_c))
 
-    where the elemets of the second tuple the estimated standard errors of the
+    where the elements of the second tuple the estimated standard errors of the
     fit parameters.  The fit parameters are:
 
     * a - amplitude of the Sigmoid

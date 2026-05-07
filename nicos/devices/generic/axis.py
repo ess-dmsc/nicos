@@ -633,4 +633,4 @@ class Axis(CanReference, AbstractAxis):
                         MoveError, "motor did not stop after " "stop request, aborting"
                     )
                     moving = False
-        self.log.debug("inner positioning loop finshed")
+        self.log.debug("inner positioning loop finished")

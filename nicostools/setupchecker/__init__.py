@@ -111,7 +111,7 @@ class SetupCollection:
 
     def _exec_all(self, setuplist):
         for setupname, filename in setuplist:
-            self.log.info("excecuting %s", filename)
+            self.log.info("executing %s", filename)
             filename = path.normpath(path.abspath(filename))
             is_guiconfig = setupname.startswith("guiconfig")
             if is_guiconfig:

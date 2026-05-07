@@ -642,7 +642,7 @@ class NicosPlot(DlgUtils):
     def saveQuietly(self):
         """Save plot quietly to temporary files with default formats.
 
-        Return a list of tuples (created filname, extension)
+        Return a list of tuples (created filename, extension)
         """
         raise NotImplementedError
 
@@ -1308,7 +1308,7 @@ def synthesizeSingleCurveData(curvedata, fmtno, window=0.1):
     """Generate a single matrix with value Y1...Yn for a single time column
     from a list of separate (X, Y) curves
 
-    Y values of curves that don't have data for inbetween points is not
+    Y values of curves that don't have data for in between points is not
     interpolated, but the last value is repeated.
     """
     ncurves = len(curvedata)

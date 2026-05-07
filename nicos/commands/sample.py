@@ -237,7 +237,7 @@ def activation(
         except ConfigurationError:
             pass
     if instrument is None:
-        raise UsageError("Please specifiy an instrument or flux")
+        raise UsageError("Please specify an instrument or flux")
     if mass is None:
         try:
             formula = session.experiment.sample.mass

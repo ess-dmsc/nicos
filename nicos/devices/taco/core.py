@@ -228,7 +228,7 @@ class TacoDevice(HasCommunication):
         self._taco_reset(self._dev)
 
     def doReadUnit(self):
-        # explicitly configured unit has precendence
+        # explicitly configured unit has precedence
         if "unit" in self._config:
             return self._config["unit"]
         if hasattr(self._dev, "unit"):

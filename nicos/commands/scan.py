@@ -641,7 +641,7 @@ def manualscan(*args, **kwargs):
                 maw(device, i+1)
                 count(t=600)
 
-    This example mimicks a regular `scan()`, with the exception that before
+    This example mimics a regular `scan()`, with the exception that before
     every point the value of another device is checked for validity.
 
     The arguments to `manualscan()` can be are:

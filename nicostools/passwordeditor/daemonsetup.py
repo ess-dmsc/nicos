@@ -57,7 +57,7 @@ class DaemonSetup:
 
         All entries will be converted to strings. If the password field
         contains the hashlib call it will generate a NameError which will be
-        catched so the entry will not converted to the hexdigest
+        caught so the entry will not converted to the hexdigest
         """
         if not self.passwd:
             return []
