@@ -11,9 +11,18 @@ from nicos.guisupport.qt import (
     QPointF,
     QPolygonF,
     QRectF,
+    QSize,
     Qt,
     QWidget,
     pyqtSignal,
+)
+from nicos_ess.devices.epics.chopper import (
+    CHOPPER_GUI_CHOPPER,
+    CHOPPER_GUI_MOTOR_POSITION,
+    CHOPPER_GUI_SLIT_EDGES,
+    CHOPPER_RENDERED_PARKING_ANGLE,
+    CHOPPER_RENDERED_SPEED,
+    is_chopper_moving,
 )
 from nicos_ess.gui.widgets.chopper_math import (
     build_rotation_model,
@@ -31,6 +40,91 @@ class Colors(Enum):
     BLUE = Qt.GlobalColor.blue
     DARK_GRAY = Qt.GlobalColor.darkGray
     BLACK = Qt.GlobalColor.black
+
+
+class ChopperLegendWidget(QWidget):
+    _PADDING_X = 9
+    _PADDING_Y = 5
+    _GAP_X = 7
+    _ITEM_GAP = 18
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMinimumSize(self.sizeHint())
+
+    def sizeHint(self):
+        fm = self.fontMetrics()
+        icon = self._icon_size(fm)
+        labels = ("Coated blade", "Beam guide", "Rotating", "Parked")
+        width = self._PADDING_X * 2
+        for index, label in enumerate(labels):
+            width += icon + self._GAP_X + fm.horizontalAdvance(label)
+            if index < len(labels) - 1:
+                width += self._ITEM_GAP
+        return QSize(width, icon + 2 * self._PADDING_Y)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setFont(self.font())
+
+        fm = painter.fontMetrics()
+        icon = self._icon_size(fm)
+        x = self._PADDING_X
+        y = max(self._PADDING_Y, (self.height() - icon) // 2)
+
+        painter.setPen(QPen(QColor(0, 0, 0, 120), 1))
+        painter.setBrush(QBrush(QColor(255, 255, 255, 230)))
+        painter.drawRoundedRect(
+            QRectF(0.5, 0.5, self.width() - 1, self.height() - 1),
+            4,
+            4,
+        )
+
+        def baseline() -> int:
+            return y + (icon + fm.ascent()) // 2
+
+        def text(label: str) -> None:
+            nonlocal x
+            painter.setPen(QPen(Colors.BLACK.value, 0))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawText(x, baseline(), label)
+            x += fm.horizontalAdvance(label) + self._ITEM_GAP
+
+        gray_w = icon
+        gray_h = icon
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(Colors.DARK_GRAY.value)
+        painter.drawRect(x, y, gray_w, gray_h)
+        stripe_h = gray_h // 2
+        stripe_y = y + (gray_h - stripe_h) // 2
+        painter.setBrush(Colors.BLACK.value)
+        painter.drawRect(x, stripe_y, gray_w, stripe_h)
+        x += gray_w + self._GAP_X
+        text("Coated blade")
+
+        painter.setPen(QPen(Colors.BLUE.value, max(2, icon // 4)))
+        line_x = x + icon // 2
+        painter.drawLine(line_x, y, line_x, y + icon)
+        x += icon + self._GAP_X
+        text("Beam guide")
+
+        self._draw_color_item(painter, x, y, icon, Colors.GREEN.value, "Rotating")
+        x += icon + self._GAP_X + fm.horizontalAdvance("Rotating") + self._ITEM_GAP
+        self._draw_color_item(painter, x, y, icon, QBrush(Colors.GRAY.value), "Parked")
+
+    def _icon_size(self, fm) -> int:
+        return max(9, fm.height())
+
+    def _draw_color_item(self, painter, x, y, icon, brush, label: str) -> None:
+        painter.setPen(Colors.BLACK.value)
+        painter.setBrush(brush)
+        painter.drawRect(x, y, icon, icon)
+        painter.setPen(QPen(Colors.BLACK.value, 0))
+        painter.setBrush(Qt.NoBrush)
+        fm = painter.fontMetrics()
+        baseline = y + (icon + fm.ascent()) // 2
+        painter.drawText(x + icon + self._GAP_X, baseline, label)
 
 
 class ChopperWidget(QWidget):
@@ -62,7 +156,7 @@ class ChopperWidget(QWidget):
                 (center.x() - click_pos.x()) ** 2 + (center.y() - click_pos.y()) ** 2
             )
             if distance <= chopper_radius:
-                self._selected_chopper = self.chopper_data[i]["chopper"]
+                self._selected_chopper = self.chopper_data[i][CHOPPER_GUI_CHOPPER]
                 self.onChopperSelected.emit(self._selected_chopper)
                 self.update()
                 return
@@ -89,32 +183,31 @@ class ChopperWidget(QWidget):
         self._detailed_view = bool(enabled)
         self.update()
 
-    def is_detailed_view_enabled(self) -> bool:
-        return self._detailed_view
-
-    def set_show_guide_line(self, enabled: bool) -> None:
-        self._show_guide_line = bool(enabled)
-        self.update()
-
     def set_chopper_angle(self, chopper_name, angle):
         # Store raw device angle; mode-specific direction/offset handling happens
         # in paint-time bookkeeping based on speed and canonical metadata.
         for i, chopper in enumerate(self.chopper_data):
-            if chopper["chopper"] == chopper_name:
-                self.angles[i] = wrap360(float(angle))
+            if chopper[CHOPPER_GUI_CHOPPER] == chopper_name:
+                if angle is None:
+                    self.angles.pop(i, None)
+                else:
+                    self.angles[i] = wrap360(float(angle))
         self.update()
+
+    def clear_chopper_angle(self, chopper_name) -> None:
+        self.set_chopper_angle(chopper_name, None)
 
     def set_chopper_speed(self, chopper_name, speed):
         for chopper in self.chopper_data:
-            if chopper["chopper"] == chopper_name:
-                chopper["speed"] = speed
+            if chopper[CHOPPER_GUI_CHOPPER] == chopper_name:
+                chopper[CHOPPER_RENDERED_SPEED] = speed
                 self.update()
                 return
 
     def set_chopper_park_angle(self, chopper_name, angle):
         for chopper in self.chopper_data:
-            if chopper["chopper"] == chopper_name:
-                chopper["parking_angle"] = angle
+            if chopper[CHOPPER_GUI_CHOPPER] == chopper_name:
+                chopper[CHOPPER_RENDERED_PARKING_ANGLE] = angle
                 self.update()
                 return
 
@@ -123,7 +216,8 @@ class ChopperWidget(QWidget):
     ) -> float:
         if not has_canonical_inputs(chopper):
             raise ValueError(
-                f"Chopper {chopper.get('chopper')!r} missing canonical bookkeeping inputs"
+                f"Chopper {chopper.get(CHOPPER_GUI_CHOPPER)!r} missing "
+                "canonical bookkeeping inputs"
             )
         model = build_rotation_model(chopper)
         if moving:
@@ -135,7 +229,10 @@ class ChopperWidget(QWidget):
                 model.park_open_angle_deg,
                 model.motor_position,
                 model.positive_speed_rotation_direction,
+                model.resolver_positive_direction,
                 model.disk_delay_deg,
+                model.cw_disk_delay_deg,
+                model.ccw_disk_delay_deg,
             )
         return parked_rotation_deg(
             raw_angle,
@@ -152,14 +249,16 @@ class ChopperWidget(QWidget):
         requiring panel/client setup.
         """
         for i, chopper in enumerate(self.chopper_data):
-            if chopper["chopper"] != chopper_name:
+            if chopper[CHOPPER_GUI_CHOPPER] != chopper_name:
                 continue
-            speed_hz = chopper.get("speed", 0.0)
-            moving = speed_hz is not None and abs(float(speed_hz)) >= 2
-            raw_angle = float(self.angles.get(i, 0.0))
+            speed_hz = chopper.get(CHOPPER_RENDERED_SPEED, 0.0)
+            moving = is_chopper_moving(speed_hz)
+            raw_angle = self.angles.get(i)
+            if raw_angle is None:
+                return None
             try:
                 base_rotation = self._canonical_rotation_base(
-                    chopper, raw_angle, speed_hz, moving
+                    chopper, float(raw_angle), speed_hz, moving
                 )
             except ValueError:
                 return None
@@ -167,29 +266,6 @@ class ChopperWidget(QWidget):
                 # Geometry conversion from engineering CW+ to Qt math-CCW.
                 return wrap360(base_rotation + self._guide_angle_deg)
             return wrap360(base_rotation)
-        return None
-
-    def _tdc_marker_angle_for_chopper(self, chopper: dict) -> Optional[float]:
-        if not has_canonical_inputs(chopper):
-            return None
-        try:
-            model = build_rotation_model(chopper)
-        except ValueError:
-            return None
-        tdc_resolver = float(chopper["tdc_resolver_position"])
-        tdc_base_rotation = parked_rotation_deg(
-            tdc_resolver,
-            model.resolver_offset_deg,
-            model.resolver_sign,
-        )
-        tdc_qt_rotation = wrap360(tdc_base_rotation + self._guide_angle_deg)
-        # Opening-center world angle at TDC reference.
-        return wrap360(-model.parked_opening_center_deg + tdc_qt_rotation)
-
-    def get_tdc_marker_angle_for_chopper(self, chopper_name: str) -> Optional[float]:
-        for chopper in self.chopper_data:
-            if chopper["chopper"] == chopper_name:
-                return self._tdc_marker_angle_for_chopper(chopper)
         return None
 
     def _spin_direction_sign(
@@ -203,24 +279,16 @@ class ChopperWidget(QWidget):
             return None
         return runtime_spin_sign(speed_hz, model.positive_speed_rotation_direction)
 
-    def get_spin_direction_sign_for_chopper(self, chopper_name: str) -> Optional[int]:
-        for chopper in self.chopper_data:
-            if chopper["chopper"] != chopper_name:
-                continue
-            speed_hz = chopper.get("speed", 0.0)
-            return self._spin_direction_sign(chopper, speed_hz)
-        return None
-
     def _spin_indicator_arc_angles(
         self, spin_sign: int, span_deg: float = 72.0
     ) -> tuple[float, float]:
         half_span = span_deg / 2.0
         if spin_sign >= 0:
-            start = self._guide_angle_deg - half_span
-            end = self._guide_angle_deg + half_span
-        else:
             start = self._guide_angle_deg + half_span
             end = self._guide_angle_deg - half_span
+        else:
+            start = self._guide_angle_deg - half_span
+            end = self._guide_angle_deg + half_span
         return wrap360(start), wrap360(end)
 
     def _point_on_circle(
@@ -308,17 +376,29 @@ class ChopperWidget(QWidget):
 
         for i, chopper in enumerate(self.chopper_data):
             radius = chopper_radius
-            slit_edges = chopper["slit_edges"]
-            current_speed = chopper.get("speed", 0.0)
-            parking_angle = chopper.get("parking_angle", None)
+            slit_edges = chopper[CHOPPER_GUI_SLIT_EDGES]
+            current_speed = chopper.get(CHOPPER_RENDERED_SPEED, 0.0)
+            parking_angle = chopper.get(CHOPPER_RENDERED_PARKING_ANGLE, None)
             center = positions[i]
 
-            is_selected = self._selected_chopper == chopper["chopper"]
-            is_moving = current_speed is not None and abs(float(current_speed)) >= 2
-            raw_angle = float(self.angles.get(i, 0.0))
+            is_selected = self._selected_chopper == chopper[CHOPPER_GUI_CHOPPER]
+            is_moving = is_chopper_moving(current_speed)
+            raw_angle = self.angles.get(i)
+            if raw_angle is None:
+                self._draw_unknown_chopper(painter, center, radius, is_selected)
+                self._draw_chopper_labels(
+                    painter,
+                    center,
+                    radius,
+                    chopper[CHOPPER_GUI_CHOPPER],
+                    is_selected,
+                    None,
+                    "Waiting",
+                )
+                continue
             try:
                 base_rotation = self._canonical_rotation_base(
-                    chopper, raw_angle, current_speed, is_moving
+                    chopper, float(raw_angle), current_speed, is_moving
                 )
             except ValueError:
                 continue
@@ -336,7 +416,15 @@ class ChopperWidget(QWidget):
                 is_moving,
             )
             if self._detailed_view:
-                self._draw_chopper_details(painter, center, radius, chopper)
+                self._draw_chopper_details(
+                    painter,
+                    center,
+                    radius,
+                    chopper,
+                    float(raw_angle),
+                    current_speed,
+                    is_moving,
+                )
 
             if self._show_guide_line:
                 painter.setPen(QPen(Colors.BLUE.value, 4))
@@ -353,60 +441,110 @@ class ChopperWidget(QWidget):
                         painter, center, line_length * 0.5, spin_sign
                     )
 
-            text_direction = -1 if self._guide_angle_deg == 270 else 1
-
-            chopper_name = chopper["chopper"]
-            if is_selected:
-                painter.setPen(Colors.BLUE.value)
-            else:
-                painter.setPen(Colors.BLACK.value)
-            font = painter.font()
-            font.setPointSize(int(radius / 8))
-            painter.setFont(font)
-
-            fm = painter.fontMetrics()
-            text_height = fm.height()
-
-            text_rect = QRectF(
-                center.x() - radius * 1.5,
-                center.y() + (radius + 5) * text_direction,
-                radius * 3.0,
-                text_height * text_direction,
-            )
-
-            painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, chopper_name)
-
             if current_speed is None:
+                self._draw_chopper_labels(
+                    painter,
+                    center,
+                    radius,
+                    chopper[CHOPPER_GUI_CHOPPER],
+                    is_selected,
+                    None,
+                    None,
+                )
                 continue
 
-            painter.setPen(Colors.BLACK.value)
             if not is_moving and parking_angle is not None:
                 value_text = f"{parking_angle:.3f}°"
             else:
                 value_text = f"{current_speed:.3f} Hz"
-            value_rect = QRectF(
-                center.x() - radius * 1.5,
-                center.y() + text_height * text_direction,
-                radius * 3.0,
-                text_height * text_direction,
-            )
-            painter.drawText(value_rect, Qt.AlignmentFlag.AlignCenter, value_text)
-
             status_text = "Rotating" if is_moving else "Parked"
-            status_rect = QRectF(
-                center.x() - radius * 1.5,
-                center.y() + (2 * text_height) * text_direction,
-                radius * 3.0,
-                text_height * text_direction,
+            self._draw_chopper_labels(
+                painter,
+                center,
+                radius,
+                chopper[CHOPPER_GUI_CHOPPER],
+                is_selected,
+                value_text,
+                status_text,
             )
-            painter.drawText(status_rect, Qt.AlignmentFlag.AlignCenter, status_text)
 
-        self.draw_legend(painter, chopper_radius)
+    def _draw_unknown_chopper(
+        self, painter: QPainter, center: QPointF, radius: float, selected: bool
+    ) -> None:
+        painter.save()
+        painter.setBrush(QBrush(QColor(190, 190, 190, 130)))
+        painter.setPen(
+            QPen(Colors.BLUE.value, 2) if selected else QPen(Colors.BLACK.value, 1)
+        )
+        painter.drawEllipse(center, radius * 0.7, radius * 0.7)
+        painter.restore()
+
+    def _draw_chopper_labels(
+        self,
+        painter: QPainter,
+        center: QPointF,
+        radius: float,
+        chopper_name: str,
+        is_selected: bool,
+        value_text: Optional[str],
+        status_text: Optional[str],
+    ) -> None:
+        painter.setPen(Colors.BLUE.value if is_selected else Colors.BLACK.value)
+        font = painter.font()
+        font.setPointSize(int(radius / 8))
+        painter.setFont(font)
+
+        fm = painter.fontMetrics()
+        text_height = fm.height()
+        rows = [chopper_name]
+        if value_text is not None:
+            rows.append(value_text)
+        if status_text is not None:
+            rows.append(status_text)
+        rects = self._label_rects(center, radius, len(rows), text_height)
+
+        for row, (rect, text) in enumerate(zip(rects, rows)):
+            painter.setPen(
+                Colors.BLUE.value if is_selected and row == 0 else Colors.BLACK.value
+            )
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
+
+    def _label_rects(
+        self, center: QPointF, radius: float, row_count: int, row_height: float
+    ) -> list[QRectF]:
+        text_direction = -1 if self._guide_angle_deg == 270 else 1
+        rects = [
+            QRectF(
+                center.x() - radius * 1.5,
+                center.y() + (radius + 5) * text_direction,
+                radius * 3.0,
+                row_height * text_direction,
+            )
+        ]
+        rects.extend(
+            QRectF(
+                center.x() - radius * 1.5,
+                center.y() + row * row_height * text_direction,
+                radius * 3.0,
+                row_height * text_direction,
+            )
+            for row in range(1, row_count)
+        )
+        return rects
 
     def _draw_chopper_details(
-        self, painter: QPainter, center: QPointF, radius: float, chopper: dict
+        self,
+        painter: QPainter,
+        center: QPointF,
+        radius: float,
+        chopper: dict,
+        raw_angle: float,
+        speed_hz: Optional[float],
+        is_moving: bool,
     ) -> None:
-        motor_position = str(chopper.get("motor_position", "")).strip().lower()
+        motor_position = (
+            str(chopper.get(CHOPPER_GUI_MOTOR_POSITION, "")).strip().lower()
+        )
         motor_alpha = 220 if motor_position == "upstream" else 95
 
         hub_radius = radius * 0.24
@@ -421,9 +559,12 @@ class ChopperWidget(QWidget):
         painter.setBrush(QBrush(spindle_color))
         painter.drawEllipse(center, spindle_radius, spindle_radius)
 
-        tdc_angle = self._tdc_marker_angle_for_chopper(chopper)
-        if tdc_angle is not None:
-            theta = math.radians(tdc_angle)
+        reference = self._reference_marker_for_chopper(
+            chopper, raw_angle, speed_hz, is_moving
+        )
+        if reference is not None:
+            marker_angle, label = reference
+            theta = math.radians(marker_angle)
             p_inner = QPointF(
                 center.x() + (radius * 0.74) * math.cos(theta),
                 center.y() - (radius * 0.74) * math.sin(theta),
@@ -435,72 +576,96 @@ class ChopperWidget(QWidget):
             painter.setPen(QPen(QColor(210, 45, 45, 210), 2, Qt.PenStyle.DashLine))
             painter.drawLine(p_inner, p_outer)
             painter.setPen(QPen(QColor(210, 45, 45, 210), 1))
-            label_pos = QPointF(
-                center.x() + (radius * 1.08) * math.cos(theta),
-                center.y() - (radius * 1.08) * math.sin(theta),
+            font = painter.font()
+            font.setPointSize(max(7, int(radius * 0.11)))
+            painter.setFont(font)
+            fm = painter.fontMetrics()
+            text_w = fm.horizontalAdvance(label) + 8
+            text_h = fm.height() + 2
+            anchor = QPointF(
+                center.x() + (radius * 1.10) * math.cos(theta),
+                center.y() - (radius * 1.10) * math.sin(theta),
             )
-            painter.drawText(label_pos, "TDC")
+            cos_t = math.cos(theta)
+            sin_t = math.sin(theta)
+            if cos_t < -0.2:
+                text_x = anchor.x() - text_w - 3
+            elif cos_t > 0.2:
+                text_x = anchor.x() + 3
+            else:
+                text_x = anchor.x() - text_w / 2
+            if sin_t > 0.2:
+                text_y = anchor.y() - text_h - 3
+            elif sin_t < -0.2:
+                text_y = anchor.y() + 3
+            else:
+                text_y = anchor.y() - text_h / 2
+            painter.drawText(
+                QRectF(text_x, text_y, text_w, text_h),
+                Qt.AlignmentFlag.AlignCenter,
+                label,
+            )
         painter.restore()
 
-    def draw_legend(self, painter: QPainter, ref_radius: float) -> None:
-        painter.save()
+    def _reference_marker_for_chopper(
+        self,
+        chopper: dict,
+        raw_angle: float,
+        speed_hz: Optional[float],
+        is_moving: bool,
+    ) -> Optional[tuple[float, str]]:
+        if not has_canonical_inputs(chopper):
+            return None
+        try:
+            model = build_rotation_model(chopper)
+        except ValueError:
+            return None
 
-        icon = max(12, int(ref_radius * 0.20))
-        gap_y = 4
-        gap_x = 6
-        margin = 8
+        if is_moving:
+            current_rotation = spinning_rotation_deg(
+                raw_angle,
+                speed_hz,
+                model.parked_opening_center_deg,
+                model.tdc_resolver_position_deg,
+                model.park_open_angle_deg,
+                model.motor_position,
+                model.positive_speed_rotation_direction,
+                model.resolver_positive_direction,
+                model.disk_delay_deg,
+                model.cw_disk_delay_deg,
+                model.ccw_disk_delay_deg,
+            )
+            reference_rotation = spinning_rotation_deg(
+                0.0,
+                speed_hz,
+                model.parked_opening_center_deg,
+                model.tdc_resolver_position_deg,
+                model.park_open_angle_deg,
+                model.motor_position,
+                model.positive_speed_rotation_direction,
+                model.resolver_positive_direction,
+                model.disk_delay_deg,
+                model.cw_disk_delay_deg,
+                model.ccw_disk_delay_deg,
+            )
+            label = "TDC"
+        else:
+            current_rotation = parked_rotation_deg(
+                raw_angle,
+                model.resolver_offset_deg,
+                model.resolver_sign,
+            )
+            reference_rotation = parked_rotation_deg(
+                model.tdc_resolver_position_deg,
+                model.resolver_offset_deg,
+                model.resolver_sign,
+            )
+            label = "TDC"
 
-        f = painter.font()
-        f.setPointSize(max(7, int(icon * 0.90)))
-        painter.setFont(f)
-        fm = painter.fontMetrics()
-
-        def text_baseline(y_pos: int) -> int:
-            return y_pos + (icon + fm.ascent()) // 2
-
-        def _row(y_pos: int, brush: QBrush, label: str) -> int:
-            painter.setPen(Colors.BLACK.value)
-            painter.setBrush(brush)
-            painter.drawRect(margin, y_pos, icon, icon)
-
-            painter.setPen(QPen(Colors.BLACK.value, 0))
-            painter.setBrush(Qt.NoBrush)
-            painter.drawText(margin + icon + gap_x, text_baseline(y_pos), label)
-            return y_pos + icon + gap_y
-
-        y = margin
-
-        gray_w = icon
-        gray_h = icon
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(Colors.DARK_GRAY.value)
-        painter.drawRect(margin, y, gray_w, gray_h)
-
-        stripe_h = gray_h // 2
-        stripe_y = y + (gray_h - stripe_h) // 2
-        painter.setBrush(Colors.BLACK.value)
-        painter.drawRect(margin, stripe_y, gray_w, stripe_h)
-
-        painter.setPen(QPen(Colors.BLACK.value, 0))
-        painter.setBrush(Qt.NoBrush)
-        painter.drawText(margin + gray_w + gap_x, text_baseline(y), "Coated blade")
-
-        y += icon + gap_y
-
-        painter.setPen(QPen(Colors.BLUE.value, 4))
-        line_x = margin + icon // 2
-        painter.drawLine(line_x, y, line_x, y + icon)
-
-        painter.setPen(QPen(Colors.BLACK.value, 0))
-        painter.setBrush(Qt.NoBrush)
-        painter.drawText(margin + icon + gap_x, text_baseline(y), "Beam guide")
-
-        y += gray_h + gap_y
-
-        y = _row(y, QBrush(Colors.GREEN.value), "Rotating")
-        _row(y, QBrush(Colors.GRAY.value), "Parked")
-
-        painter.restore()
+        marker_angle = wrap360(
+            self._guide_angle_deg + current_rotation - reference_rotation
+        )
+        return marker_angle, label
 
     def calculate_grid(self, count, aspect_ratio):
         best_diff = float("inf")
@@ -576,9 +741,14 @@ class ChopperWidget(QWidget):
             return []
         segs = []
         for s, e in slit_edges:
-            s %= 360.0
-            e %= 360.0
-            if e < s:
+            raw_s = float(s)
+            raw_e = float(e)
+            raw_width = raw_e - raw_s
+            s = raw_s % 360.0
+            e = raw_e % 360.0
+            if e == s and raw_width != 0.0:
+                e = s + 360.0
+            elif e < s:
                 e += 360.0  # unwrap across 0°
             segs.append([s, e])
         segs.sort(key=lambda p: p[0])
@@ -713,8 +883,10 @@ class ChopperWidget(QWidget):
         painter.drawEllipse(center, radius - slit_height, radius - slit_height)
 
     def update_chopper_data(self, chopper_data):
+        for chopper in chopper_data:
+            build_rotation_model(chopper)
         self.chopper_data = chopper_data
-        self.angles = {i: self._guide_angle_deg for i in range(len(self.chopper_data))}
+        self.angles = {}
         self.update()
 
     def clear(self):

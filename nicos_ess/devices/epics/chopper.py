@@ -11,6 +11,7 @@ from nicos.core import (
     Readable,
     Waitable,
     listof,
+    none_or,
     oneof,
     status,
 )
@@ -34,16 +35,49 @@ CHOPPER_GUI_DELAY_ERRORS_KEY = "delay_errors_key"
 CHOPPER_CACHE_VALUE_PARAM = "value"
 CHOPPER_CACHE_RAW_ERRORS_PARAM = "raw_errors"
 
-CHOPPER_GUI_METADATA_FIELDS = (
-    "slit_edges",
-    "motor_position",
-    "positive_speed_rotation_direction",
-    "resolver_positive_direction",
-    "parked_opening_index",
-    "tdc_resolver_position",
-    "park_open_angle",
-    "disk_delay",
+CHOPPER_GUI_SLIT_EDGES = "slit_edges"
+CHOPPER_GUI_MOTOR_POSITION = "motor_position"
+CHOPPER_GUI_POSITIVE_SPEED_ROTATION_DIRECTION = "positive_speed_rotation_direction"
+CHOPPER_GUI_RESOLVER_POSITIVE_DIRECTION = "resolver_positive_direction"
+CHOPPER_GUI_PARKED_OPENING_INDEX = "parked_opening_index"
+CHOPPER_GUI_TDC_RESOLVER_POSITION = "tdc_resolver_position"
+CHOPPER_GUI_PARK_OPEN_ANGLE = "park_open_angle"
+CHOPPER_GUI_DISK_DELAY = "disk_delay"
+CHOPPER_GUI_CW_DISK_DELAY = "cw_disk_delay"
+CHOPPER_GUI_CCW_DISK_DELAY = "ccw_disk_delay"
+
+CHOPPER_GUI_REQUIRED_METADATA_FIELDS = (
+    CHOPPER_GUI_SLIT_EDGES,
+    CHOPPER_GUI_MOTOR_POSITION,
+    CHOPPER_GUI_PARKED_OPENING_INDEX,
+    CHOPPER_GUI_TDC_RESOLVER_POSITION,
+    CHOPPER_GUI_PARK_OPEN_ANGLE,
 )
+
+CHOPPER_GUI_DEFAULTED_METADATA = {
+    CHOPPER_GUI_POSITIVE_SPEED_ROTATION_DIRECTION: "CW",
+    CHOPPER_GUI_RESOLVER_POSITIVE_DIRECTION: "CW",
+    CHOPPER_GUI_DISK_DELAY: 0.0,
+    CHOPPER_GUI_CW_DISK_DELAY: None,
+    CHOPPER_GUI_CCW_DISK_DELAY: None,
+}
+
+CHOPPER_GUI_METADATA_FIELDS = (
+    *CHOPPER_GUI_REQUIRED_METADATA_FIELDS,
+    *CHOPPER_GUI_DEFAULTED_METADATA,
+)
+
+CHOPPER_RENDERED_SPEED = "speed"
+CHOPPER_RENDERED_PARKING_ANGLE = "parking_angle"
+
+CHOPPER_MOVING_SPEED_THRESHOLD_HZ = 2.0
+
+
+def is_chopper_moving(speed_hz) -> bool:
+    return (
+        speed_hz is not None
+        and abs(float(speed_hz)) >= CHOPPER_MOVING_SPEED_THRESHOLD_HZ
+    )
 
 
 def get_chopper_gui_info_for(controller):
@@ -79,49 +113,61 @@ def canonical_chopper_parameters():
     the GUI.
     """
     return {
-        "slit_edges": Param(
+        CHOPPER_GUI_SLIT_EDGES: Param(
             "Slit edges of the chopper", type=listof(listof(float)), mandatory=True
         ),
-        "motor_position": Param(
+        CHOPPER_GUI_MOTOR_POSITION: Param(
             "Motor mounting side for chopper drawing",
             type=oneof("upstream", "downstream"),
             mandatory=True,
             unit="",
         ),
-        "positive_speed_rotation_direction": Param(
+        CHOPPER_GUI_POSITIVE_SPEED_ROTATION_DIRECTION: Param(
             "Physical disk rotation direction for positive speed",
             type=oneof("CW", "CCW"),
             default="CW",
             unit="",
         ),
-        "resolver_positive_direction": Param(
+        CHOPPER_GUI_RESOLVER_POSITIVE_DIRECTION: Param(
             "Resolver angle direction for positive resolver values",
             type=oneof("CW", "CCW"),
             default="CW",
             unit="",
         ),
-        "parked_opening_index": Param(
+        CHOPPER_GUI_PARKED_OPENING_INDEX: Param(
             "Index of the slit opening aligned at park_open_angle",
             type=int,
             default=0,
             unit="",
         ),
-        "tdc_resolver_position": Param(
+        CHOPPER_GUI_TDC_RESOLVER_POSITION: Param(
             "Resolver position at the TDC reference",
             type=float,
             mandatory=True,
             unit="degrees",
         ),
-        "park_open_angle": Param(
+        CHOPPER_GUI_PARK_OPEN_ANGLE: Param(
             "Resolver position where the parked opening is centered",
             type=float,
             mandatory=True,
             unit="degrees",
         ),
-        "disk_delay": Param(
+        CHOPPER_GUI_DISK_DELAY: Param(
             "Phase calibration offset added to calculated center-window delay",
             type=float,
             mandatory=True,
+            unit="degrees",
+        ),
+        CHOPPER_GUI_CW_DISK_DELAY: Param(
+            "Phase calibration offset for effective CW rotation",
+            type=none_or(float),
+            default=None,
+            unit="degrees",
+        ),
+        CHOPPER_GUI_CCW_DISK_DELAY: Param(
+            "Phase calibration offset for effective CCW rotation",
+            type=none_or(float),
+            default=None,
             unit="degrees",
         ),
     }

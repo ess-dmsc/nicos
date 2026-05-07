@@ -8,6 +8,7 @@ from nicos_ess.gui.widgets.chopper_math import (
     ChopperRotationModel,
     build_rotation_model,
     compute_phase_center_delay_deg,
+    disk_delay_for_rotation,
     opening_center_deg,
     opening_width_deg,
     parked_rotation_deg,
@@ -44,7 +45,10 @@ def _spinning(chopper, phase, speed):
         model.park_open_angle_deg,
         model.motor_position,
         model.positive_speed_rotation_direction,
+        model.resolver_positive_direction,
         model.disk_delay_deg,
+        model.cw_disk_delay_deg,
+        model.ccw_disk_delay_deg,
     )
 
 
@@ -118,6 +122,33 @@ def test_build_rotation_model_uses_nonzero_parked_opening_index():
     ) == pytest.approx(275.0)
 
 
+def test_build_rotation_model_uses_documented_defaults_for_optional_metadata():
+    chopper = _canonical()
+    chopper.pop("positive_speed_rotation_direction")
+    chopper.pop("resolver_positive_direction")
+    chopper.pop("disk_delay")
+
+    model = build_rotation_model(chopper)
+
+    assert model.positive_speed_rotation_direction == CW
+    assert model.resolver_sign == -1
+    assert model.disk_delay_deg == pytest.approx(0.0)
+    assert model.cw_disk_delay_deg == pytest.approx(0.0)
+    assert model.ccw_disk_delay_deg == pytest.approx(0.0)
+
+
+def test_direction_specific_disk_delays_override_default_disk_delay():
+    chopper = _canonical(disk_delay=9.0, cw_disk_delay=5.3, ccw_disk_delay=6.6)
+    model = build_rotation_model(chopper)
+
+    assert disk_delay_for_rotation(
+        CW, model.disk_delay_deg, model.cw_disk_delay_deg, model.ccw_disk_delay_deg
+    ) == pytest.approx(5.3)
+    assert disk_delay_for_rotation(
+        CCW, model.disk_delay_deg, model.cw_disk_delay_deg, model.ccw_disk_delay_deg
+    ) == pytest.approx(6.6)
+
+
 @pytest.mark.parametrize(
     ("motor_position", "resolver_direction", "expected_sign"),
     [
@@ -151,11 +182,11 @@ def test_single_opening_parked_resolver_perturbation_follows_resolver_polarity(
 @pytest.mark.parametrize(
     ("positive_direction", "speed", "expected_delta"),
     [
-        (CW, 14.0, -10.0),
-        (CW, -14.0, 10.0),
+        (CW, 14.0, 10.0),
+        (CW, -14.0, -10.0),
     ],
 )
-def test_single_opening_phase_perturbation_moves_opposite_effective_spin(
+def test_single_opening_phase_perturbation_follows_effective_spin(
     positive_direction, speed, expected_delta
 ):
     chopper = _canonical(positive_speed_rotation_direction=positive_direction)
@@ -167,8 +198,6 @@ def test_single_opening_phase_perturbation_moves_opposite_effective_spin(
         DOWNSTREAM,
         effective_direction,
     )
-    if spin_sign != (1 if positive_direction == CW else -1):
-        phase0 = wrap360(phase0 + 180.0)
 
     rot0 = _spinning(chopper, phase0, speed)
     rot1 = _spinning(chopper, phase0 + 10.0, speed)
@@ -235,7 +264,7 @@ def test_multi_opening_nonzero_index_can_derive_phase_setpoints_for_every_window
         disk_delay=7.0,
     )
     centers = [opening_center_deg(edges) for edges in chopper["slit_edges"]]
-    expected_phases = [17.0, 287.0, 127.0]
+    expected_phases = [197.0, 287.0, 87.0]
 
     for phase, center in zip(expected_phases, centers):
         assert _spinning(chopper, phase, speed=14.0) == pytest.approx(center)
@@ -246,3 +275,10 @@ def test_opening_center_and_width_handle_wraparound():
 
     assert opening_width_deg(opening) == pytest.approx(20.0)
     assert opening_center_deg(opening) == pytest.approx(0.0)
+
+
+def test_opening_center_and_width_handle_full_circle():
+    opening = [0.0, 360.0]
+
+    assert opening_width_deg(opening) == pytest.approx(360.0)
+    assert opening_center_deg(opening) == pytest.approx(180.0)

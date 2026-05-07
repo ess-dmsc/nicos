@@ -17,9 +17,14 @@ from nicos_ess.devices.epics.chopper import (
     CHOPPER_GUI_PARK_ANGLE_KEY,
     CHOPPER_GUI_SPEED_KEY,
     CHOPPER_GUI_TOTAL_DELAY_KEY,
+    is_chopper_moving,
 )
-from nicos_ess.gui.widgets.chopper_math import has_canonical_inputs
+from nicos_ess.gui.widgets.chopper_math import (
+    build_rotation_model,
+    has_canonical_inputs,
+)
 from nicos_ess.gui.widgets.chopper_widget import (
+    ChopperLegendWidget,
     ChopperWidget,
 )
 from nicos_ess.gui.widgets.pyqtgraph.histogram_data_viewer import (
@@ -98,6 +103,8 @@ class ChopperPanel(Panel):
         )
         self._detail_checkbox.toggled.connect(self.chopper_widget.set_detailed_view)
         controls.addWidget(self._detail_checkbox)
+        controls.addSpacing(18)
+        controls.addWidget(ChopperLegendWidget(parent=self))
         controls.addStretch(1)
         layout.addLayout(controls)
         self.setLayout(layout)
@@ -179,21 +186,36 @@ class ChopperPanel(Panel):
         self.trend_widget.receive_data(timestamps, mean, stddev, fwhm)
 
     def _calc_stats(self, data_array):
-        num_bins = int((max(data_array) - min(data_array)) / BIN_WIDTH)
-        num_bins = min(max(num_bins, 1), 100)
-        bins = np.linspace(min(data_array), max(data_array), num_bins)
+        data_array = np.asarray(data_array, dtype=float)
+        if data_array.size == 0:
+            empty = np.asarray([], dtype=float)
+            return empty, empty, np.nan, np.nan, 0.0, np.nan, np.nan
+
+        data_min = float(np.min(data_array))
+        data_max = float(np.max(data_array))
+        data_range = data_max - data_min
+        if data_range == 0.0:
+            half_width = BIN_WIDTH / 2.0
+            bins = np.asarray([data_min - half_width, data_max + half_width])
+        else:
+            num_bins = int(np.ceil(data_range / BIN_WIDTH))
+            num_bins = min(max(num_bins, 1), 100)
+            bins = np.linspace(data_min, data_max, num_bins + 1)
         hist, bin_edges = np.histogram(data_array, bins=bins)
         bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
         x = bin_centers
         y = hist
-        mean = np.mean(data_array)
-        stddev = np.std(data_array, ddof=1)
+        mean = float(np.mean(data_array))
+        stddev = float(np.std(data_array, ddof=0))
         fwhm, left_idx, right_idx = self._calc_fwhm(bin_edges, hist)
         left_bin_edge = bin_edges[left_idx]
         right_bin_edge = bin_edges[right_idx]
         return x, y, mean, stddev, fwhm, left_bin_edge, right_bin_edge
 
     def _calc_fwhm(self, bin_edges, hist):
+        if len(hist) == 0:
+            return 0.0, 0, 0
+
         half_max = max(hist) / 2
         max_idx = np.argmax(hist)
 
@@ -209,8 +231,9 @@ class ChopperPanel(Panel):
         else:
             right_idx = len(hist) - 1
 
-        fwhm = bin_edges[right_idx] - bin_edges[left_idx]
-        return fwhm, left_idx, right_idx
+        right_edge_idx = min(right_idx + 1, len(bin_edges) - 1)
+        fwhm = bin_edges[right_edge_idx] - bin_edges[left_idx]
+        return fwhm, left_idx, right_edge_idx
 
     def _get_loaded_choppers(self):
         return [
@@ -228,7 +251,7 @@ class ChopperPanel(Panel):
 
         chopper_name, role = role_info
         if role == CHOPPER_KEY_ROLE_DELAY_ERRORS:
-            if value is None:
+            if value is None or expired:
                 if self.chopper_widget.get_selected_chopper() == chopper_name:
                     self.histogram_widget.clear()
                     self.trend_widget.clear()
@@ -236,7 +259,8 @@ class ChopperPanel(Panel):
             self._handle_delay_errors(timestamp, chopper_name, value)
             return
 
-        if value is None:
+        if value is None or expired:
+            self._clear_role_value(chopper_name, role)
             return
 
         if role == CHOPPER_KEY_ROLE_SPEED:
@@ -266,18 +290,38 @@ class ChopperPanel(Panel):
     def _update_chopper_angle(self, chopper_name):
         frequency = self._speeds.get(chopper_name)
         if frequency is None:
+            self.chopper_widget.clear_chopper_angle(chopper_name)
             return
 
-        if abs(frequency) >= 2:
+        if is_chopper_moving(frequency):
             delay = self._total_delays.get(chopper_name)
             if delay is not None:
                 angle = nanoseconds_to_degrees(delay, frequency)
                 self.chopper_widget.set_chopper_angle(chopper_name, angle)
+            else:
+                self.chopper_widget.clear_chopper_angle(chopper_name)
             return
 
         park_angle = self._park_angles.get(chopper_name)
         if park_angle is not None:
             self.chopper_widget.set_chopper_angle(chopper_name, park_angle)
+        else:
+            self.chopper_widget.clear_chopper_angle(chopper_name)
+
+    def _clear_role_value(self, chopper_name, role):
+        if role == CHOPPER_KEY_ROLE_SPEED:
+            self._speeds.pop(chopper_name, None)
+            self.chopper_widget.set_chopper_speed(chopper_name, None)
+            self.chopper_widget.clear_chopper_angle(chopper_name)
+        elif role == CHOPPER_KEY_ROLE_TOTAL_DELAY:
+            self._total_delays.pop(chopper_name, None)
+            if is_chopper_moving(self._speeds.get(chopper_name)):
+                self.chopper_widget.clear_chopper_angle(chopper_name)
+        elif role == CHOPPER_KEY_ROLE_PARK_ANGLE:
+            self._park_angles.pop(chopper_name, None)
+            self.chopper_widget.set_chopper_park_angle(chopper_name, None)
+            if not is_chopper_moving(self._speeds.get(chopper_name)):
+                self.chopper_widget.clear_chopper_angle(chopper_name)
 
     def _register_chopper_keys(self):
         registered_new_keys = False
@@ -335,11 +379,26 @@ class ChopperPanel(Panel):
                 "session.devices[%r].%s()" % (dev_name, CHOPPER_GUI_INFO_METHOD),
                 None,
             )
-            if not isinstance(disc_info, dict) or not has_canonical_inputs(disc_info):
+            if not isinstance(disc_info, dict):
                 continue
 
             chopper_name = disc_info.get(CHOPPER_GUI_CHOPPER)
             if not chopper_name:
+                continue
+
+            if not has_canonical_inputs(disc_info):
+                self.log.warning(
+                    "Ignoring chopper %s with incomplete GUI metadata", chopper_name
+                )
+                continue
+            try:
+                build_rotation_model(disc_info)
+            except ValueError as err:
+                self.log.warning(
+                    "Ignoring chopper %s with invalid GUI metadata: %s",
+                    chopper_name,
+                    err,
+                )
                 continue
 
             self._add_chopper_key_roles(chopper_name, disc_info)
