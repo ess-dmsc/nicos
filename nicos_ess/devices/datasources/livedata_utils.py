@@ -18,10 +18,9 @@ from typing import Dict, List, Optional, Set, Tuple
 class WorkflowId:
     def __str__(self):
         """Compact path form used by selectors and UI menus."""
-        return f"{self.instrument}/{self.namespace}/{self.name}/{self.version}"
+        return f"{self.instrument}/{self.name}/{self.version}"
 
     instrument: str
-    namespace: str
     name: str
     version: int
 
@@ -47,7 +46,6 @@ def parse_result_key(source_name_json: str) -> ResultKey:
     return ResultKey(
         workflow_id=WorkflowId(
             instrument=wf["instrument"],
-            namespace=wf["namespace"],
             name=wf["name"],
             version=int(wf["version"]),
         ),
@@ -65,7 +63,7 @@ class Selector:
     A concrete binding to a workflow/source (and optionally a specific job/output).
 
     Format (string):
-        "<instrument>/<namespace>/<name>/<version>@<source_name>#<job_number>/<output_name>"
+        "<instrument>/<name>/<version>@<source_name>#<job_number>/<output_name>"
 
     - '#<job_number>' is optional => will bind to the latest active job.
     - '/<output_name>' is optional => channel may choose a default (e.g. "current").
