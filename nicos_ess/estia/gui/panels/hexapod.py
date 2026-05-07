@@ -74,7 +74,7 @@ class HexapodPanel(Panel):
         if message[5] != self._exec_reqid or message[2] < WARNING:
             return
         # show warnings and errors emitted by the current command in a window
-        msg = "%s: %s" % (message[0], message[3].strip())
+        msg = f"{message[0]}: {message[3].strip()}"
         if self._error_window is None:
 
             def reset_errorwindow():
@@ -101,7 +101,7 @@ class HexapodPanel(Panel):
     def update_current_pos(self, values):
         curval = 0
         for axis in self.qtObj:
-            self.qtObj[axis]["curVal"].setText("%.3f" % values[curval])
+            self.qtObj[axis]["curVal"].setText(f"{round(values[curval], 3):.3f}")
             curval = curval + 1
 
     def show_controls(self, visibility):
