@@ -1,4 +1,4 @@
-from nicos_ess.devices.mapped_controller import MappedController
+from nicos_ess.devices.epics.pva import EpicsMappedMoveable
 
 class StringEpicsMappedMoveable(EpicsMappedMoveable):
     """
