@@ -34,9 +34,9 @@ import pytest
 pytest.importorskip("epics")
 pytest.importorskip("kafka")
 
-from nicos.core import status
 from nicos.devices.epics.pyepics import EpicsDevice, EpicsReadable
 
+from nicos.core import status
 from nicos_ess.estia.devices.pt100 import (
     EpicsPT100Temperature,
     error_bits,
@@ -73,7 +73,7 @@ def test_get_pt100_status_message_error():
     assert get_pt100_status_message(error | 0b10) == (status.ERROR, "overrange")
     assert get_pt100_status_message(error | 0b100) == (
         status.ERROR,
-        "limit1 " "overshot",
+        "limit1 overshot",
     )
     assert get_pt100_status_message(error | 0b1000) == (
         status.ERROR,

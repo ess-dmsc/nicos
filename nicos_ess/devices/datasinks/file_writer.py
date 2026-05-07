@@ -27,17 +27,16 @@ from nicos.core import (
     ADMIN,
     MASTER,
     Attach,
+    ConfigurationError,
     Param,
     host,
     listof,
     status,
-    ConfigurationError,
 )
 from nicos.core.constants import SIMULATION
 from nicos.core.device import Device
 from nicos.core.params import anytype
 from nicos.utils import printTable, readFileCounter, updateFileCounter
-
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
 from nicos_ess.devices.kafka.producer import KafkaProducer
@@ -417,9 +416,7 @@ class FileWriterController:
         file_num_str = f"{file_num:0>6}"
         command_str = "".join(
             c for c in command_str.lower() if c in "0123456789abcdef"
-        )[
-            :11
-        ]  # truncate command_str to leave 4 random bytes
+        )[:11]  # truncate command_str to leave 4 random bytes
         # set version to name-based SHA1 hash (constructed)
         # nb; version 8 not recognised by stduuid!
         prefix = f"{proposal_str}{file_num_str}5{command_str}"
@@ -434,7 +431,9 @@ class FileWriterController:
     def request_stop(self, job_id, stop_time, service_id):
         message = serialise_6s4t(
             job_id=job_id,
-            command_id=self._generate_uuid(f"{job_id[6:8]}{job_id[9:13]}", "0000000000000000"),
+            command_id=self._generate_uuid(
+                f"{job_id[6:8]}{job_id[9:13]}", "0000000000000000"
+            ),
             service_id=service_id,
             stop_time=stop_time,
             run_name="",
@@ -614,11 +613,11 @@ class FileWriterControlSink(Device):
                     "number is required to start writing."
                 )
             else:
-                raise RuntimeError("cannot start writing as proposal number not " "set")
+                raise RuntimeError("cannot start writing as proposal number not set")
         active_jobs = self.get_active_jobs()
         if active_jobs:
             raise AlreadyWritingException(
-                "cannot start writing as writing " "already in progress"
+                "cannot start writing as writing already in progress"
             )
 
     def get_active_jobs(self):
@@ -660,12 +659,10 @@ class FileWriterControlSink(Device):
                 job_to_replay = job
                 break
         if not job_to_replay:
-            raise RuntimeError(
-                "Could not replay job as that job number was " "not found"
-            )
+            raise RuntimeError("Could not replay job as that job number was not found")
         if not job_to_replay:
             raise RuntimeError(
-                "Could not replay job as no stop time defined " "for that job"
+                "Could not replay job as no stop time defined for that job"
             )
 
         partition, offset = job_to_replay.kafka_offset

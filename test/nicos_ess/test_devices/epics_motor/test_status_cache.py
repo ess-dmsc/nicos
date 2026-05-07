@@ -25,7 +25,6 @@
 import pytest
 
 from nicos.core import status
-
 from test.nicos_ess.test_devices.epics_motor.helpers import (
     START_STATUS_TRANSITION_CASES,
     STATUS_CASES,

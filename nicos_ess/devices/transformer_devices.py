@@ -1,4 +1,4 @@
-from nicos.core import Attach, HasLimits, Moveable, Override, Param, multiStatus, status
+from nicos.core import Attach, HasLimits, Moveable, Override, Param, multiStatus
 from nicos.devices.abstract import TransformedMoveable
 from nicos_ess.devices.epics.pva import EpicsManualMappedAnalogMoveable
 from nicos_ess.devices.epics.pva.motor import EpicsJogMotor

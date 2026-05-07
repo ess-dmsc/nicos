@@ -12,7 +12,7 @@ from nicos.core import (
     pvname,
     status,
 )
-from nicos.devices.abstract import MappedMoveable, MappedReadable, Readable
+from nicos.devices.abstract import MappedReadable
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
     RecordInfo,
@@ -280,9 +280,7 @@ class PowerSupplyBank(CanDisable, MappedReadable):
         if on_channels == num_of_channels:
             msg = "Bank is ON (all channels are ON)"
         elif on_channels > 0:
-            msg = "Bank is ON ({} of {} channels are ON)".format(
-                on_channels, num_of_channels
-            )
+            msg = f"Bank is ON ({on_channels} of {num_of_channels} channels are ON)"
             bank_stat = status.BUSY
         else:
             msg = "Bank is OFF (all channels are OFF)"

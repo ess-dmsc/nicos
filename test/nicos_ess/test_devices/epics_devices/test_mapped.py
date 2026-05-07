@@ -25,10 +25,7 @@
 """Harness tests for EpicsMappedReadable, EpicsMappedMoveable, and
 EpicsManualMappedAnalogMoveable."""
 
-import pytest
-
-from nicos.core import MoveError, status
-
+from nicos.core import status
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsManualMappedAnalogMoveable,
     EpicsMappedMoveable,
@@ -40,7 +37,6 @@ from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
 )
 
 from .conftest import manual_moveable_config
-
 
 # ---------------------------------------------------------------------------
 # MappedReadable
@@ -515,7 +511,9 @@ class TestEpicsManualMappedAnalogMoveable:
                     fake_backend.emit_connection(config["readpv"], False)
                     fake_backend.emit_connection(config["readpv"], True)
                     fake_backend.emit_update(config["readpv"], value=14, units="Hz")
-                    fake_backend.emit_update(config["writepv"], value=14, limits=(0, 40))
+                    fake_backend.emit_update(
+                        config["writepv"], value=14, limits=(0, 40)
+                    )
                 if delay_calls["count"] > 20:
                     raise RuntimeError("test guard: maw did not recover")
                 return original_delay(seconds)

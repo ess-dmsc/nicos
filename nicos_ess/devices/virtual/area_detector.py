@@ -525,7 +525,7 @@ class AreaDetectorCollector(Detector):
             return
 
         for controller in self._controlchannels:
-            sub_preset = preset.get(controller.name, None)
+            sub_preset = preset.get(controller.name)
             if sub_preset:
                 controller.doSetPreset(**{"n": sub_preset})
 

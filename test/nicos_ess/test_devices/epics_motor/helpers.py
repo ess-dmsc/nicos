@@ -25,7 +25,6 @@
 import pytest
 
 from nicos.core import status
-
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 
 MOTOR_PV = "SIM:M1"

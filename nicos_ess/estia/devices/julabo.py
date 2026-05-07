@@ -4,9 +4,8 @@ controller using EPICS.
 """
 
 from nicos.core import ConfigurationError, HasPrecision, Override, Param, pvname, status
-
-from nicos.devices.epics.pva import EpicsAnalogMoveable
 from nicos.devices.epics.mixins import HasDisablePv
+from nicos.devices.epics.pva import EpicsAnalogMoveable
 
 
 class TemperatureController(HasDisablePv, HasPrecision, EpicsAnalogMoveable):
@@ -154,7 +153,7 @@ class TemperatureController(HasDisablePv, HasPrecision, EpicsAnalogMoveable):
         :param pvparam: PV alias.
         :return: Actual PV name.
         """
-        record_prefix = getattr(self, "pvprefix")
+        record_prefix = self.pvprefix
         field = self._get_record_fields().get(pvparam)
 
         if field is not None:

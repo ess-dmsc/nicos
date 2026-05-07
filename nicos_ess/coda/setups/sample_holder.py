@@ -12,7 +12,7 @@ devices = dict(
     sample_stack_z=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Sample stack linear z - electrical axis 1 in motion cabinet 4",
-        motorpv=f"LOKI-SpSt1:MC-LinZ-01:Mtr",
+        motorpv="LOKI-SpSt1:MC-LinZ-01:Mtr",
         monitor_deadband=0.01,
     ),
     thermostated_sample_holder=device(

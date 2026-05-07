@@ -33,8 +33,8 @@ import sys
 from logging import DEBUG, ERROR, WARNING, Formatter, StreamHandler
 from os import path
 from time import monotonic, sleep
+from unittest import mock
 
-import mock
 import pytest
 
 from nicos import config
@@ -103,13 +103,13 @@ class approx:
         if math.isinf(self.expected):
             return str(self.expected)
         try:
-            vetted_tolerance = "{:.1e}".format(self.tolerance)
+            vetted_tolerance = f"{self.tolerance:.1e}"
         except ValueError:
             vetted_tolerance = "???"
         if sys.version_info[0] == 2:
-            return "{0} +- {1}".format(self.expected, vetted_tolerance)
+            return f"{self.expected} +- {vetted_tolerance}"
         else:
-            return "{0} \u00b1 {1}".format(self.expected, vetted_tolerance)
+            return f"{self.expected} \u00b1 {vetted_tolerance}"
 
     def __eq__(self, actual):
         if actual == self.expected:
@@ -131,7 +131,7 @@ class approx:
         absolute_tolerance = set_default(self.abs, 1e-12)
         if absolute_tolerance < 0:
             raise ValueError(
-                "absolute tolerance can't be negative: {}".format(absolute_tolerance)
+                f"absolute tolerance can't be negative: {absolute_tolerance}"
             )
         if math.isnan(absolute_tolerance):
             raise ValueError("absolute tolerance can't be NaN.")
@@ -141,7 +141,7 @@ class approx:
         relative_tolerance = set_default(self.rel, 1e-6) * abs(self.expected)
         if relative_tolerance < 0:
             raise ValueError(
-                "relative tolerance can't be negative: {}".format(absolute_tolerance)
+                f"relative tolerance can't be negative: {absolute_tolerance}"
             )
         if math.isnan(relative_tolerance):
             raise ValueError("relative tolerance can't be NaN.")
@@ -437,14 +437,14 @@ class TestController(IsController, Moveable):
             if other < adevtarget:
                 return (
                     False,
-                    "dev1 can only move to values smaller" " than %r" % other,
+                    "dev1 can only move to values smaller than %r" % other,
                 )
         if adev == self._attached_dev2:
             other = self._attached_dev1.read()
             if other > adevtarget:
                 return (
                     False,
-                    "dev2 can only move to values greater" " than %r" % other,
+                    "dev2 can only move to values greater than %r" % other,
                 )
         return (True, "Allowed")
 
@@ -453,7 +453,7 @@ class TestController(IsController, Moveable):
 
     def doIsAllowed(self, target):
         if target[0] > target[1]:
-            return (False, "dev1 can only move to values greater" " than dev2")
+            return (False, "dev1 can only move to values greater than dev2")
         return (True, "Allowed")
 
     def doStart(self, target):
@@ -647,8 +647,7 @@ def startElog(wait=2):
             raise Exception(
                 "elog failed to start within %s sec\n"
                 "----- tail of cacheserver.log -----\n%s\n"
-                "----- tail of elog.log -----\n%s"
-                % (wait, cache_tail, elog_tail)
+                "----- tail of elog.log -----\n%s" % (wait, cache_tail, elog_tail)
             )
 
     return startSubprocess("elog", wait_cb=elog_wait_cb)

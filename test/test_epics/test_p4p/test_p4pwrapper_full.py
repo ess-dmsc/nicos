@@ -13,7 +13,6 @@ from p4p.server.thread import SharedPV
 from nicos.core import status
 from nicos.devices.epics.pva.p4p import P4pWrapper
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
-
 from test.test_epics.test_p4p.utils.p4p_doubles import EventSink
 from test.test_epics.test_p4p.utils.pva_server import (
     PvaServer,
@@ -239,8 +238,10 @@ def test_monitor_change_and_connection_callbacks(
         before_change_calls = len(change.calls)
         pv.post(update_value, timestamp=time.time())
         wait_for(
-            lambda: len(change.calls) > before_change_calls
-            and change.calls[-1][0][2] == pytest.approx(update_value),
+            lambda: (
+                len(change.calls) > before_change_calls
+                and change.calls[-1][0][2] == pytest.approx(update_value)
+            ),
             timeout=_TIMEOUT,
         )
 
@@ -259,10 +260,12 @@ def test_monitor_change_and_connection_callbacks(
             message="test alarm",
         )
         wait_for(
-            lambda: len(change.calls) > before_alarm_calls
-            and change.calls[-1][0][2] == pytest.approx(update_value)
-            and change.calls[-1][0][5] == expected_nicos
-            and change.calls[-1][0][6] == "test alarm",
+            lambda: (
+                len(change.calls) > before_alarm_calls
+                and change.calls[-1][0][2] == pytest.approx(update_value)
+                and change.calls[-1][0][5] == expected_nicos
+                and change.calls[-1][0][6] == "test alarm"
+            ),
             timeout=_TIMEOUT,
         )
     finally:

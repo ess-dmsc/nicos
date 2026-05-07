@@ -6,7 +6,6 @@ import pytest
 from nicos.core import CommunicationError, status
 from nicos.devices.epics.pva.p4p import P4pWrapper, pvget, pvput
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
-
 from test.test_epics.test_p4p.utils.p4p_doubles import (
     CallSpy,
     FakeContext,

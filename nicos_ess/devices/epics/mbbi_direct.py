@@ -1,19 +1,14 @@
-import copy
 import time
 
 from nicos import session
 from nicos.core import (
     POLLER,
     SIMULATION,
-    Attach,
     Override,
     Param,
     Readable,
-    Waitable,
-    listof,
     status,
 )
-from nicos.devices.abstract import MappedMoveable, Moveable
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
     RecordInfo,

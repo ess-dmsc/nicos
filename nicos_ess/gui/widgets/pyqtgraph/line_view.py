@@ -35,7 +35,7 @@ class LineView(QWidget):
     data_changed = pyqtSignal(dict)
 
     def __init__(self, parent=None, name="", preview_mode=False, *args):
-        super(LineView, self).__init__(parent, *args)
+        super().__init__(parent, *args)
 
         self.name = name
         self.preview_mode = preview_mode

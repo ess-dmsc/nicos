@@ -35,7 +35,6 @@ from nicos import session
 from nicos.configmod import readToml
 from nicos.core.sessions.simulation import SimulationSupervisor
 from nicos.core.utils import system_user
-
 from test.utils import module_root
 
 # Keep this test focused on ESS-owned facilities for now.
@@ -132,7 +131,7 @@ def find_scripts():
 
 
 # Discover scripts dynamically so new testscripts are automatically covered.
-@pytest.mark.parametrize('facility, instr, script', find_scripts())
+@pytest.mark.parametrize("facility, instr, script", find_scripts())
 def test_dryrun(session, facility, instr, script):
     setups = ["system"]
     setupcode = []
@@ -163,9 +162,9 @@ def test_dryrun(session, facility, instr, script):
                 elif parts[2] == "timing":
                     timing_condition = parts[4].strip()
                 else:
-                    assert False, (
-                        "invalid test directive in file: %r (see %s)"
-                        % (line, TESTSCRIPT_DOC)
+                    assert False, "invalid test directive in file: %r (see %s)" % (
+                        line,
+                        TESTSCRIPT_DOC,
                     )
             code.append(line)
     code[0:0] = setupcode

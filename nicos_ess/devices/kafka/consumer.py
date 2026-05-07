@@ -5,8 +5,9 @@ import random
 import threading
 import time
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from confluent_kafka import (
     OFFSET_BEGINNING,
@@ -90,7 +91,7 @@ class KafkaConsumer:
     @staticmethod
     def create(
         brokers: Sequence[str], starting_offset: str = "latest", **options
-    ) -> "KafkaConsumer":
+    ) -> KafkaConsumer:
         """Factory for :class:`KafkaConsumer` with SASL options injected.
 
         Parameters
@@ -206,7 +207,7 @@ class KafkaConsumer:
     def is_partition_eof(err: object) -> bool:
         """Return True if the error is a PARTITION_EOF event."""
         try:
-            return int(getattr(err, "code")()) == ERR_PARTITION_EOF
+            return int(err.code()) == ERR_PARTITION_EOF
         except Exception:
             return False
 
@@ -214,7 +215,7 @@ class KafkaConsumer:
     def is_all_brokers_down(err: object) -> bool:
         """Return True if the error indicates ALL_BROKERS_DOWN."""
         try:
-            return int(getattr(err, "code")()) == ERR_ALL_BROKERS_DOWN
+            return int(err.code()) == ERR_ALL_BROKERS_DOWN
         except Exception:
             return False
 
@@ -222,7 +223,7 @@ class KafkaConsumer:
     def is_offset_out_of_range(err: object) -> bool:
         """Return True if the error indicates OFFSET_OUT_OF_RANGE."""
         try:
-            return int(getattr(err, "code")()) == ERR_OFFSET_OUT_OF_RANGE
+            return int(err.code()) == ERR_OFFSET_OUT_OF_RANGE
         except Exception:
             return False
 
@@ -230,10 +231,10 @@ class KafkaConsumer:
     def is_unknown_topic_or_partition(err: object) -> bool:
         """Return True if the error indicates an unknown topic or partition."""
         try:
-            code = int(getattr(err, "code")())
+            code = int(err.code())
             if code == ERR_UNKNOWN_TOPIC_OR_PART:
                 return True
-            name = str(getattr(err, "name")() or "")
+            name = str(err.name() or "")
             return name in ("UNKNOWN_TOPIC_OR_PART", "_UNKNOWN_PARTITION")
         except Exception:
             return False
@@ -1291,7 +1292,7 @@ class KafkaSubscriber:
                 continue
 
             key = (tp.topic, tp.partition)
-            pos = pos_map.get(key, None)
+            pos = pos_map.get(key)
             if pos is None or pos < 0:
                 last = self._last_seen.get(key, OFFSET_END)
                 pos = (int(last) + 1) if last != OFFSET_END else int(low)

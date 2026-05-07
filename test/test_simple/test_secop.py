@@ -44,7 +44,6 @@ from nicos.core.params import (
 )
 from nicos.devices.secop.validators import get_validator
 from nicos.protocols.cache import cache_dump
-
 from test.utils import raises
 
 simple_types = [

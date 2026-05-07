@@ -26,10 +26,9 @@ from collections import OrderedDict
 from copy import deepcopy
 
 from nicos.guisupport.qt import QHeaderView, Qt
-
+from nicos_ess.gui.tables.table_delegates import LimitsDelegate, ReadOnlyDelegate
 from nicos_ess.loki.gui.scriptbuilder import Column
 from nicos_ess.loki.gui.scriptbuilder_model import LokiScriptModel
-from nicos_ess.gui.tables.table_delegates import LimitsDelegate, ReadOnlyDelegate
 
 HEADERS = ["position", "sample", "duration"]
 COLUMNS = OrderedDict(

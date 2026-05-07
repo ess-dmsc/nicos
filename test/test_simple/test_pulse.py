@@ -25,7 +25,6 @@
 
 from nicos.core import ConfigurationError, waitForCompletion
 from nicos.devices.generic.manual import ManualSwitch
-
 from test.utils import raises
 
 session_setup = "pulse"

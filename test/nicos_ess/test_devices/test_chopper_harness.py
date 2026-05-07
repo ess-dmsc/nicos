@@ -38,9 +38,7 @@ from test.nicos_ess.test_devices.doubles import (
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
 
-    monkeypatch.setattr(
-        chopper_mod, "create_wrapper", lambda timeout, use_pva: backend
-    )
+    monkeypatch.setattr(chopper_mod, "create_wrapper", lambda timeout, use_pva: backend)
     monkeypatch.setattr(
         epics_devices, "create_wrapper", lambda timeout, use_pva: backend
     )

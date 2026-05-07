@@ -14,11 +14,9 @@ import time
 import pytest
 
 from nicos.core import status
-
 from nicos_ess.devices.datasources import just_bin_it
 from nicos_ess.devices.kafka import status_handler
 from nicos_ess.devices.timer import TimerChannel
-
 from test.nicos_ess.test_devices.doubles import (
     StubKafkaConsumer,
     StubKafkaProducer,
@@ -65,9 +63,7 @@ def recording_kafka(monkeypatch):
             if msg_id in acked_ids:
                 continue
             acked_ids.add(msg_id)
-            return json.dumps(
-                {"msg_id": msg_id, "response": "ACK"}
-            ).encode("utf-8")
+            return json.dumps({"msg_id": msg_id, "response": "ACK"}).encode("utf-8")
         return None
 
     consumer = StubKafkaConsumer(poll_hook=poll_hook)

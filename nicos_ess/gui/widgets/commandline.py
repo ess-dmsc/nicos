@@ -17,7 +17,6 @@ from nicos.guisupport.qt import (
     pyqtSignal,
 )
 from nicos.guisupport.utils import setBackgroundColor, setForegroundColor
-
 from nicos_ess.gui.utils import State, StyleSelector, refresh_widget
 
 wordsplit_re = re.compile(r"[ \t\n\"\\\'`@$><=;|&{(\[]")

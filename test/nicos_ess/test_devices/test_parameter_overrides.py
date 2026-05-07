@@ -14,6 +14,7 @@ class TestKnauerValveOverrides:
     @pytest.fixture(autouse=True)
     def setup(self):
         from nicos_ess.loki.devices.knauer_valve import KnauerValve
+
         self.cls = KnauerValve
 
     def test_readpv_not_in_parameters(self):
@@ -42,6 +43,7 @@ class TestIDS3010ControlOverrides:
     @pytest.fixture(autouse=True)
     def setup(self):
         from nicos_ess.estia.devices.attocube import IDS3010Control
+
         self.cls = IDS3010Control
 
     def test_statuspv_not_in_parameters(self):
@@ -65,6 +67,7 @@ class TestRheometerControlOverrides:
     @pytest.fixture(autouse=True)
     def setup(self):
         from nicos_ess.devices.epics.ap_rheometer import RheometerControl
+
         self.cls = RheometerControl
 
     def test_mapping_not_in_parameters(self):
@@ -83,6 +86,7 @@ class TestChopperAlarmsOverrides:
     @pytest.fixture(autouse=True)
     def setup(self):
         from nicos_ess.devices.epics.chopper import ChopperAlarms
+
         self.cls = ChopperAlarms
 
     def test_unit_volatile_false(self):
@@ -104,6 +108,7 @@ class TestEssChopperControllerOverrides:
     @pytest.fixture(autouse=True)
     def setup(self):
         from nicos_ess.devices.epics.chopper import EssChopperController
+
         self.cls = EssChopperController
 
     def test_mapping_settable_false(self):
@@ -129,6 +134,7 @@ class TestHPLCPumpControllerOverrides:
     @pytest.fixture(autouse=True)
     def setup(self):
         from nicos_ess.devices.epics.hplc_pump import HPLCPumpController
+
         self.cls = HPLCPumpController
 
     def test_mapping_settable_false(self):
@@ -154,6 +160,7 @@ class TestSyringePumpControllerOverrides:
     @pytest.fixture(autouse=True)
     def setup(self):
         from nicos_ess.devices.epics.syringe_pump import SyringePumpController
+
         self.cls = SyringePumpController
 
     def test_mapping_settable_false(self):

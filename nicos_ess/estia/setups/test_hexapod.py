@@ -57,6 +57,6 @@ devices = dict(
     hexapod_status=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="NewPort Status",
-        readpv=f"ESTIA-SES:MC-MCU-001:STATUS",
+        readpv="ESTIA-SES:MC-MCU-001:STATUS",
     ),
 )

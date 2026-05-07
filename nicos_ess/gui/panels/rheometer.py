@@ -4,22 +4,21 @@ import numpy as np
 
 from nicos.clients.gui.panels import Panel
 from nicos.guisupport.qt import (
+    QComboBox,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
     QSplitter,
-    Qt,
-    QVBoxLayout,
-    QComboBox,
-    QGridLayout,
-    QTableView,
-    QStandardItemModel,
     QStandardItem,
+    QStandardItemModel,
+    Qt,
+    QTableView,
     QTimer,
+    QVBoxLayout,
 )
-
 
 #########################################################
 #  Some refactoring to be done, but this works for now  #
@@ -491,9 +490,10 @@ class RheometerPanel(Panel):
             ("strain", self.strain_final_le),
             ("frequency", self.frequency_final_le),
         ]:
-            if getattr(self, f"{func}_combo").currentText() == "CONSTANT":
-                self.set_enabled_state(False, [final_le])
-            elif not getattr(self, f"{func}_combo").isEnabled():
+            if (
+                getattr(self, f"{func}_combo").currentText() == "CONSTANT"
+                or not getattr(self, f"{func}_combo").isEnabled()
+            ):
                 self.set_enabled_state(False, [final_le])
             else:
                 self.set_enabled_state(True, [final_le])

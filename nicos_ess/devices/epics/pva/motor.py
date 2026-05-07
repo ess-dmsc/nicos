@@ -14,7 +14,7 @@ from nicos.core import (
     pvname,
     status,
 )
-from nicos.core.errors import ConfigurationError, MoveError, PositionError
+from nicos.core.errors import ConfigurationError, MoveError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
 from nicos.devices.epics.status import SEVERITY_TO_STATUS

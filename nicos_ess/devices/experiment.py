@@ -247,9 +247,7 @@ class EssExperiment(Device):
         """deviate from default of <dataroot>/<year>/<proposal>"""
         if self.fixed_proposal_path is not None:
             return self.fixed_proposal_path
-        return path.join(
-            session.instrument.name.lower(), proposal, "raw"
-        )
+        return path.join(session.instrument.name.lower(), proposal, "raw")
 
     def _check_users(self, users):
         if not users:

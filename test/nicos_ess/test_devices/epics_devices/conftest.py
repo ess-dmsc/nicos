@@ -27,7 +27,6 @@
 import pytest
 
 from nicos.core import status
-
 from nicos_ess.devices.epics.pva import epics_devices
 from nicos_ess.devices.epics.pva.epics_devices import EpicsAnalogMoveable
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import (

@@ -9,7 +9,6 @@ devices = dict(
         dataroot="data",
         sample="Sample",
         cache_filepath="",
-
     ),
     Sample=device(
         "nicos_ess.devices.sample.EssSample",

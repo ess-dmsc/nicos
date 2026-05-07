@@ -231,7 +231,7 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
 
     def _get_pv_name(self, pvparam):
         pv_name = self._record_fields.get(pvparam)
-        if "image_pv" == pvparam:
+        if pvparam == "image_pv":
             return self.image_pv
         if pv_name:
             return self.pv_root + pv_name
@@ -698,11 +698,11 @@ class OrcaFlash4(AreaDetector):
 
     def _get_pv_name(self, pvparam):
         pv_name = self._record_fields.get(pvparam)
-        if "image_pv" == pvparam:
+        if pvparam == "image_pv":
             return self.image_pv
-        if "topicpv" == pvparam:
+        if pvparam == "topicpv":
             return self.topicpv
-        if "sourcepv" == pvparam:
+        if pvparam == "sourcepv":
             return self.sourcepv
         if pv_name:
             return self.pv_root + pv_name

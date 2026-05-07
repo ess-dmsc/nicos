@@ -28,7 +28,6 @@ import numpy
 import pytest
 
 from nicos.core import status
-
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsReadable,
     EpicsStringReadable,
@@ -107,9 +106,9 @@ class TestEpicsReadable:
         )
 
         assert len(fake_backend.subscriptions) == 2
-        assert device_harness.run("poller", device._cache.get, device, "value") == pytest.approx(
-            5.5
-        )
+        assert device_harness.run(
+            "poller", device._cache.get, device, "value"
+        ) == pytest.approx(5.5)
         assert device_harness.run("poller", device._cache.get, device, "unit") == "V"
         assert device_harness.run("poller", device._cache.get, device, "status") == (
             status.ERROR,
@@ -262,7 +261,9 @@ class TestEpicsStringReadable:
             readpv=readpv,
             monitor=False,
         )
-        device_harness.run("daemon", device._cache.put, device._name, "value", "from-cache")
+        device_harness.run(
+            "daemon", device._cache.put, device._name, "value", "from-cache"
+        )
         get_calls_before = len(fake_backend.get_calls)
 
         value = device_harness.run("daemon", device.read, 0)

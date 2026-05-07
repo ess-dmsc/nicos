@@ -211,7 +211,9 @@ class RedisStub:
             timeseries = self._fake_db.get(key, {})
             if not isinstance(timeseries, dict):
                 return 0
-            to_remove = [ts for ts in list(timeseries.keys()) if fromtime <= ts <= totime]
+            to_remove = [
+                ts for ts in list(timeseries.keys()) if fromtime <= ts <= totime
+            ]
             for ts in to_remove:
                 timeseries.pop(ts, None)
             return len(to_remove)
@@ -355,7 +357,6 @@ class RedisStub:
 
         cleaned = 0
         for key, mapping in self._fake_db.items():
-
             if key.endswith("_ts") or key.endswith("_snapshot"):
                 continue
             if not isinstance(mapping, dict):
@@ -868,7 +869,7 @@ def test_cache_dump_none_is_not_treated_as_delete(db):
     # We expect a real entry, not a deletion
     entry = db._get_data("test/none/value")
     assert entry is not None
-    assert entry.value is "None"
+    assert entry.value == "None"
     assert entry.time == 123.0
     assert entry.ttl == 456.0
 

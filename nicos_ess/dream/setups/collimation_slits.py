@@ -7,9 +7,9 @@ blades = {
     "upper": "Zp",
 }
 
-devices=dict()
+devices = dict()
 
-for slit_set in range(1,4):
+for slit_set in range(1, 4):
     for blade in blades:
         devices[f"slit_set_{slit_set}_{blade}"] = device(
             "nicos_ess.devices.epics.pva.motor.SmaractPiezoMotor",

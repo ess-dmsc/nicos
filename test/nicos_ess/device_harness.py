@@ -37,8 +37,8 @@ from types import SimpleNamespace
 
 from nicos import session as nicos_session
 from nicos.core import (
-    MASTER,
     MAIN,
+    MASTER,
     POLLER,
     SIMULATION,
     AccessError,
@@ -153,9 +153,7 @@ class InMemoryCache:
     def unsetRewrite(self, to_prefix):
         self._rewrites.pop(to_prefix.lower(), None)
 
-    def put_aged(
-        self, dev, key, value, age_seconds, *, now=None, ttl=None, flag=""
-    ):
+    def put_aged(self, dev, key, value, age_seconds, *, now=None, ttl=None, flag=""):
         """Convenience helper for maxage tests that need stale cache entries."""
         reference_time = monotonic() if now is None else float(now)
         stale_time = reference_time - max(0.0, float(age_seconds))

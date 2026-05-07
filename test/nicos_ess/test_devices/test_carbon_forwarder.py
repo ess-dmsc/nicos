@@ -29,9 +29,7 @@ class RecordingEmitter:
 
 
 class TestCarbonForwarderHarness:
-    def test_do_init_sets_default_filter_and_empty_emitter(
-        self, daemon_device_harness
-    ):
+    def test_do_init_sets_default_filter_and_empty_emitter(self, daemon_device_harness):
         device = daemon_device_harness.create_master(CarbonForwarder)
 
         assert device._emitter is None

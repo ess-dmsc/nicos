@@ -513,7 +513,7 @@ class MainWindow(DlgUtils, QMainWindow):
 
     @staticmethod
     def setQSS(style_file):
-        with open(style_file, "r", encoding="utf-8") as fd:
+        with open(style_file, encoding="utf-8") as fd:
             try:
                 QApplication.instance().setStyleSheet(fd.read())
             except Exception as e:

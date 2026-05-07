@@ -27,7 +27,6 @@
 from time import sleep
 
 from nicos.core import LimitError, status
-
 from test.utils import approx, raises
 
 session_setup = "axis"

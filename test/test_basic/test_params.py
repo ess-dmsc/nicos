@@ -60,7 +60,6 @@ from nicos.core.params import (
     tupleof,
     vec3,
 )
-
 from test.utils import raises
 
 # pylint: disable=compare-to-empty-string
@@ -401,7 +400,7 @@ def test_mailaddress():
     )
     assert (
         mailaddress(
-            "W. Lohstroh, G. Simeoni " "<wiebke.lohstroh+giovanna.simeoni@frm2.tum.de>"
+            "W. Lohstroh, G. Simeoni <wiebke.lohstroh+giovanna.simeoni@frm2.tum.de>"
         )
         == "W. Lohstroh, G. Simeoni <wiebke.lohstroh+giovanna.simeoni@frm2.tum.de>"
     )

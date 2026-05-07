@@ -34,7 +34,7 @@ def import_table_from_csv_file(filename):
     :param filename: path to csv file
     :return: tuple of headers (empty if no headers) and rows
     """
-    with open(filename, "r", encoding="utf-8") as file:
+    with open(filename, encoding="utf-8") as file:
         return import_table_from_csv_stream(file)
 
 

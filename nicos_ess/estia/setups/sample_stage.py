@@ -15,7 +15,7 @@ devices = dict(
     goniometer=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Sample Stage Rotation Base",
-        motorpv=f"ESTIA-SpRot:MC-RotZ01:Mtr",
+        motorpv="ESTIA-SpRot:MC-RotZ01:Mtr",
         has_powerauto=False,
         fmtstr="%.2f",
     ),

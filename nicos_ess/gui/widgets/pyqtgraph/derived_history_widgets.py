@@ -1,7 +1,6 @@
 import itertools
 
 import numpy as np
-
 import pyqtgraph as pg
 from qtgr import QWidget
 
@@ -12,10 +11,10 @@ from nicos.guisupport.qt import (
 )
 from nicos_ess.gui.widgets.pyqtgraph.utils.fitter import Fitter1D, FitType
 from nicos_ess.gui.widgets.pyqtgraph.utils.utils import (
-    interpolate_to_common_timestamps,
     COLORS,
-    PlotTypes,
     HISTOGRAM_COLORS,
+    PlotTypes,
+    interpolate_to_common_timestamps,
 )
 
 pg.setConfigOption("background", "w")
@@ -31,7 +30,7 @@ class DerivedWidgetBase(QWidget):
     widgetRemoved = pyqtSignal(str)
 
     def __init__(self, parent=None):
-        super(DerivedWidgetBase, self).__init__(parent)
+        super().__init__(parent)
 
     @pyqtSlot(float, float)
     def on_bounds_changed(self, left_bound, right_bound):
@@ -52,7 +51,7 @@ class DerivedWidgetBase(QWidget):
 
 class HistogramPlot(DerivedWidgetBase):
     def __init__(self, parent=None):
-        super(HistogramPlot, self).__init__(parent)
+        super().__init__(parent)
 
         self.plotwidget = pg.PlotWidget()
         self.plotwidget.showGrid(x=True, y=True, alpha=0.2)
@@ -166,7 +165,7 @@ class HistogramPlot(DerivedWidgetBase):
 
 class XYPlot(DerivedWidgetBase):
     def __init__(self, parent=None):
-        super(XYPlot, self).__init__(parent)
+        super().__init__(parent)
 
         self.plotwidget = pg.PlotWidget()
         self.plotwidget.showGrid(x=True, y=True, alpha=0.2)

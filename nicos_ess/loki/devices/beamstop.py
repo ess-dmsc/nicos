@@ -34,7 +34,7 @@ class LokiBeamstopArmPositioner(MappedController):
                 if abs(v - value) < self._attached_controlled_device.precision:
                     return k
         inverse_mapping = {v: k for k, v in self.mapping.items()}
-        mapped_value = inverse_mapping.get(value, None)
+        mapped_value = inverse_mapping.get(value)
         if mapped_value:
             return mapped_value
         if value > self.mapping["Parked"]:
@@ -83,7 +83,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
     def _mapReadValue(self, value):
         inverse_mapping = {v: k for k, v in self._full_mapping.items()}
-        mapped_value = inverse_mapping.get(value, None)
+        mapped_value = inverse_mapping.get(value)
         if not mapped_value:
             return "In Between"
         return mapped_value

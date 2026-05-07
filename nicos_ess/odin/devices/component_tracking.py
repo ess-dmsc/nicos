@@ -14,7 +14,6 @@ from nicos.core import (
     status,
     tupleof,
 )
-
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
 from nicos_ess.utilities.json_utils import generate_nxlog_json
 

@@ -545,8 +545,10 @@ class MultiLiveDataPanel(LiveDataPanel):
             self.plotwidget.settings_histogram.item.gradient.saveState()
         )
         self.update_previews(
-            lambda preview: preview.widget.settings_histogram.item.gradient.restoreState(
-                current_gradient_state
+            lambda preview: (
+                preview.widget.settings_histogram.item.gradient.restoreState(
+                    current_gradient_state
+                )
             ),
             self.plotwidget.name,
         )
@@ -747,9 +749,12 @@ class MultiLiveDataPanel(LiveDataPanel):
         self.highlight_selected_preview(det_name)
 
     def _check_switched_plot(self, det_name, is_2d):
-        if self.plotwidget.isVisible() and not is_2d:
-            return True
-        elif self.plotwidget_1d.isVisible() and is_2d:
+        if (
+            self.plotwidget.isVisible()
+            and not is_2d
+            or self.plotwidget_1d.isVisible()
+            and is_2d
+        ):
             return True
         elif is_2d:
             return det_name != self.plotwidget.name

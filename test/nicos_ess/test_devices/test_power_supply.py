@@ -1,10 +1,14 @@
 import pytest
-from nicos_ess.devices.epics.power_supply_channel import PowerSupplyChannel, PowerSupplyBank
+
+from nicos_ess.devices.epics.power_supply_channel import (
+    PowerSupplyBank,
+    PowerSupplyChannel,
+)
 
 session_setup = None
 
-class FakePowerSupplyChannel(PowerSupplyChannel):
 
+class FakePowerSupplyChannel(PowerSupplyChannel):
     _record_fields = {
         "voltage_monitor": 0.0,
         "current_monitor": 0.0,
@@ -38,7 +42,6 @@ class FakePowerSupplyChannel(PowerSupplyChannel):
 
 
 class FakePowerSupplyBank(PowerSupplyBank):
-
     def doPreinit(self, mode):
         pass
 
@@ -49,7 +52,6 @@ class FakePowerSupplyBank(PowerSupplyBank):
 
 
 class TestPowerSupply:
-
     @pytest.fixture(autouse=True)
     def prepare(self, session):
         self.session = session

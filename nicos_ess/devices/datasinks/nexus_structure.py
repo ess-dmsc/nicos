@@ -19,7 +19,7 @@ from nicos_ess.utilities.json_utils import (
 )
 
 ALLOWED_INSTRUMENT_NAMES = [
-    "", # Empty string is necessary for non-instrument instances
+    "",  # Empty string is necessary for non-instrument instances
     "beer",
     "bifrost",
     "dream",
@@ -79,7 +79,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return json.dumps(structure)
 
     def _load_structure(self):
-        with open(self.nexus_config_path, "r", encoding="utf-8") as file:
+        with open(self.nexus_config_path, encoding="utf-8") as file:
             structure = file.read()
         json_struct = json.loads(structure)
         # Build the initial name→index map (groups only)
@@ -264,26 +264,26 @@ class NexusStructureJsonFile(NexusStructureProvider):
         children = []
         if entities:
             for n, v in entities.items():
-              if skip_keys and n in skip_keys:
-                  continue
-              children.append(
-                  {
-                      "module": "dataset",
-                      "config": {"name": n, "values": v, "dtype": "string"},
-                  }
-              )
+                if skip_keys and n in skip_keys:
+                    continue
+                children.append(
+                    {
+                        "module": "dataset",
+                        "config": {"name": n, "values": v, "dtype": "string"},
+                    }
+                )
         return children
 
     def _generate_samples_link_list(self, entities):
         children = []
         if entities:
-          for n, p in entities.items():
-              children.append(
-                  {
-                      "module": "link",
-                      "config": {"name": n, "type": "NXlink", "source": p},
-                  }
-              )
+            for n, p in entities.items():
+                children.append(
+                    {
+                        "module": "link",
+                        "config": {"name": n, "type": "NXlink", "source": p},
+                    }
+                )
         return children
 
     def _insert_samples(self, structure, metainfo):

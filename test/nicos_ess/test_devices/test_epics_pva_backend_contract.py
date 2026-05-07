@@ -32,9 +32,9 @@ import ast
 import inspect
 from pathlib import Path
 
-import nicos_ess.devices.epics.pva.epics_devices as epics_devices
 import pytest
 
+import nicos_ess.devices.epics.pva.epics_devices as epics_devices
 from nicos.core import status
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
     FakeEpicsBackend,
@@ -74,7 +74,9 @@ def _get_method_node(class_node, method_name):
     for node in class_node.body:
         if isinstance(node, ast.FunctionDef) and node.name == method_name:
             return node
-    raise AssertionError(f"Method {method_name!r} not found in class {class_node.name!r}")
+    raise AssertionError(
+        f"Method {method_name!r} not found in class {class_node.name!r}"
+    )
 
 
 def _signature_spec_from_ast(method_node):
@@ -84,8 +86,7 @@ def _signature_spec_from_ast(method_node):
 
     return {
         "positional": tuple(
-            (arg.arg, default is not None)
-            for arg, default in zip(positional, defaults)
+            (arg.arg, default is not None) for arg, default in zip(positional, defaults)
         ),
         "kwonly": tuple(
             (arg.arg, default is not None)
@@ -144,9 +145,10 @@ WRAPPER_SPECS = _wrapper_specs_from_source()
 @pytest.mark.parametrize("method_name", COMMON_WRAPPER_METHODS)
 def test_pva_wrappers_share_common_method_contract(method_name):
     # Both production wrappers should expose the same API surface.
-    assert WRAPPER_SPECS["P4pWrapper"][method_name] == WRAPPER_SPECS["CaprotoWrapper"][
-        method_name
-    ]
+    assert (
+        WRAPPER_SPECS["P4pWrapper"][method_name]
+        == WRAPPER_SPECS["CaprotoWrapper"][method_name]
+    )
 
 
 @pytest.mark.parametrize("method_name", COMMON_WRAPPER_METHODS)
@@ -182,7 +184,9 @@ def test_fake_backend_subscription_callback_shape_matches_wrapper_contract():
     observed_connections = []
 
     def on_change(pvname, pvparam, value, units, limits, severity, message):
-        observed_changes.append((pvname, pvparam, value, units, limits, severity, message))
+        observed_changes.append(
+            (pvname, pvparam, value, units, limits, severity, message)
+        )
 
     def on_connection(pvname, pvparam, is_connected):
         observed_connections.append((pvname, pvparam, is_connected))

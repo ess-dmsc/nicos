@@ -27,7 +27,6 @@
 import pytest
 
 from nicos.core import MoveError, status
-
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsAnalogMoveable,
     EpicsDigitalMoveable,
@@ -36,8 +35,7 @@ from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
     analog_moveable_config,
 )
 
-from .conftest import assert_error_status, create_analog_pair
-
+from .conftest import assert_error_status
 
 # ---------------------------------------------------------------------------
 # Analog-specific tests
@@ -126,24 +124,33 @@ class TestEpicsAnalogMoveable:
         fake_backend.emit_update(config["targetpv"], value=3.5)
 
         assert len(fake_backend.subscriptions) == 4
-        assert device_harness.run("poller", poller_device._cache.get, poller_device, "value") == pytest.approx(
-            3.0
+        assert device_harness.run(
+            "poller", poller_device._cache.get, poller_device, "value"
+        ) == pytest.approx(3.0)
+        assert (
+            device_harness.run(
+                "poller", poller_device._cache.get, poller_device, "unit"
+            )
+            == "mm"
         )
-        assert device_harness.run("poller", poller_device._cache.get, poller_device, "unit") == "mm"
-        assert device_harness.run("poller", poller_device._cache.get, poller_device, "abslimits") == (
+        assert device_harness.run(
+            "poller", poller_device._cache.get, poller_device, "abslimits"
+        ) == (
             -10.0,
             10.0,
         )
-        assert device_harness.run("poller", poller_device._cache.get, poller_device, "target") == pytest.approx(
-            3.5
-        )
-        assert device_harness.run("poller", poller_device._cache.get, poller_device, "status")[0] == (
-            status.BUSY
-        )
+        assert device_harness.run(
+            "poller", poller_device._cache.get, poller_device, "target"
+        ) == pytest.approx(3.5)
+        assert device_harness.run(
+            "poller", poller_device._cache.get, poller_device, "status"
+        )[0] == (status.BUSY)
 
         fake_backend.emit_connection(config["readpv"], False)
         assert_error_status(
-            device_harness.run("poller", poller_device._cache.get, poller_device, "status")
+            device_harness.run(
+                "poller", poller_device._cache.get, poller_device, "status"
+            )
         )
 
     def test_daemon_analog_moveable_reads_shared_cache_from_poller(
@@ -232,7 +239,9 @@ def test_moveable_stale_cache_does_not_complete_move_wait(
         shared=config,
     )
 
-    fake_backend.emit_update(config["writepv"], value=initial_value, limits=(-100.0, 100.0))
+    fake_backend.emit_update(
+        config["writepv"], value=initial_value, limits=(-100.0, 100.0)
+    )
     fake_backend.emit_update(
         config["readpv"],
         value=initial_value,
@@ -286,8 +295,12 @@ def test_moveable_second_start_wins_when_old_callbacks_arrive_late(
     device_harness, fake_backend, device_class, initial_value, target_value, device_name
 ):
     config = analog_moveable_config()
-    fake_backend.values[config["readpv"]] = 0.0 if isinstance(initial_value, float) else 0
-    fake_backend.values[config["writepv"]] = 0.0 if isinstance(initial_value, float) else 0
+    fake_backend.values[config["readpv"]] = (
+        0.0 if isinstance(initial_value, float) else 0
+    )
+    fake_backend.values[config["writepv"]] = (
+        0.0 if isinstance(initial_value, float) else 0
+    )
     fake_backend.units[config["readpv"]] = "mm"
     fake_backend.alarms[config["readpv"]] = (status.OK, "ok")
 
@@ -299,7 +312,9 @@ def test_moveable_second_start_wins_when_old_callbacks_arrive_late(
 
     device_harness.run("daemon", daemon_device.start, initial_value)
     device_harness.run("daemon", daemon_device.start, target_value)
-    fake_backend.emit_update(config["writepv"], value=initial_value, limits=(-100.0, 100.0))
+    fake_backend.emit_update(
+        config["writepv"], value=initial_value, limits=(-100.0, 100.0)
+    )
     fake_backend.emit_update(config["readpv"], value=initial_value, units="mm")
     observed_target = device_harness.run("daemon", lambda: daemon_device.target)
     observed_status = device_harness.run("daemon", daemon_device.status, 0)
@@ -387,7 +402,9 @@ def test_moveable_maw_recovers_from_transient_disconnect(
             if delay_calls["count"] == 1:
                 fake_backend.emit_connection(config["readpv"], False)
                 fake_backend.emit_connection(config["readpv"], True)
-                fake_backend.emit_update(config["readpv"], value=target_value, units="mm")
+                fake_backend.emit_update(
+                    config["readpv"], value=target_value, units="mm"
+                )
                 fake_backend.emit_update(
                     config["writepv"], value=target_value, limits=(-100.0, 100.0)
                 )
@@ -454,7 +471,9 @@ def test_moveable_out_of_order_callbacks_keep_busy(
     )
 
     device_harness.run("daemon", daemon_device.start, target_value)
-    fake_backend.emit_update(config["writepv"], value=target_value, limits=(-100.0, 100.0))
+    fake_backend.emit_update(
+        config["writepv"], value=target_value, limits=(-100.0, 100.0)
+    )
     status_after_write = device_harness.run("daemon", daemon_device.status, 0)
     fake_backend.emit_update(config["readpv"], value=target_value, units="mm")
     status_after_read = device_harness.run("daemon", daemon_device.status, 0)

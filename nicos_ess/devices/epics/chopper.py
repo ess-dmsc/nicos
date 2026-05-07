@@ -14,7 +14,7 @@ from nicos.core import (
     oneof,
     status,
 )
-from nicos.devices.abstract import MappedMoveable, Moveable
+from nicos.devices.abstract import MappedMoveable
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsManualMappedAnalogMoveable,
     EpicsParameters,
@@ -195,7 +195,7 @@ class EssChopperController(MappedMoveable):
             try:
                 target_speed = self._attached_speed._inverse_mapping.get(0, "0 Hz")
                 self._attached_speed.move(target_speed)
-            except Exception as e:
+            except Exception:
                 self.log.exception(
                     "Failed to set speed to 0 when stopping chopper. "
                     "Will still send stop command."
@@ -395,6 +395,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         # What is the reset command for an ODIN chopper?
         pass
 
+
 class NmxChopperAlarms(EpicsParameters, Readable):
     """
     This device handles chopper alarms.
@@ -567,7 +568,7 @@ class NmxChopperController(MappedMoveable):
             try:
                 target_speed = self._attached_speed._inverse_mapping.get(0, "0 Hz")
                 self._attached_speed.move(target_speed)
-            except Exception as e:
+            except Exception:
                 self.log.exception(
                     "Failed to set speed to 0 when stopping chopper. "
                     "Will still send stop command."

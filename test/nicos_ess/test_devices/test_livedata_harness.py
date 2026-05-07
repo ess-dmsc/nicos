@@ -19,11 +19,9 @@ pytest.importorskip("streaming_data_types")
 from streaming_data_types.dataarray_da00 import Variable, serialise_da00
 
 from nicos import session as nicos_session
-
 from nicos_ess.devices.datasources import livedata
 from nicos_ess.devices.datasources.livedata_utils import JobId, WorkflowId
 from nicos_ess.devices.timer import TimerChannel
-
 from test.nicos_ess.test_devices.doubles import (
     StubKafkaProducer,
     StubKafkaSubscriber,
@@ -112,9 +110,7 @@ class TestLiveDataHarness:
             job_number="job-1",
             state="active",
         )
-        collector._registry.note_output(
-            workflow, JobId("monitor", "job-1"), "current"
-        )
+        collector._registry.note_output(workflow, JobId("monitor", "job-1"), "current")
         mapping = collector.get_current_mapping()
         label, selector = next(iter(mapping.items()))
 
@@ -142,9 +138,7 @@ class TestLiveDataHarness:
 
         _prime_and_prepare()
 
-        payload = json.loads(
-            livedata_stubs.messages[0]["message"].decode("utf-8")
-        )
+        payload = json.loads(livedata_stubs.messages[0]["message"].decode("utf-8"))
         assert payload["action"] == "reset"
         assert payload["job_id"] == {
             "source_name": "monitor",
@@ -233,10 +227,12 @@ class TestDataChannelDimensionHandling:
 
     def test_1d_signal(self):
         """A 1-D signal should keep its natural shape and summed readback."""
-        self._send([
-            _var("signal", [10, 20, 30], axes=["x"]),
-            _var("x", [0.0, 1.0, 2.0, 3.0], axes=["x"]),
-        ])
+        self._send(
+            [
+                _var("signal", [10, 20, 30], axes=["x"]),
+                _var("x", [0.0, 1.0, 2.0, 3.0], axes=["x"]),
+            ]
+        )
 
         assert self.channel.read(0)[0] == 60
         assert self.channel._signal.shape == (3,)
@@ -244,11 +240,13 @@ class TestDataChannelDimensionHandling:
     def test_2d_signal(self):
         """A 2-D signal should preserve both dimensions."""
         data = np.arange(6, dtype=np.float64).reshape(2, 3)
-        self._send([
-            _var("signal", data, axes=["y", "x"]),
-            _var("x", [0.0, 1.0, 2.0, 3.0], axes=["x"]),
-            _var("y", [0.0, 1.0, 2.0], axes=["y"]),
-        ])
+        self._send(
+            [
+                _var("signal", data, axes=["y", "x"]),
+                _var("x", [0.0, 1.0, 2.0, 3.0], axes=["x"]),
+                _var("y", [0.0, 1.0, 2.0], axes=["y"]),
+            ]
+        )
 
         assert self.channel.read(0)[0] == 15
         assert self.channel._signal.shape == (2, 3)

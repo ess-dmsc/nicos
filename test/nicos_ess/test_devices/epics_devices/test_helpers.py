@@ -95,7 +95,9 @@ class TestHelpers:
             mapping={},
             _inverse_mapping={},
         )
-        mapped_device._setROParam = lambda name, value: setattr(mapped_device, name, value)
+        mapped_device._setROParam = lambda name, value: setattr(
+            mapped_device, name, value
+        )
 
         _update_mapped_choices(mapped_device, selector)
 

@@ -50,7 +50,6 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, findResource, formatDuration, formatEndtime
-
 from nicos_ess.gui.utils import get_icon
 
 has_scintilla = QsciScintilla is not None
@@ -81,7 +80,7 @@ def find_all_nicos_commands():
         for file in files:
             if file == "__init__.py":
                 continue
-            with open(os.path.join(root, file), "r", encoding=LOCALE_ENCODING) as f:
+            with open(os.path.join(root, file), encoding=LOCALE_ENCODING) as f:
                 lines = f.readlines()
                 found_usercommand = False
                 for line in lines:
@@ -878,7 +877,7 @@ class EditorPanel(Panel):
             printer = QPrinter()
             printer.setOutputFileName("")
             if QPrintDialog(printer, self).exec() == QDialog.DialogCode.Accepted:
-                getattr(self.currentEditor, "print")(printer)
+                self.currentEditor.print(printer)
 
     def validateScript(self):
         script = self.currentEditor.text()
@@ -900,7 +899,7 @@ class EditorPanel(Panel):
             return
         if self.current_status != "idle":
             if not self.askQuestion(
-                "A script is currently running, do you " "want to queue this script?",
+                "A script is currently running, do you want to queue this script?",
                 True,
             ):
                 return
@@ -948,7 +947,7 @@ class EditorPanel(Panel):
         reason, ok = QInputDialog.getText(
             self,
             "Update reason",
-            "For the logbook, you can enter a reason " "for the update here:",
+            "For the logbook, you can enter a reason for the update here:",
             text="no reason specified",
         )
         if not ok:
@@ -1059,7 +1058,7 @@ class EditorPanel(Panel):
         if not self.checkDirty(self.currentEditor):
             return
         try:
-            with open(fn, "r", encoding=LOCALE_ENCODING) as f:
+            with open(fn, encoding=LOCALE_ENCODING) as f:
                 text = f.read()
         except Exception as err:
             return self.showError("Opening file failed: %s" % err)

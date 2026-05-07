@@ -6,25 +6,25 @@ devices = dict(
     IDN_kepco=device(
         "nicos.devices.epics.pva.EpicsStringReadable",
         description="The hardware Identification",
-        readpv="{}IDN_rbv".format(pv_root),
+        readpv=f"{pv_root}IDN_rbv",
     ),
     V_kepco=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="The Voltage",
-        readpv="{}MeasVolt".format(pv_root),
-        writepv="{}Volt".format(pv_root),
-        targetpv="{}Volt_rbv".format(pv_root),
+        readpv=f"{pv_root}MeasVolt",
+        writepv=f"{pv_root}Volt",
+        targetpv=f"{pv_root}Volt_rbv",
     ),
     Remote_kepco=device(
         "nicos.devices.epics.pva.EpicsMappedMoveable",
         description="Setting remote mode on/off",
-        readpv="{}Remote_rbv".format(pv_root),
-        writepv="{}Remote".format(pv_root),
+        readpv=f"{pv_root}Remote_rbv",
+        writepv=f"{pv_root}Remote",
     ),
     Output_kepco=device(
         "nicos.devices.epics.pva.EpicsMappedMoveable",
         description="Setting output on/off",
-        readpv="{}Output_rbv".format(pv_root),
-        writepv="{}Output".format(pv_root),
+        readpv=f"{pv_root}Output_rbv",
+        writepv=f"{pv_root}Output",
     ),
 )

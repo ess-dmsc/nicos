@@ -6,12 +6,12 @@ devices = dict(
     EVR_time=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Status of the EVR timing",
-        readpv="{}Time-Valid-Sts".format(pv_root),
+        readpv=f"{pv_root}Time-Valid-Sts",
     ),
     EVR_link=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Status of link to EVG",
-        readpv="{}Link-Sts".format(pv_root),
+        readpv=f"{pv_root}Link-Sts",
     ),
     NTP_DIFF=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

@@ -25,7 +25,6 @@
 """Harness tests for EpicsStringMoveable."""
 
 from nicos.core import status
-
 from nicos_ess.devices.epics.pva.epics_devices import EpicsStringMoveable
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
     string_moveable_config,

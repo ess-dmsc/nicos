@@ -799,7 +799,7 @@ class SeleneRobot(Moveable):
     def load_data(self, fname=None):
         if fname is None:
             fname = self.position_data
-        data = yaml.load(open(fname, "r"), yaml.FullLoader)
+        data = yaml.load(open(fname), yaml.FullLoader)
         self.positions = data["positions"]
         self.rotations = data["rotations"]
         self.calculate_zeros()

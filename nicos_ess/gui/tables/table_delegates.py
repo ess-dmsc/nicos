@@ -2,16 +2,16 @@
 
 from nicos.guisupport.qt import (
     QAbstractSpinBox,
+    QApplication,
     QComboBox,
     QDoubleSpinBox,
     QItemDelegate,
-    Qt,
-    QStyledItemDelegate,
-    QStyleOptionButton,
-    QStyle,
-    QApplication,
     QPoint,
     QRect,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionButton,
+    Qt,
 )
 
 
@@ -51,7 +51,7 @@ class ComboBoxDelegate(QItemDelegate):
 
 class CheckboxDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
-        super(CheckboxDelegate, self).__init__(parent)
+        super().__init__(parent)
         self.model = None
 
     def paint(self, painter, option, index):

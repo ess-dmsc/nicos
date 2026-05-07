@@ -23,6 +23,7 @@
 import unittest
 
 import pytest
+
 pytest.importorskip("epics")
 from test.nicos_ess.test_devices.utils import create_patch
 

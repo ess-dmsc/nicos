@@ -24,8 +24,7 @@
 
 import pytest
 
-from nicos_ess.devices.epics.pva import epics_devices
-from nicos_ess.devices.epics.pva import shutter
+from nicos_ess.devices.epics.pva import epics_devices, shutter
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 

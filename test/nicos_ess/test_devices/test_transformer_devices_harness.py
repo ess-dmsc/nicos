@@ -25,15 +25,13 @@
 import pytest
 
 from nicos_ess.devices import transformer_devices
-from nicos_ess.devices.epics.pva import epics_devices
-from nicos_ess.devices.epics.pva import motor
+from nicos_ess.devices.epics.pva import epics_devices, motor
 from nicos_ess.devices.epics.pva.epics_devices import EpicsManualMappedAnalogMoveable
 from test.nicos_ess.test_devices.doubles import (
     FakeEpicsBackend,
     HarnessMoveable,
     seed_epics_jog_motor_defaults,
 )
-
 
 MOTOR_PV = "SIM:M1"
 CHOPPER_SPEED_READPV = "SIM:CHOP:SPD.RBV"
@@ -50,9 +48,7 @@ def chopper_phase_config():
 
 
 def cache_raw_speed_target(device_harness, raw_target):
-    speed = device_harness.get_device(
-        device_harness.POLLER_ROLE, "mapped_speed_dev"
-    )
+    speed = device_harness.get_device(device_harness.POLLER_ROLE, "mapped_speed_dev")
     speed._cache.put(speed.name, "target", raw_target)
 
 
@@ -102,7 +98,9 @@ def attached_transformer_devices(device_harness, fake_backend):
 
 
 class TestChopperPhaseHarness:
-    def test_initializes(self, device_harness, fake_backend, attached_transformer_devices):
+    def test_initializes(
+        self, device_harness, fake_backend, attached_transformer_devices
+    ):
         del fake_backend, attached_transformer_devices
         daemon_device, poller_device = device_harness.create_pair(
             transformer_devices.ChopperPhase,
@@ -116,7 +114,7 @@ class TestChopperPhaseHarness:
     def test_initializes_with_raw_speed_target_in_cache(
         self, device_harness, fake_backend, attached_transformer_devices
     ):
-        # cache a speed value which is not in the mapping to verify 
+        # cache a speed value which is not in the mapping to verify
         # that the device can handle this case on initialization
         cache_raw_speed_target(device_harness, 70.0)
 
@@ -131,7 +129,9 @@ class TestChopperPhaseHarness:
 
 
 class TestDegreesPerSecondToRPMHarness:
-    def test_initializes(self, device_harness, fake_backend, attached_transformer_devices):
+    def test_initializes(
+        self, device_harness, fake_backend, attached_transformer_devices
+    ):
         del fake_backend, attached_transformer_devices
         daemon_device, poller_device = device_harness.create_pair(
             transformer_devices.DegreesPerSecondToRPM,

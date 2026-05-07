@@ -5,7 +5,6 @@
 import pytest
 
 from nicos.services.cache.endpoints.redis_client import RedisClient
-
 from test.test_cache.test_redis import RedisClientStub
 
 
@@ -173,7 +172,9 @@ def test_execute_command_hdel(real_redis_client, stub_redis_client):
     real_removed = real_redis_client.execute_command("HDEL", key, "b", "c")
     stub_removed = stub_redis_client.execute_command("HDEL", key, "b", "c")
     assert real_removed == stub_removed
-    assert real_redis_client.hgetall(key) == stub_redis_client.hgetall(key) == {"a": "1"}
+    assert (
+        real_redis_client.hgetall(key) == stub_redis_client.hgetall(key) == {"a": "1"}
+    )
 
 
 def test_execute_command_zremrangebyscore(real_redis_client, stub_redis_client):

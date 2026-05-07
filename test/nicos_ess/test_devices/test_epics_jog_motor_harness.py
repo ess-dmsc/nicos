@@ -31,7 +31,6 @@ from test.nicos_ess.test_devices.doubles import (
     seed_epics_jog_motor_defaults,
 )
 
-
 MOTOR_PV = "SIM:M1"
 
 

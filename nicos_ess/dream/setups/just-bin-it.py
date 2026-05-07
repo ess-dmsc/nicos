@@ -73,7 +73,7 @@ devices = dict(
         response_topic="dream_jbi_responses",
         statustopic=["dream_jbi_heartbeat"],
         images=[
-            "det_fw_endcap", 
+            "det_fw_endcap",
             "det_bw_endcap",
             "det_mantle",
             "det_sans",

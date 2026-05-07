@@ -21,15 +21,14 @@
 #
 # *****************************************************************************
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 # pytest.importorskip("graypy")
 from nicos.commands.device import adjust
 from nicos.core import status
-
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
-
 
 session_setup = "ess_motors"
 

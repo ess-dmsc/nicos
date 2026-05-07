@@ -12,7 +12,6 @@ from nicos.guisupport.qt import (
     QDialogButtonBox,
     QFormLayout,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QPushButton,
     QSpinBox,

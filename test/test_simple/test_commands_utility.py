@@ -33,7 +33,6 @@ from nicos.commands.utility import (
     floatrange,
 )
 from nicos.core import UsageError
-
 from test.utils import approx, raises
 
 

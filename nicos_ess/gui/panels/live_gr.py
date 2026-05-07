@@ -17,7 +17,11 @@ from nicos.guisupport.livewidget import (
     AXES,
     DATATYPES,
     IntegralLiveWidget,
+)
+from nicos.guisupport.livewidget import (
     LiveWidget as DefaultLiveWidget,
+)
+from nicos.guisupport.livewidget import (
     LiveWidget1D as DefaultLiveWidget1D,
 )
 from nicos.guisupport.qt import (
@@ -45,7 +49,6 @@ from nicos.guisupport.qt import (
 from nicos.guisupport.qtgr import MouseEvent
 from nicos.protocols.cache import cache_load
 from nicos.utils import BoundedOrderedDict, ReaderRegistry, findResource, safeName
-
 from nicos_ess.gui.utils import get_icon
 
 try:
@@ -684,9 +687,7 @@ class LiveDataPanel(PlotPanel):
         try:
             descriptions = params["datadescs"]
         except KeyError:
-            self.log.warning(
-                'Livedata with tag "Live" without ' '"datadescs" provided.'
-            )
+            self.log.warning('Livedata with tag "Live" without "datadescs" provided.')
             return
 
         # pylint: disable=len-as-condition

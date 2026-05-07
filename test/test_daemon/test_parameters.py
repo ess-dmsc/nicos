@@ -22,7 +22,6 @@
 # *****************************************************************************
 
 from nicos.services.daemon.auth.ldap import ldapuri
-
 from test.utils import raises
 
 

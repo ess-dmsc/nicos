@@ -9,22 +9,22 @@ devices = dict(
     foc5_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
-        readpv="{}ChopState_R".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}ChopState_R",
         visibility=(),
     ),
     foc5_chopper_speed=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",  # Should be EpicsAnalogMoveable later
         description="The current speed.",
-        readpv="{}Spd_R".format(foc5_pv_root),
-        writepv="{}Spd_S".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}Spd_R",
+        writepv=f"{foc5_pv_root}Spd_S",
         precision=0.1,
         mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0},
     ),
     foc5_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
-        readpv="{}ChopDly-S".format(foc5_pv_root),
-        writepv="{}ChopDly-S".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}ChopDly-S",
+        writepv=f"{foc5_pv_root}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
     foc5_chopper_phase=device(
@@ -38,7 +38,7 @@ devices = dict(
     foc5_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
-        readpv="{}DiffTSSamples".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}DiffTSSamples",
         unit="ns",
         visibility=(
             "metadata",
@@ -48,13 +48,13 @@ devices = dict(
     foc5_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}InPhs_R",
     ),
     foc5_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The chopper's park angle.",
-        readpv="{}Pos_R".format(foc5_pv_root),
-        writepv="{}ParkAngle_S".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}Pos_R",
+        writepv=f"{foc5_pv_root}ParkAngle_S",
     ),
     foc5_chopper=device(
         "nicos_ess.devices.epics.chopper.OdinChopperController",
@@ -83,7 +83,7 @@ devices = dict(
     foc5_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The vacuum pressure",
-        readpv="{}200:PrsR".format(vacuum_pv_root),
+        readpv=f"{vacuum_pv_root}200:PrsR",
         fmtstr="%.2e",
     ),
 )

@@ -18,7 +18,7 @@ try:
     from nicos.guisupport.qt import QApplication
 except ImportError:
     print(
-        f"Please install the optional 'gui' dependencies of NICOS to use this command. Refer to the README for details."
+        "Please install the optional 'gui' dependencies of NICOS to use this command. Refer to the README for details."
     )
     sys.exit(0)
 import nicos_ess
@@ -138,7 +138,7 @@ def main(_argv):
     gui_conf.stylefile = ""
 
     if gui_conf.options.get("facility") in ["ess", "sinq"]:
-        gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig.qss")
+        gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, "gui/guiconfig.qss")
 
     stylefiles = [
         path.join(userpath, "style-%s.qss" % sys.platform),
@@ -150,7 +150,7 @@ def main(_argv):
     for stylefile in [gui_conf.stylefile] or stylefiles:
         if path.isfile(stylefile):
             try:
-                with open(stylefile, "r", encoding="utf-8") as fd:
+                with open(stylefile, encoding="utf-8") as fd:
                     app.setStyleSheet(fd.read())
                 gui_conf.stylefile = stylefile
                 break

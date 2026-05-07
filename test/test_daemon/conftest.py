@@ -28,7 +28,6 @@ import pytest
 from nicos.clients.base import ConnectionData, NicosClient
 from nicos.protocols.daemon import STATUS_IDLE, STATUS_IDLEEXC
 from nicos.utils import parseConnectionString, tcpSocket
-
 from test.utils import daemon_addr, killSubprocess, startSubprocess
 
 

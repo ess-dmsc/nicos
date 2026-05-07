@@ -1,5 +1,6 @@
-import pytest
 import threading
+
+import pytest
 
 from nicos.core import LimitError, status
 from nicos_ess.loki.devices.detector_motion import LOKIDetectorMotion

@@ -25,7 +25,6 @@
 import pytest
 
 from nicos_ess.devices.epics.pva import motor
-
 from test.nicos_ess.test_devices.doubles import patch_create_wrapper
 from test.nicos_ess.test_devices.epics_motor.helpers import seed_default_motor_pvs
 

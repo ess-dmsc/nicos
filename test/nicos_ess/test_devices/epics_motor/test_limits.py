@@ -25,10 +25,8 @@
 import pytest
 
 from nicos.core.errors import ConfigurationError
-
 from nicos_ess.devices.epics.pva.epics_devices import RecordInfo, RecordType
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
-
 from test.nicos_ess.test_devices.epics_motor.helpers import (
     ASYMM_DIAL_LIMITS,
     DYNAMIC_HW_DIAL_LIMIT_CASES,

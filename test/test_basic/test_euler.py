@@ -26,7 +26,6 @@
 import pytest
 
 from nicos.core.errors import NicosError
-
 from test.utils import approx, raises
 
 session_setup = "euler"

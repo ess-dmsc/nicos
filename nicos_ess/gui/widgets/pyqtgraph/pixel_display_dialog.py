@@ -1,12 +1,12 @@
 from nicos.guisupport.qt import (
     QDialog,
+    QHeaderView,
+    QMessageBox,
     QPushButton,
+    Qt,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QMessageBox,
-    QHeaderView,
-    Qt,
 )
 
 
