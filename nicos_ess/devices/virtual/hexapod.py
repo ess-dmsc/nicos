@@ -17,6 +17,7 @@ class VirtualHexapod(Moveable):
         "t_speed": Param(
             "Virtual translation speed",
             settable=True,
+            mandatory=False,
             type=floatrange(0.01, 20),
             default=1,
             unit="mm/s",
@@ -24,6 +25,7 @@ class VirtualHexapod(Moveable):
         "r_speed": Param(
             "Virtual rotation speed",
             settable=True,
+            mandatory=False,
             type=floatrange(0.001, 1.5),
             default=0.01,
             unit="deg/s",
