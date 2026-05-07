@@ -35,6 +35,7 @@ devices = dict(
         maxage=None,
     ),
     # DPU Config
+    # TODO: Configurable Mapped Moveable device for string!
     detector_config_control=device(
         # Showing only the index!
         # This class seems to be the best so far for read/write the DPU config PV.
@@ -48,22 +49,22 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
         # Add mapping here to override the one from readpv (ENUM), as the writepv is a STRING.
-        mapping={
-            'PARK': "PARK",
-            'CALIBRATION': "CALIBRATION",
-            'MAINTENANCE': "MAINTENANCE",
-            'CONFIG1':"CONFIG1",
-            'CONFIG2':"CONFIG2", 
-            'CONFIG3':"CONFIG3", 
-            'CONFIG4':"CONFIG4", 
-            'CONFIG5':"CONFIG5",
-            'CONFIG6':"CONFIG6",
-            'CONFIG7':"CONFIG7",
-            'CONFIG8':"CONFIG8",
-            'CONFIG9':"CONFIG9",
-            'CONFIG10':"CONFIG10",
-            'CONFIG11':"CONFIG11",
-            }
+        #mapping={
+        #    'PARK': "PARK",
+        #    'CALIBRATION': "CALIBRATION",
+        #    'MAINTENANCE': "MAINTENANCE",
+        #    'CONFIG1':"CONFIG1",
+        #    'CONFIG2':"CONFIG2", 
+        #    'CONFIG3':"CONFIG3", 
+        #    'CONFIG4':"CONFIG4", 
+        #    'CONFIG5':"CONFIG5",
+        #    'CONFIG6':"CONFIG6",
+        #    'CONFIG7':"CONFIG7",
+        #    'CONFIG8':"CONFIG8",
+        #    'CONFIG9':"CONFIG9",
+        #    'CONFIG10':"CONFIG10",
+        #    'CONFIG11':"CONFIG11",
+        #    }
     ),
     detector_config_readback=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
