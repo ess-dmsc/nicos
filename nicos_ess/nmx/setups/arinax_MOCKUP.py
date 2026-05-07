@@ -40,7 +40,7 @@ devices = dict(
         # Showing only the index!
         # This class seems to be the best so far for read/write the DPU config PV.
         # PS: This PV is being fixed. Probably it will be an ENUM too in the future.
-        "nicos_ess.nmx.devices.arinax.StringEpicsMappedMoveable",
+        "nicos_ess.nmx.devices.arinax.ConfigurableEpicsMappedMoveable",
         description="ARINAX DPU Configuration, control (mockup)",
         readpv="NMX-mockup:getDPUConfiguration",
         writepv="NMX-mockup:setDPUConfiguration",
@@ -48,6 +48,7 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
+        write_enum_string=True,
         # Add mapping here to override the one from readpv (ENUM), as the writepv is a STRING.
         #mapping={
         #    'PARK': "PARK",
