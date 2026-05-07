@@ -110,6 +110,7 @@ devices = dict(
         pva=False,
     ),
     # Sample load
+    # TODO: Issue here: mapping is broken. The PV is STRING type. Idea: Add a string manual mapped device.
     sample_load__load_SS_sample=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU load sample from storage, control (mockup)",
@@ -121,6 +122,20 @@ devices = dict(
         maxage=None,
         mapping=SAMPLE_STORAGE,
     ),
+    # TODO: Temp device (while the above one is not fixed).
+    sample_load__load_SS_sample__STR=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="ARINAX SPU load sample from storage, control (mockup)",
+        readpv="NMX-mockup:LoadSSSample",
+        writepv="NMX-mockup:LoadSSSample",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping=SAMPLE_STORAGE,
+        fmtstr="%.e", # Work-around: fix the infinity limits.
+    ),
+    # TODO: Issue here: mapping is broken. The PV is STRING type. Idea: Add a string manual mapped device.
     sample_load__load_UP_sample=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU load sample from unipucks, control (mockup)",
@@ -132,6 +147,20 @@ devices = dict(
         maxage=None,
         mapping=UNIPUCKS,
     ),
+    # TODO: Temporary device.
+    sample_load__load_UP_sample_STR=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="ARINAX SPU load sample from unipucks, control (mockup)",
+        readpv="NMX-mockup:LoadUPSample",
+        writepv="NMX-mockup:LoadUPSample",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping=UNIPUCKS,
+        fmtstr="%.e", # Work-around: fix the infinity limits.
+    ),
+    # TODO: Issue here: mapping is broken. The PV is LONG type. Idea: Ask ARINAX to make them as ENUM.
     sample_load__sample_is_loaded=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="ARINAX SPU sample is mounted, readback (mockup)",
@@ -145,6 +174,21 @@ devices = dict(
             'Yes': 1,
             },
     ),
+    # TODO: Temporary device.
+    sample_load__sample_is_loaded__LONG=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="ARINAX SPU sample is mounted, readback (mockup)",
+        readpv="NMX-mockup:getIsSampleLoaded",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            'No': 0,
+            'Yes': 1,
+            },
+    ),
+    # TODO: Issue here: mapping is broken. The PV is STRING type. Idea: Add a string manual mapped device??
     sample_load__unload_sample=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU unload sample, control (mockup)",
@@ -158,6 +202,21 @@ devices = dict(
             'Unload sample': "1", # Any string should be okay.
             },
     ),
+    # TODO: Temporary device.
+    sample_load__unload_sample__STR=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="ARINAX SPU unload sample, control (mockup)",
+        readpv="NMX-mockup:UnLoadSample",
+        writepv="NMX-mockup:UnLoadSample",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            'Unload sample': "1", # Any string should be okay.
+            },
+        fmtstr="%.e", # Work-around.
+    ),
     # Sample tool
     sample_tool__current_tool_=device(
         # Only index is showing.
@@ -169,6 +228,7 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
+    # TODO: Issue here: mapping is broken. The PV is STRING type. Idea: Add a string manual mapped device.
     sample_tool__load_tool=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU desired tool loading, control (mockup)",
@@ -187,6 +247,27 @@ devices = dict(
             "CustomToolSample": "CustomToolSample",
             "None": "None",
         },
+    ),
+    # TODO: Temporary device.
+    sample_tool__load_tool__STR=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="ARINAX SPU desired tool loading, control (mockup)",
+        readpv="NMX-mockup:LoadTool",
+        writepv="NMX-mockup:LoadTool",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            "GoniometerEmpty": "GoniometerEmpty",
+            "CustomToolEmpty": "CustomToolEmpty",
+            "TouchProbe": "TouchProbe",
+            "ToolChanger": "ToolChanger",
+            "GoniometerSample": "GoniometerSample",
+            "CustomToolSample": "CustomToolSample",
+            "None": "None",
+        },
+        fmtstr="%.e", # Work-around.
     ),
 
 )
