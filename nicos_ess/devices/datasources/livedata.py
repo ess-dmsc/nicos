@@ -651,12 +651,11 @@ class LiveDataCollector(Detector):
                 payload = js.get("message", js)
                 wf_str = payload.get("workflow_id", "")
                 wf_parts = wf_str.split("/") if wf_str else []
-                if len(wf_parts) == 4:
+                if len(wf_parts) == 3:
                     wf = WorkflowId(
                         instrument=wf_parts[0],
-                        namespace=wf_parts[1],
-                        name=wf_parts[2],
-                        version=int(wf_parts[3]),
+                        name=wf_parts[1],
+                        version=int(wf_parts[2]),
                     )
                     job = payload.get("job_id", {})
                     self._registry.jobinfo_from_status(
@@ -690,7 +689,7 @@ class LiveDataCollector(Detector):
         Examples of a start and stop and reset command response:
 
         Start:
-        {"identifier":{"instrument":"dummy","namespace":"data_reduction","name":"total_counts","version":1},"job_number":"51d0d89b-d05f-4509-8761-392af404919b","schedule":{"start_time":null,"end_time":null},"aux_source_names":{},"params":{}}
+        {"identifier":{"instrument":"dummy","name":"total_counts","version":1},"job_number":"51d0d89b-d05f-4509-8761-392af404919b","schedule":{"start_time":null,"end_time":null},"aux_source_names":{},"params":{}}
         Stop:
         {"job_id":{"source_name":"panel_0","job_number":"51d0d89b-d05f-4509-8761-392af404919b"},"workflow_id":null,"action":"stop"}
         Reset:
@@ -810,9 +809,9 @@ class LiveDataCollector(Detector):
             }
         """
 
-        def split_workflow_path(path: str) -> tuple[str, str, str, int]:
-            i, ns, n, v = path.split("/")
-            return i, ns, n, int(v)
+        def split_workflow_path(path: str) -> tuple[str, str, int]:
+            i, n, v = path.split("/")
+            return i, n, int(v)
 
         # Preferred output ordering first
         prefer = ("current", "cumulative")
@@ -835,7 +834,7 @@ class LiveDataCollector(Detector):
             if not outputs:
                 continue
 
-            _, _, wf_name, _ = split_workflow_path(ji.workflow_path)
+            _, wf_name, _ = split_workflow_path(ji.workflow_path)
             for out in outputs:
                 label = f"{ji.source_name} ({ji.job_number.split('-')[0]}) {out}"
 
