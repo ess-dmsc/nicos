@@ -1,27 +1,31 @@
+from nicos.core import (
+    Param,
+)
+
 from nicos_ess.devices.epics.pva import EpicsMappedMoveable
 
-class StringEpicsMappedMoveable(EpicsMappedMoveable):
+class ConfigurableEpicsMappedMoveable(EpicsMappedMoveable):
     """
-    An EpicsMappedMoveable that writes the ENUM string instead of its index.
+    An EpicsMappedMoveable with an extra parameter to allow the ENUM string (key) to be 
+    written to PV instead of the index (write_enum_string).
+
+    This class is added for handling some ARINAX EPICS PVs, where the get PV is an ENUM,
+    but the set PV is a string.
+
+    TODO: The extra parameter here can, in the future, be incorporated to the original
+    EpicsMappedMoveble class.
     """
 
-    #valuetype = str
-    #
-    #parameters = {
-    #    "readpv": Param(
-    #        "PV for reading device value", type=pvname, mandatory=True, userparam=False
-    #    ),
-    #    "writepv": Param(
-    #        "PV for writing device target", type=pvname, mandatory=True, userparam=False
-    #    ),
-    #    "targetpv": Param(
-    #        "Optional target readback PV.",
-    #        type=none_or(pvname),
-    #        mandatory=False,
-    #        userparam=False,
-    #    ),
-    #}
+    parameters = {
+        "write_enum_string": Param(
+            "Write to PV the enum string instead of the index", type=bool, default=False,
+        ),
+    }
 
     def doStart(self, value):
-        self._epics_wrapper.put_pv_value(self.writepv, value)
+        """ Modified doStart method."""
+        if self.write_enum_string:
+            self._epics_wrapper.put_pv_value(self.writepv, value)
+            return
+        super().doStart(value)
 
