@@ -64,7 +64,7 @@ class TAS(HasAutoDevices, Instrument, Moveable):
     attached_devices = {
         "cell": Attach("Unit cell object to calculate angles", Cell),
         "mono": Attach("Monochromator device", Monochromator),
-        "ana": Attach("Analysator device", Monochromator),
+        "ana": Attach("Analysator device", Monochromator),  # codespell:ignore
         "phi": Attach("Sample scattering angle", Moveable),
         "psi": Attach("Sample rocking angle", Moveable),
         "alpha": Attach(

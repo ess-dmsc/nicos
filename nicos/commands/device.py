@@ -680,7 +680,7 @@ def getall(*names):
     lists the offset for all devices with an "offset" parameter.
     """
     items = []
-    for name, dev in sorted(session.devices.items(), key=lambda nd: nd[0].lower()):
+    for name, dev in sorted(session.devices.items(), key=lambda nd: nd[0].lower()):  # codespell:ignore
         pvalues = []
         for param in names:
             if param in dev.parameters:
