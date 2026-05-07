@@ -920,7 +920,7 @@ def history(dev, key="value", fromtime=None, totime=None, interval=None):
     >>> history(mth, 'speed', '14:00', '17:00')    # between 14h and 17h today
     >>> history(mth, 'speed', '2012-05-04', '2012-05-08')  # between two days
 
-    Example for interval specification. Setting 10 seconds as the minumum
+    Example for interval specification. Setting 10 seconds as the minimum
     interval between two adjacent data points:
 
     >>> history(mth, 'speed', '2012-05-04', '2012-05-08', 10) # in [seconds]

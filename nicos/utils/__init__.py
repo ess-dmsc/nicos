@@ -389,7 +389,7 @@ def tcpSocket(host, defaultport, timeout=None, keepalive=None):
 
     Specify 'host[:port]' or a (host, port) tuple for the mandatory argument.
     If the port specification is missing, the value of the defaultport is used.
-    If timeout is set to a number, the timout of the connection is set to this
+    If timeout is set to a number, the timeout of the connection is set to this
     number, else the socket stays in blocking mode.
 
     If *keepalive* is given, enable TCP keepalive and set the keepalive
@@ -1462,7 +1462,7 @@ def timedRetryOnExcept(max_retries=1, timeout=1, ex=None, actionOnFail=None):
     max_retries: how often to retry
     timeout: how long to sleep between tries
     ex: only catch specified exceptions, if None, only catch `Exception`
-    actionOnFail: will be called when an exception occured
+    actionOnFail: will be called when an exception occurred
 
     All other args are passed to wrapped function.  If max_retries is
     exhausted, the exception is reraised.
@@ -1672,7 +1672,7 @@ def parseKeyExpression(
     funs = []
     transformer = KeyExprTransform()
     for expr in exprs:
-        # normalize names occuring in the formula
+        # normalize names occurring in the formula
         expr = ast.fix_missing_locations(transformer.visit(expr))
         # find the variable and replace by "x"
         key = None

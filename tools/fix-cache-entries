@@ -82,7 +82,7 @@ def fix_pollinterval_and_maxage(pollinterval=float, maxage=float):
     return res
 
 
-# Framwork
+# Framework
 
 class CClient:
     """Very crude and basic cache client"""
@@ -236,7 +236,7 @@ class CClient:
                 keys = argspec.args
                 types = argspec.defaults
                 if len(keys) != len(types):
-                    print('Can not apply fix %s, not all argumens have types '
+                    print('Can not apply fix %s, not all arguments have types '
                           'as default!' % fix.__name__)
                 # ask cache about the values of the keys
                 args = [self.querykey(dev, k) for k in keys]

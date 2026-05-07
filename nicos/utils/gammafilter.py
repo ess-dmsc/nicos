@@ -61,7 +61,7 @@ def scharr_filter(img):
     Analysis function for sharpness of an given numpy array.
 
     First generates a scharr-filter for the x and y direction. Afterwards
-    it perfroms a convolution of the scharr with the array and calculates
+    it performs a convolution of the scharr with the array and calculates
     the mean value of the absolute.
     Input: region (numpy array)
     Output: sharpness (scalar)
@@ -88,8 +88,8 @@ def gam_rem_adp_log(img, thr3=25, thr5=100, thr7=400, sig_log=0.8):
     img_logm3 = cv2.medianBlur(img_log, 3)
     # substitute only those pixels whose values are greater than adaptive
     # threshold, which is set to median(log(img))+thr, where thr is a
-    # predetermined constant chosed to be best fitted for specific noise
-    # charateristics by user.
+    # predetermined constant chose to be best fitted for specific noise
+    # characteristics by user.
     # Adaptive filter size:
     # "Opening" operator:
     imgthr3 = np.greater(img_log, img_logm3 + thr3)

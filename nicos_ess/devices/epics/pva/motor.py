@@ -122,7 +122,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             mandatory=False,
         ),
         "hwuserlimits": Param(
-            "Unchangable hardware user limits, diallimits with applied offset and direction.",
+            "Unchangeable hardware user limits, diallimits with applied offset and direction.",
             type=limits,
             settable=False,
             volatile=True,

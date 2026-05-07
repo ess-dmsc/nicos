@@ -211,7 +211,7 @@ class WebhookForwarder(ForwarderBase, Device):
                 elif self.http_mode == "POST":
                     requests.post(self.hook_url, data=pdict, timeout=0.5)
         except Exception:
-            self.log.warning("Execption during webhook call", exc=True)
+            self.log.warning("Exception during webhook call", exc=True)
 
     def _processQueue(self):
         while not self._stoprequest:

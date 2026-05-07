@@ -47,7 +47,7 @@ class Authenticator(BaseAuthenticator):
 
        `nicos-keystore add nicos_user \<username\>`
 
-    b) the `keyring` tool (this may required addtional dependencies to be
+    b) the `keyring` tool (this may required additional dependencies to be
        installed):
 
        `keyring -b keyrings.alt.file.EncryptedKeyring set nicos_user \<username\>`

@@ -1,4 +1,4 @@
-description = "ESTIA Bandwith Chopper"
+description = "ESTIA Bandwidth Chopper"
 
 pv_root = "ESTIA-ChpSy1:Chop-BWC-101:"
 chic_root = "ESTIA-ChpSy1:Chop-CHIC-001:"
