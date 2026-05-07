@@ -161,7 +161,6 @@ dev = [
 exclude = [
     "nicos_mlz/",
     "nicos_sinq/",
-    "test/",
     "nicos_demo/",
     "nicostools/",
     "doc/",
