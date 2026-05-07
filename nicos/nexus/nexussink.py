@@ -81,7 +81,7 @@ class NexusSinkHandler(DataSinkHandler):
     in one NeXus file. This requires keeping a copy of the start dataset
     around and some logic in begin() end end()
 
-    Then it turned out that h5py.flush() does not write a useable file
+    Then it turned out that h5py.flush() does not write a usable file
     to disk for other programs to digest while the data is still being
     collected. Thus it is necessary to keep the file closed and open and
     close it only when data needs to be updated.
@@ -228,7 +228,7 @@ class NexusSinkHandler(DataSinkHandler):
             except BlockingIOError:
                 session.log.warning(
                     "Other process is accessing NeXus file "
-                    "while updating, possibly loosing "
+                    "while updating, possibly losing "
                     "scan point"
                 )
 

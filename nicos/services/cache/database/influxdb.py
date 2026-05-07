@@ -167,7 +167,7 @@ class InfluxDBCacheDatabase(CacheDatabase):
     categories are stored as _measurements, nicos keys are organized in _fields.
     Values are stored as fields' _values. Expired mark is set up
     as _tag. It is better to keep expired as a tag, because then it is
-    immideately available in every record obtained from queries. If expired is
+    immediately available in every record obtained from queries. If expired is
     set up as field this field should be requested separately and this comes at
     higher computational cost.
     Values are stored as strings as they are in flatfile database for the sake

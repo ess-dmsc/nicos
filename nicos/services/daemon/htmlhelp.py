@@ -88,10 +88,10 @@ class HelpGenerator:
             '<html><head><style type="text/css">%s</style>' "</head>\n<body>" % STYLE
         )
         self.footer = "</body></html>"
-        self.strin = StringIO()
+        self.strin = StringIO()  # codespell:ignore
         self.strout = StringIO()
         self.lock = threading.Lock()
-        self.helper = pydoc.Helper(input=self.strin, output=self.strout)
+        self.helper = pydoc.Helper(input=self.strin, output=self.strout)  # codespell:ignore
         self._specialtopics = set(self.helper.topics)
         if hasattr(self.helper, "symbols"):
             self._specialtopics.update(self.helper.symbols)

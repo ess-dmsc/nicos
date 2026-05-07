@@ -79,7 +79,7 @@ class SequenceItem:
         """
 
     def run(self):
-        """Initate an action, define in derived classes."""
+        """Initiate an action, define in derived classes."""
 
     def retry(self, retries):
         """Retry the start of an already failed action."""
@@ -489,14 +489,14 @@ class SequencerMixin(DeviceMixinBase):
 
     def doStatus(self, maxage=0):
         """Return highest statusvalue."""
-        stati = [
+        statuses = [
             dev.status(maxage) for dev in devIter(self._getWaiters(), Readable)
         ] + [self._seq_status]
         # sort inplace by first element, i.e. status code
-        stati.sort(key=lambda st: st[0])
+        statuses.sort(key=lambda st: st[0])
         # select highest (worst) status
         # if no status is 'worse' then _seq_status, this is _seq_status
-        _status = stati[-1]
+        _status = statuses[-1]
         if self._seq_is_running():
             return max(status.BUSY, _status[0]), _status[1]
         return _status

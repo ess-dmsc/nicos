@@ -201,7 +201,7 @@ def multiWait(devices):
     It checks the device status until all devices are OK or errored.
 
     Errors raised are handled like in the following way:
-    The error is logged, and the first exception with the highest serverity
+    The error is logged, and the first exception with the highest severity
     (exception in `CONTINUE_EXECPTIONS` < `SKIP_EXCEPTIONS` < other exceptions)
     is re-raised at the end.
 
@@ -393,7 +393,7 @@ def _multiMethod(baseclass, method, devices):
     """Calls a method on a list of devices.
 
     Errors raised are handled like in the following way:
-    The error is logged, and the first exception with the highest serverity
+    The error is logged, and the first exception with the highest severity
     (exception in `CONTINUE_EXCEPTIONS` < `SKIP_EXCEPTIONS` < other exceptions)
     is re-raised at the end.
 

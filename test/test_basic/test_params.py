@@ -412,7 +412,7 @@ def test_mailaddress():
     assert raises(ValueError, mailaddress, "my@domain")
     assert raises(ValueError, mailaddress, "my@domain.123")
     assert raises(ValueError, mailaddress, "my@domain@dummy.my")
-    assert raises(ValueError, mailaddress, "my@nonsens@dömain.my")
+    assert raises(ValueError, mailaddress, "my@nonsense@dömain.my")
     assert raises(ValueError, mailaddress, "M. Address <my.address@domain.my>,")
 
 

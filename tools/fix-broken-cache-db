@@ -90,9 +90,9 @@ count = 0
 for fn, data in badfiles.items():
     try:
         # make backup
-        with open(fn + '.bak', 'wb') as fo:
+        with open(fn + '.bak', 'wb') as fo:  # codespell:ignore
             with open(fn, 'rb') as fi:
-                fo.write(fi.read())
+                fo.write(fi.read())  # codespell:ignore
         # rewrite cache file
         with open(fn, 'w', encoding='utf-8') as f:
             f.write(data)

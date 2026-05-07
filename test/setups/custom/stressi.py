@@ -134,7 +134,7 @@ devices = dict(
             abslimits=(0, 155),
         ),
     ),
-    slite=device(
+    slite=device(  # codespell:ignore
         "nicos.devices.generic.VirtualMotor",
         unit="mm",
         abslimits=(0, 70),

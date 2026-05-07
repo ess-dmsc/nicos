@@ -33,7 +33,7 @@ from .elements import ConstDataset, NexusElementBase, NXAttribute
 class NicosProgramDataset(ConstDataset):
     """Place holder for the NICOS program info.
 
-    This elememt can be used for the `program_name` entry in the NXentry group.
+    This element can be used for the `program_name` entry in the NXentry group.
     """
 
     def __init__(self):

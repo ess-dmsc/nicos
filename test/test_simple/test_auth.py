@@ -121,7 +121,7 @@ class TestOAuthAuthenticator:
     @pytest.fixture
     def OAuthAuth(self, request):
         Auth = OAuthAuthenticator(
-            "authenicator", tokenurl="https://unit.test/", clientid=""
+            "authenticator", tokenurl="https://unit.test/", clientid=""
         )
         yield Auth
 
@@ -138,7 +138,7 @@ def ListAuth(request):
         hashed = hashlib.sha1(pw.encode()).hexdigest() if pw != "" else pw
         passwds.append((user, hashed, level))
 
-    Auth = ListAuthenticator("authenicator", hashing="sha1", passwd=passwds)
+    Auth = ListAuthenticator("authenticator", hashing="sha1", passwd=passwds)
     yield Auth
 
 

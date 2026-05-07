@@ -179,7 +179,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
 
     def doStart(self, target=None):
         # if no target is given, it's a start command from the Detector class
-        # treat it as begining a count/scan instead of changing selector
+        # treat it as beginning a count/scan instead of changing selector
 
         # passivechannel path
         if target is None:

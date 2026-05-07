@@ -387,7 +387,7 @@ class MultilineChannel(Readable):
     }
 
     attached_devices = {
-        "controller": Attach("Multline Controller", MultilineController),
+        "controller": Attach("Multiline Controller", MultilineController),
     }
 
     def doRead(self, maxage=0):
