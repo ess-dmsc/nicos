@@ -2,7 +2,7 @@ description = "The choppers for HEIMDAL"
 
 pv_root_pulse_shaping_chopper_1 = "HEIMDAL-ChpSy1:Chop-TPSC-101:"
 pv_root_pulse_shaping_chopper_2 = "HEIMDAL-ChpSy1:Chop-TPSC-102:"
-pv_root_bandwidth_chopper = "HEIMDAL-ChpSy1:Chop-TWSC-101:P"
+pv_root_bandwidth_chopper = "HEIMDAL-ChpSy1:Chop-TWSC-101:"
 chic_root_1 = "HEIMDAL-ChpSy1:Chop-CHIC-001:"
 
 # HEIMDAL TPSC park values are the beam-guide references.  Direction-specific
