@@ -89,7 +89,6 @@ class HexapodPanel(Panel):
             self._error_window.activateWindow()
 
     def exec_command(self, command):
-        self.client.tell("", command)
         self._exec_reqid = self.client.run(command)
 
     def clear(self):
@@ -177,7 +176,7 @@ class HexapodPanel(Panel):
         if value == "Work":
             self.coordSyst.setStyleSheet("background-color: lightorange")
             self.coordSyst.setText("Work")
-        if value == "Tool":
+        elif value == "Tool":
             self.coordSyst.setStyleSheet("background-color: lightgreen")
             self.coordSyst.setText("Tool")
         else:
@@ -258,7 +257,6 @@ class HexapodPanel(Panel):
     @pyqtSlot()
     def on_butTest_pressed(self):
         class_typ = "nicos_ess.devices.virtual.hexapod.TableHexapod"
-
         self.test = self.client.getDeviceList(needs_class=class_typ)
         self.showError(f"{self.test}")
         # data = self.mainwindow.expertmode
@@ -267,12 +265,12 @@ class HexapodPanel(Panel):
 
     @pyqtSlot()
     def on_relNeg_tx_pressed(self):
-        target = self.curTx.value() + (-1 * self.relTx.value())
+        target = -1 * self.relTx.value()
         self.exec_command(f"move('{self.adevs['tx']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_tx_pressed(self):
-        target = self.curTx.value() + self.relTx.value()
+        target = self.relTx.value()
         self.exec_command(f"move('{self.adevs['tx']['devname']}', {target})")
 
     @pyqtSlot()
