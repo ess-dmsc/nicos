@@ -1289,11 +1289,16 @@
       </property>
      </widget>
     </widget>
+   </widget>
+   <widget class="QWidget" name="expTab">
+    <attribute name="title">
+     <string>Expert Control</string>
+    </attribute>
     <widget class="QPushButton" name="butTest">
      <property name="geometry">
       <rect>
-       <x>1030</x>
-       <y>340</y>
+       <x>20</x>
+       <y>30</y>
        <width>101</width>
        <height>25</height>
       </rect>
@@ -1311,11 +1316,6 @@
       <bool>false</bool>
      </property>
     </widget>
-   </widget>
-   <widget class="QWidget" name="expTab">
-    <attribute name="title">
-     <string>Expert Control</string>
-    </attribute>
    </widget>
   </widget>
   <action name="actionReference_drive">
