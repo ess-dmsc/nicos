@@ -2,6 +2,7 @@ description = "The choppers for HEIMDAL"
 
 pv_root_pulse_shaping_chopper_1 = "HEIMDAL-ChpSy1:Chop-TPSC-101:"
 pv_root_pulse_shaping_chopper_2 = "HEIMDAL-ChpSy1:Chop-TPSC-102:"
+pv_root_bandwidth_chopper = "HEIMDAL-ChpSy1:Chop-TWSC-101:P"
 chic_root_1 = "HEIMDAL-ChpSy1:Chop-CHIC-001:"
 
 # HEIMDAL TPSC park values are the beam-guide references.  Direction-specific
@@ -337,5 +338,148 @@ devices = dict(
         disk_delay=0.0,
         cw_disk_delay=6.25,
         ccw_disk_delay=5.5,
+    ),
+    bandwidth_chopper_log=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The logs from chopper controller",
+        readpv="{}Log_R".format(pv_root_bandwidth_chopper),
+        visibility=(),
+    ),
+    bandwidth_chopper_levitation_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}LeviStatus_R".format(pv_root_bandwidth_chopper),
+        visibility=(),
+    ),
+    bandwidth_chopper_motor_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The temperature of the motor of the chopper",
+        readpv="{}MtrTemp_R".format(pv_root_bandwidth_chopper),
+        visibility=(),
+    ),
+    bandwidth_chopper_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}ChopState_R".format(pv_root_bandwidth_chopper),
+        visibility=(),
+    ),
+    bandwidth_chopper_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Used to start and stop the chopper.",
+        readpv="{}C_Execute".format(pv_root_bandwidth_chopper),
+        writepv="{}C_Execute".format(pv_root_bandwidth_chopper),
+        requires={"level": "admin"},
+        visibility=(),
+    ),
+    bandwidth_chopper_speed=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="The current speed.",
+        readpv="{}Spd_R".format(pv_root_bandwidth_chopper),
+        writepv="{}Spd_S".format(pv_root_bandwidth_chopper),
+        precision=0.1,
+        mapping={
+            "-14 Hz": -14,
+            "0 Hz": 0,
+            "14 Hz": 14,
+        },
+    ),
+    bandwidth_chopper_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The current delay.",
+        readpv="{}ChopDly-S".format(pv_root_bandwidth_chopper),
+        writepv="{}ChopDly-S".format(pv_root_bandwidth_chopper),
+        abslimits=(0.0, 0.0),
+    ),
+    bandwidth_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv="{}TotDly".format(pv_root_bandwidth_chopper),
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
+    bandwidth_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="bandwidth_chopper_delay",
+        mapped_speed_dev="bandwidth_chopper_speed",
+        offset=0,
+        unit="degrees",
+    ),
+    bandwidth_chopper_delay_errors=device(
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(pv_root_bandwidth_chopper),
+        unit="ns",
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
+    bandwidth_chopper_phased=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper is in phase.",
+        readpv="{}InPhs_R".format(pv_root_bandwidth_chopper),
+    ),
+    bandwidth_chopper_park_angle=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="The choppers park angle.",
+        readpv="{}Pos_R".format(pv_root_bandwidth_chopper),
+        writepv="{}Park_S".format(pv_root_bandwidth_chopper),
+        visibility=(),
+        mapping={
+            "park transparent": 70.0,
+            "park open": 150.0,
+            "park close": 330.0,
+        },
+    ),
+    bandwidth_chopper_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the bandwidth chopper.",
+        readpv="{}ParkStatus_R".format(pv_root_bandwidth_chopper),
+    ),
+    bandwidth_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the bandwidth chopper.",
+        readpv="{}C_Park".format(pv_root_bandwidth_chopper),
+        writepv="{}C_Park".format(pv_root_bandwidth_chopper),
+    ),
+    bandwidth_chopper_chic=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The status of the CHIC connection.",
+        readpv="{}ConnectedR".format(chic_root_1),
+        visibility=(),
+        pva=True,
+    ),
+    bandwidth_chopper_alarms=device(
+        "nicos_ess.devices.epics.chopper.ChopperAlarmsV2",
+        description="The chopper alarms",
+        pv_root=pv_root_bandwidth_chopper,
+        visibility=(),
+    ),
+    bandwidth_chopper=device(
+        "nicos_ess.devices.epics.chopper.EssChopperController",
+        description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
+        state="bandwidth_chopper_status",
+        command="bandwidth_chopper_control",
+        speed="bandwidth_chopper_speed",
+        total_delay="bandwidth_chopper_total_delay",
+        park_angle="bandwidth_chopper_park_angle",
+        delay_errors="bandwidth_chopper_delay_errors",
+        chic_conn="bandwidth_chopper_chic",
+        alarms="bandwidth_chopper_alarms",
+        slit_edges=[[0.0, 20.0]],
+        motor_position="upstream",
+        positive_speed_rotation_direction="CW",
+        tdc_resolver_position=342.0,
+        park_open_angle=150.0,
+        disk_delay=0.0,
     ),
 )
