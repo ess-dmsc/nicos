@@ -130,7 +130,7 @@ devices = dict(
     ),
     # TODO: Temporary device.
     sample_load__load_UP_sample_STR=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU load sample from unipucks, control (mockup)",
         readpv="NMX-mockup:LoadUPSample",
         writepv="NMX-mockup:LoadUPSample",
@@ -185,7 +185,7 @@ devices = dict(
     ),
     # TODO: Temporary device.
     sample_load__unload_sample__STR=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU unload sample, control (mockup)",
         readpv="NMX-mockup:UnLoadSample",
         writepv="NMX-mockup:UnLoadSample",
@@ -231,7 +231,7 @@ devices = dict(
     ),
     # TODO: Temporary device.
     sample_tool__load_tool__STR=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU desired tool loading, control (mockup)",
         readpv="NMX-mockup:LoadTool",
         writepv="NMX-mockup:LoadTool",
