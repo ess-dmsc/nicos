@@ -53,6 +53,8 @@ devices = dict(
         state="mini_chopper_status",
         command="mini_chopper_control",
         speed="mini_chopper_speed",
+        total_delay="mini_chopper_delay",
+        park_angle="mini_chopper_park_angle",
         chic_conn="mini_chopper_chic",
     ),
 )

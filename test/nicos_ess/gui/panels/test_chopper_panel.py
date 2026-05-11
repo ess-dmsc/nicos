@@ -92,6 +92,7 @@ def _canonical(name, **overrides):
         "parked_opening_index": 0,
         "tdc_resolver_position": 60.0,
         "park_open_angle": 30.0,
+        "guide_position": "DOWN",
         "disk_delay": 0.0,
     }
     data.update(overrides)

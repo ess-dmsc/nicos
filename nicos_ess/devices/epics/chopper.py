@@ -117,12 +117,12 @@ def canonical_chopper_parameters():
     """
     return {
         CHOPPER_GUI_SLIT_EDGES: Param(
-            "Slit edges of the chopper", type=listof(listof(float)), mandatory=True
+            "Slit edges of the chopper", type=listof(listof(float))
         ),
         CHOPPER_GUI_MOTOR_POSITION: Param(
             "Motor mounting side for chopper drawing",
-            type=oneof("upstream", "downstream"),
-            mandatory=True,
+            type=none_or(oneof("upstream", "downstream")),
+            default=None,
             unit="",
         ),
         CHOPPER_GUI_POSITIVE_SPEED_ROTATION_DIRECTION: Param(
@@ -139,20 +139,20 @@ def canonical_chopper_parameters():
         ),
         CHOPPER_GUI_PARKED_OPENING_INDEX: Param(
             "Index of the slit opening aligned at park_open_angle",
-            type=int,
-            default=0,
+            type=none_or(int),
+            default=None,
             unit="",
         ),
         CHOPPER_GUI_TDC_RESOLVER_POSITION: Param(
             "Resolver position at the TDC reference",
-            type=float,
-            mandatory=True,
+            type=none_or(float),
+            default=None,
             unit="degrees",
         ),
         CHOPPER_GUI_PARK_OPEN_ANGLE: Param(
             "Resolver position where the parked opening is centered",
-            type=float,
-            mandatory=True,
+            type=none_or(float),
+            default=None,
             unit="degrees",
         ),
         CHOPPER_GUI_GUIDE_POSITION: Param(
@@ -164,7 +164,7 @@ def canonical_chopper_parameters():
         CHOPPER_GUI_DISK_DELAY: Param(
             "Phase calibration offset added to calculated center-window delay",
             type=float,
-            mandatory=True,
+            default=CHOPPER_GUI_DEFAULTED_METADATA[CHOPPER_GUI_DISK_DELAY],
             unit="degrees",
         ),
         CHOPPER_GUI_CW_DISK_DELAY: Param(

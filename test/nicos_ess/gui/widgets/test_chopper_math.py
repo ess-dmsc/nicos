@@ -16,7 +16,6 @@ from nicos_ess.gui.widgets.chopper_math import (
     runtime_spin_sign,
     spinning_rotation_deg,
     wrap180,
-    wrap360,
 )
 
 
@@ -29,6 +28,7 @@ def _canonical(**overrides):
         "parked_opening_index": 0,
         "tdc_resolver_position": 60.0,
         "park_open_angle": 30.0,
+        "guide_position": "DOWN",
         "disk_delay": 0.0,
     }
     data.update(overrides)
