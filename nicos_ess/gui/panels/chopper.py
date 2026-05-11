@@ -11,16 +11,7 @@ from nicos.guisupport.qt import (
     Qt,
     QVBoxLayout,
 )
-from nicos_ess.devices.epics.chopper import (
-    CHOPPER_GUI_CHOPPER,
-    CHOPPER_GUI_DELAY_ERRORS_KEY,
-    CHOPPER_GUI_INFO_METHOD,
-    CHOPPER_GUI_PARK_ANGLE_KEY,
-    CHOPPER_GUI_SPEED_KEY,
-    CHOPPER_GUI_TOTAL_DELAY_KEY,
-    CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED,
-    is_chopper_moving,
-)
+from nicos_ess.devices.epics.chopper import is_chopper_moving
 from nicos_ess.gui.widgets.chopper_math import (
     build_rotation_model,
     has_canonical_inputs,
@@ -41,11 +32,11 @@ CHOPPER_KEY_ROLE_TOTAL_DELAY = "total_delay"
 CHOPPER_KEY_ROLE_PARK_ANGLE = "park_angle"
 CHOPPER_KEY_ROLE_DELAY_ERRORS = "delay_errors"
 
-CHOPPER_GUI_KEY_FIELDS = (
-    (CHOPPER_GUI_SPEED_KEY, CHOPPER_KEY_ROLE_SPEED),
-    (CHOPPER_GUI_TOTAL_DELAY_KEY, CHOPPER_KEY_ROLE_TOTAL_DELAY),
-    (CHOPPER_GUI_PARK_ANGLE_KEY, CHOPPER_KEY_ROLE_PARK_ANGLE),
-    (CHOPPER_GUI_DELAY_ERRORS_KEY, CHOPPER_KEY_ROLE_DELAY_ERRORS),
+_CHOPPER_KEY_ROLES = (
+    ("speed_key", CHOPPER_KEY_ROLE_SPEED),
+    ("total_delay_key", CHOPPER_KEY_ROLE_TOTAL_DELAY),
+    ("park_angle_key", CHOPPER_KEY_ROLE_PARK_ANGLE),
+    ("delay_errors_key", CHOPPER_KEY_ROLE_DELAY_ERRORS),
 )
 
 
@@ -250,9 +241,7 @@ class ChopperPanel(Panel):
         return fwhm, left_idx, right_edge_idx
 
     def _get_loaded_choppers(self):
-        return [
-            chopper[CHOPPER_GUI_CHOPPER] for chopper in self.chopper_widget.chopper_data
-        ]
+        return [chopper["chopper"] for chopper in self.chopper_widget.chopper_data]
 
     def on_keyChange(self, key, value, timestamp, expired):
         if key == "session/mastersetup":
@@ -382,21 +371,20 @@ class ChopperPanel(Panel):
 
         for dev_name in devices.keys():
             has_contract = self.client.eval(
-                "hasattr(session.devices[%r], %r)"
-                % (dev_name, CHOPPER_GUI_INFO_METHOD),
+                "hasattr(session.devices[%r], %r)" % (dev_name, "get_chopper_gui_info"),
                 False,
             )
             if not has_contract:
                 continue
 
             disc_info = self.client.eval(
-                "session.devices[%r].%s()" % (dev_name, CHOPPER_GUI_INFO_METHOD),
+                "session.devices[%r].get_chopper_gui_info()" % dev_name,
                 None,
             )
             if not isinstance(disc_info, dict):
                 continue
 
-            chopper_name = disc_info.get(CHOPPER_GUI_CHOPPER)
+            chopper_name = disc_info.get("chopper")
             if not chopper_name:
                 continue
 
@@ -423,9 +411,9 @@ class ChopperPanel(Panel):
 
     def _update_unverified_geometry_warning(self, chopper_info):
         unverified_choppers = [
-            chopper[CHOPPER_GUI_CHOPPER]
+            chopper["chopper"]
             for chopper in chopper_info
-            if not chopper[CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED]
+            if not chopper["visual_geometry_verified"]
         ]
         if not unverified_choppers:
             self._unverified_geometry_warning.setText("")
@@ -440,7 +428,7 @@ class ChopperPanel(Panel):
         self._unverified_geometry_warning.setVisible(True)
 
     def _add_chopper_key_roles(self, chopper_name, disc_info):
-        for field, role in CHOPPER_GUI_KEY_FIELDS:
+        for field, role in _CHOPPER_KEY_ROLES:
             key = disc_info.get(field)
             if not key:
                 continue

@@ -24,86 +24,33 @@ from nicos_ess.devices.epics.pva.epics_devices import (
     get_from_cache_or,
 )
 
-CHOPPER_GUI_INFO_METHOD = "get_chopper_gui_info"
-
-CHOPPER_GUI_CHOPPER = "chopper"
-CHOPPER_GUI_SPEED_KEY = "speed_key"
-CHOPPER_GUI_TOTAL_DELAY_KEY = "total_delay_key"
-CHOPPER_GUI_PARK_ANGLE_KEY = "park_angle_key"
-CHOPPER_GUI_DELAY_ERRORS_KEY = "delay_errors_key"
-
-CHOPPER_CACHE_VALUE_PARAM = "value"
-CHOPPER_CACHE_RAW_ERRORS_PARAM = "raw_errors"
-
-CHOPPER_GUI_SLIT_EDGES = "slit_edges"
-CHOPPER_GUI_MOTOR_POSITION = "motor_position"
-CHOPPER_GUI_POSITIVE_SPEED_ROTATION_DIRECTION = "positive_speed_rotation_direction"
-CHOPPER_GUI_RESOLVER_POSITIVE_DIRECTION = "resolver_positive_direction"
-CHOPPER_GUI_PARKED_OPENING_INDEX = "parked_opening_index"
-CHOPPER_GUI_TDC_RESOLVER_POSITION = "tdc_resolver_position"
-CHOPPER_GUI_PARK_OPEN_ANGLE = "park_open_angle"
-CHOPPER_GUI_GUIDE_POSITION = "guide_position"
-CHOPPER_GUI_DISK_DELAY = "disk_delay"
-CHOPPER_GUI_CW_DISK_DELAY = "cw_disk_delay"
-CHOPPER_GUI_CCW_DISK_DELAY = "ccw_disk_delay"
-CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED = "visual_geometry_verified"
-
-CHOPPER_GUI_REQUIRED_METADATA_FIELDS = (
-    CHOPPER_GUI_SLIT_EDGES,
-    CHOPPER_GUI_MOTOR_POSITION,
-    CHOPPER_GUI_PARKED_OPENING_INDEX,
-    CHOPPER_GUI_TDC_RESOLVER_POSITION,
-    CHOPPER_GUI_PARK_OPEN_ANGLE,
-    CHOPPER_GUI_GUIDE_POSITION,
-)
-
-CHOPPER_GUI_DEFAULTED_METADATA = {
-    CHOPPER_GUI_POSITIVE_SPEED_ROTATION_DIRECTION: "CW",
-    CHOPPER_GUI_RESOLVER_POSITIVE_DIRECTION: "CW",
-    CHOPPER_GUI_DISK_DELAY: 0.0,
-    CHOPPER_GUI_CW_DISK_DELAY: None,
-    CHOPPER_GUI_CCW_DISK_DELAY: None,
-    CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED: False,
-}
-
-CHOPPER_GUI_METADATA_FIELDS = (
-    *CHOPPER_GUI_REQUIRED_METADATA_FIELDS,
-    *CHOPPER_GUI_DEFAULTED_METADATA,
-)
-
-CHOPPER_RENDERED_SPEED = "speed"
-CHOPPER_RENDERED_PARKING_ANGLE = "parking_angle"
-CHOPPER_RENDERED_GUIDE_ANGLE = "guide_angle"
-
-CHOPPER_MOVING_SPEED_THRESHOLD_HZ = 2.0
-
 
 def is_chopper_moving(speed_hz) -> bool:
-    return (
-        speed_hz is not None
-        and abs(float(speed_hz)) >= CHOPPER_MOVING_SPEED_THRESHOLD_HZ
-    )
+    return speed_hz is not None and abs(float(speed_hz)) >= 2.0
 
 
 def get_chopper_gui_info_for(controller):
     info = {
-        CHOPPER_GUI_CHOPPER: controller.name,
-        CHOPPER_GUI_SPEED_KEY: _cache_key(
-            controller._attached_speed, CHOPPER_CACHE_VALUE_PARAM
-        ),
-        CHOPPER_GUI_TOTAL_DELAY_KEY: _cache_key(
-            controller._attached_total_delay, CHOPPER_CACHE_VALUE_PARAM
-        ),
-        CHOPPER_GUI_PARK_ANGLE_KEY: _cache_key(
-            controller._attached_park_angle, CHOPPER_CACHE_VALUE_PARAM
-        ),
-        CHOPPER_GUI_DELAY_ERRORS_KEY: None,
+        "chopper": controller.name,
+        "speed_key": _cache_key(controller._attached_speed, "value"),
+        "total_delay_key": _cache_key(controller._attached_total_delay, "value"),
+        "park_angle_key": _cache_key(controller._attached_park_angle, "value"),
+        "delay_errors_key": _cache_key(controller._attached_delay_errors, "raw_errors"),
     }
-    if controller._attached_delay_errors is not None:
-        info[CHOPPER_GUI_DELAY_ERRORS_KEY] = _cache_key(
-            controller._attached_delay_errors, CHOPPER_CACHE_RAW_ERRORS_PARAM
-        )
-    for param in CHOPPER_GUI_METADATA_FIELDS:
+    for param in (
+        "slit_edges",
+        "motor_position",
+        "parked_opening_index",
+        "tdc_resolver_position",
+        "park_open_angle",
+        "guide_position",
+        "positive_speed_rotation_direction",
+        "resolver_positive_direction",
+        "disk_delay",
+        "cw_disk_delay",
+        "ccw_disk_delay",
+        "visual_geometry_verified",
+    ):
         info[param] = getattr(controller, param)
     return info
 
@@ -118,75 +65,71 @@ def canonical_chopper_parameters():
     the GUI.
     """
     return {
-        CHOPPER_GUI_SLIT_EDGES: Param(
-            "Slit edges of the chopper", type=listof(listof(float))
-        ),
-        CHOPPER_GUI_MOTOR_POSITION: Param(
+        "slit_edges": Param("Slit edges of the chopper", type=listof(listof(float))),
+        "motor_position": Param(
             "Motor mounting side for chopper drawing",
             type=none_or(oneof("upstream", "downstream")),
             default=None,
             unit="",
         ),
-        CHOPPER_GUI_POSITIVE_SPEED_ROTATION_DIRECTION: Param(
+        "positive_speed_rotation_direction": Param(
             "Physical disk rotation direction for positive speed",
             type=oneof("CW", "CCW"),
             default="CW",
             unit="",
         ),
-        CHOPPER_GUI_RESOLVER_POSITIVE_DIRECTION: Param(
+        "resolver_positive_direction": Param(
             "Resolver angle direction for positive resolver values",
             type=oneof("CW", "CCW"),
             default="CW",
             unit="",
         ),
-        CHOPPER_GUI_PARKED_OPENING_INDEX: Param(
+        "parked_opening_index": Param(
             "Index of the slit opening aligned at park_open_angle",
             type=none_or(int),
             default=None,
             unit="",
         ),
-        CHOPPER_GUI_TDC_RESOLVER_POSITION: Param(
+        "tdc_resolver_position": Param(
             "Resolver position at the TDC reference",
             type=none_or(float),
             default=None,
             unit="degrees",
         ),
-        CHOPPER_GUI_PARK_OPEN_ANGLE: Param(
+        "park_open_angle": Param(
             "Resolver position where the parked opening is centered",
             type=none_or(float),
             default=None,
             unit="degrees",
         ),
-        CHOPPER_GUI_GUIDE_POSITION: Param(
+        "guide_position": Param(
             "Beam-guide direction used by the chopper GUI",
             type=oneof("RIGHT", "UP", "LEFT", "DOWN"),
             default="DOWN",
             unit="",
         ),
-        CHOPPER_GUI_DISK_DELAY: Param(
+        "disk_delay": Param(
             "Phase calibration offset added to calculated center-window delay",
             type=float,
-            default=CHOPPER_GUI_DEFAULTED_METADATA[CHOPPER_GUI_DISK_DELAY],
+            default=0.0,
             unit="degrees",
         ),
-        CHOPPER_GUI_CW_DISK_DELAY: Param(
+        "cw_disk_delay": Param(
             "Phase calibration offset for effective CW rotation",
             type=none_or(float),
             default=None,
             unit="degrees",
         ),
-        CHOPPER_GUI_CCW_DISK_DELAY: Param(
+        "ccw_disk_delay": Param(
             "Phase calibration offset for effective CCW rotation",
             type=none_or(float),
             default=None,
             unit="degrees",
         ),
-        CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED: Param(
+        "visual_geometry_verified": Param(
             "Whether the chopper GUI visual geometry has been verified",
             type=bool,
-            default=CHOPPER_GUI_DEFAULTED_METADATA[
-                CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED
-            ],
+            default=False,
             unit="",
         ),
     }
@@ -324,7 +267,7 @@ class EssChopperController(MappedMoveable):
         "speed": Attach("Speed PV of the chopper", MappedMoveable),
         "total_delay": Attach("Total applied chopper delay", Readable),
         "park_angle": Attach("Resolver park angle", Readable),
-        "delay_errors": Attach("Delay-error samples", Readable, optional=True),
+        "delay_errors": Attach("Delay-error samples", Readable),
         "chic_conn": Attach("Status of the CHIC connection", Readable),
     }
 
@@ -402,7 +345,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         "speed": Attach("Speed PV of the chopper", MappedMoveable),
         "total_delay": Attach("Total applied chopper delay", Readable),
         "park_angle": Attach("Resolver park angle", Readable),
-        "delay_errors": Attach("Delay-error samples", Readable, optional=True),
+        "delay_errors": Attach("Delay-error samples", Readable),
         "chic_conn": Attach("Status of the CHIC connection", Readable, optional=True),
     }
 

@@ -1,25 +1,19 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from nicos_ess.devices.epics.chopper import (
-    CHOPPER_GUI_CCW_DISK_DELAY,
-    CHOPPER_GUI_CW_DISK_DELAY,
-    CHOPPER_GUI_DEFAULTED_METADATA,
-    CHOPPER_GUI_DISK_DELAY,
-    CHOPPER_GUI_MOTOR_POSITION,
-    CHOPPER_GUI_PARK_OPEN_ANGLE,
-    CHOPPER_GUI_PARKED_OPENING_INDEX,
-    CHOPPER_GUI_POSITIVE_SPEED_ROTATION_DIRECTION,
-    CHOPPER_GUI_REQUIRED_METADATA_FIELDS,
-    CHOPPER_GUI_RESOLVER_POSITIVE_DIRECTION,
-    CHOPPER_GUI_SLIT_EDGES,
-    CHOPPER_GUI_TDC_RESOLVER_POSITION,
-)
-
 CW = "CW"
 CCW = "CCW"
 UPSTREAM = "upstream"
 DOWNSTREAM = "downstream"
+
+_REQUIRED_METADATA_FIELDS = (
+    "slit_edges",
+    "motor_position",
+    "parked_opening_index",
+    "tdc_resolver_position",
+    "park_open_angle",
+    "guide_position",
+)
 
 
 def wrap360(value: float) -> float:
@@ -83,8 +77,8 @@ class ChopperRotationModel:
 
 def has_canonical_inputs(chopper: dict) -> bool:
     return all(
-        chopper.get(key) is not None for key in CHOPPER_GUI_REQUIRED_METADATA_FIELDS
-    ) and bool(chopper.get(CHOPPER_GUI_SLIT_EDGES))
+        chopper.get(key) is not None for key in _REQUIRED_METADATA_FIELDS
+    ) and bool(chopper.get("slit_edges"))
 
 
 def resolver_direction_sign(direction: str, motor_position: str) -> int:
@@ -133,9 +127,7 @@ def sign_to_direction(sign: int) -> str:
 
 def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotationModel:
     missing_fields = [
-        field
-        for field in CHOPPER_GUI_REQUIRED_METADATA_FIELDS
-        if chopper.get(field) is None
+        field for field in _REQUIRED_METADATA_FIELDS if chopper.get(field) is None
     ]
     if missing_fields:
         raise ValueError(
@@ -143,11 +135,11 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
             + ", ".join(missing_fields)
         )
 
-    slit_edges = chopper[CHOPPER_GUI_SLIT_EDGES]
+    slit_edges = chopper["slit_edges"]
     if not slit_edges:
         raise ValueError("Canonical chopper model requires non-empty slit_edges")
 
-    parked_opening_index = int(chopper[CHOPPER_GUI_PARKED_OPENING_INDEX])
+    parked_opening_index = int(chopper["parked_opening_index"])
     if parked_opening_index < 0 or parked_opening_index >= len(slit_edges):
         raise ValueError(
             "parked_opening_index must reference an existing slit opening "
@@ -162,41 +154,22 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
     parked_opening = slit_edges[parked_opening_index]
     opening_center = opening_center_deg(parked_opening)
 
-    park_open_angle = float(chopper[CHOPPER_GUI_PARK_OPEN_ANGLE])
-    tdc_resolver_position = float(chopper[CHOPPER_GUI_TDC_RESOLVER_POSITION])
-    disk_delay = float(
-        chopper.get(
-            CHOPPER_GUI_DISK_DELAY,
-            CHOPPER_GUI_DEFAULTED_METADATA[CHOPPER_GUI_DISK_DELAY],
-        )
-    )
-    cw_disk_delay = chopper.get(
-        CHOPPER_GUI_CW_DISK_DELAY,
-        CHOPPER_GUI_DEFAULTED_METADATA[CHOPPER_GUI_CW_DISK_DELAY],
-    )
-    ccw_disk_delay = chopper.get(
-        CHOPPER_GUI_CCW_DISK_DELAY,
-        CHOPPER_GUI_DEFAULTED_METADATA[CHOPPER_GUI_CCW_DISK_DELAY],
-    )
+    park_open_angle = float(chopper["park_open_angle"])
+    tdc_resolver_position = float(chopper["tdc_resolver_position"])
+    disk_delay = float(chopper.get("disk_delay", 0.0))
+    cw_disk_delay = chopper.get("cw_disk_delay")
+    ccw_disk_delay = chopper.get("ccw_disk_delay")
     if cw_disk_delay is None:
         cw_disk_delay = disk_delay
     if ccw_disk_delay is None:
         ccw_disk_delay = disk_delay
 
-    motor_position = normalize_motor_position(chopper[CHOPPER_GUI_MOTOR_POSITION])
+    motor_position = normalize_motor_position(chopper["motor_position"])
     positive_speed_direction = normalize_spin_direction(
-        chopper.get(
-            CHOPPER_GUI_POSITIVE_SPEED_ROTATION_DIRECTION,
-            CHOPPER_GUI_DEFAULTED_METADATA[
-                CHOPPER_GUI_POSITIVE_SPEED_ROTATION_DIRECTION
-            ],
-        )
+        chopper.get("positive_speed_rotation_direction", CW)
     )
     resolver_direction = normalize_spin_direction(
-        chopper.get(
-            CHOPPER_GUI_RESOLVER_POSITIVE_DIRECTION,
-            CHOPPER_GUI_DEFAULTED_METADATA[CHOPPER_GUI_RESOLVER_POSITIVE_DIRECTION],
-        )
+        chopper.get("resolver_positive_direction", CW)
     )
     resolver_sign = resolver_direction_sign(resolver_direction, motor_position)
     # Parked reference: when resolver == park_open_angle, parked opening center

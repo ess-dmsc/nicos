@@ -39,6 +39,16 @@ devices = dict(
         readpv="{}ParkPos_Stat".format(pv_root),
         visibility=(),
     ),
+    mini_chopper_delay_errors=device(
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(pv_root),
+        unit="ns",
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
     mini_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
@@ -55,6 +65,7 @@ devices = dict(
         speed="mini_chopper_speed",
         total_delay="mini_chopper_delay",
         park_angle="mini_chopper_park_angle",
+        delay_errors="mini_chopper_delay_errors",
         chic_conn="mini_chopper_chic",
     ),
 )

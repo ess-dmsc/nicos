@@ -12,7 +12,6 @@ QApplication = qt.QApplication
 QPointF = qt.QPointF
 QPixmap = qt.QPixmap
 Qt = qt.Qt
-from nicos_ess.devices.epics.chopper import CHOPPER_RENDERED_GUIDE_ANGLE
 from nicos_ess.gui.widgets.chopper_math import (
     CCW,
     CW,
@@ -57,7 +56,7 @@ def _canonical(name, **overrides):
         "tdc_resolver_position": 60.0,
         "park_open_angle": 30.0,
         "guide_position": "DOWN",
-        CHOPPER_RENDERED_GUIDE_ANGLE: DOWN_GUIDE_ANGLE,
+        "guide_angle": DOWN_GUIDE_ANGLE,
         "disk_delay": 0.0,
     }
     data.update(overrides)
@@ -130,7 +129,7 @@ def _rendered_color_matches_at_radius(
 
 def _rendered_guide_probe_is_dark(widget, qapp) -> bool:
     return _rendered_probe_is_dark(
-        widget, qapp, widget.chopper_data[0][CHOPPER_RENDERED_GUIDE_ANGLE]
+        widget, qapp, widget.chopper_data[0]["guide_angle"]
     )
 
 

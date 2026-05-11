@@ -16,16 +16,7 @@ from nicos.guisupport.qt import (
     QWidget,
     pyqtSignal,
 )
-from nicos_ess.devices.epics.chopper import (
-    CHOPPER_GUI_CHOPPER,
-    CHOPPER_GUI_GUIDE_POSITION,
-    CHOPPER_GUI_MOTOR_POSITION,
-    CHOPPER_GUI_SLIT_EDGES,
-    CHOPPER_RENDERED_GUIDE_ANGLE,
-    CHOPPER_RENDERED_PARKING_ANGLE,
-    CHOPPER_RENDERED_SPEED,
-    is_chopper_moving,
-)
+from nicos_ess.devices.epics.chopper import is_chopper_moving
 from nicos_ess.gui.widgets.chopper_math import (
     build_rotation_model,
     has_canonical_inputs,
@@ -156,7 +147,7 @@ class ChopperWidget(QWidget):
                 (center.x() - click_pos.x()) ** 2 + (center.y() - click_pos.y()) ** 2
             )
             if distance <= chopper_radius:
-                self._selected_chopper = self.chopper_data[i][CHOPPER_GUI_CHOPPER]
+                self._selected_chopper = self.chopper_data[i]["chopper"]
                 self.onChopperSelected.emit(self._selected_chopper)
                 self.update()
                 return
@@ -181,7 +172,7 @@ class ChopperWidget(QWidget):
         # Store raw device angle; mode-specific direction/offset handling happens
         # in paint-time bookkeeping based on speed and canonical metadata.
         for i, chopper in enumerate(self.chopper_data):
-            if chopper[CHOPPER_GUI_CHOPPER] == chopper_name:
+            if chopper["chopper"] == chopper_name:
                 if angle is None:
                     self.angles.pop(i, None)
                 else:
@@ -193,15 +184,15 @@ class ChopperWidget(QWidget):
 
     def set_chopper_speed(self, chopper_name, speed):
         for chopper in self.chopper_data:
-            if chopper[CHOPPER_GUI_CHOPPER] == chopper_name:
-                chopper[CHOPPER_RENDERED_SPEED] = speed
+            if chopper["chopper"] == chopper_name:
+                chopper["speed"] = speed
                 self.update()
                 return
 
     def set_chopper_park_angle(self, chopper_name, angle):
         for chopper in self.chopper_data:
-            if chopper[CHOPPER_GUI_CHOPPER] == chopper_name:
-                chopper[CHOPPER_RENDERED_PARKING_ANGLE] = angle
+            if chopper["chopper"] == chopper_name:
+                chopper["parking_angle"] = angle
                 self.update()
                 return
 
@@ -210,7 +201,7 @@ class ChopperWidget(QWidget):
     ) -> float:
         if not has_canonical_inputs(chopper):
             raise ValueError(
-                f"Chopper {chopper.get(CHOPPER_GUI_CHOPPER)!r} missing "
+                f"Chopper {chopper.get('chopper')!r} missing "
                 "canonical bookkeeping inputs"
             )
         model = build_rotation_model(chopper)
@@ -243,9 +234,9 @@ class ChopperWidget(QWidget):
         requiring panel/client setup.
         """
         for i, chopper in enumerate(self.chopper_data):
-            if chopper[CHOPPER_GUI_CHOPPER] != chopper_name:
+            if chopper["chopper"] != chopper_name:
                 continue
-            speed_hz = chopper.get(CHOPPER_RENDERED_SPEED, 0.0)
+            speed_hz = chopper.get("speed", 0.0)
             moving = is_chopper_moving(speed_hz)
             raw_angle = self.angles.get(i)
             if raw_angle is None:
@@ -258,7 +249,7 @@ class ChopperWidget(QWidget):
                 return None
             if include_guide:
                 # Geometry conversion from engineering CW+ to Qt math-CCW.
-                return wrap360(base_rotation + chopper[CHOPPER_RENDERED_GUIDE_ANGLE])
+                return wrap360(base_rotation + chopper["guide_angle"])
             return wrap360(base_rotation)
         return None
 
@@ -276,7 +267,7 @@ class ChopperWidget(QWidget):
     def _spin_indicator_arc_angles(
         self, chopper: dict, spin_sign: int, span_deg: float = 72.0
     ) -> tuple[float, float]:
-        guide_angle_deg = chopper[CHOPPER_RENDERED_GUIDE_ANGLE]
+        guide_angle_deg = chopper["guide_angle"]
         half_span = span_deg / 2.0
         if spin_sign >= 0:
             start = guide_angle_deg + half_span
@@ -376,13 +367,13 @@ class ChopperWidget(QWidget):
 
         for i, chopper in enumerate(self.chopper_data):
             radius = chopper_radius
-            slit_edges = chopper[CHOPPER_GUI_SLIT_EDGES]
-            current_speed = chopper.get(CHOPPER_RENDERED_SPEED, 0.0)
-            parking_angle = chopper.get(CHOPPER_RENDERED_PARKING_ANGLE, None)
+            slit_edges = chopper["slit_edges"]
+            current_speed = chopper.get("speed", 0.0)
+            parking_angle = chopper.get("parking_angle", None)
             center = positions[i]
-            guide_angle_deg = chopper[CHOPPER_RENDERED_GUIDE_ANGLE]
+            guide_angle_deg = chopper["guide_angle"]
 
-            is_selected = self._selected_chopper == chopper[CHOPPER_GUI_CHOPPER]
+            is_selected = self._selected_chopper == chopper["chopper"]
             is_moving = is_chopper_moving(current_speed)
             raw_angle = self.angles.get(i)
             if raw_angle is None:
@@ -497,7 +488,7 @@ class ChopperWidget(QWidget):
 
         fm = painter.fontMetrics()
         text_height = fm.height()
-        rows = [chopper[CHOPPER_GUI_CHOPPER]]
+        rows = [chopper["chopper"]]
         if value_text is not None:
             rows.append(value_text)
         if status_text is not None:
@@ -518,7 +509,7 @@ class ChopperWidget(QWidget):
         row_count: int,
         row_height: float,
     ) -> list[QRectF]:
-        text_direction = -1 if chopper[CHOPPER_RENDERED_GUIDE_ANGLE] == 270 else 1
+        text_direction = -1 if chopper["guide_angle"] == 270 else 1
         rects = [
             QRectF(
                 center.x() - radius * 1.5,
@@ -548,9 +539,7 @@ class ChopperWidget(QWidget):
         speed_hz: Optional[float],
         is_moving: bool,
     ) -> None:
-        motor_position = (
-            str(chopper.get(CHOPPER_GUI_MOTOR_POSITION, "")).strip().lower()
-        )
+        motor_position = str(chopper.get("motor_position", "")).strip().lower()
         motor_alpha = 220 if motor_position == "upstream" else 95
 
         hub_radius = radius * 0.24
@@ -669,9 +658,7 @@ class ChopperWidget(QWidget):
             label = "TDC"
 
         marker_angle = wrap360(
-            chopper[CHOPPER_RENDERED_GUIDE_ANGLE]
-            + current_rotation
-            - reference_rotation
+            chopper["guide_angle"] + current_rotation - reference_rotation
         )
         return marker_angle, label
 
@@ -893,9 +880,7 @@ class ChopperWidget(QWidget):
     def update_chopper_data(self, chopper_data):
         for chopper in chopper_data:
             build_rotation_model(chopper)
-            chopper[CHOPPER_RENDERED_GUIDE_ANGLE] = self._to_guide_deg(
-                chopper[CHOPPER_GUI_GUIDE_POSITION]
-            )
+            chopper["guide_angle"] = self._to_guide_deg(chopper["guide_position"])
         self.chopper_data = chopper_data
         self.angles = {}
         self.update()
