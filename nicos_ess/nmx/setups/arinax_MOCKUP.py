@@ -105,7 +105,7 @@ devices = dict(
     ),
     # TODO: Temp device (while the above one is not fixed).
     sample_load__load_SS_sample__STR=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU load sample from storage, control (mockup)",
         readpv="NMX-mockup:LoadSSSample",
         writepv="NMX-mockup:LoadSSSample",
@@ -114,7 +114,7 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
         mapping=SAMPLE_STORAGE,
-        fmtstr="%.e", # Work-around: fix the infinity limits.
+        #fmtstr="%.e", # Work-around: fix the infinity limits.
     ),
     # TODO: Issue here: mapping is broken. The PV is STRING type. Idea: Add a string manual mapped device.
     sample_load__load_UP_sample=device(
