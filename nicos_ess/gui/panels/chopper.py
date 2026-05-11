@@ -255,6 +255,10 @@ class ChopperPanel(Panel):
         chopper_name, role = role_info
         if role == CHOPPER_KEY_ROLE_DELAY_ERRORS:
             if value is None or expired:
+                prefix = f"{chopper_name}/"
+                for stored_key in list(self._db.DB):
+                    if stored_key.startswith(prefix):
+                        self._db.DB.pop(stored_key, None)
                 if self.chopper_widget.get_selected_chopper() == chopper_name:
                     self.histogram_widget.clear()
                     self.trend_widget.clear()
@@ -361,6 +365,7 @@ class ChopperPanel(Panel):
         self.chopper_widget.clear()
         self.histogram_widget.clear()
         self.trend_widget.clear()
+        self._update_unverified_geometry_warning([])
 
     def _get_chopper_info(self):
         devices = self.client.eval("session.devices", {})
