@@ -18,8 +18,10 @@ from nicos.guisupport.qt import (
 )
 from nicos_ess.devices.epics.chopper import (
     CHOPPER_GUI_CHOPPER,
+    CHOPPER_GUI_GUIDE_POSITION,
     CHOPPER_GUI_MOTOR_POSITION,
     CHOPPER_GUI_SLIT_EDGES,
+    CHOPPER_RENDERED_GUIDE_ANGLE,
     CHOPPER_RENDERED_PARKING_ANGLE,
     CHOPPER_RENDERED_SPEED,
     is_chopper_moving,
@@ -132,14 +134,12 @@ class ChopperWidget(QWidget):
 
     GUIDE_DIRS = {"RIGHT": 0.0, "UP": 90.0, "LEFT": 180.0, "DOWN": 270.0}
 
-    def __init__(self, parent=None, guide_pos="UP"):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setMinimumSize(100, 100)
         self.chopper_data = []
         self.angles = {}
         self._selected_chopper = None
-        self._guide_pos = guide_pos
-        self._guide_angle_deg = self._to_guide_deg(guide_pos)
         self._detailed_view = False
         self._show_guide_line = True
 
@@ -172,12 +172,6 @@ class ChopperWidget(QWidget):
         if key not in self.GUIDE_DIRS:
             raise ValueError(f"Invalid guide position: {pos!r}")
         return self.GUIDE_DIRS[key]
-
-    def set_guide_position(self, pos) -> None:
-        new_deg = self._to_guide_deg(pos)
-        self._guide_pos = pos
-        self._guide_angle_deg = new_deg
-        self.update()
 
     def set_detailed_view(self, enabled: bool) -> None:
         self._detailed_view = bool(enabled)
@@ -264,7 +258,7 @@ class ChopperWidget(QWidget):
                 return None
             if include_guide:
                 # Geometry conversion from engineering CW+ to Qt math-CCW.
-                return wrap360(base_rotation + self._guide_angle_deg)
+                return wrap360(base_rotation + chopper[CHOPPER_RENDERED_GUIDE_ANGLE])
             return wrap360(base_rotation)
         return None
 
@@ -280,15 +274,16 @@ class ChopperWidget(QWidget):
         return runtime_spin_sign(speed_hz, model.positive_speed_rotation_direction)
 
     def _spin_indicator_arc_angles(
-        self, spin_sign: int, span_deg: float = 72.0
+        self, chopper: dict, spin_sign: int, span_deg: float = 72.0
     ) -> tuple[float, float]:
+        guide_angle_deg = chopper[CHOPPER_RENDERED_GUIDE_ANGLE]
         half_span = span_deg / 2.0
         if spin_sign >= 0:
-            start = self._guide_angle_deg + half_span
-            end = self._guide_angle_deg - half_span
+            start = guide_angle_deg + half_span
+            end = guide_angle_deg - half_span
         else:
-            start = self._guide_angle_deg - half_span
-            end = self._guide_angle_deg + half_span
+            start = guide_angle_deg - half_span
+            end = guide_angle_deg + half_span
         return wrap360(start), wrap360(end)
 
     def _point_on_circle(
@@ -326,9 +321,14 @@ class ChopperWidget(QWidget):
         painter.drawLine(tip_point, right)
 
     def _draw_spin_direction_indicator(
-        self, painter: QPainter, center: QPointF, radius: float, spin_sign: int
+        self,
+        painter: QPainter,
+        center: QPointF,
+        radius: float,
+        chopper: dict,
+        spin_sign: int,
     ) -> None:
-        start_deg, end_deg = self._spin_indicator_arc_angles(spin_sign)
+        start_deg, end_deg = self._spin_indicator_arc_angles(chopper, spin_sign)
         # Avoid wrap discontinuity during interpolation.
         if end_deg - start_deg > 180.0:
             end_deg -= 360.0
@@ -380,6 +380,7 @@ class ChopperWidget(QWidget):
             current_speed = chopper.get(CHOPPER_RENDERED_SPEED, 0.0)
             parking_angle = chopper.get(CHOPPER_RENDERED_PARKING_ANGLE, None)
             center = positions[i]
+            guide_angle_deg = chopper[CHOPPER_RENDERED_GUIDE_ANGLE]
 
             is_selected = self._selected_chopper == chopper[CHOPPER_GUI_CHOPPER]
             is_moving = is_chopper_moving(current_speed)
@@ -390,7 +391,7 @@ class ChopperWidget(QWidget):
                     painter,
                     center,
                     radius,
-                    chopper[CHOPPER_GUI_CHOPPER],
+                    chopper,
                     is_selected,
                     None,
                     "Waiting",
@@ -403,7 +404,7 @@ class ChopperWidget(QWidget):
             except ValueError:
                 continue
             # Convert canonical engineering CW+ rotation to Qt math-CCW.
-            angle = wrap360(base_rotation + self._guide_angle_deg)
+            angle = wrap360(base_rotation + guide_angle_deg)
 
             self.draw_chopper(
                 painter,
@@ -429,7 +430,7 @@ class ChopperWidget(QWidget):
             if self._show_guide_line:
                 painter.setPen(QPen(Colors.BLUE.value, 4))
                 theta = math.radians(
-                    self._guide_angle_deg
+                    guide_angle_deg
                 )  # 0=right, 90=up, 180=left, 270=down
                 line_x = center.x() + line_length * math.cos(theta)
                 line_y = center.y() - line_length * math.sin(theta)
@@ -438,7 +439,7 @@ class ChopperWidget(QWidget):
                 spin_sign = self._spin_direction_sign(chopper, current_speed)
                 if spin_sign is not None:
                     self._draw_spin_direction_indicator(
-                        painter, center, line_length * 0.5, spin_sign
+                        painter, center, line_length * 0.5, chopper, spin_sign
                     )
 
             if current_speed is None:
@@ -446,7 +447,7 @@ class ChopperWidget(QWidget):
                     painter,
                     center,
                     radius,
-                    chopper[CHOPPER_GUI_CHOPPER],
+                    chopper,
                     is_selected,
                     None,
                     None,
@@ -462,7 +463,7 @@ class ChopperWidget(QWidget):
                 painter,
                 center,
                 radius,
-                chopper[CHOPPER_GUI_CHOPPER],
+                chopper,
                 is_selected,
                 value_text,
                 status_text,
@@ -484,7 +485,7 @@ class ChopperWidget(QWidget):
         painter: QPainter,
         center: QPointF,
         radius: float,
-        chopper_name: str,
+        chopper: dict,
         is_selected: bool,
         value_text: Optional[str],
         status_text: Optional[str],
@@ -496,12 +497,12 @@ class ChopperWidget(QWidget):
 
         fm = painter.fontMetrics()
         text_height = fm.height()
-        rows = [chopper_name]
+        rows = [chopper[CHOPPER_GUI_CHOPPER]]
         if value_text is not None:
             rows.append(value_text)
         if status_text is not None:
             rows.append(status_text)
-        rects = self._label_rects(center, radius, len(rows), text_height)
+        rects = self._label_rects(chopper, center, radius, len(rows), text_height)
 
         for row, (rect, text) in enumerate(zip(rects, rows)):
             painter.setPen(
@@ -510,9 +511,14 @@ class ChopperWidget(QWidget):
             painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
 
     def _label_rects(
-        self, center: QPointF, radius: float, row_count: int, row_height: float
+        self,
+        chopper: dict,
+        center: QPointF,
+        radius: float,
+        row_count: int,
+        row_height: float,
     ) -> list[QRectF]:
-        text_direction = -1 if self._guide_angle_deg == 270 else 1
+        text_direction = -1 if chopper[CHOPPER_RENDERED_GUIDE_ANGLE] == 270 else 1
         rects = [
             QRectF(
                 center.x() - radius * 1.5,
@@ -663,7 +669,9 @@ class ChopperWidget(QWidget):
             label = "TDC"
 
         marker_angle = wrap360(
-            self._guide_angle_deg + current_rotation - reference_rotation
+            chopper[CHOPPER_RENDERED_GUIDE_ANGLE]
+            + current_rotation
+            - reference_rotation
         )
         return marker_angle, label
 
@@ -885,6 +893,9 @@ class ChopperWidget(QWidget):
     def update_chopper_data(self, chopper_data):
         for chopper in chopper_data:
             build_rotation_model(chopper)
+            chopper[CHOPPER_RENDERED_GUIDE_ANGLE] = self._to_guide_deg(
+                chopper[CHOPPER_GUI_GUIDE_POSITION]
+            )
         self.chopper_data = chopper_data
         self.angles = {}
         self.update()

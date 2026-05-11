@@ -42,6 +42,7 @@ CHOPPER_GUI_RESOLVER_POSITIVE_DIRECTION = "resolver_positive_direction"
 CHOPPER_GUI_PARKED_OPENING_INDEX = "parked_opening_index"
 CHOPPER_GUI_TDC_RESOLVER_POSITION = "tdc_resolver_position"
 CHOPPER_GUI_PARK_OPEN_ANGLE = "park_open_angle"
+CHOPPER_GUI_GUIDE_POSITION = "guide_position"
 CHOPPER_GUI_DISK_DELAY = "disk_delay"
 CHOPPER_GUI_CW_DISK_DELAY = "cw_disk_delay"
 CHOPPER_GUI_CCW_DISK_DELAY = "ccw_disk_delay"
@@ -52,6 +53,7 @@ CHOPPER_GUI_REQUIRED_METADATA_FIELDS = (
     CHOPPER_GUI_PARKED_OPENING_INDEX,
     CHOPPER_GUI_TDC_RESOLVER_POSITION,
     CHOPPER_GUI_PARK_OPEN_ANGLE,
+    CHOPPER_GUI_GUIDE_POSITION,
 )
 
 CHOPPER_GUI_DEFAULTED_METADATA = {
@@ -69,6 +71,7 @@ CHOPPER_GUI_METADATA_FIELDS = (
 
 CHOPPER_RENDERED_SPEED = "speed"
 CHOPPER_RENDERED_PARKING_ANGLE = "parking_angle"
+CHOPPER_RENDERED_GUIDE_ANGLE = "guide_angle"
 
 CHOPPER_MOVING_SPEED_THRESHOLD_HZ = 2.0
 
@@ -151,6 +154,12 @@ def canonical_chopper_parameters():
             type=float,
             mandatory=True,
             unit="degrees",
+        ),
+        CHOPPER_GUI_GUIDE_POSITION: Param(
+            "Beam-guide direction used by the chopper GUI",
+            type=oneof("RIGHT", "UP", "LEFT", "DOWN"),
+            default="DOWN",
+            unit="",
         ),
         CHOPPER_GUI_DISK_DELAY: Param(
             "Phase calibration offset added to calculated center-window delay",

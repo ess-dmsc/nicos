@@ -12,6 +12,7 @@ QApplication = qt.QApplication
 QPointF = qt.QPointF
 QPixmap = qt.QPixmap
 Qt = qt.Qt
+from nicos_ess.devices.epics.chopper import CHOPPER_RENDERED_GUIDE_ANGLE
 from nicos_ess.gui.widgets.chopper_math import (
     CCW,
     CW,
@@ -27,6 +28,8 @@ from nicos_ess.gui.widgets.chopper_math import (
     wrap360,
 )
 from nicos_ess.gui.widgets.chopper_widget import ChopperWidget
+
+DOWN_GUIDE_ANGLE = 270.0
 
 
 @pytest.fixture(scope="session")
@@ -53,6 +56,8 @@ def _canonical(name, **overrides):
         "parked_opening_index": 0,
         "tdc_resolver_position": 60.0,
         "park_open_angle": 30.0,
+        "guide_position": "DOWN",
+        CHOPPER_RENDERED_GUIDE_ANGLE: DOWN_GUIDE_ANGLE,
         "disk_delay": 0.0,
     }
     data.update(overrides)
@@ -124,7 +129,9 @@ def _rendered_color_matches_at_radius(
 
 
 def _rendered_guide_probe_is_dark(widget, qapp) -> bool:
-    return _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg)
+    return _rendered_probe_is_dark(
+        widget, qapp, widget.chopper_data[0][CHOPPER_RENDERED_GUIDE_ANGLE]
+    )
 
 
 def _assert_rendered_opening_centered(
@@ -382,7 +389,7 @@ def test_widget_uses_absolute_speed_threshold_for_motion_state(qapp):
 
 
 def test_widget_does_not_assume_guide_angle_before_dynamic_angle_arrives(qapp):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     widget.update_chopper_data([_canonical("c1")])
     widget.set_chopper_speed("c1", 0.0)
 
@@ -402,15 +409,15 @@ def test_widget_rejects_invalid_canonical_metadata_explicitly(qapp):
 
 
 def test_widget_full_circle_opening_stays_fully_open(qapp):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     widget.update_chopper_data([_canonical("full", slit_edges=[[0.0, 360.0]])])
     widget.set_chopper_speed("full", 0.0)
     widget.set_chopper_angle("full", 30.0)
 
     assert widget._normalize_openings([[0.0, 360.0]]) == [[0.0, 360.0]]
-    assert not _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg)
-    assert not _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg + 90.0)
+    assert not _rendered_probe_is_dark(widget, qapp, DOWN_GUIDE_ANGLE)
+    assert not _rendered_probe_is_dark(widget, qapp, DOWN_GUIDE_ANGLE + 90.0)
 
 
 @pytest.mark.parametrize(
@@ -420,8 +427,10 @@ def test_widget_full_circle_opening_stays_fully_open(qapp):
 def test_chopper_name_stays_outside_disk_while_status_text_stays_inside(
     qapp, guide_pos, name_above_disk
 ):
-    widget = ChopperWidget(guide_pos=guide_pos)
-    rects = widget._label_rects(QPointF(100.0, 100.0), 50.0, 3, 10.0)
+    widget = ChopperWidget()
+    chopper = _canonical("label", guide_position=guide_pos)
+    widget.update_chopper_data([chopper])
+    rects = widget._label_rects(chopper, QPointF(100.0, 100.0), 50.0, 3, 10.0)
     name_rect = rects[0].normalized()
     value_rect = rects[1].normalized()
     status_rect = rects[2].normalized()
@@ -436,7 +445,7 @@ def test_chopper_name_stays_outside_disk_while_status_text_stays_inside(
 
 
 def test_parked_detailed_tdc_marker_rotates_with_resolver_angle(qapp):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     chopper = _canonical("tdc", tdc_resolver_position=30.0, park_open_angle=30.0)
 
     at_tdc = widget._reference_marker_for_chopper(
@@ -455,7 +464,7 @@ def test_parked_detailed_tdc_marker_rotates_with_resolver_angle(qapp):
 
 
 def test_spinning_detailed_marker_keeps_tdc_label(qapp):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     chopper = _canonical("phase")
     phase0 = widget._reference_marker_for_chopper(
         chopper, raw_angle=0.0, speed_hz=14.0, is_moving=True
@@ -473,7 +482,7 @@ def test_spinning_detailed_marker_keeps_tdc_label(qapp):
 
 
 def test_detailed_reference_marker_renders_red_reference_line(qapp):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     widget.set_detailed_view(True)
     chopper = _canonical("tdc", tdc_resolver_position=30.0, park_open_angle=30.0)
@@ -505,7 +514,7 @@ def test_detailed_reference_marker_renders_red_reference_line(qapp):
 def test_spin_direction_indicator_renders_for_both_effective_directions(
     qapp, speed_hz, spin_sign
 ):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     chopper = _canonical("spin")
     widget.update_chopper_data([chopper])
@@ -513,7 +522,7 @@ def test_spin_direction_indicator_renders_for_both_effective_directions(
     widget.set_chopper_angle("spin", _phase_reference(chopper, speed_hz))
     widget.resize(420, 420)
     qapp.processEvents()
-    start_angle, end_angle = widget._spin_indicator_arc_angles(spin_sign)
+    start_angle, end_angle = widget._spin_indicator_arc_angles(chopper, spin_sign)
     positions, chopper_radius = widget.calculate_positions(1)
     assert positions
 
@@ -524,7 +533,7 @@ def test_spin_direction_indicator_renders_for_both_effective_directions(
     assert _rendered_color_matches_at_radius(
         widget,
         qapp,
-        widget._guide_angle_deg,
+        DOWN_GUIDE_ANGLE,
         chopper_radius * 1.1 * 0.5,
         is_dark,
     )
@@ -542,7 +551,7 @@ def test_spin_direction_indicator_renders_for_both_effective_directions(
 def test_generic_single_opening_parked_reference_renders_open_at_down_guide(
     qapp, motor_position, resolver_direction
 ):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     chopper = _canonical(
         "single",
@@ -559,7 +568,7 @@ def test_generic_single_opening_parked_reference_renders_open_at_down_guide(
     _assert_rendered_opening_centered(
         widget,
         qapp,
-        center_angle_deg=widget._guide_angle_deg,
+        center_angle_deg=DOWN_GUIDE_ANGLE,
         inside_offset_deg=30.0,
         outside_offset_deg=55.0,
     )
@@ -577,7 +586,7 @@ def test_generic_single_opening_parked_reference_renders_open_at_down_guide(
 def test_generic_single_opening_phase_reference_renders_open_at_down_guide(
     qapp, motor_position, positive_direction, speed_hz
 ):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     chopper = _canonical(
         "single",
@@ -595,7 +604,7 @@ def test_generic_single_opening_phase_reference_renders_open_at_down_guide(
     _assert_rendered_opening_centered(
         widget,
         qapp,
-        center_angle_deg=widget._guide_angle_deg,
+        center_angle_deg=DOWN_GUIDE_ANGLE,
         inside_offset_deg=30.0,
         outside_offset_deg=55.0,
     )
@@ -604,7 +613,7 @@ def test_generic_single_opening_phase_reference_renders_open_at_down_guide(
 def test_generic_single_opening_phase_perturbation_moves_rendered_opening(
     qapp,
 ):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     speed_hz = 14.0
     chopper = _canonical("single", slit_edges=[[0.0, 12.0]])
@@ -616,7 +625,7 @@ def test_generic_single_opening_phase_perturbation_moves_rendered_opening(
 
     assert _rendered_guide_probe_is_dark(widget, qapp)
     assert _rendered_has_opening_near_angle(
-        widget, qapp, widget._guide_angle_deg + 25.0
+        widget, qapp, DOWN_GUIDE_ANGLE + 25.0
     )
 
 
@@ -630,7 +639,7 @@ def test_generic_single_opening_phase_perturbation_moves_rendered_opening(
 def test_generic_single_opening_resolver_perturbation_moves_rendered_opening(
     qapp, motor_position, resolver_direction, expected_shift
 ):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     chopper = _canonical(
         "single",
@@ -646,12 +655,12 @@ def test_generic_single_opening_resolver_perturbation_moves_rendered_opening(
 
     assert _rendered_guide_probe_is_dark(widget, qapp)
     assert _rendered_has_opening_near_angle(
-        widget, qapp, widget._guide_angle_deg + expected_shift
+        widget, qapp, DOWN_GUIDE_ANGLE + expected_shift
     )
 
 
 def test_generic_multi_opening_index_zero_can_park_all_windows_at_down_guide(qapp):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     chopper = _canonical(
         "multi_idx0",
@@ -670,7 +679,7 @@ def test_generic_multi_opening_index_zero_can_park_all_windows_at_down_guide(qap
 
 
 def test_generic_multi_opening_index_zero_can_phase_all_windows_at_down_guide(qapp):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     chopper = _canonical(
         "multi_idx0",
@@ -692,7 +701,7 @@ def test_generic_multi_opening_index_zero_can_phase_all_windows_at_down_guide(qa
 def test_generic_multi_opening_nonzero_index_can_park_all_windows_at_down_guide(
     qapp,
 ):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     chopper = _canonical(
         "multi_idx2",
@@ -713,7 +722,7 @@ def test_generic_multi_opening_nonzero_index_can_park_all_windows_at_down_guide(
 def test_generic_multi_opening_nonzero_index_can_phase_all_windows_at_down_guide(
     qapp,
 ):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     chopper = _canonical(
         "multi_idx2",
@@ -735,7 +744,7 @@ def test_generic_multi_opening_nonzero_index_can_phase_all_windows_at_down_guide
 
 @pytest.mark.parametrize("psc", _dream_psc_cases(), ids=lambda c: c["chopper"])
 def test_widget_dream_psc_park_reference_renders_open_at_down_guide(qapp, psc):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     widget.update_chopper_data([psc])
     widget.set_chopper_speed(psc["chopper"], 0.0)
@@ -755,7 +764,7 @@ def test_widget_dream_psc_park_reference_renders_open_at_down_guide(qapp, psc):
 def test_widget_dream_psc_phase_reference_renders_open_at_down_guide(
     qapp, psc, phase_angle
 ):
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     widget.update_chopper_data([psc])
     widget.set_chopper_speed(psc["chopper"], 14.0)
@@ -766,7 +775,7 @@ def test_widget_dream_psc_phase_reference_renders_open_at_down_guide(
 
 def test_widget_dream_psc_all_openings_can_be_parked_at_down_guide(qapp):
     for psc in _dream_psc_cases():
-        widget = ChopperWidget(guide_pos="DOWN")
+        widget = ChopperWidget()
         _hide_guide_line(widget)
         widget.update_chopper_data([psc])
         widget.set_chopper_speed(psc["chopper"], 0.0)
@@ -782,7 +791,7 @@ def test_widget_dream_psc_all_openings_can_be_parked_at_down_guide(qapp):
 
 def test_widget_dream_psc_all_openings_can_be_phased_at_down_guide(qapp):
     for psc in _dream_psc_cases():
-        widget = ChopperWidget(guide_pos="DOWN")
+        widget = ChopperWidget()
         _hide_guide_line(widget)
         widget.update_chopper_data([psc])
         widget.set_chopper_speed(psc["chopper"], 14.0)
@@ -807,7 +816,7 @@ def test_widget_dream_psc_all_openings_can_be_phased_at_down_guide(qapp):
 def test_widget_nmx_wls2_pair_shows_small_right_side_transmission_opening(qapp):
     wls2a, wls2b = _nmx_wls2_pair()
 
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     widget.update_chopper_data([wls2a, wls2b])
     widget.set_chopper_speed(wls2a["chopper"], 14.0)
     widget.set_chopper_speed(wls2b["chopper"], 14.0)
@@ -854,7 +863,7 @@ def test_widget_nmx_wls2_disc_renders_opening_near_furthest_right(
     wls2a, wls2b = _nmx_wls2_pair()
     chopper = wls2a if chopper_name == "wls2a" else wls2b
 
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     widget.update_chopper_data([chopper])
     widget.set_chopper_speed(chopper_name, 14.0)
@@ -867,7 +876,7 @@ def test_widget_nmx_wls_phase_reference_renders_centered_opening_at_down_guide(
     qapp,
 ):
     for wls in _nmx_wls_cases():
-        widget = ChopperWidget(guide_pos="DOWN")
+        widget = ChopperWidget()
         _hide_guide_line(widget)
         width = opening_width_deg(wls["slit_edges"][0])
         inside_offset = min(width * 0.4, 70.0)
@@ -880,7 +889,7 @@ def test_widget_nmx_wls_phase_reference_renders_centered_opening_at_down_guide(
         _assert_rendered_opening_centered(
             widget,
             qapp,
-            center_angle_deg=widget._guide_angle_deg,
+            center_angle_deg=DOWN_GUIDE_ANGLE,
             inside_offset_deg=inside_offset,
             outside_offset_deg=outside_offset,
         )
@@ -888,7 +897,7 @@ def test_widget_nmx_wls_phase_reference_renders_centered_opening_at_down_guide(
 
 def test_widget_heimdal_tpsc_renders_down_park_opening(qapp):
     for tpsc in _heimdal_tpsc_pair():
-        widget = ChopperWidget(guide_pos="DOWN")
+        widget = ChopperWidget()
         _hide_guide_line(widget)
         widget.update_chopper_data([tpsc])
         widget.set_chopper_speed(tpsc["chopper"], 0.0)
@@ -896,14 +905,14 @@ def test_widget_heimdal_tpsc_renders_down_park_opening(qapp):
             tpsc["chopper"], float(tpsc["down_park_resolver_angle"])
         )
 
-        assert not _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg)
-        assert _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg + 12.0)
-        assert _rendered_probe_is_dark(widget, qapp, widget._guide_angle_deg - 12.0)
+        assert not _rendered_probe_is_dark(widget, qapp, DOWN_GUIDE_ANGLE)
+        assert _rendered_probe_is_dark(widget, qapp, DOWN_GUIDE_ANGLE + 12.0)
+        assert _rendered_probe_is_dark(widget, qapp, DOWN_GUIDE_ANGLE - 12.0)
 
 
 def test_widget_heimdal_tpsc_renders_left_transparent_window(qapp):
     for tpsc in _heimdal_tpsc_pair():
-        widget = ChopperWidget(guide_pos="DOWN")
+        widget = ChopperWidget()
         _hide_guide_line(widget)
         widget.update_chopper_data([tpsc])
         widget.set_chopper_speed(tpsc["chopper"], 0.0)
@@ -918,7 +927,7 @@ def test_widget_heimdal_tpsc_renders_left_transparent_window(qapp):
 
 def test_widget_heimdal_tpsc_renders_left_effective_ccw_phase(qapp):
     for tpsc in _heimdal_tpsc_pair():
-        widget = ChopperWidget(guide_pos="DOWN")
+        widget = ChopperWidget()
         _hide_guide_line(widget)
         widget.update_chopper_data([tpsc])
         widget.set_chopper_speed(tpsc["chopper"], -14.0)
@@ -933,7 +942,7 @@ def test_widget_heimdal_tpsc_renders_left_effective_ccw_phase(qapp):
 
 def test_widget_heimdal_tpsc_renders_left_effective_cw_phase(qapp):
     for tpsc in _heimdal_tpsc_pair():
-        widget = ChopperWidget(guide_pos="DOWN")
+        widget = ChopperWidget()
         _hide_guide_line(widget)
         widget.update_chopper_data([tpsc])
         widget.set_chopper_speed(tpsc["chopper"], 70.0)
@@ -991,7 +1000,7 @@ def test_widget_heimdal_tpsc_yaml_style_phase_renders_expected_window(
     phase = _yaml_style_center_delay(chopper, park_open, rotation, disk_delay)
     assert phase == pytest.approx(expected_phase)
 
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     _hide_guide_line(widget)
     widget.update_chopper_data([chopper])
     widget.set_chopper_speed(chopper["chopper"], speed_hz)
@@ -1028,7 +1037,7 @@ def test_widget_heimdal_tpsc_pair_opposite_speed_phases_show_left_side_transmiss
     qapp,
 ):
     tpsc101, tpsc102 = _heimdal_tpsc_pair()
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     widget.update_chopper_data([tpsc101, tpsc102])
 
     widget.set_chopper_speed(tpsc101["chopper"], 70.0)
@@ -1047,7 +1056,7 @@ def test_widget_heimdal_tpsc_pair_reversed_speed_phases_show_left_side_transmiss
     qapp,
 ):
     tpsc101, tpsc102 = _heimdal_tpsc_pair()
-    widget = ChopperWidget(guide_pos="DOWN")
+    widget = ChopperWidget()
     widget.update_chopper_data([tpsc101, tpsc102])
 
     widget.set_chopper_speed(tpsc101["chopper"], -70.0)

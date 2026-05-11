@@ -40,7 +40,6 @@ main_window = docked(
                             panel(
                                 "nicos_ess.gui.panels.chopper.ChopperPanel",
                                 slit_direction="CCW",
-                                guide_pos="DOWN",
                             ),
                         ),
                         (
