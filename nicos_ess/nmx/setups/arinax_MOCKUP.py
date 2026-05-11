@@ -91,7 +91,7 @@ devices = dict(
         pva=False,
     ),
     # Sample load
-    sample_load__load_SS_sample__STR=device(
+    sample_load__load_SS_sample=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU load sample from storage, control (mockup)",
         readpv="NMX-mockup:LoadSSSample",
@@ -102,7 +102,7 @@ devices = dict(
         maxage=None,
         mapping=SAMPLE_STORAGE,
     ),
-    sample_load__load_UP_sample_STR=device(
+    sample_load__load_UP_sample=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU load sample from unipucks, control (mockup)",
         readpv="NMX-mockup:LoadUPSample",
@@ -115,7 +115,7 @@ devices = dict(
         fmtstr="%.e", # Work-around: fix the infinity limits.
     ),
     # TODO: Issue here: mapping is broken. The PV is LONG type. Idea: Ask ARINAX to make them as ENUM.
-    sample_load__sample_is_loaded__LONG=device(
+    sample_load__sample_is_loaded=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="ARINAX SPU sample is mounted, readback (mockup)",
         readpv="NMX-mockup:getIsSampleLoaded",
@@ -129,7 +129,7 @@ devices = dict(
         #    'Yes': 1,
         #    },
     ),
-    sample_load__unload_sample__STR=device(
+    sample_load__unload_sample=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU unload sample, control (mockup)",
         readpv="NMX-mockup:UnLoadSample",
@@ -143,6 +143,7 @@ devices = dict(
             },
     ),
     # Sample tool
+    # TODO: Adding and underline in the end due to cache (?) issues.
     sample_tool__current_tool_=device(
         # Only index is showing.
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -153,7 +154,8 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    sample_tool__load_tool__STR=device(
+    # TODO: Adding and underline in the end due to cache (?) issues.
+    sample_tool__load_tool_=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU desired tool loading, control (mockup)",
         readpv="NMX-mockup:LoadTool",
