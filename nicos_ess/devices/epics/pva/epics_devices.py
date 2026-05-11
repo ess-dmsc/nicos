@@ -789,15 +789,12 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             )
 
 
-class EpicsManualMappedAnalogMoveable(
-    EpicsParameters, HasPrecision, HasLimits, MappedMoveable
-):
+class EpicsManualMappedMoveable(EpicsParameters, MappedMoveable):
     """
-    Acts as a moveable device, which reads and writes to EPICS PVs but it
-    has a configurable mapping. Used for example to map allowed chopper speeds
-    instead of allowing all values in a range.
+    Acts as a moveable analog device, which reads and writes to EPICS PVs but it
+    has a configurable mapping. Can be used for string PVs.
     """
-
+    
     parameters = {
         "readpv": Param(
             "PV for reading device value", type=pvname, mandatory=True, userparam=False
@@ -811,8 +808,6 @@ class EpicsManualMappedAnalogMoveable(
     }
 
     parameter_overrides = {
-        "abslimits": Override(mandatory=False, volatile=True),
-        "unit": Override(mandatory=False, settable=False, volatile=True),
         "mapping": Override(settable=True),
     }
 
@@ -906,17 +901,6 @@ class EpicsManualMappedAnalogMoveable(
             lambda: self._epics_wrapper.get_pv_value(self.readpv),
         )
 
-    def doReadUnit(self):
-        return get_from_cache_or(
-            self, "unit", lambda: self._epics_wrapper.get_units(self.readpv)
-        )
-
-    def doReadAbslimits(self):
-        lo, hi = get_from_cache_or(
-            self, "abslimits", lambda: self._epics_wrapper.get_limits(self.writepv)
-        )
-        return (-1e308, 1e308) if (lo == 0 and hi == 0) else (lo, hi)
-
     def doReadTarget(self, maxage=0):
         def _func():
             raw_value = self._epics_wrapper.get_pv_value(self.targetpv or self.writepv)
@@ -978,10 +962,7 @@ class EpicsManualMappedAnalogMoveable(
         ts = time.time()
         if name == self.readpv:
             self._cache.put(self._name, param, value, ts)
-            self._cache.put(self._name, "unit", units, ts)
             self._cache.put(self._name, "status", self._do_status(), ts)
-        if name == self.writepv and limits:
-            self._cache.put(self._name, "abslimits", limits, ts)
         if name == self.writepv and not self.target:
             self._cache.put(self._name, param, value, ts)
             self._cache.put(self._name, "status", self._do_status(), ts)
@@ -1009,3 +990,47 @@ class EpicsManualMappedAnalogMoveable(
                 (status.ERROR, "communication failure"),
                 time.time(),
             )
+
+class EpicsManualMappedAnalogMoveable(
+    HasPrecision, HasLimits, EpicsManualMappedMoveable
+):
+    """
+    Acts as a moveable analog device, which reads and writes to EPICS PVs but it
+    has a configurable mapping. Used for example to map allowed chopper speeds
+    instead of allowing all values in a range.
+    """
+
+    parameter_overrides = {
+        "abslimits": Override(mandatory=False, volatile=True),
+        "unit": Override(mandatory=False, settable=False, volatile=True),
+    }
+
+    def doReadUnit(self):
+        return get_from_cache_or(
+            self, "unit", lambda: self._epics_wrapper.get_units(self.readpv)
+        )
+
+    def doReadAbslimits(self):
+        lo, hi = get_from_cache_or(
+            self, "abslimits", lambda: self._epics_wrapper.get_limits(self.writepv)
+        )
+        return (-1e308, 1e308) if (lo == 0 and hi == 0) else (lo, hi)
+
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name not in {self.readpv, self.writepv, self.targetpv}:
+            return
+        ts = time.time()
+        if name == self.readpv:
+            self._cache.put(self._name, param, value, ts)
+            self._cache.put(self._name, "unit", units, ts)
+            self._cache.put(self._name, "status", self._do_status(), ts)
+        if name == self.writepv and limits:
+            self._cache.put(self._name, "abslimits", limits, ts)
+        if name == self.writepv and not self.target:
+            self._cache.put(self._name, param, value, ts)
+            self._cache.put(self._name, "status", self._do_status(), ts)
+        if name == self.targetpv:
+            self._cache.put(self._name, param, value, ts)
+            self._cache.put(self._name, "status", self._do_status(), ts)
