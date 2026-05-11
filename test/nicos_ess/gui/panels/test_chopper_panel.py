@@ -13,6 +13,7 @@ from nicos_ess.devices.epics.chopper import (
     CHOPPER_GUI_PARK_ANGLE_KEY,
     CHOPPER_GUI_SPEED_KEY,
     CHOPPER_GUI_TOTAL_DELAY_KEY,
+    CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED,
 )
 from nicos_ess.gui.panels.chopper import (
     CHOPPER_KEY_ROLE_PARK_ANGLE,
@@ -23,7 +24,27 @@ from nicos_ess.gui.panels.chopper import (
 
 
 def _panel_without_qt_init():
-    return ChopperPanel.__new__(ChopperPanel)
+    panel = ChopperPanel.__new__(ChopperPanel)
+    panel._unverified_geometry_warning = _RecordingWarningLabel()
+    return panel
+
+
+class _RecordingWarningLabel:
+    def __init__(self):
+        self._text = ""
+        self._visible = False
+
+    def setText(self, text):
+        self._text = text
+
+    def text(self):
+        return self._text
+
+    def setVisible(self, visible):
+        self._visible = visible
+
+    def isVisible(self):
+        return self._visible
 
 
 class _RecordingWidget:
@@ -94,6 +115,7 @@ def _canonical(name, **overrides):
         "park_open_angle": 30.0,
         "guide_position": "DOWN",
         "disk_delay": 0.0,
+        CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED: False,
     }
     data.update(overrides)
     return data
@@ -208,3 +230,36 @@ def test_invalid_canonical_metadata_is_logged_and_not_loaded():
         "parked_opening_index must reference an existing slit opening "
         "(got 3, total openings=1)"
     ]
+
+
+def test_unverified_geometry_warning_tracks_loaded_choppers():
+    verified = _canonical("verified", visual_geometry_verified=True)
+    unverified_1 = _canonical("unverified_1")
+    unverified_2 = _canonical("unverified_2")
+    panel = _panel_without_qt_init()
+    panel.client = _FakeClient(
+        {
+            "verified": verified,
+            "unverified_1": unverified_1,
+            "unverified_2": unverified_2,
+        }
+    )
+    panel.chopper_widget = _RecordingWidget()
+    panel.log = _RecordingLog()
+
+    panel._get_chopper_info()
+
+    assert panel._unverified_geometry_warning.isVisible()
+    assert panel._unverified_geometry_warning.text() == (
+        "UNVERIFIED CHOPPER GEOMETRY: openings and angles for "
+        "unverified_1, unverified_2 have not been verified. Do not use this "
+        "visualization as truth."
+    )
+
+    verified_2 = _canonical("verified_2", visual_geometry_verified=True)
+    panel.client = _FakeClient({"verified": verified, "verified_2": verified_2})
+
+    panel._get_chopper_info()
+
+    assert not panel._unverified_geometry_warning.isVisible()
+    assert panel._unverified_geometry_warning.text() == ""

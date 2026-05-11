@@ -173,6 +173,7 @@ devices = dict(
         disk_delay=0.0,
         cw_disk_delay=5.3,
         ccw_disk_delay=6.6,
+        visual_geometry_verified=True,
     ),
     pulse_shaping_chopper_2_log=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
@@ -338,6 +339,7 @@ devices = dict(
         disk_delay=0.0,
         cw_disk_delay=6.25,
         ccw_disk_delay=5.5,
+        visual_geometry_verified=True,
     ),
     bandwidth_chopper_log=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
@@ -481,5 +483,6 @@ devices = dict(
         tdc_resolver_position=342.0,
         park_open_angle=150.0,
         disk_delay=0.0,
+        visual_geometry_verified=True,
     ),
 )

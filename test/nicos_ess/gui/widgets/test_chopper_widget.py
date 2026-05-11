@@ -299,6 +299,10 @@ def _dream_psc_cases():
     return [psc1, psc2]
 
 
+NMX_WLS2A_RIGHT_SIDE_PHASE_DEG = 264.0
+NMX_WLS2B_RIGHT_SIDE_PHASE_DEG = 184.0
+
+
 def _nmx_wls2_pair():
     wls2a = _canonical(
         "wls2a",
@@ -806,13 +810,6 @@ def test_widget_dream_psc_all_openings_can_be_phased_at_down_guide(qapp):
             )
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Depends on NMX WLS2A phase polarity; redo the strobe measurement before "
-        "changing metadata or math."
-    ),
-    strict=True,
-)
 def test_widget_nmx_wls2_pair_shows_small_right_side_transmission_opening(qapp):
     wls2a, wls2b = _nmx_wls2_pair()
 
@@ -820,8 +817,8 @@ def test_widget_nmx_wls2_pair_shows_small_right_side_transmission_opening(qapp):
     widget.update_chopper_data([wls2a, wls2b])
     widget.set_chopper_speed(wls2a["chopper"], 14.0)
     widget.set_chopper_speed(wls2b["chopper"], 14.0)
-    widget.set_chopper_angle(wls2a["chopper"], 82.0)
-    widget.set_chopper_angle(wls2b["chopper"], 0.0)
+    widget.set_chopper_angle(wls2a["chopper"], NMX_WLS2A_RIGHT_SIDE_PHASE_DEG)
+    widget.set_chopper_angle(wls2b["chopper"], NMX_WLS2B_RIGHT_SIDE_PHASE_DEG)
 
     rot_a = widget.get_rotation_angle_for_chopper(wls2a["chopper"], include_guide=True)
     rot_b = widget.get_rotation_angle_for_chopper(wls2b["chopper"], include_guide=True)
@@ -842,19 +839,8 @@ def test_widget_nmx_wls2_pair_shows_small_right_side_transmission_opening(qapp):
 @pytest.mark.parametrize(
     ("chopper_name", "phase_deg"),
     [
-        pytest.param(
-            "wls2a",
-            82.0,
-            marks=pytest.mark.xfail(
-                reason=(
-                    "NMX WLS2A phase polarity conflicts with the Heimdal/DREAM "
-                    "canonical math path; redo the strobe measurement before "
-                    "changing metadata or math."
-                ),
-                strict=True,
-            ),
-        ),
-        ("wls2b", 0.0),
+        ("wls2a", NMX_WLS2A_RIGHT_SIDE_PHASE_DEG),
+        ("wls2b", NMX_WLS2B_RIGHT_SIDE_PHASE_DEG),
     ],
 )
 def test_widget_nmx_wls2_disc_renders_opening_near_furthest_right(

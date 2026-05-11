@@ -6,6 +6,7 @@ from nicos.clients.gui.panels import Panel
 from nicos.guisupport.qt import (
     QCheckBox,
     QHBoxLayout,
+    QLabel,
     QSplitter,
     Qt,
     QVBoxLayout,
@@ -17,6 +18,7 @@ from nicos_ess.devices.epics.chopper import (
     CHOPPER_GUI_PARK_ANGLE_KEY,
     CHOPPER_GUI_SPEED_KEY,
     CHOPPER_GUI_TOTAL_DELAY_KEY,
+    CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED,
     is_chopper_moving,
 )
 from nicos_ess.gui.widgets.chopper_math import (
@@ -105,6 +107,20 @@ class ChopperPanel(Panel):
         controls.addWidget(ChopperLegendWidget(parent=self))
         controls.addStretch(1)
         layout.addLayout(controls)
+
+        self._unverified_geometry_warning = QLabel("")
+        self._unverified_geometry_warning.setObjectName("unverifiedGeometryWarning")
+        self._unverified_geometry_warning.setWordWrap(True)
+        self._unverified_geometry_warning.setStyleSheet(
+            "color: #8b0000; "
+            "background-color: #ffd6d6; "
+            "border: 1px solid #c40000; "
+            "padding: 6px; "
+            "font-weight: bold;"
+        )
+        self._unverified_geometry_warning.setVisible(False)
+        layout.addWidget(self._unverified_geometry_warning)
+
         self.setLayout(layout)
 
     def build_ui(self):
@@ -402,7 +418,26 @@ class ChopperPanel(Panel):
             self._add_chopper_key_roles(chopper_name, disc_info)
             chopper_info.append(disc_info)
 
+        self._update_unverified_geometry_warning(chopper_info)
         self.chopper_widget.update_chopper_data(chopper_info)
+
+    def _update_unverified_geometry_warning(self, chopper_info):
+        unverified_choppers = [
+            chopper[CHOPPER_GUI_CHOPPER]
+            for chopper in chopper_info
+            if not chopper[CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED]
+        ]
+        if not unverified_choppers:
+            self._unverified_geometry_warning.setText("")
+            self._unverified_geometry_warning.setVisible(False)
+            return
+
+        names = ", ".join(unverified_choppers)
+        self._unverified_geometry_warning.setText(
+            "UNVERIFIED CHOPPER GEOMETRY: openings and angles for "
+            f"{names} have not been verified. Do not use this visualization as truth."
+        )
+        self._unverified_geometry_warning.setVisible(True)
 
     def _add_chopper_key_roles(self, chopper_name, disc_info):
         for field, role in CHOPPER_GUI_KEY_FIELDS:

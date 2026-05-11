@@ -46,6 +46,7 @@ CHOPPER_GUI_GUIDE_POSITION = "guide_position"
 CHOPPER_GUI_DISK_DELAY = "disk_delay"
 CHOPPER_GUI_CW_DISK_DELAY = "cw_disk_delay"
 CHOPPER_GUI_CCW_DISK_DELAY = "ccw_disk_delay"
+CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED = "visual_geometry_verified"
 
 CHOPPER_GUI_REQUIRED_METADATA_FIELDS = (
     CHOPPER_GUI_SLIT_EDGES,
@@ -62,6 +63,7 @@ CHOPPER_GUI_DEFAULTED_METADATA = {
     CHOPPER_GUI_DISK_DELAY: 0.0,
     CHOPPER_GUI_CW_DISK_DELAY: None,
     CHOPPER_GUI_CCW_DISK_DELAY: None,
+    CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED: False,
 }
 
 CHOPPER_GUI_METADATA_FIELDS = (
@@ -178,6 +180,14 @@ def canonical_chopper_parameters():
             type=none_or(float),
             default=None,
             unit="degrees",
+        ),
+        CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED: Param(
+            "Whether the chopper GUI visual geometry has been verified",
+            type=bool,
+            default=CHOPPER_GUI_DEFAULTED_METADATA[
+                CHOPPER_GUI_VISUAL_GEOMETRY_VERIFIED
+            ],
+            unit="",
         ),
     }
 
