@@ -40,7 +40,6 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
 
     def doPreinit(self, mode):
         self._lock = threading.Lock()
-        self._ps_bank = self._get_ps_bank()
 
     def doInit(self, mode):
         pass
