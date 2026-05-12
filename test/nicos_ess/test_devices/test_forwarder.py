@@ -145,14 +145,14 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         with mock.patch.object(
             EpicsKafkaForwarder, "_status_update_callback"
         ) as mock_method:
-            self.device.new_messages_callback([(123456, message_fb)])
+            self.device.new_messages_callback([(123456, None, message_fb)])
             mock_method.assert_called_once()
             messages = mock_method.call_args[0]
 
         message_json.update({"update_interval": update_interval})
         assert messages == ({123456: message_json},)
 
-        self.device.new_messages_callback([(12345, message_fb)])
+        self.device.new_messages_callback([(12345, None, message_fb)])
         assert self.device.forwarded == {pvname}
 
     def test_update_forwarded_many_pvs(self):
@@ -160,8 +160,8 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         pvnames = {f"mypv{d}" for d in range(10)}
         message_json = {"streams": [create_stream(pv) for pv in pvnames]}
         message_fb = create_x5f2_buffer(message_json)
-        self.device.new_messages_callback([(12345, message_fb)])
-        self.device.new_messages_callback([(12345, message_fb)])
+        self.device.new_messages_callback([(12345, None, message_fb)])
+        self.device.new_messages_callback([(12345, None, message_fb)])
         assert self.device.forwarded == pvnames
 
     def test_update_forwarded_pv_sets_forwarding_status(self):
@@ -169,7 +169,7 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         pvname = "mypv"
         message_json = {"streams": [create_stream(pvname)]}
         message_fb = create_x5f2_buffer(message_json)
-        self.device.new_messages_callback([(12345, message_fb)])
+        self.device.new_messages_callback([(12345, None, message_fb)])
         assert self.device.curstatus == (status.OK, "Forwarding..")
 
     def test_update_forwarded_many_pvs_set_forwarding_status(self):
@@ -177,13 +177,13 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         pvnames = {f"mypv{d}" for d in range(10)}
         message_json = {"streams": [create_stream(pv) for pv in pvnames]}
         message_fb = create_x5f2_buffer(message_json)
-        self.device.new_messages_callback([(12345, message_fb)])
+        self.device.new_messages_callback([(12345, None, message_fb)])
         assert self.device.curstatus == (status.OK, "Forwarding..")
 
     def test_empty_message_gives_idle_state(self):
         message_json = {"streams": []}
         message_fb = create_x5f2_buffer(message_json)
-        self.device.new_messages_callback([(12345, message_fb)])
+        self.device.new_messages_callback([(12345, None, message_fb)])
         assert not self.device.forwarded
         assert self.device.curstatus == (status.OK, "idle")
 
@@ -191,7 +191,7 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         message_json = {"streams": []}
         for update_interval in [1000, 2000]:
             message_fb = create_x5f2_buffer(message_json, update_interval)
-            self.device.new_messages_callback([(123456, message_fb)])
+            self.device.new_messages_callback([(123456, None, message_fb)])
             assert self.device.statusinterval == update_interval // 1000
 
     def test_forwarded_pv(self):

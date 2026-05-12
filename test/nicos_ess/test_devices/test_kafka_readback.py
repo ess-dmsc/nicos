@@ -48,7 +48,7 @@ def emit_readback_messages(subscribers, *payloads, topic):
         for subscriber in subscribers
         if subscriber.subscribed and subscriber.subscribed[-1] == [topic]
     )
-    batch = [((0, 0), payload) for payload in payloads]
+    batch = [((0, 0), None, payload) for payload in payloads]
     subscriber.emit_messages(batch)
 
 

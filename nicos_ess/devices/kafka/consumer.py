@@ -5,8 +5,9 @@ import random
 import threading
 import time
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from confluent_kafka import (
     OFFSET_BEGINNING,
@@ -90,7 +91,7 @@ class KafkaConsumer:
     @staticmethod
     def create(
         brokers: Sequence[str], starting_offset: str = "latest", **options
-    ) -> "KafkaConsumer":
+    ) -> KafkaConsumer:
         """Factory for :class:`KafkaConsumer` with SASL options injected.
 
         Parameters
@@ -206,7 +207,7 @@ class KafkaConsumer:
     def is_partition_eof(err: object) -> bool:
         """Return True if the error is a PARTITION_EOF event."""
         try:
-            return int(getattr(err, "code")()) == ERR_PARTITION_EOF
+            return int(err.code()) == ERR_PARTITION_EOF
         except Exception:
             return False
 
@@ -214,7 +215,7 @@ class KafkaConsumer:
     def is_all_brokers_down(err: object) -> bool:
         """Return True if the error indicates ALL_BROKERS_DOWN."""
         try:
-            return int(getattr(err, "code")()) == ERR_ALL_BROKERS_DOWN
+            return int(err.code()) == ERR_ALL_BROKERS_DOWN
         except Exception:
             return False
 
@@ -222,7 +223,7 @@ class KafkaConsumer:
     def is_offset_out_of_range(err: object) -> bool:
         """Return True if the error indicates OFFSET_OUT_OF_RANGE."""
         try:
-            return int(getattr(err, "code")()) == ERR_OFFSET_OUT_OF_RANGE
+            return int(err.code()) == ERR_OFFSET_OUT_OF_RANGE
         except Exception:
             return False
 
@@ -230,10 +231,10 @@ class KafkaConsumer:
     def is_unknown_topic_or_partition(err: object) -> bool:
         """Return True if the error indicates an unknown topic or partition."""
         try:
-            code = int(getattr(err, "code")())
+            code = int(err.code())
             if code == ERR_UNKNOWN_TOPIC_OR_PART:
                 return True
-            name = str(getattr(err, "name")() or "")
+            name = str(err.name() or "")
             return name in ("UNKNOWN_TOPIC_OR_PART", "_UNKNOWN_PARTITION")
         except Exception:
             return False
@@ -1291,7 +1292,7 @@ class KafkaSubscriber:
                 continue
 
             key = (tp.topic, tp.partition)
-            pos = pos_map.get(key, None)
+            pos = pos_map.get(key)
             if pos is None or pos < 0:
                 last = self._last_seen.get(key, OFFSET_END)
                 pos = (int(last) + 1) if last != OFFSET_END else int(low)
@@ -1496,9 +1497,9 @@ class KafkaSubscriber:
 
     def _extract_delivery_batch(
         self, msgs: Sequence[object]
-    ) -> Tuple[List[Tuple[Tuple[int, int], bytes]], bool]:
+    ) -> Tuple[List[Tuple[Tuple[int, int], *Tuple[str, ...], bytes]], bool]:
         """Build the delivery list from raw messages and perform error handling."""
-        deliver: List[Tuple[Tuple[int, int], bytes]] = []
+        deliver: List[Tuple[Tuple[int, int], *Tuple[str, ...], bytes]] = []
         had_error = False
 
         for m in msgs:
@@ -1516,7 +1517,11 @@ class KafkaSubscriber:
 
             try:
                 self._track_last_seen(m)
-                deliver.append((m.timestamp(), m.value()))
+                # if we are using a partition key, such as in livedata
+                if m.key():
+                    deliver.append((m.timestamp(), m.key().decode("utf-8"), m.value()))
+                else:
+                    deliver.append((m.timestamp(), None, m.value()))
             except Exception:
                 continue
 
@@ -1533,8 +1538,8 @@ class KafkaSubscriber:
         if self._messages_callback:
             try:
                 self._messages_callback(deliver)
-            except Exception:
-                session.log.error("[kafka] messages_callback raised")
+            except Exception as e:
+                session.log.error(f"[kafka] messages_callback raised: {e}")
 
     def _handle_idle(
         self, had_error: bool, now: float, since_assign: float, since_reboot_ok: bool
@@ -1628,7 +1633,7 @@ if __name__ == "__main__":
     # with a topic "data_topic" producing some data.
     def print_messages(msgs):
         """Demo callback that prints message timestamps and lengths."""
-        for ts, val in msgs:
+        for ts, _, val in msgs:
             ttype, tval = ts
             print(f"msg ts={ttype}:{tval} len={len(val) if val is not None else 0}")
 

@@ -59,7 +59,7 @@ def _create_channel(daemon_device_harness, name="channel"):
     return daemon_device_harness.create_master(
         livedata.DataChannel,
         name=name,
-        selector="test/monitor_data/1@monitor/current",
+        selector="fom-1 test/monitor_data/1@monitor/current",
         type="counter",
     )
 
@@ -108,11 +108,12 @@ class TestLiveDataHarness:
 
         collector._registry.jobinfo_from_status(
             workflow,
+            fom="fom-1",
             job_source_name="monitor",
             job_number="job-1",
             state="active",
         )
-        collector._registry.note_output(
+        collector._registry.note_output("fom-1",
             workflow, JobId("monitor", "job-1"), "current"
         )
         mapping = collector.get_current_mapping()
@@ -134,6 +135,7 @@ class TestLiveDataHarness:
             # Preparing only resets known jobs, so populate the registry first.
             collector._registry.jobinfo_from_status(
                 WorkflowId("test", "monitor_data", 1),
+                fom="fom-1",
                 job_source_name="monitor",
                 job_number="job-1",
                 state="active",
@@ -189,7 +191,7 @@ class TestLiveDataHarness:
             ],
         )
 
-        collector._on_data_messages([(123456789, raw)])
+        collector._on_data_messages([(123456789, "fom-1", raw)])
 
         assert channel.read(0)[0] == 5
         assert captured
@@ -222,7 +224,7 @@ class TestDataChannelDimensionHandling:
     def _send(self, variables):
         """Inject one DA00 payload directly into the channel update path."""
         da00 = _make_da00(_SOURCE_NAME, variables)
-        self.channel.update_data_from_da00(da00, 123456789)
+        self.channel.update_data_from_da00("fom-1", da00, 123456789)
 
     def test_scalar_signal(self):
         """Scalar signals are normalised into a one-element 1-D array."""

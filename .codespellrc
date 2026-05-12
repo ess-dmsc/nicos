@@ -1,4 +1,4 @@
 [codespell]
 skip = ./.git,./.ci,./test/root,./nicos_mlz/*,./nicos/authors.py,*.svg,*venv,uv.lock,./log/*,./nicos/guisupport/gui_rc_qt*.py,./data/*,requirement*.txt,./nicos_demo/*,./doc/source/nicos_mlz/*,test_structure_loki.json,lima.rst,./nicos/clients/gui/panels/search.ui
 quiet-level = 2
-ignore-words-list = mot,esponsible,LiveTime,rmove,inout,inbetween,LinZ,SOM,propT,ans,clen,aLine,Hart,hart,umit
+ignore-words-list = mot,esponsible,LiveTime,rmove,inout,inbetween,LinZ,SOM,propT,ans,clen,aLine,Hart,hart,umit,fom

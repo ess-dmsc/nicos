@@ -33,17 +33,19 @@ class JobId:
 
 @dataclass(frozen=True)
 class ResultKey:
+    fom: str
     workflow_id: WorkflowId
     job_id: JobId
     output_name: Optional[str]
 
 
-def parse_result_key(source_name_json: str) -> ResultKey:
-    """Parse DA00 source_name JSON => ResultKey."""
+def parse_result_key(fom: str, source_name_json: str) -> ResultKey:
+    """Parse DA00 source_name JSON plus kafka key => ResultKey."""
     raw = json.loads(source_name_json)
     wf = raw["workflow_id"]
     job = raw["job_id"]
     return ResultKey(
+        fom=fom,
         workflow_id=WorkflowId(
             instrument=wf["instrument"],
             name=wf["name"],
@@ -63,12 +65,13 @@ class Selector:
     A concrete binding to a workflow/source (and optionally a specific job/output).
 
     Format (string):
-        "<instrument>/<name>/<version>@<source_name>#<job_number>/<output_name>"
+        "<fom> <instrument>/<name>/<version>@<source_name>#<job_number>/<output_name>"
 
     - '#<job_number>' is optional => will bind to the latest active job.
     - '/<output_name>' is optional => channel may choose a default (e.g. "current").
     """
 
+    fom: str
     workflow_path: str
     source_name: str
     job_number: Optional[str] = None
@@ -79,12 +82,14 @@ class Selector:
         """
         Parse the selector string. Minimal validation; keeps things permissive for UIs.
         """
-        wf_part, rest = s.split("@", 1)
+        fom, selector = s.split(" ")
+        wf_part, rest = selector.split("@", 1)
         job_part, slash, out = rest.partition("/")
         src, hashmark, job = job_part.partition("#")
         job_num = job if hashmark else None
         out_name = out if slash else None
         return cls(
+            fom=fom,
             workflow_path=wf_part,
             source_name=src,
             job_number=job_num,
@@ -101,11 +106,14 @@ class Selector:
             return False
         if self.output_name and rk.output_name != self.output_name:
             return False
+        if self.fom and rk.fom != self.fom:
+            return False
         return True
 
 
 @dataclass
 class JobInfo:
+    figure_of_merit: str
     workflow_path: str
     job_number: str
     source_name: str
@@ -120,11 +128,11 @@ class JobInfo:
 class JobRegistry:
     """
     Keeps an always-up-to-date view of jobs seen via status/data streams.
-    Keyed by (source_name, job_number).
+    Keyed by figure of merit.
     """
 
     def __init__(self) -> None:
-        self._jobs: Dict[Tuple[str, str], JobInfo] = {}
+        self._jobs: Dict[str, JobInfo] = {}
 
     @staticmethod
     def _key(source_name: str, job_number: str) -> Tuple[str, str]:
@@ -133,6 +141,7 @@ class JobRegistry:
     def jobinfo_from_status(
         self,
         wf: WorkflowId | str,
+        fom: str,
         job_source_name: str,
         job_number: str,
         state: str,
@@ -145,10 +154,10 @@ class JobRegistry:
         else:
             wf_path = str(wf)
 
-        key = self._key(job_source_name, job_number)
-        ji = self._jobs.get(key)
+        ji = self._jobs.get(fom)
         if ji is None:
             ji = JobInfo(
+                figure_of_merit=fom,
                 workflow_path=wf_path,
                 job_number=job_number,
                 source_name=job_source_name,
@@ -156,7 +165,7 @@ class JobRegistry:
                 start_time_ns=start_time_ns,
                 end_time_ns=end_time_ns,
             )
-            self._jobs[key] = ji
+            self._jobs[fom] = ji
         else:
             ji.state = state
             if start_time_ns is not None:
@@ -169,26 +178,28 @@ class JobRegistry:
             ji.heartbeat_ms = int(heartbeat_ms)
 
     def note_output(
-        self, wf: WorkflowId, job: JobId, output_name: Optional[str]
+        self, fom: str, wf: WorkflowId, job: JobId, output_name: Optional[str]
     ) -> None:
         if not output_name:
             return
-        key = self._key(job.source_name, job.job_number)
-        ji = self._jobs.get(key)
+        ji = self._jobs.get(fom)
         if ji is None:
             ji = JobInfo(
+                figure_of_merit=fom,
                 workflow_path=str(wf),
                 job_number=job.job_number,
                 source_name=job.source_name,
                 state="active",
             )
-            self._jobs[key] = ji
+            self._jobs[fom] = ji
         ji.outputs.add(output_name)
 
     def list_jobs(self) -> List[JobInfo]:
         return list(self._jobs.values())
 
-    def resolve_latest(self, workflow_path: str, source_name: str) -> Optional[JobInfo]:
+    def resolve_latest(
+        self, fom: str, workflow_path: str, source_name: str
+    ) -> Optional[JobInfo]:
         """
         Pick the most relevant job: prefer active, then scheduled, then finishing,
         then newest start time.
@@ -196,7 +207,9 @@ class JobRegistry:
         candidates = [
             j
             for j in self._jobs.values()
-            if j.workflow_path == workflow_path and j.source_name == source_name
+            if j.workflow_path == workflow_path
+            and j.source_name == source_name
+            and j.figure_of_merit == fom
         ]
         if not candidates:
             return None
@@ -212,15 +225,15 @@ class JobRegistry:
             candidates, key=lambda j: (order.get(j.state, 99), -(j.start_time_ns or 0))
         )[0]
 
-    def mark_seen(self, job_source_name: str, job_number: str) -> None:
+    def mark_seen(self, fom: str, job_source_name: str, job_number: str) -> None:
         """Touch a job when we observe DA00 for it."""
-        ji = self._jobs.get(self._key(job_source_name, job_number))
+        ji = self._jobs.get(fom)
         if ji:
             ji.last_seen_s = time.time()
 
-    def remove_job(self, job_source_name: str, job_number: str) -> None:
+    def remove_job(self, fom: str, job_source_name: str, job_number: str) -> None:
         """Explicitly remove a job (e.g. when a response says 'removed')."""
-        self._jobs.pop(self._key(job_source_name, job_number), None)
+        self._jobs.pop(fom, None)
 
     def expire_stale(self, now: Optional[float] = None, grace_mult: float = 3.0) -> int:
         """

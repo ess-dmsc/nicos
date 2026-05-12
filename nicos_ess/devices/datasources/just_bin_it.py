@@ -297,7 +297,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         self._update_status(status.OK, "")
 
     def new_messages_callback(self, messages):
-        for _, message in messages:
+        for _, _, message in messages:
             deserialiser = deserialiser_by_schema.get(get_schema(message))
             if not deserialiser:
                 continue
@@ -352,7 +352,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 
     def get_configuration(self):
         # Generate a unique-ish id
-        self._unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
+        self._unique_id = f"nicos-{self.name}-{int(time.time())}"
 
         return {
             "type": hist_type_by_name[self.hist_type].name,
@@ -475,7 +475,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     def doStart(self):
         # Generate a unique-ish id
-        unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
+        unique_id = f"nicos-{self.name}-{int(time.time())}"
         self.log.debug("set unique id = %s", unique_id)
 
         config = self._create_config(unique_id)

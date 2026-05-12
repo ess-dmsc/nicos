@@ -70,7 +70,8 @@ def _publish_livedata_when_running(channel, total):
         axes=["bin_edges"],
         unit="",
     )
-    channel.update_data_from_da00(
+    figure_of_merit = 'fom-1'
+    channel.update_data_from_da00(figure_of_merit,
         SimpleNamespace(source_name=source_name, data=[signal, edges]),
         int(time.time() * 1e9),
     )

@@ -205,7 +205,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         self._cache.put(self._name, "status", self.curstatus, time.time())
 
     # Called by collector when a matching DA00 arrives
-    def update_data_from_da00(self, da00_msg, timestamp_ns: int):
+    def update_data_from_da00(self, fom, da00_msg, timestamp_ns: int):
         if not getattr(self, "running", True):
             return
         try:
@@ -350,7 +350,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
 
             # Title from signal label or DA00 result key
             try:
-                rk = parse_result_key(da00_msg.source_name)
+                rk = parse_result_key(fom, da00_msg.source_name)
                 fallback_title = rk.output_name or self.name
             except Exception:
                 fallback_title = self.name
@@ -435,13 +435,14 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         if sel.job_number:
             for j in reg.list_jobs():
                 if (
-                    j.workflow_path == sel.workflow_path
+                    j.figure_of_merit == sel.fom
+                    and j.workflow_path == sel.workflow_path
                     and j.source_name == sel.source_name
                     and j.job_number == sel.job_number
                 ):
                     return j
             return None
-        return reg.resolve_latest(sel.workflow_path, sel.source_name)
+        return reg.resolve_latest(sel.fom, sel.workflow_path, sel.source_name)
 
     def reset_job(self):
         job = self._resolve_job()
@@ -590,21 +591,20 @@ class LiveDataCollector(Detector):
         base = self.cfg_group_id or "nicos-livedata"
         return f"{base}-{label}-{uuid4().hex}"
 
-    def _on_data_messages(self, messages: List[Tuple[int, bytes]]):
-        for timestamp_ns, raw in messages:
+    def _on_data_messages(self, messages: List[Tuple[int, str, bytes]]):
+        for timestamp_ns, fom, raw in messages:
             try:
                 if get_schema(raw) != "da00":
                     continue
                 da = deserialise_da00(raw)
-                rk = parse_result_key(da.source_name)
-                self._registry.note_output(rk.workflow_id, rk.job_id, rk.output_name)
+                rk = parse_result_key(fom, da.source_name)
+                self._registry.note_output(
+                    fom, rk.workflow_id, rk.job_id, rk.output_name
+                )
 
-                try:
-                    self._registry.mark_seen(
-                        rk.job_id.source_name, rk.job_id.job_number
-                    )
-                except Exception:
-                    pass
+                self._registry.mark_seen(
+                    fom, rk.job_id.source_name, rk.job_id.job_number
+                )
 
                 # Route to matching channels
                 self._dispatch_to_channels(timestamp_ns, rk, da)
@@ -660,6 +660,7 @@ class LiveDataCollector(Detector):
                     job = payload.get("job_id", {})
                     self._registry.jobinfo_from_status(
                         wf,
+                        fom=msg.key().decode("utf-8"),
                         job_source_name=job.get("source_name", ""),
                         job_number=job.get("job_number", ""),
                         state=payload.get("state", "unknown"),
@@ -702,30 +703,27 @@ class LiveDataCollector(Detector):
             if not msg:
                 time.sleep(0.05)
                 continue
+
+            raw = msg.value()
             try:
-                raw = msg.value()
-                try:
-                    js = json.loads(raw.decode("utf-8"))
-                except Exception:
-                    js = None
-
-                if isinstance(js, dict):
-                    # Accept either an ACK of our command or a terminal status
-                    action = (js.get("action") or "").lower()
-                    job = js.get("job_id") or {}
-                    src = job.get("source_name") or js.get("source_name") or ""
-                    jn = job.get("job_number") or ""
-
-                    remove_hint = action == "remove"
-
-                    if remove_hint and src and jn:
-                        self._registry.remove_job(src, jn)
-                        self._push_mapping_to_channels()
-
+                js = json.loads(raw.decode("utf-8"))
             except Exception:
-                pass
-            finally:
-                self._resp_consumer._consumer.commit(msg, asynchronous=False)
+                js = None
+
+            if isinstance(js, dict):
+                # Accept either an ACK of our command or a terminal status
+                action = (js.get("action") or "").lower()
+                job = js.get("job_id") or {}
+                src = job.get("source_name") or js.get("source_name") or ""
+                jn = job.get("job_number") or ""
+
+                remove_hint = action == "remove"
+
+                if remove_hint and src and jn:
+                    self._registry.remove_job(msg.key().decode("utf-8"), src, jn)
+                    self._push_mapping_to_channels()
+
+            self._resp_consumer._consumer.commit(msg, asynchronous=False)
 
     def _dispatch_to_channels(self, timestamp_ns: int, rk, da):
         for ch in self._channels:
@@ -733,7 +731,7 @@ class LiveDataCollector(Detector):
             if not sel:
                 continue
             if sel.selector_matches(rk):
-                ch.update_data_from_da00(da, timestamp_ns)
+                ch.update_data_from_da00(rk.fom, da, timestamp_ns)
 
     def send_job_command(
         self,
@@ -827,7 +825,12 @@ class LiveDataCollector(Detector):
 
         for ji in sorted(
             self._registry.list_jobs(),
-            key=lambda j: (j.workflow_path, j.source_name, j.job_number),
+            key=lambda j: (
+                j.figure_of_merit,
+                j.workflow_path,
+                j.source_name,
+                j.job_number,
+            ),
         ):
             # If we haven't seen any DA00 yet for this job, we won't know outputs.
             outputs = sorted(ji.outputs, key=out_sort_key)
@@ -836,11 +839,12 @@ class LiveDataCollector(Detector):
 
             _, wf_name, _ = split_workflow_path(ji.workflow_path)
             for out in outputs:
-                label = f"{ji.source_name} ({ji.job_number.split('-')[0]}) {out}"
+                label = f"{ji.figure_of_merit} {ji.source_name} ({ji.job_number.split('-')[0]}) {out}"
 
-                selector = f"{ji.workflow_path}@{ji.source_name}#{ji.job_number}/{out}"
+                selector = f"{ji.figure_of_merit} {ji.workflow_path}@{ji.source_name}#{ji.job_number}/{out}"
                 items.append(
                     {
+                        "figure_of_merit": ji.figure_of_merit,
                         "label": label,
                         "workflow_name": wf_name,
                         "output": out,
@@ -860,7 +864,7 @@ class LiveDataCollector(Detector):
         refreshes the cache keys.
         """
         items = self.list_plot_selection_items()
-        return [i["label"] for i in items]
+        return [i["figure_of_merit"] for i in items]
 
     def _bump_expected_status(self, update_interval_ms: int):
         interval_s = max(1, int(update_interval_ms // 1000))
@@ -882,19 +886,14 @@ class LiveDataCollector(Detector):
     def get_current_mapping(self) -> dict:
         """Return the current label->selector mapping as built for channels."""
         items = self.list_plot_selection_items()
+        # return {it["figure_of_merit"]: it["selector"] for it in items}
         return {it["label"]: it["selector"] for it in items}
 
     def _check_disconnect(self):
         if time.time() > (self._last_expected_status_time + self.status_timeout):
-            try:
-                self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
-            except Exception:
-                pass
+            self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
 
     def doShutdown(self):
         # Best-effort cleanup; Kafka wrappers usually are resilient to late close.
-        try:
-            if self._data_subscriber:
-                self._data_subscriber.close()
-        except Exception:
-            pass
+        if self._data_subscriber:
+            self._data_subscriber.close()

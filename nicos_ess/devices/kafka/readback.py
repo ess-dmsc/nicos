@@ -152,7 +152,7 @@ class KafkaReadbackRouter(Device):
         self._kafka_subscribers[topic] = subscriber
 
     def _messages_callback(self, topic, messages):
-        for _timestamp, raw in messages:
+        for _timestamp, _key, raw in messages:
             self._handle_kafka_payload(topic, raw)
 
     def _error_callback(self, topic, err):

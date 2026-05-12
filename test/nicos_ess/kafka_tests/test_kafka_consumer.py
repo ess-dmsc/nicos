@@ -335,7 +335,7 @@ def test_subscriber_delivers_messages_via_callback(subscriber):
     subscriber.subscribe(["topic"], on_msgs, on_idle)
     pump(subscriber, steps=20)
 
-    assert [v for (_, v) in delivered] == [b"A", b"B"]
+    assert [v for (_, _, v) in delivered] == [b"A", b"B"]
     assert calls_idle["n"] >= 0
 
 
@@ -729,7 +729,7 @@ def test_first_message_after_long_idle_is_consumed_instead_of_stuck_rebootstrap_
     subscriber.tick()
 
     # Validate: no stuck reboot reason, message delivered
-    assert b"FIRST" in [v for (_, v) in delivered]
+    assert b"FIRST" in [v for (_, _, v) in delivered]
     assert "stuck_no_progress_despite_lag" not in reasons
 
 
@@ -783,5 +783,5 @@ def test_first_message_after_long_idle_is_consumed_instead_of_stuck_rebootstrap_
     subscriber.tick()
 
     # Validate: delivered and no stuck reboot
-    assert b"FIRST-S" in [v for (_, v) in delivered]
+    assert b"FIRST-S" in [v for (_, _, v) in delivered]
     assert "stuck_no_progress_despite_lag" not in reasons

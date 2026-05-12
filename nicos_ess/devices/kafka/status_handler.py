@@ -97,7 +97,7 @@ class KafkaStatusHandler(Readable):
 
     def new_messages_callback(self, messages):
         json_messages = {}
-        for timestamp, message in messages:
+        for timestamp, _, message in messages:
             try:
                 if get_schema(message) != "x5f2":
                     continue

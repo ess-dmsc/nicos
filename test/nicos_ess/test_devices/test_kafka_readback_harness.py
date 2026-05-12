@@ -76,7 +76,7 @@ def emit_readback_messages(
         for subscriber in subscribers
         if subscriber.subscribed and subscriber.subscribed[-1] == [topic]
     )
-    batch = [((0, 0), payload) for payload in payloads]
+    batch = [((0, 0), None, payload) for payload in payloads]
     device_harness.run_daemon(subscriber.emit_messages, batch)
 
 

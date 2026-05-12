@@ -75,7 +75,7 @@ def _publish_histogram_when_started(image, total):
             ),
         }
     )
-    image.new_messages_callback([(int(time.time() * 1e9), message)])
+    image.new_messages_callback([(int(time.time() * 1e9), "N/A", message)])
 
 
 @pytest.fixture
