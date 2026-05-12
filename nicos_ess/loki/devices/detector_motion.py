@@ -29,12 +29,10 @@ class LOKIDetectorMotion(EpicsMotor):
         EpicsMotor.doInit(self, mode)
 
     def _bank_status_is_ok(self):
-        # TODO: Move check to power supply class
+        # # TODO: Move check to power supply class
         bank_status, status_msg = self._attached_power_supply.status()
-        if bank_status != status.OK:
-            self.log.warning(status_msg)
-            return False
-        return True
+        status_ok = bank_status == status.OK
+        return status_ok, status_msg
 
     def _bank_is_powered_off(self):
         # TODO: Move check to power supply class
@@ -75,10 +73,13 @@ class LOKIDetectorMotion(EpicsMotor):
             Message indicating why movement is or isn't allowed.
         """
 
+        status_ok, msg = self._bank_status_is_ok()
+        if not status_ok:
+            return False, msg
+
         if (
-            self._bank_status_is_ok()
-            and self._bank_is_powered_off()
-            and self._bank_voltage_is_below_threshold()
+            # self._bank_status_is_ok()
+            self._bank_is_powered_off() and self._bank_voltage_is_below_threshold()
         ):
             self.log.info(
                 "Detector bank motion: Power supply is OFF and "
@@ -89,5 +90,5 @@ class LOKIDetectorMotion(EpicsMotor):
                 True,
                 "Power supply is OFF and voltage is below or equal to threshold.",
             )
-        else:
-            return False, ""
+
+        return False, ""
