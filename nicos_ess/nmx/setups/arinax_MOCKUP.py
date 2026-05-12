@@ -67,7 +67,7 @@ devices = dict(
     ),
     # Sample centring motion
     sample_centring_chi=device(
-        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.nmx.devices.arinax.EpicsArinaxMoveable",
         description="ARINAX sample motor Chi (mockup)",
         readpv="NMX-mockup:getChiPosition",
         writepv="NMX-mockup:setChiPosition",
@@ -75,15 +75,15 @@ devices = dict(
         pva=False,
     ),
     sample_centring_phi=device(
-        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.nmx.devices.arinax.EpicsArinaxMoveable",
         description="ARINAX sample motor Phi (mockup)",
         readpv="NMX-mockup:getPhiPosition",
-        writepv="NMX-mockup:setPhiPosition", # String type, incompatible here.
+        writepv="NMX-mockup:setPhiPosition",
         unit="mm",
         pva=False,
     ),
     sample_centring_theta=device(
-        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.nmx.devices.arinax.EpicsArinaxMoveable",
         description="ARINAX sample motor Theta (mockup)",
         readpv="NMX-mockup:getThetaPosition",
         writepv="NMX-mockup:setThetaPosition",
@@ -112,7 +112,7 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
         mapping=UNIPUCKS,
-        fmtstr="%.e", # Work-around: fix the infinity limits.
+
     ),
     # TODO: Issue here: mapping is broken. The PV is LONG type. Idea: Ask ARINAX to make them as ENUM.
     sample_load__sample_is_loaded=device(
