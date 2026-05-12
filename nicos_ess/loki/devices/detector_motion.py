@@ -38,22 +38,21 @@ class LOKIDetectorMotion(EpicsMotor):
         # TODO: Move check to power supply class
         bank_on, n_channels_on = self._attached_power_supply.status_on()
         if bank_on:
-            self.log.warning("Power supply bank is still ON, all channels must be OFF.")
-            return False
-        return True
+            return False, "Power supply bank is still ON, all channels must be OFF."
+        return True, ""
 
     def _bank_voltage_is_below_threshold(self):
         # TODO: Move check to power supply class
+        volt_unit = f"{self._attached_power_supply._get_voltage_unit()}"
+        error_msg = (
+            "Power supply bank voltages are above threshold, "
+            "all channels must be less than "
+            f"{self.voltage_off_threshold} {volt_unit}"
+        )
         for channel in self._attached_power_supply._attached_ps_channels:
             if channel.doReadVoltage_Monitor() > self.voltage_off_threshold:
-                self.log.warning(
-                    "Power supply bank voltages are above threshold, "
-                    "all channels must be less than "
-                    f"{self.voltage_off_threshold} "
-                    f"{self._attached_power_supply._get_voltage_unit()}"
-                )
-                return False
-        return True
+                return False, error_msg
+        return True, ""
 
     def doIsAllowed(self, pos):
         """
@@ -77,18 +76,12 @@ class LOKIDetectorMotion(EpicsMotor):
         if not status_ok:
             return False, msg
 
-        if (
-            # self._bank_status_is_ok()
-            self._bank_is_powered_off() and self._bank_voltage_is_below_threshold()
-        ):
-            self.log.info(
-                "Detector bank motion: Power supply is OFF and "
-                "voltage is below or equal to threshold. "
-                "Movement is permitted."
-            )
-            return (
-                True,
-                "Power supply is OFF and voltage is below or equal to threshold.",
-            )
+        power_off, msg = self._bank_is_powered_off()
+        if not power_off:
+            return False, msg
 
-        return False, ""
+        voltage_below_thresh, msg = self._bank_voltage_is_below_threshold()
+        if not voltage_below_thresh:
+            return False, msg
+
+        return True, ""
