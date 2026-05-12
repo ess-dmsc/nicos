@@ -44,6 +44,9 @@ class EpicsArinaxMoveable(EpicsMoveable):
     
     E.g., for Phi, Chi and Theta ARINAX actuators, the getter PV is float, 
     but setter is string.
+
+    TODO: Try inheriting from core EpicsAnalogMoveable to have limits. Not using
+    this now because device status in the GUI gets a type error.
     """
 
     valuetype = anytype
