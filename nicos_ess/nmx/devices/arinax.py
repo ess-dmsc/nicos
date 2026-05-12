@@ -1,8 +1,15 @@
 from nicos.core import (
     Param,
+    HasPrecision,
+    HasLimits,
+    anytype,
+    SIMULATION
 )
 
+from nicos.devices.epics.pva import EpicsDevice, EpicsMoveable
+
 from nicos_ess.devices.epics.pva import EpicsMappedMoveable
+
 
 class ConfigurableEpicsMappedMoveable(EpicsMappedMoveable):
     """
@@ -29,3 +36,27 @@ class ConfigurableEpicsMappedMoveable(EpicsMappedMoveable):
             return
         super().doStart(value)
 
+
+class EpicsArinaxMoveable(EpicsMoveable):
+    """
+    Handles EPICS Arinax devices (such as actuators/motors) which 
+    have getter and setter of different types.
+    
+    E.g., for Phi, Chi and Theta ARINAX actuators, the getter PV is float, 
+    but setter is string.
+    """
+
+    valuetype = anytype
+
+    def doInit(self, mode):
+        """Modified doInit method. Skips in/outtype checks."""
+
+        if mode == SIMULATION:
+            return
+            
+        EpicsDevice.doInit(self, mode)
+    
+    def doStart(self, value):
+        out_type = self._epics_wrapper.get_pv_type(self._param_to_pv["writepv"]) # TODO: Move it to a better place.
+        value = out_type(value) # Converts to out type.
+        self._put_pv("writepv", value)
