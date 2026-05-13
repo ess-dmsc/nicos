@@ -46,8 +46,8 @@ class VirtualHexapod(Moveable):
         self._setSpeed(self.r_speed, "deg")
 
     def doStart(self, target):
-        for name, target in zip(self.axis_names, target):
-            self._adevs[name].start(target)
+        for name, pos in zip(self.axis_names, target):
+            self._adevs[name].start(pos)
 
     def doRead(self, maxage=0):
         pos = [self._adevs[name].read(maxage) for name in self.axis_names]
