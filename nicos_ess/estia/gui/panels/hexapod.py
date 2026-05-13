@@ -126,7 +126,10 @@ class HexapodPanel(Panel):
         # Annoying way to check if the setup is live or not
         class_typ = "nicos_ess.estia.devices.newport.VirtualHexapod"
         name = self.client.getDeviceList(needs_class=class_typ)
-        return bool(name)
+        # name returns as a list if something exists
+        if name:
+            return name[0] == self.devname
+        return False
 
     def get_hexapod_data(self):
         if not self._is_hexapod_live():
