@@ -124,7 +124,7 @@ class HexapodPanel(Panel):
 
     def _is_hexapod_live(self):
         # Annoying way to check if the setup is live or not
-        class_typ = "nicos_ess.devices.virtual.hexapod.TableHexapod"
+        class_typ = "nicos_ess.estia.devices.newport.VirtualHexapod"
         name = self.client.getDeviceList(needs_class=class_typ)
         return bool(name)
 
@@ -165,7 +165,7 @@ class HexapodPanel(Panel):
             elif code in ok_val:
                 self.hexStatus.setStyleSheet("background-color: lightblue")
             elif code == not_ref:
-                self.hexStatus.setStyleSheet("background-color: lightorange")
+                self.hexStatus.setStyleSheet("background-color: orange")
             else:
                 self.hexStatus.setStyleSheet("background-color: None")
             self.hexStatus.setText(f"{code}")
@@ -174,7 +174,7 @@ class HexapodPanel(Panel):
         # sometimes the mapping is odd for awhile, so checking for int or string and
         # setting text accordingly
         if value == "Work":
-            self.coordSyst.setStyleSheet("background-color: lightorange")
+            self.coordSyst.setStyleSheet("background-color: lightgreen")
             self.coordSyst.setText("Work")
         elif value == "Tool":
             self.coordSyst.setStyleSheet("background-color: lightgreen")

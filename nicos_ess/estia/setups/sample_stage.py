@@ -1,4 +1,7 @@
-description = "Sample stage system made up of Newport Hexapod and Goinometer Sample Rotation Stage"
+description = (
+    "Sample stage system made up of Newport Hexapod "
+    "and Goinometer Sample Rotation Stage"
+)
 
 hex_root = "ESTIA-SES:MC-MCU-001:"
 
@@ -86,7 +89,7 @@ devices = dict(
         visibility=(),
     ),
     estia_hexapod=device(
-        "nicos_ess.devices.virtual.hexapod.TableHexapod",
+        "nicos_ess.estia.devices.newport.VirtualHexapod",
         description="Hexapod Device",
         tx="tx",
         ty="ty",
@@ -94,7 +97,7 @@ devices = dict(
         rx="rx",
         ry="ry",
         rz="rz",
-        table="goniometer",
+        gmt="goniometer",
     ),
     hexapod_status=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
