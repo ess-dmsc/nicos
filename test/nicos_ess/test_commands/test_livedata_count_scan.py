@@ -16,9 +16,7 @@ pytest.importorskip("streaming_data_types")
 
 from nicos.commands.measure import count
 from nicos.commands.scan import scan
-
 from nicos_ess.devices.datasources import livedata
-
 from test.nicos_ess.command_helpers import (
     loaded_setup,
     scan_positions,
@@ -70,8 +68,9 @@ def _publish_livedata_when_running(channel, total):
         axes=["bin_edges"],
         unit="",
     )
-    figure_of_merit = 'fom-1'
-    channel.update_data_from_da00(figure_of_merit,
+    figure_of_merit = "fom-1"
+    channel.update_data_from_da00(
+        figure_of_merit,
         SimpleNamespace(source_name=source_name, data=[signal, edges]),
         int(time.time() * 1e9),
     )

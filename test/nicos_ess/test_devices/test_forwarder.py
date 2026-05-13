@@ -29,14 +29,12 @@ from socket import gethostname
 from string import ascii_lowercase
 
 import pytest
-
+from streaming_data_types.forwarder_config_update_fc00 import deserialise_fc00
 from streaming_data_types.logdata_f142 import serialise_f142
 from streaming_data_types.status_x5f2 import serialise_x5f2
-from streaming_data_types.forwarder_config_update_fc00 import deserialise_fc00
 
-from nicos.core import status, POLLER, MAIN, ConfigurationError
+from nicos.core import MAIN, POLLER, ConfigurationError, status
 from nicos.utils import createThread
-
 from nicos_ess.devices.forwarder import EpicsKafkaForwarder
 
 try:
@@ -210,10 +208,7 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         self.motor.nexus_config = [nx_conf]
         self.device._producer = mock.Mock()
         self.device._stop_requested = False
-        thread = createThread(
-            "forwarder_updater",
-            self.device._update_forwarded_pvs
-        )
+        thread = createThread("forwarder_updater", self.device._update_forwarded_pvs)
         for _ in range(10):
             if self.device._producer.produce.called:
                 break
@@ -224,7 +219,6 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         assert fc.streams[0].channel == nx_conf["source_name"]
         assert fc.streams[0].schema == nx_conf["schema"]
         assert fc.streams[0].topic == nx_conf["topic"]
-
 
     def test_static_value_to_nexus(self):
         nx_conf = {
@@ -239,9 +233,9 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         json_obj = self.device.get_nexus_json()["/entry/instrument"]
         assert json_obj[0]["name"] == nx_conf["group_name"]
         assert json_obj[0]["children"][0]["config"] == {
-            "name": f'{nx_conf["group_name"]}_{nx_conf["suffix"]}',
+            "name": f"{nx_conf['group_name']}_{nx_conf['suffix']}",
             "values": nx_conf["value"],
-            "dtype": "string"
+            "dtype": "string",
         }
 
     def test_static_read_to_nexus(self):
@@ -253,14 +247,14 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             "dataset_type": "static_read",
         }
         position = "some_read_string"
-        self.motor.nexus_config=[nx_conf]
+        self.motor.nexus_config = [nx_conf]
         self.motor.values["position"] = position
         json_obj = self.device.get_nexus_json()["/entry/instrument"]
         assert json_obj[0]["name"] == nx_conf["group_name"]
         assert json_obj[0]["children"][0]["config"] == {
-            "name": f'{nx_conf["group_name"]}_{nx_conf["suffix"]}',
+            "name": f"{nx_conf['group_name']}_{nx_conf['suffix']}",
             "values": position,
-            "dtype": "string"
+            "dtype": "string",
         }
 
     def test_multiple_nexus_config_with_different_paths(self):
@@ -282,23 +276,23 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             "nexus_path": "/entry/sample",
         }
         position = 123
-        self.motor.nexus_config=[nx_conf1, nx_conf2]
+        self.motor.nexus_config = [nx_conf1, nx_conf2]
         self.motor.values["position"] = position
         json_by_path = self.device.get_nexus_json()
         assert len(json_by_path) == 2
         json_1 = json_by_path["/entry/instrument"]
         assert json_1[0]["name"] == nx_conf1["group_name"]
         assert json_1[0]["children"][0]["config"] == {
-            "name": f'{nx_conf1["group_name"]}_{nx_conf1["suffix"]}',
+            "name": f"{nx_conf1['group_name']}_{nx_conf1['suffix']}",
             "values": position,
-            "dtype": "int"
+            "dtype": "int",
         }
         json_2 = json_by_path["/entry/sample"]
         assert json_2[0]["name"] == nx_conf2["group_name"]
         assert json_2[0]["children"][0]["config"] == {
-            "name": f'{nx_conf2["group_name"]}_{nx_conf2["suffix"]}',
+            "name": f"{nx_conf2['group_name']}_{nx_conf2['suffix']}",
             "values": nx_conf2["value"],
-            "dtype": "string"
+            "dtype": "string",
         }
 
     def test_nexus_config_must_be_list(self):
@@ -345,7 +339,12 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             self.motor.nexus_config = [bad]
 
     def test_group_name_and_nx_class_cannot_be_empty(self):
-        bad = {"group_name": "", "nx_class": "", "dataset_type": "static_value", "value": "X"}
+        bad = {
+            "group_name": "",
+            "nx_class": "",
+            "dataset_type": "static_value",
+            "value": "X",
+        }
         with pytest.raises(ConfigurationError):
             self.motor.nexus_config = [bad]
 
@@ -366,7 +365,11 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             self.motor.nexus_config = [bad]
 
     def test_static_value_without_value_key_raises(self):
-        bad = {"group_name": "g", "nx_class": "NXcollection", "dataset_type": "static_value"}
+        bad = {
+            "group_name": "g",
+            "nx_class": "NXcollection",
+            "dataset_type": "static_value",
+        }
         with pytest.raises(ConfigurationError):
             self.motor.nexus_config = [bad]
 
@@ -480,7 +483,9 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             "periodic": 0,
         }
         ok2 = dict(ok1, periodic=1)
-        ok3 = dict(ok1, periodic=True)  # coerces to 1 in validator, but not defaulted if missing
+        ok3 = dict(
+            ok1, periodic=True
+        )  # coerces to 1 in validator, but not defaulted if missing
         ok4 = dict(ok1, periodic=False)  # coerces to 0
         self.motor.nexus_config = [ok1, ok2, ok3, ok4]
 
@@ -526,7 +531,6 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         }
         self.motor.nexus_config = [good]
 
-
     def test_nx_log_config_generates_json(self):
         nx_conf = {
             "group_name": "motor1",
@@ -561,7 +565,6 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         assert "/entry/instrument" in json_obj
         instrument = json_obj["/entry/instrument"]
         assert instrument[0]["name"] == "motor1"
-
 
     def test_static_value_config_generates_json(self):
         nx_conf = {
