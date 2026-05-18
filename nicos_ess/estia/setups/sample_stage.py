@@ -1,6 +1,6 @@
 description = (
     "Sample stage system made up of Newport Hexapod "
-    "and Goinometer Sample Rotation Stage"
+    "and Goniometer Sample Rotation Stage"
 )
 
 hex_root = "ESTIA-SES:MC-MCU-001:"
