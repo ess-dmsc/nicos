@@ -44,6 +44,7 @@ def add_devices(pvs, prefix):
             description=f"Detector {prefix} {board_type} module {key} set voltage",
             readpv=f"{pv_prefix}-VMon",
             writepv=f"{pv_prefix}-V0Set",
+            precision=7.0,  # reported error is 0.3% +- 2V, so 7V should be safe
             requires={"level": "admin"},
         )
         devices[f"{key}_enable"] = device(
