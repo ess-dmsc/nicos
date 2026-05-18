@@ -1,4 +1,4 @@
-description = "Virtual hexapod with added Translation"
+description = "Virtual hexapod"
 
 devices = dict(
     mock_tx=device(
@@ -42,21 +42,5 @@ devices = dict(
         description="Table Translation",
         abslimits=(0, 360),
         unit="deg",
-    ),
-    estia_hexapod=device(
-        "nicos_ess.devices.virtual.hexapod.TableHexapod",
-        description="Hexapod Device",
-        tx="mock_tx",
-        ty="mock_ty",
-        tz="mock_tz",
-        rx="mock_rx",
-        ry="mock_ry",
-        rz="mock_rz",
-        table="mock_goniometer",
-    ),
-    hexapod_status=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="NewPort Status",
-        readpv=f"ESTIA-SES:MC-MCU-001:STATUS",
     ),
 )
