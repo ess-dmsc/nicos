@@ -127,7 +127,7 @@ _multiblock = Block(
             Field(
                 widget="nicos_mlz.puma.gui.multiwidget.MultiAnalyzerWidget",
                 width=40,
-                heigth=30,
+                height=30,
             ),
         ),
     ],

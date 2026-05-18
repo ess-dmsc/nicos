@@ -94,7 +94,7 @@ class PanelDialog(SetupDepWindowMixin, QDialog):
 class SetupDepPanelMixin(QObject):
     """Mixin to handle setup-dependent visibility.
 
-    Note: You must explicity add the following class attribute in all
+    Note: You must explicitly add the following class attribute in all
     classes using this mixin (A PyQt resctriction, see
     https://riverbankcomputing.com/pipermail/pyqt/2013-September/033199.html):
 

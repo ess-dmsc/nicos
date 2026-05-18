@@ -1,4 +1,4 @@
-description = "Vaccum sensors and temperature control"
+description = "Vacuum sensors and temperature control"
 
 devices = dict(
     vacuum=device(

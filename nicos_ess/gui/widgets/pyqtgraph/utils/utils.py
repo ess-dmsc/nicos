@@ -9,7 +9,7 @@ from nicos.guisupport.qt import QLabel, pyqtSignal
 
 COLORS = [
     (0, 114, 178),  # Blue
-    (213, 94, 0),  # Vermillion
+    (213, 94, 0),  # Vermilion
     (0, 158, 115),  # Green
     (230, 159, 0),  # Orange
     (86, 180, 233),  # Sky Blue

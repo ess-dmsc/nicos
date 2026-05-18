@@ -113,7 +113,7 @@ class SeleneRobot(Moveable):
             unit="mm",
         ),
         "position_data": Param(
-            "YAML file that contins the positioning data",
+            "YAML file that contains the positioning data",
             type=str,
             mandatory=True,
             userparam=False,
@@ -346,7 +346,7 @@ class SeleneRobot(Moveable):
     def engage(self):
         """
         User version to engage a screw if already positioned.
-        Has some additional checkes and usability improvements.
+        Has some additional checks and usability improvements.
         """
         self.doRead()
         if self.current_position == (-1, -1):

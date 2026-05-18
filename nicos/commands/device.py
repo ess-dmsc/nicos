@@ -680,7 +680,7 @@ def getall(*names):
     lists the offset for all devices with an "offset" parameter.
     """
     items = []
-    for name, dev in sorted(session.devices.items(), key=lambda nd: nd[0].lower()):
+    for name, dev in sorted(session.devices.items(), key=lambda nd: nd[0].lower()):  # codespell:ignore
         pvalues = []
         for param in names:
             if param in dev.parameters:
@@ -920,7 +920,7 @@ def history(dev, key="value", fromtime=None, totime=None, interval=None):
     >>> history(mth, 'speed', '14:00', '17:00')    # between 14h and 17h today
     >>> history(mth, 'speed', '2012-05-04', '2012-05-08')  # between two days
 
-    Example for interval specification. Setting 10 seconds as the minumum
+    Example for interval specification. Setting 10 seconds as the minimum
     interval between two adjacent data points:
 
     >>> history(mth, 'speed', '2012-05-04', '2012-05-08', 10) # in [seconds]

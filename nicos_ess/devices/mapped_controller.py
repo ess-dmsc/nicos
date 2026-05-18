@@ -117,7 +117,7 @@ class MultiTargetMapping(MappedMoveable):
     """
     Class for devices that map one key to a set (tuple) of values
 
-    Pratically same as `MappedController` class but maps to a tuple
+    Practically same as `MappedController` class but maps to a tuple
     instead of a single value.
 
     TODO: refactor this class to somehow allow single values too, as

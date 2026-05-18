@@ -17,7 +17,7 @@ devices = dict(
         "nicos.devices.instrument.Instrument",
         description="instrument object",
         instrument="magic",
-        responsible="unkown <unknown@ess.eu>",
+        responsible="unknown <unknown@ess.eu>",
         website="https://europeanspallationsource.se/instruments/magic",
     ),
     Sample=device(

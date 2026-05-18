@@ -91,11 +91,11 @@ def test_readonly_objects():
     d = readonlydict({"a": 1, "b": 2})
     assert raises(TypeError, d.update, {})
 
-    # pickle Protocoll 0
+    # pickle Protocol 0
     unpickled = pickle.loads(pickle.dumps(d))
     assert isinstance(unpickled, readonlydict)
     assert len(unpickled) == 2
-    # pickle Protocoll 2
+    # pickle Protocol 2
     unpickled = pickle.loads(pickle.dumps(d, 2))
     assert isinstance(unpickled, readonlydict)
     assert len(unpickled) == 2
@@ -103,11 +103,11 @@ def test_readonly_objects():
     lst = readonlylist([1, 2, 3])
     assert raises(TypeError, lst.append, 4)
 
-    # pickle Protocoll 0
+    # pickle Protocol 0
     unpickled = pickle.loads(pickle.dumps(lst))
     assert isinstance(unpickled, readonlylist)
     assert len(unpickled) == 3
-    # pickle Protocoll 2
+    # pickle Protocol 2
     unpickled = pickle.loads(pickle.dumps(lst, 2))
     assert isinstance(unpickled, readonlylist)
     assert len(unpickled) == 3

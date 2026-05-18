@@ -187,7 +187,7 @@ The recognized keys are:
 * ``dev`` -- set this field up for displaying the current value of a device.
 
 * ``format`` -- if set, it overrides the format string of the displayed value
-  (normally the foramt string of the device is used).  This is also useful for
+  (normally the format string of the device is used).  This is also useful for
   values with a ``key`` (which have no default format string) or ``item`` (where
   the devices' format string does not apply), see the "Triple Axis" block above.
 
@@ -298,7 +298,7 @@ cache, such as a value display (label/value combination) and a trend plot.
 Backends
 --------
 
-In the example setup above, the Monitor device is confiugred with the class
+In the example setup above, the Monitor device is configured with the class
 :class:`nicos.services.monitor.qt.Monitor`.  This selects the Qt backend, which
 displays the monitor as a window using the Qt GUI toolkit.  Another backend
 exists: :class:`nicos.services.monitor.html.Monitor` writing a HTML file

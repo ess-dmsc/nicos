@@ -92,7 +92,7 @@ def requires(**access):
     * ``'level'``: gives the minimum required user access level and can
       have the values ``GUEST``, ``USER`` or ``ADMIN`` as defined in the
       :mod:`nicos.core.utils` module.
-    * ``'mode'``: gives the required exection mode ("master", "slave",
+    * ``'mode'``: gives the required execution mode ("master", "slave",
       "maintenance", "simulation").
     * ``'passcode'``: only usable in the interactive console: gives a
       passcode that the user has to type back.
@@ -2325,7 +2325,7 @@ class Measurable(Waitable):
         the array result(s) of the last measurement.
 
         The array results will be read first calling `readArrays` because
-        there migth be side-effects on the scalar result of `read`, e.g.
+        there might be side-effects on the scalar result of `read`, e.g.
         `ImageChannelMixin`'s standard implementation of `doRead` returns
         `self.readresult` which will probably be altered in `doReadArrays`.
         """

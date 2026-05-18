@@ -12,7 +12,7 @@ But, first of all have a deep look into the :doc:`existing devices classes
 in mind that most of the devices have a number of parameters which can be
 configured in a setup file.
 
-Sometimes there exists a device class which is very similiar to your requests,
+Sometimes there exists a device class which is very similar to your requests,
 but not fully.  In this case you can derive your device class from the existing
 one, implementing the missing parts or overriding one or more of the base class
 methods.  It might also be reasonable to make the existing class more generic,
@@ -67,7 +67,7 @@ Sometimes the inherited class has a parameter definition, which is not exactly
 fulfilling the requirements of the new device.  For this case there is another
 dictionary called ``parameter_overrides``.
 
-It needs the name of the paramter to be changed and instead of using the
+It needs the name of the parameter to be changed and instead of using the
 :class:`~nicos.core.params.Param` the :class:`~nicos.core.params.Override`
 helper is used, which is only given the settings of the parameter to be
 overridden.
@@ -96,7 +96,7 @@ In case the new device class should represent a more high level device, like a
 slit with for blades or device that has to control two motors, it is needed to
 use other configured devices.  This can be defined in the ``attached_devices``
 dictionary.  It contains an internal device name (accessible via
-``self._attached_name`` where ``name`` has to be replaced by the choosen name
+``self._attached_name`` where ``name`` has to be replaced by the chosen name
 and an object of the :class:`~nicos.core.params.Attach` helper.
 
 .. code::

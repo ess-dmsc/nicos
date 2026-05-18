@@ -95,7 +95,7 @@ If the user calls the :func:`~count` command in NICOS the following happens:
         }
    }
 
-Scan commmand
+Scan command
 ~~~~~~~~~~~~~
 
 .. module:: nicos.commands.scan

@@ -847,7 +847,7 @@ class DetectorForecast(Readable):
 
 
 class GatedDetector(Detector):
-    """A Detector which enables some 'gates' before the measurment
+    """A Detector which enables some 'gates' before the measurement
     and disables them afterwards
     """
 

@@ -54,8 +54,8 @@ def sendMail(
     Returns True if successful and list of error-messages else
 
     mailserver is a working E-Mailserver accepting mail from us,
-    receiverlist is a not empty list of valid E-Mail adresses or a string with
-    comma-separated E-Mail adresses
+    receiverlist is a not empty list of valid E-Mail addresses or a string with
+    comma-separated E-Mail addresses
     sender is a valid E-Mail-address,
     topic and body are strings and the list of attach_files may be empty
     if attach_files is not empty, it must contain names of existing files!
