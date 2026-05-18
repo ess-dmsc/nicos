@@ -269,12 +269,12 @@ class HexapodPanel(Panel):
     @pyqtSlot()
     def on_relNeg_tx_pressed(self):
         target = -1 * self.relTx.value()
-        self.exec_command(f"move('{self.adevs['tx']['devname']}', {target})")
+        self.exec_command(f"rmove('{self.adevs['tx']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_tx_pressed(self):
         target = self.relTx.value()
-        self.exec_command(f"move('{self.adevs['tx']['devname']}', {target})")
+        self.exec_command(f"rmove('{self.adevs['tx']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relNeg_ty_pressed(self):
