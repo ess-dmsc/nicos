@@ -108,7 +108,11 @@ class TestLokiDetectorCarriage:
     def test_movement_blocked_if_status_not_ok(self, monkeypatch):
         voltage = self.motor.voltage_off_threshold - 0.1
         error_status = (status.ERROR, "some error message")
-        monkeypatch.setattr(type(self.ps_bank), "doStatus", lambda self, maxage=0: error_status)
+        monkeypatch.setattr(
+            type(self.ps_bank),
+            "doStatus",
+            lambda self, maxage=0: error_status
+        )
         self.ps_bank.disable()
         self.ps_channel._put_pv("voltage_monitor", voltage)
         with pytest.raises(LimitError):
