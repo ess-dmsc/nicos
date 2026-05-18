@@ -109,9 +109,7 @@ class TestLokiDetectorCarriage:
         voltage = self.motor.voltage_off_threshold - 0.1
         error_status = (status.ERROR, "some error message")
         monkeypatch.setattr(
-            type(self.ps_bank),
-            "doStatus",
-            lambda self, maxage=0: error_status
+            type(self.ps_bank), "doStatus", lambda self, maxage=0: error_status
         )
         self.ps_bank.disable()
         self.ps_channel._put_pv("voltage_monitor", voltage)
