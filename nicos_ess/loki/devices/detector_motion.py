@@ -84,4 +84,4 @@ class LOKIDetectorMotion(EpicsMotor):
         if not voltage_below_thresh:
             return False, msg
 
-        return True, ""
+        return EpicsMotor.isAllowed(self, pos)
