@@ -89,7 +89,7 @@ devices = dict(
         visibility=(),
     ),
     estia_hexapod=device(
-        "nicos_ess.estia.devices.newport.VirtualHexapod",
+        "nicos_ess.estia.devices.newport.NewportHexapod",
         description="Hexapod Device",
         tx="tx",
         ty="ty",

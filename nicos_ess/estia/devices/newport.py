@@ -10,7 +10,7 @@ from nicos.core import (
 )
 
 
-class VirtualHexapod(Moveable):
+class NewportHexapod(Moveable):
     """Virtual Hexapod with six axes of movement"""
 
     parameter_overrides = {
