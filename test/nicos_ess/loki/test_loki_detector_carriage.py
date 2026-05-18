@@ -119,3 +119,11 @@ class TestLokiDetectorCarriage:
         self.ps_channel._put_pv("voltage_monitor", voltage)
         with pytest.raises(LimitError):
             self.motor.move(20)
+
+    def test_movement_blocked_if_pos_outside_limits(self):
+        voltage = 0.0
+        self.ps_bank.enable()
+        self.ps_bank.disable()
+        self.ps_channel._put_pv("voltage_monitor", voltage)
+        with pytest.raises(LimitError):
+            self.motor.move(200)
