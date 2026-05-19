@@ -1,19 +1,22 @@
-from time import sleep
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
+from nicos.devices.abstract import MappedMoveable
 from nicos.core import (
     Attach,
     Moveable,
     Override,
     Value,
-    multiStatus,
     tupleof,
     Param,
     pvname,
     SIMULATION,
     status,
 )
+
+
+class NewportLimitsWrapper(MappedMoveable):
+    """Wrapper device to verify posisions sent to the hexapod by the user"""
 
 
 class NewportHexapod(EpicsDevice, Moveable):
@@ -36,7 +39,7 @@ class NewportHexapod(EpicsDevice, Moveable):
 
     _record_fields = {
         "status": "STATUS",
-        "move": "MOVE_ALL",
+        "writepv": "MOVE_ALL",
     }
 
     axis_names = ("tx", "ty", "tz", "rx", "ry", "rz", "gmt")
@@ -59,12 +62,10 @@ class NewportHexapod(EpicsDevice, Moveable):
         self._epics_wrapper.put_pv_value(self._get_pv_name(name, value))
 
     def doStart(self, target):
-        # Create a very small delay between axis motions to allow
-        # for the controller to run the command
-        # TODO: Implement MOVE_ALL pv from Newport Hexapod
-        for name, input in zip(self.axis_names, target):
-            self._adevs[name].start(input)
-            sleep(1)
+        hexapod_target = target[:-1]
+        goniometer_target = target[6]
+        self._set_pv(self._get_pv_name("writepv"), hexapod_target)
+        self._adevs["gmt"].start(goniometer_target)
 
     def doRead(self, maxage=0):
         pos = [self._adevs[name].read(maxage) for name in self.axis_names]
