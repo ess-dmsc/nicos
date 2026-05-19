@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 
-from nicos.clients.gui.panels.setup_panel import ProposalDelegate, combineUsers
+from nicos.clients.gui.panels.setup_panel import ProposalDelegate
 from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.core import ADMIN
 from nicos.guisupport.qt import (
@@ -15,6 +15,7 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.tablemodel import TableModel
 from nicos.utils import decodeAny, findResource
+from nicos.utils.user import combineUsers
 from nicos_ess.gui.panels.panel import PanelBase
 
 USER_FIELDS = ["name", "email", "affiliation"]
