@@ -151,6 +151,8 @@ deserialiser_by_schema = {
     "hs01": deserialise_hs01,
 }
 
+input_schemas = ("ev42", "ev44", "da00")
+
 
 class JustBinItImage(ImageChannelMixin, PassiveChannel):
     arraydesc = ArrayDesc("", shape=(0,), dtype=np.float64)
@@ -231,6 +233,13 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             type=str,
             default="",
             userparam=True,
+            settable=True,
+        ),
+        "input_schema": Param(
+            "Optional input schema override for this image channel",
+            type=oneof("", *input_schemas),
+            default="",
+            userparam=False,
             settable=True,
         ),
         "rotation": Param(
@@ -354,7 +363,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         # Generate a unique-ish id
         self._unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
 
-        return {
+        config = {
             "type": hist_type_by_name[self.hist_type].name,
             "data_brokers": self.brokers,
             "data_topics": [self.data_topic],
@@ -368,6 +377,9 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             "source": self.source,
             "id": self._unique_id,
         }
+        if self.input_schema:
+            config["input_schema"] = self.input_schema
+        return config
 
     def doInfo(self):
         result = [
@@ -420,14 +432,14 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         "hist_schema": Param(
             "Which schema to use for histograms",
             type=oneof(*deserialiser_by_schema.keys()),
-            default="hs00",
+            default="hs01",
             userparam=False,
             settable=True,
         ),
         "event_schema": Param(
             "Which schema the event data uses",
-            type=oneof("ev42", "ev44"),
-            default="ev42",
+            type=oneof(*input_schemas),
+            default="ev44",
             userparam=False,
             settable=True,
         ),
