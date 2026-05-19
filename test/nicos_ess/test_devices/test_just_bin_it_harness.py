@@ -65,9 +65,7 @@ def recording_kafka(monkeypatch):
             if msg_id in acked_ids:
                 continue
             acked_ids.add(msg_id)
-            return json.dumps(
-                {"msg_id": msg_id, "response": "ACK"}
-            ).encode("utf-8")
+            return json.dumps({"msg_id": msg_id, "response": "ACK"}).encode("utf-8")
         return None
 
     consumer = StubKafkaConsumer(poll_hook=poll_hook)
