@@ -163,6 +163,65 @@ class TestJustBinItDetectorHarness:
         assert commands.count("stop") == 1
         assert detector.status(0)[0] != status.ERROR
 
+    def test_image_input_schema_overrides_detector_default(
+        self, daemon_device_harness, recording_kafka
+    ):
+        """A single image channel can override the detector input schema."""
+        daemon_device_harness.create_master(
+            TimerChannel,
+            name="timer",
+            update_interval=0.01,
+        )
+
+        for name, overrides in [
+            ("ev44_image_1", {}),
+            ("ev44_image_2", {}),
+            ("da00_image", {"input_schema": "da00"}),
+        ]:
+            image_config = {
+                "brokers": ["localhost:9092"],
+                "hist_topic": "jbi_hist",
+                "data_topic": "jbi_data",
+                "hist_type": "1-D TOF",
+                "num_bins": 4,
+                "rotation": 0,
+            }
+            image_config.update(overrides)
+            daemon_device_harness.create_master(
+                just_bin_it.JustBinItImage,
+                name=name,
+                **image_config,
+            )
+
+        detector = daemon_device_harness.create_master(
+            just_bin_it.JustBinItDetector,
+            name="just_bin_it_detector",
+            brokers=["localhost:9092"],
+            command_topic="jbi_command",
+            response_topic="jbi_response",
+            event_schema="ev44",
+            statustopic=[],
+            images=["ev44_image_1", "ev44_image_2", "da00_image"],
+            timers=["timer"],
+        )
+
+        detector.prepare()
+        detector.start()
+        time.sleep(ACK_WAIT_SECONDS)
+        detector.finish()
+
+        config = next(
+            command
+            for record in recording_kafka.messages
+            for command in [json.loads(record["message"].decode("utf-8"))]
+            if command["cmd"] == "config"
+        )
+
+        assert config["input_schema"] == "ev44"
+        assert "input_schema" not in config["histograms"][0]
+        assert "input_schema" not in config["histograms"][1]
+        assert config["histograms"][2]["input_schema"] == "da00"
+
     def test_disconnect_and_recovery_follow_kafka_status_contract(
         self, daemon_device_harness, recording_kafka
     ):
