@@ -91,6 +91,7 @@ devices = dict(
     estia_hexapod=device(
         "nicos_ess.estia.devices.newport.NewportHexapod",
         description="Hexapod Device",
+        pv_root=hex_root,
         tx="tx",
         ty="ty",
         tz="tz",
