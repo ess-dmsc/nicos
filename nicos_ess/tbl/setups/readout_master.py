@@ -35,12 +35,12 @@ devices = dict(
         readpv="{}MrfMsg-R".format(pv_root_1),
     ),
     rmm1_timing_mode_source=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The source timing mode",
         readpv="{}TimingModeSrc-R".format(pv_root_1),
     ),
     rmm1_timing_mode_sync=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The sync timing mode",
         readpv="{}TimingModeSync-R".format(pv_root_1),
     ),
@@ -75,14 +75,13 @@ devices = dict(
         readpv="{}MrfMsg-R".format(pv_root_2),
     ),
     rmm2_timing_mode_source=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The source timing mode",
         readpv="{}TimingModeSrc-R".format(pv_root_2),
     ),
     rmm2_timing_mode_sync=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The sync timing mode",
         readpv="{}TimingModeSync-R".format(pv_root_2),
     ),
-    
 )
