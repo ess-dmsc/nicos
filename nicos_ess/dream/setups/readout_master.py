@@ -34,12 +34,12 @@ devices = dict(
         readpv="{}MrfMsg-R".format(pv_root_1),
     ),
     rmm1_timing_mode_source=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The mode of timing source (local/external/mrf)",
         readpv="{}TimingModeSrc-R".format(pv_root_1),
     ),
     rmm1_timing_mode_sync=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The sync timing mode",
         readpv="{}TimingModeSync-R".format(pv_root_1),
     ),
