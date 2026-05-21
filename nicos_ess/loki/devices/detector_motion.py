@@ -53,7 +53,7 @@ class LOKIDetectorMotion(EpicsMotor):
         return True, ""
 
     def isAllowed(self, pos):
-        return Moveable.isAllowed(pos)
+        return Moveable.isAllowed(self, pos)
 
     def doIsAllowed(self, pos):
         """
