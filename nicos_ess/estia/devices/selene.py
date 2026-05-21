@@ -49,7 +49,7 @@ from nicos.core import (
 from nicos.core.device import Moveable
 from nicos.devices.generic import BaseSequencer, LockedDevice
 from nicos.devices.generic.sequence import SeqDev, SeqMethod, SeqWait
-from nicos_ess.devices.epics.pva import EpicsMappedReadable
+from nicos_ess.devices.epics.pva import EpicsStringReadable
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from nicos_ess.estia.devices.multiline import MultilineChannel, MultilineController
 from nicos_ess.estia.devices.selene_calculations import SeleneCalculator
@@ -187,10 +187,10 @@ class SeleneRobot(Moveable):
         "move_z": Attach("Device for approache", EpicsMotor),
         "adjust1": Attach("Device for rotation", EpicsMotor),
         "approach1": Attach("Device for approache", EpicsMotor),
-        "hex_state1": Attach("Device reporting the hex status", EpicsMappedReadable),
+        "hex_state1": Attach("Device reporting the hex status", EpicsStringReadable),
         "adjust2": Attach("Device for rotation", EpicsMotor),
         "approach2": Attach("Device for approache", EpicsMotor),
-        "hex_state2": Attach("Device reporting the hex status", EpicsMappedReadable),
+        "hex_state2": Attach("Device reporting the hex status", EpicsStringReadable),
     }
 
     parameter_overrides = {
