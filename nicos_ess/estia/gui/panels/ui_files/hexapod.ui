@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1108</width>
+    <width>1213</width>
     <height>992</height>
    </rect>
   </property>
@@ -21,7 +21,7 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>911</width>
+     <width>1191</width>
      <height>53</height>
     </rect>
    </property>
@@ -75,8 +75,8 @@
     <rect>
      <x>10</x>
      <y>70</y>
-     <width>1021</width>
-     <height>621</height>
+     <width>1201</width>
+     <height>531</height>
     </rect>
    </property>
    <property name="tabPosition">
@@ -477,10 +477,10 @@
               <number>2</number>
              </property>
              <property name="minimum">
-              <double>-200.000000000000000</double>
+              <double>-500.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>200.000000000000000</double>
+              <double>500.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -1216,9 +1216,9 @@
     <widget class="QGroupBox" name="statusBox">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>380</y>
-       <width>191</width>
+       <x>1040</x>
+       <y>30</y>
+       <width>131</width>
        <height>91</height>
       </rect>
      </property>
@@ -1230,7 +1230,7 @@
        <rect>
         <x>0</x>
         <y>20</y>
-        <width>191</width>
+        <width>131</width>
         <height>71</height>
        </rect>
       </property>
@@ -1257,21 +1257,21 @@
     <widget class="QGroupBox" name="coordBox">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>480</y>
-       <width>191</width>
+       <x>1040</x>
+       <y>130</y>
+       <width>131</width>
        <height>91</height>
       </rect>
      </property>
      <property name="title">
-      <string>Coordinate System</string>
+      <string>Coordinate State</string>
      </property>
      <widget class="QLabel" name="coordSyst">
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>20</y>
-        <width>191</width>
+        <width>131</width>
         <height>71</height>
        </rect>
       </property>
@@ -1297,9 +1297,9 @@
     <widget class="QPushButton" name="butTest">
      <property name="geometry">
       <rect>
-       <x>10</x>
-       <y>20</y>
-       <width>190</width>
+       <x>20</x>
+       <y>30</y>
+       <width>101</width>
        <height>25</height>
       </rect>
      </property>
@@ -1307,7 +1307,7 @@
       <locale language="English" country="UnitedStates"/>
      </property>
      <property name="text">
-      <string>Testing button</string>
+      <string>Test</string>
      </property>
      <property name="default">
       <bool>false</bool>

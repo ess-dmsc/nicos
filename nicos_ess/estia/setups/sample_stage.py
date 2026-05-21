@@ -1,4 +1,7 @@
-description = "Sample stage system made up of Newport Hexapod and Goinometer Sample Rotation Stage"
+description = (
+    "Sample stage system made up of Newport Hexapod "
+    "and Goniometer Sample Rotation Stage"
+)
 
 hex_root = "ESTIA-SES:MC-MCU-001:"
 
@@ -15,7 +18,7 @@ devices = dict(
     goniometer=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Sample Stage Rotation Base",
-        motorpv=f"ESTIA-SpRot:MC-RotZ01:Mtr",
+        motorpv="ESTIA-SpRot:MC-RotZ01:Mtr",
         has_powerauto=False,
         fmtstr="%.2f",
     ),
@@ -24,6 +27,9 @@ devices = dict(
         description="Tx Translation",
         motorpv=f"{hex_root}m1",
         has_powerauto=False,
+        has_reseterror=False,
+        has_errorbit=False,
+        has_msgtxt=False,
         fmtstr="%.2f",
         visibility=(),
     ),
@@ -32,6 +38,9 @@ devices = dict(
         description="Ty Translation",
         motorpv=f"{hex_root}m2",
         has_powerauto=False,
+        has_reseterror=False,
+        has_errorbit=False,
+        has_msgtxt=False,
         fmtstr="%.2f",
         visibility=(),
     ),
@@ -40,6 +49,9 @@ devices = dict(
         description="Tz Translation",
         motorpv=f"{hex_root}m3",
         has_powerauto=False,
+        has_reseterror=False,
+        has_errorbit=False,
+        has_msgtxt=False,
         fmtstr="%.2f",
         visibility=(),
     ),
@@ -48,6 +60,9 @@ devices = dict(
         description="Rx Rotation",
         motorpv=f"{hex_root}m4",
         has_powerauto=False,
+        has_reseterror=False,
+        has_errorbit=False,
+        has_msgtxt=False,
         fmtstr="%.2f",
         visibility=(),
     ),
@@ -56,6 +71,9 @@ devices = dict(
         description="Ry Rotation",
         motorpv=f"{hex_root}m5",
         has_powerauto=False,
+        has_reseterror=False,
+        has_errorbit=False,
+        has_msgtxt=False,
         fmtstr="%.2f",
         visibility=(),
     ),
@@ -64,11 +82,14 @@ devices = dict(
         description="Rz Rotation",
         motorpv=f"{hex_root}m6",
         has_powerauto=False,
+        has_reseterror=False,
+        has_errorbit=False,
+        has_msgtxt=False,
         fmtstr="%.2f",
         visibility=(),
     ),
     estia_hexapod=device(
-        "nicos_ess.devices.virtual.hexapod.TableHexapod",
+        "nicos_ess.estia.devices.newport.NewportHexapod",
         description="Hexapod Device",
         tx="tx",
         ty="ty",
@@ -76,7 +97,7 @@ devices = dict(
         rx="rx",
         ry="ry",
         rz="rz",
-        table="goniometer",
+        gmt="goniometer",
     ),
     hexapod_status=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

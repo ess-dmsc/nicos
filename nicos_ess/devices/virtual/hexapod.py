@@ -17,6 +17,7 @@ class VirtualHexapod(Moveable):
         "t_speed": Param(
             "Virtual translation speed",
             settable=True,
+            mandatory=False,
             type=floatrange(0.01, 20),
             default=1,
             unit="mm/s",
@@ -24,6 +25,7 @@ class VirtualHexapod(Moveable):
         "r_speed": Param(
             "Virtual rotation speed",
             settable=True,
+            mandatory=False,
             type=floatrange(0.001, 1.5),
             default=0.01,
             unit="deg/s",
@@ -44,8 +46,8 @@ class VirtualHexapod(Moveable):
         self._setSpeed(self.r_speed, "deg")
 
     def doStart(self, target):
-        for name, target in zip(self.axis_names, target):
-            self._adevs[name].start(target)
+        for name, pos in zip(self.axis_names, target):
+            self._adevs[name].start(pos)
 
     def doRead(self, maxage=0):
         pos = [self._adevs[name].read(maxage) for name in self.axis_names]
