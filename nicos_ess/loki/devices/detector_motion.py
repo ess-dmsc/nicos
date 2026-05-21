@@ -25,9 +25,6 @@ class LOKIDetectorMotion(EpicsMotor):
         "power_supply": Attach("Power supply for detector bank 0", PowerSupplyBank),
     }
 
-    def doInit(self, mode):
-        EpicsMotor.doInit(self, mode)
-
     def _bank_status_is_ok(self):
         # # TODO: Move check to power supply class
         bank_status, status_msg = self._attached_power_supply.status()
