@@ -1,22 +1,50 @@
 description = "The livedata interface for tbl."
 
 devices = dict(
-    monitor1_current=device(
+    channel_1=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="Sliding time window monitor",
+        description="A TBL livedata channel",
         type="counter",
     ),
-    monitor1_cumulative=device(
+    channel_2=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="Accumulated monitor",
+        description="A TBL livedata channel",
         type="counter",
     ),
-    livedata_collector=device(
+    channel_3=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="A TBL livedata channel",
+        type="counter",
+    ),
+    channel_4=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="A TBL livedata channel",
+        type="counter",
+    ),
+    channel_5=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="A TBL livedata channel",
+        type="counter",
+    ),
+    channel_6=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="A TBL livedata channel",
+        type="counter",
+    ),
+    channel_collector=device(
         "nicos_ess.devices.datasources.livedata.LiveDataCollector",
-        description="The livedata detector collector",
+        description="The livedata histogrammer",
         brokers=configdata("config.KAFKA_BROKERS"),
         data_topics=["tbl_livedata_data"],
         commands_topic="tbl_livedata_commands",
-        others=["monitor1_current", "monitor1_cumulative"],
+        status_topics=["tbl_livedata_heartbeat"],
+        others=[
+            "channel_1",
+            "channel_2",
+            "channel_3",
+            "channel_4",
+            "channel_5",
+            "channel_6",
+        ],
     ),
 )
