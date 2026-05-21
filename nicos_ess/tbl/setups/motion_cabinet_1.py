@@ -2,12 +2,9 @@ description = "Motion cabinet 1"
 
 devices = dict(
     heavy_shutter=device(
-        "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Heavy Shutter",
-        writepv="TBL-HvSht:MC-Pne-01:ShtOpen",
         readpv="TBL-HvSht:MC-Pne-01:ShtAuxBits07",
-        resetpv="TBL-HvSht:MC-Pne-01:ShtErrRst",
-        msgtxt="TBL-HvSht:MC-Pne-01:ShtMsgTxt",
     ),
     cabinet_1_status=device(
         "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
