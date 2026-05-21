@@ -51,7 +51,7 @@ class LOKIDetectorMotion(EpicsMotor):
                 return False, error_msg
         return True, ""
 
-    def isAllowed(self, pos):
+    def doIsAllowed(self, pos):
         """
         Hook method from the Device class to check if movement is allowed,
         by verifying if power supply is OFF.
@@ -81,4 +81,4 @@ class LOKIDetectorMotion(EpicsMotor):
         if not voltage_below_thresh:
             return False, msg
 
-        return EpicsMotor.isAllowed(self, pos)
+        return True, ""
