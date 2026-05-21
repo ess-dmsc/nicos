@@ -1,5 +1,6 @@
 from nicos.core import (
     Attach,
+    Moveable,
     Param,
     status,
 )
@@ -50,6 +51,9 @@ class LOKIDetectorMotion(EpicsMotor):
             if channel.doReadVoltage_Monitor() > self.voltage_off_threshold:
                 return False, error_msg
         return True, ""
+
+    def isAllowed(self, pos):
+        return Moveable.isAllowed(pos)
 
     def doIsAllowed(self, pos):
         """
