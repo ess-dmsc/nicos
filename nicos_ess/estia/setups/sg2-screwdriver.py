@@ -33,7 +33,7 @@ devices = dict(
         },
     ),
     sg2_screwdriver_hex_state_1=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Hexscrew state",
         readpv=f"{pvprefix}LinY-01:Mtr-MsgTxt",
     ),
@@ -57,7 +57,7 @@ devices = dict(
         },
     ),
     sg2_screwdriver_hex_state_2=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Hexscrew state",
         readpv=f"{pvprefix}LinY-02:Mtr-MsgTxt",
     ),
