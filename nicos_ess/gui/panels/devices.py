@@ -1075,6 +1075,7 @@ class ControlDialog(QDialog):
                 "nicos_ess.devices.epics.pva.motor.EpicsMotor",
                 "nicos_ess.estia.devices.mover.SeleneMover",
                 "nicos_ess.estia.devices.virtual_source.VirtualSource",
+                "nicos_ess.loki.devices.cetoni_pump.CetoniPumpController",
             ]
 
             if not any(
