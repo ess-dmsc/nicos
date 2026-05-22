@@ -5,29 +5,31 @@ virtual_axes = [
     {
         "name": "horizontal_center",
         "description": "Slits L Horizontal Center",
-        "motorpv_suffix": "SlL:MC-Yc-01",
+        "motorpv_suffix": "SlL:MC-Yc-01:Mtr",
     },
     {
         "name": "horizontal_gap",
         "description": "Slits L Horizontal Gap",
-        "motorpv_suffix": "SlL:MC-Yg-01",
+        "motorpv_suffix": "SlL:MC-Yg-01:Mtr",
     },
     {
         "name": "vertical_center",
         "description": "Slits L Vertical Center",
-        "motorpv_suffix": "SlL:MC-Zc-01",
+        "motorpv_suffix": "SlL:MC-Zc-01:Mtr",
     },
     {
         "name": "vertical_gap",
         "description": "Slits L Vertical Gap",
-        "motorpv_suffix": "SlL:MC-Zg-01",
+        "motorpv_suffix": "SlL:MC-Zg-01:Mtr",
     },
 ]
 
+devices = {}
+
 for virtual_axis in virtual_axes:
-    devices[f"{slits_set_name}_{virtual_axis["name"]}"] = device(
+    devices[f"{slits_set_name}_{virtual_axis['name']}"] = device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description=f"{virtual_axis["description"]}",
-        motorpv=f"{motorpv_prefix}{virtual_axis["motorpv_suffix"]}",
+        description=f"{virtual_axis['description']}",
+        motorpv=f"{motorpv_prefix}{virtual_axis['motorpv_suffix']}",
         monitor_deadband=0.01,
     )
