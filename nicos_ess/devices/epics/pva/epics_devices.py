@@ -811,6 +811,8 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             self._epics_wrapper.connect_pv(self.targetpv)
 
     def doInit(self, mode):
+        if mode != SIMULATION:
+            _update_mapped_choices(self)
         if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
@@ -845,9 +847,6 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
                         self._connection_change_callback,
                     )
                 )
-
-        if mode != SIMULATION:
-            _update_mapped_choices(self)
         MappedMoveable.doInit(self, mode)
 
     def doRead(self, maxage=0):
