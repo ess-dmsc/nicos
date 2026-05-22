@@ -583,8 +583,8 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
     def doWriteDosing_Time(self, target):
         self._put_pv_val("dosing_time", target)
 
-    def doReadMax_Vol(self):
-        return self._get_cached_pv_or_ask("max_vol")
+    def doReadTotal_Vol(self):
+        return self._get_cached_pv_or_ask("total_vol")
 
     def doReadFirst_Fill_Syringe(self):
         return self._get_cached_pv_or_ask("first_fill_syringe")
