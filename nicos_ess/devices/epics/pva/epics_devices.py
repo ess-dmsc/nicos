@@ -65,6 +65,7 @@ class RecordType(Enum):
     VALUE = 1
     STATUS = 2
     BOTH = 3
+    OTHER = 4
 
 
 class EpicsParameters(HasNexusConfig):
