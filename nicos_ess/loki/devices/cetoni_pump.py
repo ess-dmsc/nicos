@@ -79,6 +79,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, default=""),
         "abslimits": Override(volatile=True, mandatory=False),
+        "userlimits": Override(volatile=True, chatty=False),
     }
 
     def doPreinit(self, mode):
@@ -320,7 +321,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     @usermethod
     def generate_flow(self, target):
         """
-        Generate constant flow
+        Generate constant flow with target flow rate
 
         Positive value = dispense
         Negative value = aspirate
@@ -454,10 +455,10 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         self._record_fields = self._get_record_fields()
         if mode == SIMULATION:
             return
-        self._epics_wrapper.connect_pv(self._get_pv_name("value"))
-        self._setROParam("mapping", {"Continuous flow": 0, "Time limited flow": 1})
+        self._epics_wrapper.connect_pv(self._get_pv_name("enable"))
 
     def doInit(self, mode):
+        self._setROParam("mapping", {"Continuous flow": 0, "Time limited flow": 1})
         if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._set_up_subscriptions()
 
