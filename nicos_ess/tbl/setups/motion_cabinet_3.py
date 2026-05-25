@@ -53,9 +53,9 @@ devices = dict(
         motorpv="TBL-TBL:MC-Pos-302:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_303=device(
+    camera_box=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #303",
+        description="Camera box",
         motorpv="TBL-TBL:MC-Pos-303:Mtr",
         monitor_deadband=0.01,
     ),
@@ -65,51 +65,51 @@ devices = dict(
         motorpv="TBL-TBL:MC-Pos-304:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_305=device(
+    linear_x_1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #305",
+        description="Linear X 1",
         motorpv="TBL-TBL:MC-Pos-305:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_306=device(
+    linear_x_2=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #306",
+        description="Linear X 2",
         motorpv="TBL-TBL:MC-Pos-306:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_307=device(
+    linear_x_3=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #307",
+        description="Linear X 3",
         motorpv="TBL-TBL:MC-Pos-307:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_308=device(
+    linear_z_1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #308",
+        description="Linear Z 1",
         motorpv="TBL-TBL:MC-Pos-308:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_309=device(
+    tilt_1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #309",
+        description="Tilt 1",
         motorpv="TBL-TBL:MC-Pos-309:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_310=device(
+    tilt_2=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #310",
+        description="Tilt 2",
         motorpv="TBL-TBL:MC-Pos-310:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_311=device(
+    small_rotation=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #311",
+        description="Small rotation",
         motorpv="TBL-TBL:MC-Pos-311:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_312=device(
+    medium_rotation=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #312",
+        description="Medium rotation",
         motorpv="TBL-TBL:MC-Pos-312:Mtr",
         monitor_deadband=0.01,
     ),

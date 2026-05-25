@@ -53,75 +53,75 @@ devices = dict(
         motorpv="TBL-TBL:MC-Pos-402:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_403=device(
+    small_slit_1_left=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #403",
+        description="Small slit 1 left blade",
         motorpv="TBL-TBL:MC-Pos-403:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_404=device(
+    small_slit_1_right=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #404",
+        description="Small slit 1 right blade",
         motorpv="TBL-TBL:MC-Pos-404:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_405=device(
+    small_slit_1_lower=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #405",
+        description="Small slit 1 lower blade",
         motorpv="TBL-TBL:MC-Pos-405:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_406=device(
+    small_slit_1_upper=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #406",
+        description="Small slit 1 upper blade",
         motorpv="TBL-TBL:MC-Pos-406:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_407=device(
+    large_slit_right=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #407",
+        description="Large slit right blade",
         motorpv="TBL-TBL:MC-Pos-407:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_408=device(
+    large_slit_left=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #408",
+        description="Large slit left blade",
         motorpv="TBL-TBL:MC-Pos-408:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_409=device(
+    large_slit_upper=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #409",
+        description="Large slit upper blade",
         motorpv="TBL-TBL:MC-Pos-409:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_410=device(
+    large_slit_lower=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #410",
+        description="Large slit lower blade",
         motorpv="TBL-TBL:MC-Pos-410:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_411=device(
+    small_slit_2_right=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #411",
+        description="Small slit 2 right blade",
         motorpv="TBL-TBL:MC-Pos-411:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_412=device(
+    small_slit_2_left=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #412",
+        description="Small slit 2 left blade",
         motorpv="TBL-TBL:MC-Pos-412:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_413=device(
+    small_slit_2_upper=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #413",
+        description="Small slit 2 upper blade",
         motorpv="TBL-TBL:MC-Pos-413:Mtr",
         monitor_deadband=0.01,
     ),
-    mc_mtr_414=device(
+    small_slit_2_lower=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Motion control electrical axis #414",
+        description="Small slit 2 lower blade",
         motorpv="TBL-TBL:MC-Pos-414:Mtr",
         monitor_deadband=0.01,
     ),
