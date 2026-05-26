@@ -443,7 +443,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         ),
         "first_fill_syringe": Param(
             description="When starting linked mode, the direction of flow will fill this syringe first",
-            type=oneof("SP1", "SP2"),
         ),
     }
 
