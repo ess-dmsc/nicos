@@ -444,6 +444,10 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         ),
     }
 
+    parameter_overrides = {
+        "mapping": Override(internal=True, mandatory=False, settable=False),
+    }
+
     attached_devices = {
         "sp1": Attach("controller for syringe SP1", CetoniPumpController),
         "sp2": Attach("controller for syringe SP2", CetoniPumpController),
