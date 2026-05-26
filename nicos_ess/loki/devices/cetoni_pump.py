@@ -612,9 +612,18 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
     def _readRaw(self, maxage=0):
         return self._get_cached_pv_or_ask("value")
 
+    def doRead(self, maxage=0):
+        return self._mapReadValue(self._readRaw(maxage))
+
     def _startRaw(self, target):
-        print("target:", target)
         self._put_pv_val("target", target)
+
+    def doStart(self, target):
+        self._startRaw(self._mapTargetValue(target))
+        # TODO:
+        #  set mode then start B02-CSLab:SE-Pumps:LnkdStopMode-SP
+        #
+        # self._put_pv_val("start", 1)
 
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
@@ -651,13 +660,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         else:
             self._put_pv_val("enable", 0)
         self._cache.invalidate(self, "is_enabled")
-
-    def doStart(self, target):
-        # TODO:
-        #  set mode then start B02-CSLab:SE-Pumps:LnkdStopMode-SP
-        #
-        # self._put_pv_val("start", 1)
-        pass
 
     def doStop(self):
         self._put_pv_val("stop", 1)
