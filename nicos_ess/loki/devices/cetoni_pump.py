@@ -468,9 +468,10 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
 
     def doInit(self, mode):
         if mode != SIMULATION:
-            _update_mapped_choices(self)
+            self._set_mapping(self._get_pv_name("target"))
         if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._set_up_subscriptions()
+        MappedMoveable.doInit(self, mode)
 
     def _get_record_fields(self):
         return {
@@ -559,6 +560,16 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
                     connection_callback=self._connection_change_callback,
                 )
                 self._epics_subscriptions.append(status_subscription)
+
+    def _set_mapping(self, pv_name):
+        choices = self._get_mapped_choices(pv_name)
+        new_mapping = {}
+        for i, choice in enumerate(choices):
+            new_mapping[choice] = i
+        self._setROParam("mapping", new_mapping)
+        self._inverse_mapping = {}
+        for k, v in self.mapping.items():
+            self._inverse_mapping[v] = k
 
     def _get_pv_name(self, pv_param):
         return f"{self.pvroot}{self._record_fields[pv_param].pv_suffix}"
