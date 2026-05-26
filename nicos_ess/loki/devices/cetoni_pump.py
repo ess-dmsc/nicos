@@ -623,9 +623,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             raise ConfigurationError(self, f"Invalid choice for {pv_name}: {value}")
         return True
 
-    # def _readRaw(self, maxage=0):
-    #     return self._get_cached_pv_or_ask("value")
-
     def doRead(self, maxage=0):
         return self._get_cached_mappedpv_or_ask("value")
 
