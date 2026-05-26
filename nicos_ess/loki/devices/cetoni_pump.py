@@ -1,3 +1,4 @@
+from faulthandler import is_enabled
 from time import sleep, time
 
 import nicos.commands.basic
@@ -632,6 +633,10 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         self._put_pv_val("target", target)
 
     def doStart(self, target):
+        is_enabled = self._get_cached_pv_or_ask("is_enabled")
+        if not is_enabled:
+            self.log.warning("Please enable before starting")
+            return
         self._startRaw(self._mapTargetValue(target))
         sleep(0.5)
         self._put_pv_val("start", 1)
