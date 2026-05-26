@@ -690,9 +690,9 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             return status.ERROR, "SP2 in faulty state"
 
         is_pumping = self._get_cached_pv_or_ask("is_pumping")
+        mode = self.read()
         if is_pumping:
-            # TODO: pumping continuous or pumping time
-            return status.BUSY, "Pumping"
+            return status.BUSY, f"Pumping in mode: {mode}"
 
         is_enabled = self._get_cached_pv_or_ask("is_enabled")
         if is_enabled:
