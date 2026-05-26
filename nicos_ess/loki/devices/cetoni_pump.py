@@ -1,5 +1,6 @@
-import time
+from time import sleep, time
 
+import nicos.commands.basic
 from nicos import session
 from nicos.core import (
     HasLimits,
@@ -362,7 +363,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         message,
         **kwargs,
     ):
-        time_stamp = time.time()
+        time_stamp = time()
         self._cache.put(dev=self._name, key=pv_param, value=value, time=time_stamp)
 
     def _status_change_callback(
@@ -376,7 +377,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         message,
         **kwargs,
     ):
-        time_stamp = time.time()
+        time_stamp = time()
         if pv_param == "value":
             self._cache.put(
                 dev=self._name,
@@ -405,7 +406,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
                 dev=self._name,
                 key="status",
                 value=(status.ERROR, "communication failure"),
-                time=time.time(),
+                time=time(),
             )
 
 
@@ -456,6 +457,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
     attached_devices = {
         "sp1": Attach("controller for syringe SP1", CetoniPumpController),
         "sp2": Attach("controller for syringe SP2", CetoniPumpController),
+        "pump_time": Attach("Time for linked syringe mode 'Time'", Moveable),
     }
 
     def doPreinit(self, mode):
@@ -631,10 +633,8 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
 
     def doStart(self, target):
         self._startRaw(self._mapTargetValue(target))
-        # TODO:
-        #  set mode then start B02-CSLab:SE-Pumps:LnkdStopMode-SP
-        #
-        # self._put_pv_val("start", 1)
+        sleep(0.5)
+        self._put_pv_val("start", 1)
 
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
@@ -709,7 +709,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         message,
         **kwargs,
     ):
-        time_stamp = time.time()
+        time_stamp = time()
         if pv_param in ["value", "target"]:
             self._cache.put(
                 dev=self._name,
@@ -731,7 +731,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         message,
         **kwargs,
     ):
-        time_stamp = time.time()
+        time_stamp = time()
         if pv_param == "value":
             self._cache.put(
                 dev=self._name,
@@ -760,5 +760,5 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
                 dev=self._name,
                 key="status",
                 value=(status.ERROR, "communication failure"),
-                time=time.time(),
+                time=time(),
             )
