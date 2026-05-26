@@ -508,6 +508,11 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
                 pv_suffix="B02-CSLab:SE-Pumps:C_LnkdStart",
                 record_type=RecordType.OTHER,
             ),
+            "stop_mode": RecordInfo(
+                cache_key="stop_mode",
+                pv_suffix="B02-CSLab:SE-Pumps:LnkdStopMode-SP",
+                record_type=RecordType.VALUE,
+            ),
             "stop": RecordInfo(
                 cache_key="stop",
                 pv_suffix="B02-CSLab:SE-Pumps:SP1StopAllPumps",
@@ -586,6 +591,9 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         if not value in choices:
             raise ConfigurationError(self, f"Invalid choice for {pv_name}: {value}")
         return True
+
+    def doRead(self):
+        return self._get_cached_pv_or_ask("stop_mode")
 
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
