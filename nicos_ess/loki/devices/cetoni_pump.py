@@ -13,6 +13,8 @@ from nicos.core import (
     CanDisable,
     oneof,
     Attach,
+    PositionError,
+    ConfigurationError,
 )
 from nicos.devices.abstract import CanReference, MappedMoveable
 from nicos_ess.devices.epics.pva.epics_devices import (
@@ -21,6 +23,7 @@ from nicos_ess.devices.epics.pva.epics_devices import (
     RecordInfo,
     RecordType,
     get_from_cache_or,
+    PvReadOrWrite,
 )
 
 
@@ -570,6 +573,12 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             lambda: self._get_pv_val(pv_param, as_string),
         )
 
+    def _get_mapped_choices(self, pv_name):
+        choices = self._epics_wrapper.get_value_choices(pv_name)
+        if not choices:
+            raise ConfigurationError(self, f"PV {pv_name} has no value choices")
+        return choices
+
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
 
@@ -592,10 +601,16 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         return self._get_cached_pv_or_ask("total_vol")
 
     def doReadFirst_Fill_Syringe(self):
-        return self._get_cached_pv_or_ask("first_fill_syringe")
+        pv_name = self._get_pv_name("first_fill_syringe")
+        choices = self._get_mapped_choices(pv_name)
+        value = self._get_cached_pv_or_ask("first_fill_syringe")
+        return choices[value]
 
     def doWriteFirst_Fill_Syringe(self, target):
-        self._put_pv_val("first_fill_syringe", target)
+        pv_name = self._get_pv_name("first_fill_syringe")
+        choices = self._get_mapped_choices(pv_name)
+        mapped_target = choices[target]
+        self._put_pv_val("first_fill_syringe", mapped_target)
 
     def doEnable(self, on=False):
         if on:
