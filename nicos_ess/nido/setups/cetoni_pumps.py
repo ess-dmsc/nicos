@@ -2,7 +2,7 @@ description = "The cetoni pumps"
 
 pump1_pvroot = "B02-CSLab:SE-Pumps:SP1"
 pump2_pvroot = "B02-CSLab:SE-Pumps:SP2"
-linked_pvroot = "B02-CSLab:SE-Pumps:Lnk"
+linked_pvroot = "B02-CSLab:SE-Pumps:Lnkd"
 
 devices = dict(
     pump1=device(
@@ -27,10 +27,16 @@ devices = dict(
         readpv=f"{pump2_pvroot}SyrType-SP",
         writepv=f"{pump2_pvroot}SyrType-SP",
     ),
-    pump_linked_mode=device(
+    linked_mode=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode",
         pvroot="",
         sp1="pump1",
         sp2="pump2",
+        pump_time="linked_mode_time",
+    ),
+    linked_mode_time=device(
+        "nicos_ess.devices.epics.pva.epics_devices.EpicsDigitalMoveable",
+        readpv=f"{linked_pvroot}MaxDosingTime-SP",
+        writepv=f"{linked_pvroot}MaxDosingTime-SP",
     ),
 )
