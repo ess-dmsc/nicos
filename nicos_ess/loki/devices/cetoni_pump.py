@@ -584,7 +584,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
     def _target_valid(self, pv_name, value):
         choices = self._get_mapped_choices(pv_name)
         if not value in choices:
-            raise ConfigurationError(self, f"Invalid choice for {pv_name}")
+            raise ConfigurationError(self, f"Invalid choice for {pv_name}: {value}")
         return True
 
     def doReadFlowrate(self):
