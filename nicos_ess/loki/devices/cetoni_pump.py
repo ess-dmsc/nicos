@@ -442,7 +442,10 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             volatile=True,
         ),
         "first_fill_syringe": Param(
-            description="When starting linked mode, the direction of flow will fill this syringe first",
+            description="The direction of flow will fill this syringe first, options=[SP1, SP2]",
+            volatile=True,
+            settable=True,
+            type=str,
         ),
     }
 
@@ -578,6 +581,12 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             raise ConfigurationError(self, f"PV {pv_name} has no value choices")
         return choices
 
+    def _get_mapped_index(self, pv_name, value):
+        choices = self._get_mapped_choices(pv_name)
+        if not value in choices:
+            raise ConfigurationError(self, f"Invalid choice for {pv_name}")
+        return choices.index(value)
+
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
 
@@ -607,9 +616,8 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
 
     def doWriteFirst_Fill_Syringe(self, target):
         pv_name = self._get_pv_name("first_fill_syringe")
-        choices = self._get_mapped_choices(pv_name)
-        mapped_target = choices[target]
-        self._put_pv_val("first_fill_syringe", mapped_target)
+        mapped_target_index = self._get_mapped_index(pv_name, target)
+        self._put_pv_val("first_fill_syringe", mapped_target_index)
 
     def doEnable(self, on=False):
         if on:
