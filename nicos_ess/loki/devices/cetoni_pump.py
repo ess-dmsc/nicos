@@ -23,7 +23,7 @@ from nicos_ess.devices.epics.pva.epics_devices import (
     RecordInfo,
     RecordType,
     get_from_cache_or,
-    PvReadOrWrite,
+    _update_mapped_choices,
 )
 
 
@@ -467,7 +467,8 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         self._epics_wrapper.connect_pv(self._get_pv_name("enable"))
 
     def doInit(self, mode):
-        self._setROParam("mapping", {"Continuous flow": 0, "Time limited flow": 1})
+        if mode != SIMULATION:
+            _update_mapped_choices(self)
         if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._set_up_subscriptions()
 
