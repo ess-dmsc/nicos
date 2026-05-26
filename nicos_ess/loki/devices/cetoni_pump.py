@@ -597,6 +597,17 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             lambda: self._get_pv_val(pv_param, as_string),
         )
 
+    def _get_cached_mappedpv_or_ask(self, pv_param, as_string=False):
+        """
+        Gets the PV value from the cache if possible, else get it from the device.
+        """
+        cache_key = self._get_cache_key(pv_param)
+        return get_from_cache_or(
+            self,
+            cache_key,
+            lambda: self._mapReadValue(self._get_pv_val(pv_param, as_string)),
+        )
+
     def _get_mapped_choices(self, pv_name):
         choices = self._epics_wrapper.get_value_choices(pv_name)
         if not choices:
@@ -609,11 +620,11 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             raise ConfigurationError(self, f"Invalid choice for {pv_name}: {value}")
         return True
 
-    def _readRaw(self, maxage=0):
-        return self._get_cached_pv_or_ask("value")
+    # def _readRaw(self, maxage=0):
+    #     return self._get_cached_pv_or_ask("value")
 
     def doRead(self, maxage=0):
-        return self._mapReadValue(self._readRaw(maxage))
+        return self._get_cached_mappedpv_or_ask("value")
 
     def _startRaw(self, target):
         self._put_pv_val("target", target)
@@ -699,7 +710,15 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         **kwargs,
     ):
         time_stamp = time.time()
-        self._cache.put(dev=self._name, key=pv_param, value=value, time=time_stamp)
+        if pv_param in ["value", "target"]:
+            self._cache.put(
+                dev=self._name,
+                key=pv_param,
+                value=self._mapReadValue(value),
+                time=time_stamp,
+            )
+        else:
+            self._cache.put(dev=self._name, key=pv_param, value=value, time=time_stamp)
 
     def _status_change_callback(
         self,
