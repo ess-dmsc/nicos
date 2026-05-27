@@ -58,6 +58,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         "pressure_max": Param(
             description="Syringe max pressure",
             volatile=True,
+            settable=True,
         ),
         "pressure_unit": Param(
             description="Pressure unit",
@@ -270,6 +271,9 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
 
     def doReadPressure_Max(self):
         return self._get_cached_pv_or_ask("pressure_max")
+
+    def doWritePressure_Max(self, target):
+        self._put_pv_val("pressure_max", target)
 
     def doReadPressure_Unit(self):
         return self._get_cached_pv_or_ask("pressure_unit")
