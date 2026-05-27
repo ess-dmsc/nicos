@@ -145,9 +145,7 @@ devices = dict(
             },
     ),
     # Sample tool
-    # TODO: Adding and underline in the end due to cache (?) issues.
-    sample_tool__current_tool_=device(
-        # Only index is showing.
+    tool__current_tool=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="ARINAX SPU current mounted tool, readback (mockup)",
         readpv="NMX-mockup:getCurrentTool",
@@ -155,26 +153,18 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
+        visibility=()
     ),
-    # TODO: Adding and underline in the end due to cache (?) issues.
-    sample_tool__load_tool_=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
+    tool__load_tool=device(
+        "nicos_ess.nmx.devices.arinax.ConfigurableEpicsMappedMoveable",
         description="ARINAX SPU desired tool loading, control (mockup)",
-        readpv="NMX-mockup:LoadTool",
+        readpv="NMX-mockup:getCurrentTool",
         writepv="NMX-mockup:LoadTool",
         pva=False,
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        mapping={
-            "GoniometerEmpty": "GoniometerEmpty",
-            "CustomToolEmpty": "CustomToolEmpty",
-            "TouchProbe": "TouchProbe",
-            "ToolChanger": "ToolChanger",
-            "GoniometerSample": "GoniometerSample",
-            "CustomToolSample": "CustomToolSample",
-            "None": "None",
-        },
+        write_enum_string=True,
     ),
 
 )
