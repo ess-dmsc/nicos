@@ -93,7 +93,7 @@ devices = dict(
         pva=False,
     ),
     # Sample load
-    sample_load__load_SS_sample=device(
+    sample__load_SS_sample=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU load sample from storage, control (mockup)",
         readpv="NMX-mockup:LoadSSSample",
@@ -104,7 +104,7 @@ devices = dict(
         maxage=None,
         mapping=SAMPLE_STORAGE,
     ),
-    sample_load__load_UP_sample=device(
+    sample__load_UP_sample=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU load sample from unipucks, control (mockup)",
         readpv="NMX-mockup:LoadUPSample",
@@ -117,7 +117,7 @@ devices = dict(
 
     ),
     # TODO: Issue here: mapping is broken. The PV is LONG type. Idea: Ask ARINAX to make them as ENUM.
-    sample_load__sample_is_loaded=device(
+    sample__sample_is_loaded=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="ARINAX SPU sample is mounted, readback (mockup)",
         readpv="NMX-mockup:getIsSampleLoaded",
@@ -131,7 +131,7 @@ devices = dict(
         #    'Yes': 1,
         #    },
     ),
-    sample_load__unload_sample=device(
+    sample__unload_sample=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU unload sample, control (mockup)",
         readpv="NMX-mockup:UnLoadSample",
