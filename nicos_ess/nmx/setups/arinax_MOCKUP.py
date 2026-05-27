@@ -141,7 +141,7 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
         mapping={
-            'Unload sample': "1", # Any string should be okay.
+            'Unload sample': "1", # String PV. Preferably use "0" or "1".
             },
     ),
     # Sample tool
