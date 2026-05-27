@@ -54,6 +54,7 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
+        visibility=(),
     ),
     detector_config_setpoint=device(
         # Just for testing, coudl be removed later.
@@ -64,6 +65,7 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
+        visibility=(),
     ),
     # Sample centring motion
     sample_centring_chi=device(
