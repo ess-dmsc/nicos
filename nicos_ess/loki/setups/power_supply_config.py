@@ -70,7 +70,7 @@ lv_detector_channels = {
         "107": [f"{channel:>02}" for channel in range(0, 6)],
     },
     "bank1": {
-        "108": [f"{channel:>02}" for channel in range(0, 4)],
+        "108": [f"{channel:>02}" for channel in [0, 1, 2, 7]],
     },
     "bank2": {
         "108": [f"{channel:>02}" for channel in range(4, 7)],
