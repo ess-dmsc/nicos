@@ -261,10 +261,18 @@ class KafkaReadbackRouter(Device):
 
     @staticmethod
     def _apply_f144(state, decoded):
+        timestamp_ns = int(decoded.timestamp_unix_ns or 0)
         state.has_value = True
         state.value = decoded.value
-        state.value_timestamp_ns = int(decoded.timestamp_unix_ns or 0)
+        state.value_timestamp_ns = timestamp_ns
         state.value_revision += 1
+        if state.connection not in (None, ConnectionInfo.CONNECTED) and (
+            not timestamp_ns
+            or not state.connection_timestamp_ns
+            or timestamp_ns >= state.connection_timestamp_ns
+        ):
+            state.connection = ConnectionInfo.CONNECTED
+            state.connection_timestamp_ns = timestamp_ns
 
     @staticmethod
     def _apply_al00(state, decoded):
