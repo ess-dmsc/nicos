@@ -1,6 +1,5 @@
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from nicos.devices.epics.pva import EpicsDevice
-from nicos.devices.epics.status import SEVERITY_TO_STATUS
 from nicos.devices.abstract import MappedMoveable
 from nicos.core import (
     Attach,
@@ -73,10 +72,11 @@ class NewportHexapod(EpicsDevice, Moveable):
         return pos
 
     def doStatus(self, maxage=0):
-        status = self._read_pv(self._get_pv_name("status"))
-        if status in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63]:
-            return status.ERROR, status
+        error = self._read_pv(self._get_pv_name("status"))
+        if error in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63]:
+            return status.ERROR, error
         msg = self._read_pv(f"{self._get_pv_name('status')}", as_string=True)
+
         return status.OK, msg
 
     def doIsAllowed(self, target):
