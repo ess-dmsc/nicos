@@ -334,6 +334,21 @@ def test_newer_value_update_clears_stale_connection_error_while_started(
         "counting",
     )
 
+    emit_connection(
+        device_harness,
+        kafka_readback_stubs,
+        timestamp,
+        connection=ConnectionInfo.DISCONNECTED,
+    )
+    assert device_harness.run_daemon(daemon_accumulator.status, 0) == (
+        status.BUSY,
+        "counting",
+    )
+    assert device_harness.run_poller(poller_accumulator.status) == (
+        status.BUSY,
+        "counting",
+    )
+
 
 def test_unknown_connection_status_overrides_busy(
     device_harness,
@@ -427,6 +442,27 @@ def test_sums_repeated_f144_values_while_started(
     )
     assert device_harness.run_poller(poller_accumulator.read)[0] == pytest.approx(
         4.0
+    )
+
+
+def test_ignores_stale_f144_values_while_started(
+    device_harness,
+    daemon_accumulator,
+    poller_accumulator,
+    kafka_readback_stubs,
+):
+    device_harness.run_daemon(daemon_accumulator.start)
+    timestamp = time.time()
+
+    emit_value(device_harness, kafka_readback_stubs, 2.0, timestamp)
+    emit_value(device_harness, kafka_readback_stubs, 3.0, timestamp - 0.001)
+    emit_value(device_harness, kafka_readback_stubs, 4.0, timestamp)
+
+    assert device_harness.run_daemon(daemon_accumulator.read)[0] == pytest.approx(
+        2.0
+    )
+    assert device_harness.run_poller(poller_accumulator.read)[0] == pytest.approx(
+        2.0
     )
 
 
