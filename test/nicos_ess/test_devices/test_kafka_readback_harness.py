@@ -628,6 +628,65 @@ class TestKafkaReadbackHarness:
         )
         assert readable.status() == (status.OK, "")
 
+    def test_newer_value_update_clears_stale_connection_error(
+        self, device_harness, kafka_readback_stubs
+    ):
+        create_router_pair(device_harness)
+        readable, poller_readable = create_readable_pair(
+            device_harness, "first", "src:first"
+        )
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            connection_message(2_000_000_000, ConnectionInfo.DISCONNECTED),
+        )
+        assert readable.status()[0] == status.ERROR
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            serialise_f144("src:first", 5.5, 3_000_000_000),
+        )
+
+        assert readable.read() == pytest.approx(5.5)
+        assert readable.status(0) == (status.OK, "")
+        assert readable.status() == (status.OK, "")
+        assert poller_readable.status() == (status.OK, "")
+
+    def test_older_value_update_does_not_clear_newer_connection_error(
+        self, device_harness, kafka_readback_stubs
+    ):
+        create_router_pair(device_harness)
+        readable, poller_readable = create_readable_pair(
+            device_harness, "first", "src:first"
+        )
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            connection_message(3_000_000_000, ConnectionInfo.DISCONNECTED),
+        )
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            serialise_f144("src:first", 5.5, 2_000_000_000),
+        )
+
+        assert readable.read() == pytest.approx(5.5)
+        assert readable.status(0) == (
+            status.ERROR,
+            "Kafka source disconnected (svc)",
+        )
+        assert readable.status() == (
+            status.ERROR,
+            "Kafka source disconnected (svc)",
+        )
+        assert poller_readable.status() == (
+            status.ERROR,
+            "Kafka source disconnected (svc)",
+        )
+
     def test_router_shutdown_closes_all_subscribers(
         self, device_harness, kafka_readback_stubs
     ):
