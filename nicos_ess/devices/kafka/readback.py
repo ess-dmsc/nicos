@@ -27,6 +27,8 @@ from nicos.core import (
     status,
 )
 from nicos.core.errors import CommunicationError, ConfigurationError
+from nicos.core.utils import statusString
+from nicos.devices.generic import CounterChannelMixin, PassiveChannel
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 
 KafkaKey = Tuple[str, str]
@@ -52,6 +54,7 @@ class KafkaReadbackState:
     has_value: bool = False
     value: Any = None
     value_timestamp_ns: int = 0
+    value_revision: int = 0
     alarm: Optional[Severity] = None
     alarm_message: str = ""
     alarm_timestamp_ns: int = 0
@@ -261,6 +264,7 @@ class KafkaReadbackRouter(Device):
         state.has_value = True
         state.value = decoded.value
         state.value_timestamp_ns = int(decoded.timestamp_unix_ns or 0)
+        state.value_revision += 1
 
     @staticmethod
     def _apply_al00(state, decoded):
@@ -386,18 +390,7 @@ class KafkaReadable(Readable):
 
         current_status = self._status_from_snapshot(snapshot)
         if current_status is not None:
-            self._cache.put(
-                self,
-                "status",
-                current_status,
-                self._cache_timestamp(
-                    max(
-                        snapshot.alarm_timestamp_ns,
-                        snapshot.connection_timestamp_ns,
-                        snapshot.kafka_error_timestamp_ns,
-                    )
-                ),
-            )
+            self._put_status_from_snapshot(snapshot, current_status)
 
     def _status_from_snapshot(self, snapshot):
         if snapshot is None:
@@ -424,6 +417,22 @@ class KafkaReadable(Readable):
             return None
         return max(parts, key=lambda item: item[0])
 
+    def _put_status_from_snapshot(self, snapshot, current_status):
+        self._cache.put(
+            self,
+            "status",
+            current_status,
+            self._cache_timestamp(self._status_timestamp_ns(snapshot)),
+        )
+
+    @staticmethod
+    def _status_timestamp_ns(snapshot):
+        return max(
+            snapshot.alarm_timestamp_ns,
+            snapshot.connection_timestamp_ns,
+            snapshot.kafka_error_timestamp_ns,
+        )
+
     @staticmethod
     def _cache_timestamp(timestamp_ns):
         if timestamp_ns:
@@ -448,3 +457,121 @@ class KafkaReadable(Readable):
         if connection in (ConnectionInfo.UNKNOWN, ConnectionInfo.NEVER_CONNECTED):
             return status.UNKNOWN, f"Kafka source {connection.name.lower()}{suffix}"
         return status.ERROR, f"Kafka source {connection.name.lower()}{suffix}"
+
+
+class KafkaAccumulatorChannel(CounterChannelMixin, KafkaReadable, PassiveChannel):
+    """Detector monitor channel accumulating f144 values from Kafka readbacks."""
+
+    parameters = {
+        "total": Param(
+            "The total accumulated so far",
+            type=float,
+            settable=True,
+            default=0.0,
+            internal=True,
+        ),
+        "started": Param(
+            "Whether accumulation is currently active",
+            type=bool,
+            settable=True,
+            default=False,
+            internal=True,
+        ),
+    }
+
+    parameter_overrides = {
+        "type": Override(default="monitor", mandatory=False),
+        "unit": Override(mandatory=True),
+        "fmtstr": Override(mandatory=True),
+    }
+
+    def doPreinit(self, mode):
+        KafkaReadable.doPreinit(self, mode)
+        self._last_value_revision = 0
+        self._starttime = 0.0
+        self._lock = threading.RLock()
+
+    def doPrepare(self):
+        self._reset(False)
+
+    def doStart(self):
+        self._reset(True)
+
+    def doFinish(self):
+        with self._lock:
+            self._set_started(False)
+
+    def doStop(self):
+        with self._lock:
+            self._set_started(False)
+
+    def doStatus(self, maxage=0):
+        return self._combined_status_from_snapshot(
+            self._attached_kafka.latest(self.topic, self.source_name)
+        )
+
+    def doRead(self, maxage=0):
+        return [self.total]
+
+    def _receive_kafka_update(self, snapshot):
+        current_status = self._combined_status_from_snapshot(snapshot)
+        if self._cache:
+            self._put_status_from_snapshot(snapshot, current_status)
+        if snapshot.has_value:
+            timestamp = self._cache_timestamp(snapshot.value_timestamp_ns)
+            self._add_value(snapshot.value_revision, snapshot.value, timestamp)
+
+    def _reset(self, started):
+        timestamp = currenttime()
+        with self._lock:
+            self._starttime = timestamp if started else 0.0
+            self.total = 0.0
+            self._set_started(started, timestamp)
+            if self._cache:
+                self._cache.put(self, "value", [0.0], timestamp)
+
+    def _set_started(self, started, timestamp=None):
+        if timestamp is None:
+            timestamp = currenttime()
+        self.started = started
+        if self._cache:
+            self._cache.put(
+                self,
+                "status",
+                self._combined_status_from_snapshot(
+                    self._attached_kafka.latest(self.topic, self.source_name)
+                ),
+                timestamp,
+            )
+
+    @staticmethod
+    def _status_from_started(started):
+        if started:
+            return status.BUSY, "counting"
+        return status.OK, ""
+
+    def _combined_status_from_snapshot(self, snapshot):
+        local_status = self._status_from_started(self.started)
+        kafka_status = self._status_from_snapshot(snapshot)
+        if kafka_status is None:
+            return local_status
+        return (
+            max(local_status[0], kafka_status[0]),
+            statusString(local_status[1], kafka_status[1]),
+        )
+
+    def _add_value(self, revision, value, timestamp):
+        with self._lock:
+            if revision <= self._last_value_revision:
+                return
+            self._last_value_revision = revision
+            if not self.started or timestamp < self._starttime:
+                return
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                self.log.warning(
+                    "Ignoring nonnumeric Kafka accumulator update %r", value
+                )
+                return
+            self.total += float(value)
+            if self._cache:
+                self._cache.put(self, "value", [self.total], timestamp)
