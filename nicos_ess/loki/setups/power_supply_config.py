@@ -22,25 +22,45 @@ hv_detector_channels = {
 }
 
 hv_bm_channels = {
-    "monitor_m0": {
+    "a_monitor_m0": {
         "board": 102,
         "channel": "07",
     },
-    "monitor_m1": {
+    "a_monitor_m1": {
         "board": 102,
         "channel": "08",
     },
-    "monitor_m2": {
+    "a_monitor_m2": {
         "board": 102,
         "channel": "09",
     },
-    "monitor_m3": {
+    "a_monitor_m3": {
         "board": 102,
         "channel": "10",
     },
-    "monitor_m4": {
+    "a_monitor_m4": {
         "board": 102,
         "channel": "11",
+    },
+    "b_monitor_m0": {
+        "board": 103,
+        "channel": "08",
+    },
+    "b_monitor_m1": {
+        "board": 103,
+        "channel": "09",
+    },
+    "b_monitor_m2": {
+        "board": 105,
+        "channel": "08",
+    },
+    "b_monitor_m3": {
+        "board": 105,
+        "channel": "09",
+    },
+    "b_monitor_m4": {
+        "board": 105,
+        "channel": "10",
     },
 }
 
