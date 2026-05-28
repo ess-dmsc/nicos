@@ -65,6 +65,7 @@ class NewportHexapod(EpicsDevice, Moveable):
         hexapod_target = target[:-1]
         goniometer_target = target[6]
         self._set_pv(self._get_pv_name("writepv"), hexapod_target)
+        # goniometer is separate from actual hexapod
         self._adevs["gmt"].start(goniometer_target)
 
     def doRead(self, maxage=0):
@@ -72,13 +73,11 @@ class NewportHexapod(EpicsDevice, Moveable):
         return pos
 
     def doStatus(self, maxage=0):
-        error = self._read_pv(self._get_pv_name("status"))
-        if error:
-            return status.ERROR, error
-        severity = self._read_pv(f"{self._get_pv_name('status')}")
+        status = self._read_pv(self._get_pv_name("status"))
+        if status in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63]:
+            return status.ERROR, status
         msg = self._read_pv(f"{self._get_pv_name('status')}", as_string=True)
-
-        return SEVERITY_TO_STATUS[severity], "" if msg == "12" else msg
+        return status.OK, msg
 
     def doIsAllowed(self, target):
         for name, pos in zip(self.axis_names, target):

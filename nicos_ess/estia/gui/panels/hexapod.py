@@ -169,9 +169,6 @@ class HexapodPanel(Panel):
                 self.hexStatus.setStyleSheet("background-color: lightblue")
             elif code == not_ref:
                 self.hexStatus.setStyleSheet("background-color: orange")
-            else:
-                self.hexStatus.setStyleSheet("background-color: None")
-            self.hexStatus.setText(f"{code}")
 
     def update_coord_window(self, value):
         # sometimes the mapping is odd for awhile, so checking for int or string and
