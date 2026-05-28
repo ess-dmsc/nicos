@@ -74,7 +74,7 @@ class KafkaReadbackSchemaSpec:
     """How one schema contributes to the shared readback state."""
 
     get_source_name: Callable[[Any], str]
-    apply_update: Callable[[KafkaReadbackState, Any], None]
+    apply_update: Callable[[KafkaReadbackState, Any], bool]
 
 
 class KafkaReadbackRouter(Device):
@@ -209,6 +209,8 @@ class KafkaReadbackRouter(Device):
         snapshot, callbacks = self._update_state(
             topic, source_name, apply_update, decoded
         )
+        if snapshot is None:
+            return
         self._notify_callbacks(topic, source_name, snapshot, callbacks)
 
     def _decode_payload(self, raw):
@@ -231,7 +233,8 @@ class KafkaReadbackRouter(Device):
         key = self._key(topic, source_name)
         with self._lock:
             state = self._latest.setdefault(key, KafkaReadbackState())
-            apply_update(state, decoded)
+            if not apply_update(state, decoded):
+                return None, ()
             state.kafka_error = None
             state.kafka_error_message = ""
             state.kafka_error_timestamp_ns = 0
@@ -262,6 +265,10 @@ class KafkaReadbackRouter(Device):
     @staticmethod
     def _apply_f144(state, decoded):
         timestamp_ns = int(decoded.timestamp_unix_ns or 0)
+        if KafkaReadbackRouter._is_stale_timestamp(
+            timestamp_ns, state.value_timestamp_ns
+        ):
+            return False
         state.has_value = True
         state.value = decoded.value
         state.value_timestamp_ns = timestamp_ns
@@ -273,18 +280,37 @@ class KafkaReadbackRouter(Device):
         ):
             state.connection = ConnectionInfo.CONNECTED
             state.connection_timestamp_ns = timestamp_ns
+        return True
 
     @staticmethod
     def _apply_al00(state, decoded):
+        timestamp_ns = int(decoded.timestamp_ns or 0)
+        if KafkaReadbackRouter._is_stale_timestamp(
+            timestamp_ns, state.alarm_timestamp_ns
+        ):
+            return False
         state.alarm = decoded.severity
         state.alarm_message = decoded.message
-        state.alarm_timestamp_ns = int(decoded.timestamp_ns or 0)
+        state.alarm_timestamp_ns = timestamp_ns
+        return True
 
     @staticmethod
     def _apply_ep01(state, decoded):
+        timestamp_ns = int(decoded.timestamp or 0)
+        if KafkaReadbackRouter._is_stale_timestamp(
+            timestamp_ns, state.connection_timestamp_ns
+        ):
+            return False
         state.connection = decoded.status
         state.connection_service = decoded.service_id or ""
-        state.connection_timestamp_ns = int(decoded.timestamp or 0)
+        state.connection_timestamp_ns = timestamp_ns
+        return True
+
+    @staticmethod
+    def _is_stale_timestamp(timestamp_ns, latest_timestamp_ns):
+        return bool(
+            timestamp_ns and latest_timestamp_ns and timestamp_ns <= latest_timestamp_ns
+        )
 
     def _require_configured_topic(self, topic):
         if topic not in self.topics:
