@@ -65,6 +65,10 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         ),
     }
 
+    parameter_overrides = {
+        "unit": Override(settable=False),
+    }
+
     hardware_access = True
     valuetype = int
 
