@@ -1,4 +1,4 @@
-description = "Middle focus mask changer"
+description = "The middle focus mask changer"
 prefix = "ESTIA-Chg:MC-"
 
 devices = dict(
@@ -31,7 +31,7 @@ devices = dict(
         description="readback value of the VS laser",
         readpv="ESTIA-SES:Ctrl-IM-100:LaserEnabled",
     ),
-    beam_changer_macro=device(
+    mask_changer_macro=device(
         "nicos_ess.devices.mapped_controller.MappedController",
         description="Preset controls for in_beam_changer",
         controlled_device="in_beam_changer",
