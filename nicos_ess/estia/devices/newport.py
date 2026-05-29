@@ -74,6 +74,8 @@ class NewportHexapod(EpicsDevice, Moveable):
     def doStatus(self, maxage=0):
         error = self._read_pv(self._get_pv_name("status"))
         if error in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63]:
+            if error == 2:
+                return status.ERROR, "E-STOP"
             return status.ERROR, error
         msg = self._read_pv(f"{self._get_pv_name('status')}", as_string=True)
 
