@@ -129,13 +129,27 @@ class DevInfo(AttrDict):
 
     def fmtParam(self, param, value):
         info = self.params.get(param)
-        if info:
-            try:
-                fmtvalue = info["fmtstr"] % value
-            except Exception:
-                fmtvalue = str(value)
-            return fmtvalue + " " + (info["unit"] or "")
-        return str(value)
+        if not info or value is None:
+            return str(value)
+
+        if isinstance(value, list):
+            value = tuple(value)
+        fmtstr = info["fmtstr"]
+        if isinstance(value, str) and fmtstr == "%r":
+            fmtstr = "%s"
+        if fmtstr == "main":
+            if isinstance(value, tuple):
+                fmtstr = "(" + ", ".join((self.fmtstr,) * len(value)) + ")"
+            else:
+                fmtstr = self.fmtstr
+
+        try:
+            fmtval = fmtstr % value
+        except (TypeError, ValueError):
+            fmtval = str(value)
+
+        unit = (info["unit"] or "").replace("main", self.unit)
+        return fmtval + " " + (unit or "")
 
 
 class DevicesPanel(Panel):
@@ -916,6 +930,7 @@ class ControlDialog(QDialog):
         params = self.client.getDeviceParams(self.devname)
         self.paraminfo = self.client.getDeviceParamInfo(self.devname)
         self.paramvalues = dict(params)
+        self.devinfo.params = self.paraminfo
         # Cache updates for "classes" may lag behind the dialog opening.
         # Use cache value if present, otherwise query the live device classes
         # so Moveable/Readable controls are initialized reliably.
@@ -939,8 +954,9 @@ class ControlDialog(QDialog):
                 # normally, show only userparams, except in expert mode
                 is_userparam = self.paraminfo[key]["userparam"]
                 if is_userparam or self.device_panel._show_lowlevel:
+                    formatted_value = self.devinfo.fmtParam(key, value)
                     self.paramItems[key] = item = QTreeWidgetItem(
-                        self.paramList, [key, str(value)]
+                        self.paramList, [key, formatted_value]
                     )
                     # display non-userparams in grey italics, like lowlevel
                     # devices in the device list
@@ -1371,7 +1387,8 @@ class ControlDialog(QDialog):
             return
         value = cache_load(value)
         self.paramvalues[subkey] = value
-        self.paramItems[subkey].setText(self.col_index["VALUE"], str(value))
+        formatted_value = self.devinfo.fmtParam(subkey, value)
+        self.paramItems[subkey].setText(self.col_index["VALUE"], formatted_value)
 
     def on_paramList_itemClicked(self, item):
         pname = item.text(self.col_index["NAME"])
