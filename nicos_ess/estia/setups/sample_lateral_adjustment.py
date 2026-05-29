@@ -1,4 +1,4 @@
-description = "Y Stage"
+description = "Sample Lateral Adjustment and Sample Table Pneumatic Coupling"
 
 
 devices = dict(
