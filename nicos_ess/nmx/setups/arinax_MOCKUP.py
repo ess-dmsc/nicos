@@ -68,25 +68,26 @@ devices = dict(
         visibility=(),
     ),
     # Sample centring motion
-    sample_centring_chi=device(
+    # Using numbers to have the same order from ARINAX GUI
+    sample__centring1_phi=device(
         "nicos_ess.nmx.devices.arinax.EpicsArinaxMoveable",
-        description="ARINAX sample motor Chi (mockup)",
-        readpv="NMX-mockup:getChiPosition",
-        writepv="NMX-mockup:setChiPosition",
-        unit="mm",
-        pva=False,
-    ),
-    sample_centring_phi=device(
-        "nicos_ess.nmx.devices.arinax.EpicsArinaxMoveable",
-        description="ARINAX sample motor Phi (mockup)",
+        description="ARINAX sample centring motor Phi (mockup)",
         readpv="NMX-mockup:getPhiPosition",
         writepv="NMX-mockup:setPhiPosition",
         unit="mm",
         pva=False,
     ),
-    sample_centring_theta=device(
+    sample__centring2_chi=device(
         "nicos_ess.nmx.devices.arinax.EpicsArinaxMoveable",
-        description="ARINAX sample motor Theta (mockup)",
+        description="ARINAX sample centring motor Chi (mockup)",
+        readpv="NMX-mockup:getChiPosition",
+        writepv="NMX-mockup:setChiPosition",
+        unit="mm",
+        pva=False,
+    ),
+    sample__centring3_theta=device(
+        "nicos_ess.nmx.devices.arinax.EpicsArinaxMoveable",
+        description="ARINAX sample centring motor Theta (mockup)",
         readpv="NMX-mockup:getThetaPosition",
         writepv="NMX-mockup:setThetaPosition",
         unit="mm",
