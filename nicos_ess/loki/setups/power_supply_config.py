@@ -7,10 +7,12 @@ hv_detector_channels = {
         {"module": "01", "board": "100", "channel": "00"},
         {"module": "02", "board": "100", "channel": "01"},
         {"module": "03", "board": "100", "channel": "02"},
+        {"module": "04", "board": "100", "channel": "03"},
         {"module": "05", "board": "100", "channel": "04"},
         {"module": "06", "board": "100", "channel": "05"},
         {"module": "07", "board": "100", "channel": "06"},
         {"module": "08", "board": "100", "channel": "07"},
+        {"module": "09", "board": "100", "channel": "08"},
         {"module": "10", "board": "100", "channel": "09"},
         {"module": "11", "board": "100", "channel": "10"},
         {"module": "12", "board": "100", "channel": "11"},
@@ -35,6 +37,7 @@ hv_detector_channels = {
         {"module": "04", "board": "104", "channel": "03"},
     ],
     "bank4": [
+        {"module": "01", "board": "104", "channel": "04"},
         {"module": "02", "board": "104", "channel": "05"},
         {"module": "03", "board": "104", "channel": "06"},
     ],
@@ -44,6 +47,7 @@ hv_detector_channels = {
         {"module": "03", "board": "102", "channel": "02"},
         {"module": "04", "board": "102", "channel": "03"},
         {"module": "05", "board": "102", "channel": "04"},
+        {"module": "06", "board": "102", "channel": "05"},
         {"module": "07", "board": "102", "channel": "06"},
     ],
     "bank6": [
