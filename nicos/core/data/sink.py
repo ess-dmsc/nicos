@@ -204,7 +204,7 @@ class NicosMetaWriterMixin:
             for devname, val in list(self.dataset.values.items()):
                 device = session.getDevice(devname)
                 if (devname, "value") in metainfo:
-                    # re-use the category
+                    # reuse the category
                     _, _, unit, category = metainfo[(devname, "value")]
                 else:
                     unit = device.unit

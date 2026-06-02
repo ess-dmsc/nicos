@@ -55,7 +55,7 @@ class PushButton(ClickableOutputLed):
 class SinglePushButton(PushButton):
     designer_description = (
         "Simulation of a push button with a light and only"
-        " one state to swith On or Off"
+        " one state to switch On or Off"
     )
     designer_icon = ":/leds/yellow_on"
 

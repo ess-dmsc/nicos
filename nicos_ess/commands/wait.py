@@ -17,7 +17,7 @@ def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
 
     >>> waitfor_stable(dev1, 10, 1, 30, 600)
 
-    will wait until the device position is between 9 and 11 for a continous
+    will wait until the device position is between 9 and 11 for a continuous
     period of 30 seconds, but will exit after 10 minutes if
     stability is not reached.
 

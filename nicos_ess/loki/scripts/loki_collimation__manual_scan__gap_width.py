@@ -1,5 +1,5 @@
 # ***********************************************
-# COLLIMATION SYSTEM INTEGREATED TEST
+# COLLIMATION SYSTEM INTEGRATED TEST
 # 26 JUNE 2025
 # SCRIPT FOR SCAN TEST
 # ***********************************************

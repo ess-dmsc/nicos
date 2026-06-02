@@ -49,7 +49,7 @@ from nicos.core import (
 from nicos.core.device import Moveable
 from nicos.devices.generic import BaseSequencer, LockedDevice
 from nicos.devices.generic.sequence import SeqDev, SeqMethod, SeqWait
-from nicos_ess.devices.epics.pva import EpicsMappedReadable
+from nicos_ess.devices.epics.pva import EpicsStringReadable
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from nicos_ess.estia.devices.multiline import MultilineChannel, MultilineController
 from nicos_ess.estia.devices.selene_calculations import SeleneCalculator
@@ -113,7 +113,7 @@ class SeleneRobot(Moveable):
             unit="mm",
         ),
         "position_data": Param(
-            "YAML file that contins the positioning data",
+            "YAML file that contains the positioning data",
             type=str,
             mandatory=True,
             userparam=False,
@@ -187,10 +187,10 @@ class SeleneRobot(Moveable):
         "move_z": Attach("Device for approache", EpicsMotor),
         "adjust1": Attach("Device for rotation", EpicsMotor),
         "approach1": Attach("Device for approache", EpicsMotor),
-        "hex_state1": Attach("Device reporting the hex status", EpicsMappedReadable),
+        "hex_state1": Attach("Device reporting the hex status", EpicsStringReadable),
         "adjust2": Attach("Device for rotation", EpicsMotor),
         "approach2": Attach("Device for approache", EpicsMotor),
-        "hex_state2": Attach("Device reporting the hex status", EpicsMappedReadable),
+        "hex_state2": Attach("Device reporting the hex status", EpicsStringReadable),
     }
 
     parameter_overrides = {
@@ -346,7 +346,7 @@ class SeleneRobot(Moveable):
     def engage(self):
         """
         User version to engage a screw if already positioned.
-        Has some additional checkes and usability improvements.
+        Has some additional checks and usability improvements.
         """
         self.doRead()
         if self.current_position == (-1, -1):
@@ -659,6 +659,20 @@ class SeleneRobot(Moveable):
         else:
             return found_screw
 
+    def find_screw_rotation(self):
+        angle = self._adjust()
+
+        for step in range(5, 60, 5):
+            self._move_angle(angle + step)
+            self._engage_retry()
+            if self._hex_state() == "HexScrewInserted":
+                self._move_angle(angle - self.adjuster_play / 2.0)
+                self.log.info(f"    Screw found at rotation {self._adjust()}")
+                self.update_rotation(self._adjust())
+                break
+
+        self._approach.maw(self._retracted)
+
     def refine(self, srange=2.0, sstep=20, auto_update=False):
         """
         If robot could find the screw, use to refine the more exact
@@ -738,6 +752,16 @@ class SeleneRobot(Moveable):
                 )
             )
 
+    def update_rotation(self, angle):
+        self.log.debug(
+            "Storing rotation for position (%i, %02i)" % self.current_position
+        )
+
+        rotations = dict([(k, dict(v)) for k, v in self.rotations.items()])
+
+        rotations[self.current_position[0]][self.current_position[1]] = angle
+        self.rotations = rotations
+
     def adjust(self, angle):
         self.doRead()
         if self.current_position == (-1, -1):
@@ -761,14 +785,7 @@ class SeleneRobot(Moveable):
         # move back to desired angle for extractoin
         self.log.debug("Releasing screw, %.2f" % (angle))
         self._move_angle(angle)
-        self.log.debug(
-            "Storing rotation for position (%i, %02i)" % self.current_position
-        )
-
-        rotations = dict([(k, dict(v)) for k, v in self.rotations.items()])
-
-        rotations[self.current_position[0]][self.current_position[1]] = angle
-        self.rotations = rotations
+        self.update_rotation(angle)
 
     def adjust_position(self, delta):
         """

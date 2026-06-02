@@ -287,7 +287,7 @@ def test_parameter_queries(client):
     )
     params = client.getDeviceParams("dm1")
     # parameters 'status' and 'value' not in all test cases available
-    # their occurances depends on the previous test history
+    # their occurrences depends on the previous test history
     assert set(params.keys()).issubset(
         {
             "abslimits",

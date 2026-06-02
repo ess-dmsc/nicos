@@ -105,7 +105,7 @@ class SetupDirective(Directive):
     has_content = False
     required_arguments = 1
 
-    indention = "    "
+    indentation = "    "
 
     def run(self):
         # simplify env access
@@ -286,18 +286,18 @@ class SetupDirective(Directive):
         }
 
     def _buildCSVTable(self, rows, indent_lvl=1, hHeader=True, vHeader=True):
-        rst = ["%s.. csv-table::" % (self.indention * indent_lvl)]
-        rst.append("%s:widths: 20 25 55" % (self.indention * (indent_lvl + 1)))
+        rst = ["%s.. csv-table::" % (self.indentation * indent_lvl)]
+        rst.append("%s:widths: 20 25 55" % (self.indentation * (indent_lvl + 1)))
 
         if hHeader:
-            rst.append("%s:header-rows: 1" % (self.indention * (indent_lvl + 1)))
+            rst.append("%s:header-rows: 1" % (self.indentation * (indent_lvl + 1)))
         if vHeader:
-            rst.append("%s:stub-columns: 1" % (self.indention * (indent_lvl + 1)))
+            rst.append("%s:stub-columns: 1" % (self.indentation * (indent_lvl + 1)))
         rst.append("")
 
         for row in rows:
             rst.append(
-                self.indention * (indent_lvl + 1)
+                self.indentation * (indent_lvl + 1)
                 + ", ".join('"' + cell.replace('"', '""') + '"' for cell in row)
             )
         rst.append("")

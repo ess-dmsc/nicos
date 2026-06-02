@@ -13,7 +13,7 @@ devices = dict(
     ),
     solid_liquid_macro=device(
         "nicos_ess.devices.mapped_controller.MappedController",
-        description="Preset controls for sampe axis",
+        description="Preset controls for sample axis",
         controlled_device="solid_liquid_motor",
         mapping={"Base": 1},
     ),

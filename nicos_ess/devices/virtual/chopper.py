@@ -83,7 +83,7 @@ class VirtualChopperDelay(HasOffset, CanDisable, Motor):
                 self._setROParam("curvalue", self.target + self.offset)
             else:
                 self._setROParam("target", self.curvalue - self.offset)
-        _error_thread = createThread("vitrual motor error", self._compute_error)
+        _error_thread = createThread("virtual motor error", self._compute_error)
 
     def doStart(self, target):
         if self.curstatus[0] == status.DISABLED:

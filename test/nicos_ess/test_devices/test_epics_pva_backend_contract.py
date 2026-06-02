@@ -74,7 +74,9 @@ def _get_method_node(class_node, method_name):
     for node in class_node.body:
         if isinstance(node, ast.FunctionDef) and node.name == method_name:
             return node
-    raise AssertionError(f"Method {method_name!r} not found in class {class_node.name!r}")
+    raise AssertionError(
+        f"Method {method_name!r} not found in class {class_node.name!r}"
+    )
 
 
 def _signature_spec_from_ast(method_node):
@@ -182,7 +184,9 @@ def test_fake_backend_subscription_callback_shape_matches_wrapper_contract():
     observed_connections = []
 
     def on_change(pvname, pvparam, value, units, limits, severity, message):
-        observed_changes.append((pvname, pvparam, value, units, limits, severity, message))
+        observed_changes.append(
+            (pvname, pvparam, value, units, limits, severity, message)
+        )
 
     def on_connection(pvname, pvparam, is_connected):
         observed_connections.append((pvname, pvparam, is_connected))
@@ -206,7 +210,7 @@ def test_fake_backend_subscription_callback_shape_matches_wrapper_contract():
     )
 
     # Assert
-    assert token == ("SIM:READ.RBV", "value", on_change, on_connection)
+    assert token == ("SIM:READ.RBV", "value", on_change, on_connection, True)
     assert observed_connections == [("SIM:READ.RBV", "value", True)]
     assert observed_changes == [
         (
@@ -219,6 +223,36 @@ def test_fake_backend_subscription_callback_shape_matches_wrapper_contract():
             "minor alarm",
         )
     ]
+
+
+def test_fake_backend_reads_enum_as_choice_string_when_requested():
+    # Setup
+    backend = FakeEpicsBackend()
+    backend.value_choices["SIM:ENUM"] = ["OFF", "ON"]
+    backend.values["SIM:ENUM"] = 1
+
+    # Act + Assert
+    assert backend.get_pv_value("SIM:ENUM") == 1
+    assert backend.get_pv_value("SIM:ENUM", as_string=True) == "ON"
+
+
+def test_fake_backend_subscription_reads_enum_as_choice_string_when_requested():
+    # Setup
+    backend = FakeEpicsBackend()
+    backend.value_choices["SIM:ENUM"] = ["OFF", "ON"]
+    observed_changes = []
+
+    def on_change(pvname, pvparam, value, units, limits, severity, message):
+        del pvname, pvparam, units, limits, severity, message
+        observed_changes.append(value)
+
+    backend.subscribe("SIM:ENUM", "value", on_change, as_string=True)
+
+    # Act
+    backend.emit_update("SIM:ENUM", value=1)
+
+    # Assert
+    assert observed_changes == ["ON"]
 
 
 def test_fake_backend_backend_disconnect_emits_all_subscription_connections():

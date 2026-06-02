@@ -1,5 +1,6 @@
-import pytest
 import threading
+
+import pytest
 
 from nicos.core import LimitError, status
 from nicos_ess.loki.devices.detector_motion import LOKIDetectorMotion
@@ -40,7 +41,6 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
 
     def doPreinit(self, mode):
         self._lock = threading.Lock()
-        self._ps_bank = self._get_ps_bank()
 
     def doInit(self, mode):
         pass
@@ -79,33 +79,28 @@ class TestLokiDetectorCarriage:
 
     def test_movement_allowed_if_channel_off_and_voltage_zero(self):
         voltage = 0.0
-        self.ps_bank.enable()
         self.ps_bank.disable()
         self.ps_channel._put_pv("voltage_monitor", voltage)
         self.motor.move(20)
 
     def test_movement_allowed_if_channel_off_and_voltage_below_threshold(self):
         voltage = self.motor.voltage_off_threshold - 0.1
-        self.ps_bank.enable()
         self.ps_bank.disable()
         self.ps_channel._put_pv("voltage_monitor", voltage)
         self.motor.move(20)
 
     def test_movement_blocked_if_bank_is_on(self):
-        self.ps_bank.disable()
         self.ps_bank.enable()
         with pytest.raises(LimitError):
             self.motor.move(20)
 
     def test_movement_blocked_if_channel_is_on(self):
-        self.ps_channel.disable()
         self.ps_channel.enable()
         with pytest.raises(LimitError):
             self.motor.move(20)
 
     def test_movement_blocked_if_voltage_above_threshold(self):
         voltage = self.motor.voltage_off_threshold + 0.1
-        self.ps_bank.enable()
         self.ps_bank.disable()
         self.ps_channel._put_pv("voltage_monitor", voltage)
         with pytest.raises(LimitError):
@@ -114,9 +109,17 @@ class TestLokiDetectorCarriage:
     def test_movement_blocked_if_status_not_ok(self, monkeypatch):
         voltage = self.motor.voltage_off_threshold - 0.1
         error_status = (status.ERROR, "some error message")
-        monkeypatch.setattr(type(self.ps_bank), "doStatus", lambda: error_status)
-        self.ps_bank.enable()
+        monkeypatch.setattr(
+            type(self.ps_bank), "doStatus", lambda self, maxage=0: error_status
+        )
         self.ps_bank.disable()
         self.ps_channel._put_pv("voltage_monitor", voltage)
         with pytest.raises(LimitError):
             self.motor.move(20)
+
+    def test_movement_blocked_if_pos_outside_limits(self):
+        voltage = 0.0
+        self.ps_bank.disable()
+        self.ps_channel._put_pv("voltage_monitor", voltage)
+        with pytest.raises(LimitError):
+            self.motor.move(200)

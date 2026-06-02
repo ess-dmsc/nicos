@@ -16,10 +16,10 @@ class HexapodPanel(Panel):
         loadUi(self, findResource("nicos_ess/estia/gui/panels/ui_files/hexapod.ui"))
 
         # Hexapod info
-        self.devname = ""
         self.paraminfo = {}
         self.adevs = {}
         self.qtObj = {}
+        self.devname = options.get("hexapod")
         self.status = options.get("status")
         self.coordSys = options.get("coord")
         # Hexapod Controller Info
@@ -28,6 +28,7 @@ class HexapodPanel(Panel):
         self._exec_reqid = None
         self._error_window = None
         self._control_dialogs = {}
+        self.test = self.devname
 
         client.setup.connect(self.on_client_setup)
         client.connected.connect(self.on_client_connected)
@@ -38,11 +39,9 @@ class HexapodPanel(Panel):
         self.show_controls(False)
 
     def get_hexapod_info(self):
-        self.get_hexapod_name()
-        if self.devname:
+        if self._is_hexapod_live():
             self.get_hexapod_data()
             self.setup_qt_vars()
-            self.propagate_ui()
             self.show_controls(True)
         else:
             self.clear()
@@ -65,7 +64,8 @@ class HexapodPanel(Panel):
         if devname == self.devname and pname == "value":
             self.update_current_pos(cache_load(value))
 
-        # can't seem to find it in cache but is popagated into 'value' param just fine...
+        # can't seem to find it in cache
+        # but is popagated into 'value' param just fine...
         # so grabbing it from there while updating on cache check
         self.update_status_window(self.client.getDeviceParam(self.status, "value"))
         self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
@@ -74,7 +74,7 @@ class HexapodPanel(Panel):
         if message[5] != self._exec_reqid or message[2] < WARNING:
             return
         # show warnings and errors emitted by the current command in a window
-        msg = "%s: %s" % (message[0], message[3].strip())
+        msg = f"{message[0]}: {message[3].strip()}"
         if self._error_window is None:
 
             def reset_errorwindow():
@@ -89,11 +89,9 @@ class HexapodPanel(Panel):
             self._error_window.activateWindow()
 
     def exec_command(self, command):
-        self.client.tell("exec", command)
         self._exec_reqid = self.client.run(command)
 
     def clear(self):
-        self.devname = ""
         self.paraminfo.clear()
         self.adevs.clear()
         self.qtObj.clear()
@@ -102,18 +100,17 @@ class HexapodPanel(Panel):
     def update_current_pos(self, values):
         curval = 0
         for axis in self.qtObj:
-            self.qtObj[axis]["curVal"].setText("%.3f" % values[curval])
+            self.qtObj[axis]["curVal"].setText(f"{round(values[curval], 3):.3f}")
             curval = curval + 1
 
     def show_controls(self, visibility):
-        if visibility == True:
+        if visibility:
             self.panelLabel.setText(f"{self.devname.capitalize()}")
             self.curPos.show()
             self.newPos.show()
             self.newPos_2.show()
             self.statusBox.show()
             self.coordBox.show()
-            self.butTest.show()
             self.userModes.setTabVisible(1, 0)
         # better way to hide all this using another group box....but will do it later
         else:
@@ -123,24 +120,19 @@ class HexapodPanel(Panel):
             self.newPos_2.hide()
             self.statusBox.hide()
             self.coordBox.hide()
-            self.butTest.hide()
             self.userModes.setTabVisible(1, 0)
 
-    def get_hexapod_name(self):
-        class_typ = "nicos_ess.devices.virtual.hexapod.VirtualHexapod"
-
+    def _is_hexapod_live(self):
+        # Annoying way to check if the setup is live or not
+        class_typ = "nicos_ess.estia.devices.newport.NewportHexapod"
         name = self.client.getDeviceList(needs_class=class_typ)
+        # name returns as a list if something exists
         if name:
-            if len(name) > 1:
-                self.showError("Error: 2 Hexapods Found. Panel can only control one!")
-                self.clear()
-                return
-            self.devname = name[0]
-        else:
-            self.clear()
+            return name[0] == self.devname
+        return False
 
     def get_hexapod_data(self):
-        if self.devname == "":
+        if not self._is_hexapod_live():
             return
 
         # update adev dict
@@ -148,9 +140,8 @@ class HexapodPanel(Panel):
         hexapod_info = {}
 
         for key in setup:
-            if "hexapod" in key:
-                if self.devname in setup[key]["devices"]:
-                    hexapod_info = setup[key]
+            if self.devname in setup[key]["devices"]:
+                hexapod_info = setup[key]
 
         adevs = hexapod_info["devices"][self.devname][1]
         hexapod_info = hexapod_info["devices"]
@@ -160,8 +151,6 @@ class HexapodPanel(Panel):
         for keys in adevs:
             mini_dict = {}
             mini_dict.update({"devname": adevs[keys]})
-            mini_dict.update({"unit": hexapod_info[adevs[keys]][1]["unit"]})
-
             self.adevs.update({f"{keys}": mini_dict})
 
     def update_status_window(self, code):
@@ -179,7 +168,7 @@ class HexapodPanel(Panel):
             elif code in ok_val:
                 self.hexStatus.setStyleSheet("background-color: lightblue")
             elif code == not_ref:
-                self.hexStatus.setStyleSheet("background-color: lightorange")
+                self.hexStatus.setStyleSheet("background-color: orange")
             else:
                 self.hexStatus.setStyleSheet("background-color: None")
             self.hexStatus.setText(f"{code}")
@@ -187,17 +176,15 @@ class HexapodPanel(Panel):
     def update_coord_window(self, value):
         # sometimes the mapping is odd for awhile, so checking for int or string and
         # setting text accordingly
-        if value == "Work" or 0:
-            self.coordSyst.setStyleSheet("background-color: lightorange")
+        if value == "Work":
+            self.coordSyst.setStyleSheet("background-color: lightgreen")
             self.coordSyst.setText("Work")
-        if value == "Tool" or 1:
+        elif value == "Tool":
             self.coordSyst.setStyleSheet("background-color: lightgreen")
             self.coordSyst.setText("Tool")
-
-    def propagate_ui(self):
-        for keys in self.qtObj:
-            self.qtObj[keys]["curUnit"].setText(f"{self.adevs[keys]['unit']}")
-            self.qtObj[keys]["newUnit"].setText(f"{self.adevs[keys]['unit']}")
+        else:
+            self.coordSyst.setText("")
+            self.coordSyst.setStyleSheet("background-color: gray")
 
     def setup_qt_vars(self):
         self.qtObj = {
@@ -272,8 +259,10 @@ class HexapodPanel(Panel):
 
     @pyqtSlot()
     def on_butTest_pressed(self):
-        data = self.mainwindow.expertmode
-        self.showError(f"{data}")
+        class_typ = "nicos_ess.devices.virtual.hexapod.TableHexapod"
+        self.test = self.client.getDeviceList(needs_class=class_typ)
+        self.showError(f"{self.test}")
+        # data = self.mainwindow.expertmode
 
     # relative motion using rmove in GUI
 

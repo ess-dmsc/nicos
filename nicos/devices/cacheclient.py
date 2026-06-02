@@ -595,7 +595,7 @@ class CacheClient(BaseCacheClient):
 
     def _call_callbacks(self, key, value, time):
         with self._dblock:
-            # copy is intented here to avoid races with add/removeCallback
+            # copy is intended here to avoid races with add/removeCallback
             callbacks = tuple(self._callbacks[key])
         for callback in callbacks:
             try:
@@ -623,7 +623,7 @@ class CacheClient(BaseCacheClient):
             if cbs and function and function in cbs:
                 cbs.remove(function)
                 if not cbs:
-                    # emty list: remove!
+                    # empty list: remove!
                     self._callbacks.pop(f"{dev}/{key}".lower(), None)
 
     def get(self, dev, key, default=None, mintime=None):

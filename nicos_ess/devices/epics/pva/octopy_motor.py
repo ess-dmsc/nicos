@@ -195,7 +195,7 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
 
     def doIsCompleted(self):
         """
-        Continously check if a movement is completed.
+        Continuously check if a movement is completed.
         """
         busy = self._get_cached_pv_or_ask("busy") == 1
         move_done = self._get_cached_pv_or_ask("move_done") == 1
