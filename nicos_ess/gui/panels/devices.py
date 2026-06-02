@@ -127,13 +127,16 @@ class DevInfo(AttrDict):
             return str(value)
 
         fmtstr = info["fmtstr"]
-        if isinstance(value, str) and fmtstr == "%r":
-            fmtstr = "%s"
         if fmtstr == "main":
             if isinstance(value, tuple):
                 fmtstr = "(" + ", ".join((self.fmtstr,) * len(value)) + ")"
             else:
                 fmtstr = self.fmtstr
+        else:
+            if isinstance(value, str) and fmtstr == "%r":
+                fmtstr = "%s"
+            if isinstance(value, tuple):
+                fmtstr = "(" + ", ".join((fmtstr,) * len(value)) + ")"
 
         try:
             fmtval = fmtstr % value
