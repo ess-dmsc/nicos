@@ -149,7 +149,7 @@ class DevInfo(AttrDict):
             fmtval = str(value)
 
         unit = (info["unit"] or "").replace("main", self.unit)
-        return fmtval + " " + unit
+        return f"{fmtval} {unit}"
 
 
 class DevicesPanel(Panel):
