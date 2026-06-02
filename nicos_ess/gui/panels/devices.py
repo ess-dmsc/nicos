@@ -128,12 +128,12 @@ class DevInfo(AttrDict):
         return fmted + " " + self.unit
 
     def fmtParam(self, param, value):
+        if isinstance(value, list):
+            value = tuple(value)
         info = self.params.get(param)
         if not info or value is None:
             return str(value)
 
-        if isinstance(value, list):
-            value = tuple(value)
         fmtstr = info["fmtstr"]
         if isinstance(value, str) and fmtstr == "%r":
             fmtstr = "%s"
