@@ -43,6 +43,7 @@ devices = dict(
         dataroot="/opt/nicos-data",
         sample="Sample",
         cache_filepath="/opt/nicos-data/cached_proposals.json",
+        yuos_server_url="http://localhost:14870",
     ),
     pnp_listener=device(
         "nicos_ess.devices.pnp_listener.UDPHeartbeatsManager",
