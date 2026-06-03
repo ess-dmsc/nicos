@@ -1,20 +1,20 @@
-description = "Middle focus mask changer"
+description = "The middle focus mask changer"
 prefix = "ESTIA-Chg:MC-"
 
 devices = dict(
     horizontal_adjust=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Horizontal adjust",
+        description="Horizontal adjustment of the mask changer",
         motorpv=f"{prefix}LinY01:Mtr",
         visibility=(),
     ),
     vertical_adjust=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Vertical adjust",
+        description="Vertical adjustment of the mask changer",
         motorpv=f"{prefix}LinZ01:Mtr",
         visibility=(),
     ),
-    in_beam_changer=device(
+    mask_changer_rot=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="In-Beam changer",
         motorpv=f"{prefix}RotX01:Mtr",
@@ -31,10 +31,10 @@ devices = dict(
         description="readback value of the VS laser",
         readpv="ESTIA-SES:Ctrl-IM-100:LaserEnabled",
     ),
-    beam_changer_macro=device(
+    mask_changer_macro=device(
         "nicos_ess.devices.mapped_controller.MappedController",
-        description="Preset controls for in_beam_changer",
-        controlled_device="in_beam_changer",
+        description="Preset mappings for the mask changer",
+        controlled_device="mask_changer_rot",
         mapping={"Middle": 176.5},
     ),
     # Temperature Readouts

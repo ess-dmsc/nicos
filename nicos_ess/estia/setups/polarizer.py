@@ -1,4 +1,4 @@
-description = "Polarizer"
+description = "The middle focus polarizer"
 pv_root = "ESTIA-PolChg:MC-"
 
 devices = dict(
@@ -7,7 +7,7 @@ devices = dict(
         description="Polarizer in-beam changer",
         motorpv=f"{pv_root}LinY01:Mtr",
     ),
-    angular_adjustment=device(
+    polarizer_angular_adjustment=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Polarizer angular adjustment",
         motorpv=f"{pv_root}RotZ01:Mtr",
