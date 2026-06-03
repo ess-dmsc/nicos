@@ -1,4 +1,4 @@
-description = "Keysight AnaPico Sin2010 - Polarizing Spinflipper"
+description = "Keysight AnaPico Sin2010 - Spinflipper"
 
 pv_root = "ESTIA:RF-SG-001:"
 

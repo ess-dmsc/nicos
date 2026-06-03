@@ -1,6 +1,6 @@
 from nicos_ess.estia.setups.power_supply_config import ALL_CHANNELS, get_channel_keys
 
-description = "Power Supply info for the Detector (HV)."
+description = "Power Supplies Bank 0 for the detector carriage (HV)."
 
 # Name of PS Bank and the list of channels selected for it.
 BANK_NAME = "HV_Bank_0"
@@ -39,7 +39,7 @@ channel_keys = list(devices.keys())
 # Bank device
 power_supply_module = device(
     "nicos_ess.devices.epics.power_supply_channel.PowerSupplyBank",
-    description="Detector HV Power Supplies",
+    description="Bank 0 HV Power Supplies (Detector Carriage)",
     pollinterval=1.0,
     maxage=None,
     ps_channels=channel_keys,
