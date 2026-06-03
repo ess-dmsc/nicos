@@ -8,7 +8,7 @@ devices = dict(
     sr1=device(
         "nicos_ess.estia.devices.selene.SeleneRobot",
         description="Selene 1 Robot",
-        position_data="/ess/ecdc/nicos-core/nicos_ess/estia/devices/selene1_data.yml",
+        position_data="/ess/ecdc/nicos/nicos_ess/estia/devices/selene1_data.yml",
         engaged1=0.00,
         retracted1=28.00,
         engaged2=0.00,
