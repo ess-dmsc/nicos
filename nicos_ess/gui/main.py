@@ -158,9 +158,7 @@ def main(_argv):
                 log.warning("Error setting user style sheet from %s", stylefile, exc=1)
 
     mainwindow_cls = importString(
-        gui_conf.options.get(
-            "mainwindow_class", "nicos.clients.gui.mainwindow.MainWindow"
-        )
+        gui_conf.options.get("mainwindow_class", "nicos_ess.gui.mainwindow.MainWindow")
     )
     mainwindow = mainwindow_cls(log, gui_conf, opts.viewonly, opts.server, opts.user)
     log.addHandler(DebugHandler(mainwindow))
