@@ -1,4 +1,4 @@
-description = "The slit arrangement with 4 motors"
+description = "The 4-blade sample slit"
 prefix = "ESTIA-SpSl:MC-Sl"
 
 devices = dict(
@@ -26,7 +26,7 @@ devices = dict(
         motorpv=f"{prefix}Zm:Mtr",
         visibility=(),
     ),
-    slit_1=device(
+    sample_slit=device(
         "nicos.devices.generic.slit.Slit",
         description="Slit 1 with left, right, bottom and top motors",
         opmode="centered",
