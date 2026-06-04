@@ -44,6 +44,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             # Setting them anyway just for readability.
             internal=True,
             userparam=True,
+            fmtstr="%.3f",
         ),
         "voltage_units": Param(
             "Voltage monitor readback units",
@@ -55,12 +56,17 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             volatile=True,
             internal=True,
             userparam=True,
+            fmtstr="%.3f",
         ),
         "current_units": Param(
             "Current monitor readback units",
             default="uA",
             type=str,
         ),
+    }
+
+    parameter_overrides = {
+        "unit": Override(settable=False),
     }
 
     hardware_access = True

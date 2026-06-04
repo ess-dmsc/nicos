@@ -3,85 +3,175 @@ description = "Detector bank power supply configuration"
 group = "configdata"
 
 hv_detector_channels = {
-    "bank0": {
-        "100": [f"{channel:>02}" for channel in range(0, 12)],
-        "101": [f"{channel:>02}" for channel in range(0, 2)],
-    },
-    "bank1": {
-        "101": [f"{channel:>02}" for channel in range(2, 6)],
-    },
-    "bank2": {
-        "101": [f"{channel:>02}" for channel in range(6, 9)],
-    },
-    "bank5": {
-        "102": [f"{channel:>02}" for channel in range(0, 7)],
-    },
-    "bank6": {
-        "103": [f"{channel:>02}" for channel in range(0, 8)],
-    },
+    "bank0": [
+        {"module": "01", "board": "100", "channel": "00"},
+        {"module": "02", "board": "100", "channel": "01"},
+        {"module": "03", "board": "100", "channel": "02"},
+        {"module": "04", "board": "100", "channel": "03"},
+        {"module": "05", "board": "100", "channel": "04"},
+        {"module": "06", "board": "100", "channel": "05"},
+        {"module": "07", "board": "100", "channel": "06"},
+        {"module": "08", "board": "100", "channel": "07"},
+        {"module": "09", "board": "100", "channel": "08"},
+        {"module": "10", "board": "100", "channel": "09"},
+        {"module": "11", "board": "100", "channel": "10"},
+        {"module": "12", "board": "100", "channel": "11"},
+        {"module": "13", "board": "101", "channel": "00"},
+        {"module": "14", "board": "101", "channel": "01"},
+    ],
+    "bank1": [
+        {"module": "01", "board": "101", "channel": "02"},
+        {"module": "02", "board": "101", "channel": "03"},
+        {"module": "03", "board": "101", "channel": "04"},
+        {"module": "04", "board": "101", "channel": "05"},
+    ],
+    "bank2": [
+        {"module": "01", "board": "101", "channel": "06"},
+        {"module": "02", "board": "101", "channel": "07"},
+        {"module": "03", "board": "101", "channel": "08"},
+    ],
+    "bank3": [
+        {"module": "01", "board": "104", "channel": "00"},
+        {"module": "02", "board": "104", "channel": "01"},
+        {"module": "03", "board": "104", "channel": "02"},
+        {"module": "04", "board": "104", "channel": "03"},
+    ],
+    "bank4": [
+        {"module": "01", "board": "104", "channel": "04"},
+        {"module": "02", "board": "104", "channel": "05"},
+        {"module": "03", "board": "104", "channel": "06"},
+    ],
+    "bank5": [
+        {"module": "01", "board": "102", "channel": "00"},
+        {"module": "02", "board": "102", "channel": "01"},
+        {"module": "03", "board": "102", "channel": "02"},
+        {"module": "04", "board": "102", "channel": "03"},
+        {"module": "05", "board": "102", "channel": "04"},
+        {"module": "06", "board": "102", "channel": "05"},
+        {"module": "07", "board": "102", "channel": "06"},
+    ],
+    "bank6": [
+        {"module": "01", "board": "103", "channel": "00"},
+        {"module": "02", "board": "103", "channel": "01"},
+        {"module": "03", "board": "103", "channel": "02"},
+        {"module": "04", "board": "103", "channel": "03"},
+        {"module": "05", "board": "103", "channel": "04"},
+        {"module": "06", "board": "103", "channel": "05"},
+        {"module": "07", "board": "103", "channel": "06"},
+        {"module": "08", "board": "103", "channel": "07"},
+    ],
+    "bank7": [
+        {"module": "01", "board": "104", "channel": "07"},
+        {"module": "02", "board": "104", "channel": "08"},
+        {"module": "03", "board": "104", "channel": "09"},
+        {"module": "04", "board": "104", "channel": "10"},
+        {"module": "05", "board": "104", "channel": "11"},
+    ],
+    "bank8": [
+        {"module": "01", "board": "105", "channel": "00"},
+        {"module": "02", "board": "105", "channel": "01"},
+        {"module": "03", "board": "105", "channel": "02"},
+        {"module": "04", "board": "105", "channel": "03"},
+        {"module": "05", "board": "105", "channel": "04"},
+        {"module": "06", "board": "105", "channel": "05"},
+        {"module": "07", "board": "105", "channel": "06"},
+        {"module": "08", "board": "105", "channel": "07"},
+    ],
 }
 
 hv_bm_channels = {
-    "monitor_m0": {
-        "board": 102,
-        "channel": "07",
-    },
-    "monitor_m1": {
-        "board": 102,
-        "channel": "08",
-    },
-    "monitor_m2": {
-        "board": 102,
-        "channel": "09",
-    },
-    "monitor_m3": {
-        "board": 102,
-        "channel": "10",
-    },
-    "monitor_m4": {
-        "board": 102,
-        "channel": "11",
-    },
+    "a_monitor_m0": {"board": "102", "channel": "07"},
+    "a_monitor_m1": {"board": "102", "channel": "08"},
+    "a_monitor_m2": {"board": "102", "channel": "09"},
+    "a_monitor_m3": {"board": "102", "channel": "10"},
+    "a_monitor_m4": {"board": "102", "channel": "11"},
+    "b_monitor_m0": {"board": "103", "channel": "08"},
+    "b_monitor_m1": {"board": "103", "channel": "09"},
+    "b_monitor_m2": {"board": "105", "channel": "08"},
+    "b_monitor_m3": {"board": "105", "channel": "09"},
+    "b_monitor_m4": {"board": "105", "channel": "10"},
 }
 
 lv_detector_channels = {
-    "bank0": {
-        "106": [f"{channel:>02}" for channel in range(0, 8)],
-        "107": [f"{channel:>02}" for channel in range(0, 6)],
-    },
-    "bank1": {
-        "108": [f"{channel:>02}" for channel in range(0, 4)],
-    },
-    "bank2": {
-        "108": [f"{channel:>02}" for channel in range(4, 7)],
-    },
-    "bank5": {
-        "110": [f"{channel:>02}" for channel in range(0, 7)],
-    },
-    "bank6": {
-        "111": [f"{channel:>02}" for channel in range(0, 8)],
-    },
+    "bank0": [
+        {"module": "01", "board": "106", "channel": "00"},
+        {"module": "02", "board": "106", "channel": "01"},
+        {"module": "03", "board": "106", "channel": "02"},
+        {"module": "04", "board": "106", "channel": "03"},
+        {"module": "05", "board": "106", "channel": "04"},
+        {"module": "06", "board": "106", "channel": "05"},
+        {"module": "07", "board": "106", "channel": "06"},
+        {"module": "08", "board": "106", "channel": "07"},
+        {"module": "09", "board": "107", "channel": "00"},
+        {"module": "10", "board": "107", "channel": "01"},
+        {"module": "11", "board": "107", "channel": "02"},
+        {"module": "12", "board": "107", "channel": "03"},
+        {"module": "13", "board": "107", "channel": "04"},
+        {"module": "14", "board": "107", "channel": "05"},
+    ],
+    "bank1": [
+        {"module": "01", "board": "108", "channel": "00"},
+        {"module": "02", "board": "108", "channel": "01"},
+        {"module": "03", "board": "108", "channel": "02"},
+        {"module": "04", "board": "108", "channel": "07"},
+    ],
+    "bank2": [
+        {"module": "01", "board": "108", "channel": "04"},
+        {"module": "02", "board": "108", "channel": "05"},
+        {"module": "03", "board": "108", "channel": "06"},
+    ],
+    "bank3": [
+        {"module": "01", "board": "112", "channel": "00"},
+        {"module": "02", "board": "112", "channel": "01"},
+        {"module": "03", "board": "112", "channel": "02"},
+        {"module": "04", "board": "112", "channel": "03"},
+    ],
+    "bank4": [
+        {"module": "01", "board": "112", "channel": "04"},
+        {"module": "02", "board": "112", "channel": "05"},
+        {"module": "03", "board": "112", "channel": "06"},
+    ],
+    "bank5": [
+        {"module": "01", "board": "110", "channel": "00"},
+        {"module": "02", "board": "110", "channel": "01"},
+        {"module": "03", "board": "110", "channel": "02"},
+        {"module": "04", "board": "110", "channel": "03"},
+        {"module": "05", "board": "110", "channel": "04"},
+        {"module": "07", "board": "110", "channel": "06"},
+    ],
+    "bank6": [
+        {"module": "01", "board": "111", "channel": "00"},
+        {"module": "02", "board": "111", "channel": "01"},
+        {"module": "03", "board": "111", "channel": "02"},
+        {"module": "04", "board": "111", "channel": "03"},
+        {"module": "05", "board": "111", "channel": "04"},
+        {"module": "06", "board": "111", "channel": "05"},
+        {"module": "07", "board": "111", "channel": "06"},
+        {"module": "08", "board": "111", "channel": "07"},
+    ],
+    "bank7": [
+        {"module": "01", "board": "113", "channel": "00"},
+        {"module": "02", "board": "113", "channel": "01"},
+        {"module": "03", "board": "113", "channel": "02"},
+        {"module": "04", "board": "113", "channel": "03"},
+        {"module": "05", "board": "113", "channel": "04"},
+    ],
+    "bank8": [
+        {"module": "01", "board": "114", "channel": "00"},
+        {"module": "02", "board": "114", "channel": "01"},
+        {"module": "03", "board": "114", "channel": "02"},
+        {"module": "04", "board": "114", "channel": "03"},
+        {"module": "05", "board": "114", "channel": "04"},
+        {"module": "06", "board": "114", "channel": "05"},
+        {"module": "07", "board": "114", "channel": "06"},
+        {"module": "08", "board": "114", "channel": "07"},
+    ],
 }
 
 lv_bm_channels = {
-    "monitor_m0": {
-        "board": 115,
-        "channel": "00",
-    },
-    "monitor_m1": {
-        "board": 115,
-        "channel": "01",
-    },
-    "monitor_m2": {
-        "board": 115,
-        "channel": "02",
-    },
-    "monitor_m3": {
-        "board": 115,
-        "channel": "03",
-    },
-    "monitor_m4": {
-        "board": 115,
-        "channel": "04",
-    },
+    "monitor_m0": {"board": "115", "channel": "00"},
+    "monitor_m1": {"board": "115", "channel": "01"},
+    "monitor_m2": {"board": "115", "channel": "02"},
+    "monitor_m3": {"board": "115", "channel": "03"},
+    "monitor_m4": {"board": "115", "channel": "04"},
 }
