@@ -257,37 +257,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return dial_min, dial_max
 
     def doReadHwuserlimits(self):
-        dial_min = self._get_cached_pv_or_ask("diallowlimit")
-        dial_max = self._get_cached_pv_or_ask("dialhighlimit")
-        if dial_min > dial_max:
-            raise ConfigurationError(
-                self,
-                f"dial lowlimit ({dial_min}) above dial highlimit ({dial_max})",
-            )
-        offset = self.offset
         hw_user_min = self._get_cached_pv_or_ask("lowlimit")
         hw_user_max = self._get_cached_pv_or_ask("highlimit")
-        if hw_user_min > hw_user_max:
-            raise ConfigurationError(
-                self,
-                f"hardware user lowlimit ({hw_user_min}) above hardware user highlimit ({hw_user_max})",
-            )
-        if not self._user_limits_fit_dial_window(
-            hw_user_min, hw_user_max, dial_min, dial_max, offset
-        ):
-            raise ConfigurationError(
-                self,
-                "hardware userlimits (%s, %s) are inconsistent with dial limits "
-                "(%s, %s), offset (%s) and direction (%s)"
-                % (
-                    hw_user_min,
-                    hw_user_max,
-                    dial_min,
-                    dial_max,
-                    offset,
-                    self._get_pv("dir", as_string=True),
-                ),
-            )
         return hw_user_min, hw_user_max
 
     def doReadUserlimits(self):
@@ -391,30 +362,11 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._put_pv("monitor_deadband", max(deadband, 0))
 
     def doWriteOffset(self, new_off):
-        """Shift the user ↔ dial offset via SET/FOFF; limits follow automatically."""
-        if self.offset == new_off:
-            return
-
+        """Set the EPICS motor record offset exactly."""
         if self._get_pv("moving") or not self._get_pv("donemoving"):
             raise RuntimeError(f"{self}: cannot change OFF while motor is moving")
 
-        # Calculate the user value that makes OFF = new_off
-        dir_sign = 1 if self._get_pv("dir", as_string=True) == "Pos" else -1
-        dial_now = self._get_pv("dialvalue")
-        user_target = dial_now * dir_sign + new_off  # user = dial·DIR + OFF
-
-        # Enter calibration mode with variable offset
-        self._put_pv("set", 1)
-        self._put_pv("foff", 0)
-
-        # Write VAL – record calculates OFF and shifts HLM/LLM
-        self._put_pv("target", user_target)
-
-        # Leave calibration mode
-        self._put_pv("set", 0)
-
-        self._cache.put(self._name, "offset", new_off, time.time())
-        self.log.info("Offset changed to %s", new_off)
+        self._put_pv("offset", new_off, wait=True)
 
     def doWriteUserlimits(self, value):
         self._checkLimits(value)
@@ -427,10 +379,16 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self.limitoffsets = (omin, omax)
 
     def doAdjust(self, oldvalue, newvalue):
-        # For EPICS the offset sign convention differs to that of the base
-        # implementation.
-        diff = oldvalue - newvalue
-        self.offset -= diff
+        if self._get_pv("moving") or not self._get_pv("donemoving"):
+            raise RuntimeError(f"{self}: cannot adjust OFF while motor is moving")
+
+        self._put_pv("set", 1, wait=True)
+        try:
+            self._put_pv("foff", 0, wait=True)
+            adjusted_current = self._get_pv("value") + newvalue - oldvalue
+            self._put_pv("target", adjusted_current, wait=True)
+        finally:
+            self._put_pv("set", 0, wait=True)
 
     def doStop(self):
         self._put_pv("stop", 1)
@@ -570,9 +528,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             f"{self.motorpv}{self._record_fields[param].pv_suffix}", as_string
         )
 
-    def _put_pv(self, param, value):
+    def _put_pv(self, param, value, wait=False):
         self._epics_wrapper.put_pv_value(
-            f"{self.motorpv}{self._record_fields[param].pv_suffix}", value
+            f"{self.motorpv}{self._record_fields[param].pv_suffix}", value, wait=wait
         )
 
     def _get_valid_speed(self, value):

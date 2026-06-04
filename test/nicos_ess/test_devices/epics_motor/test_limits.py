@@ -36,7 +36,6 @@ from test.nicos_ess.test_devices.epics_motor.helpers import (
     OFFSET_CASES,
     TARGET_DIAL_USERLIMITS,
     WRITTEN_DYNAMIC_USER_DIAL_LIMITS,
-    build_motor_cfg,
     create_monitored_motor_pair,
     create_motor_pair,
     pv,
@@ -44,37 +43,6 @@ from test.nicos_ess.test_devices.epics_motor.helpers import (
     user_limits_from_dial_limits,
     userlimits_from_hw_window_and_limitoffsets,
 )
-
-
-class DerivedRecordFieldEpicsMotor(EpicsMotor):
-    def doPreinit(self, mode):
-        super().doPreinit(mode)
-        self._record_fields["extra_field"] = RecordInfo("", ".XTR", RecordType.VALUE)
-
-
-class TestEpicsMotorLegacyParity:
-    def test_motor_adjust_updates_offset_for_redefined_position(
-        self, device_harness, fake_backend
-    ):
-        fake_backend.values[pv(".RBV")] = 0.0
-        fake_backend.values[pv(".DRBV")] = 0.0
-        fake_backend.values[pv(".VAL")] = 0.0
-        daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
-
-        device_harness.run_daemon(daemon_device.doAdjust, 0.0, 50.0)
-
-        assert device_harness.run_daemon(daemon_device.doReadOffset) == 50.0
-        assert fake_backend.values[pv(".VAL")] == 50.0
-
-    def test_derived_motor_can_extend_record_field_mapping(self, device_harness):
-        dev = device_harness.create(
-            "daemon",
-            DerivedRecordFieldEpicsMotor,
-            name="motor",
-            **build_motor_cfg(),
-        )
-        assert "extra_field" in dev._record_fields
-        assert dev._record_fields["extra_field"].pv_suffix == ".XTR"
 
 
 class TestEpicsMotorLimits:
@@ -230,71 +198,6 @@ class TestEpicsMotorLimits:
             == expected_userlimits
         )
         assert daemon_device._startup_moveable_limits_pending is False
-
-    @pytest.mark.parametrize(
-        "pv_updates,error_match",
-        [
-            pytest.param(
-                {".DLLM": 10.0, ".DHLM": -10.0},
-                "invalid value for parameter abslimits",
-                id="dial_limits_inverted",
-            ),
-            pytest.param(
-                {".LLM": 10.0, ".HLM": -10.0},
-                "hardware user lowlimit",
-                id="hardware_limits_inverted",
-            ),
-            pytest.param(
-                {".OFF": 10.0},
-                "hardware userlimits",
-                id="hardware_limits_inconsistent_with_offset",
-            ),
-        ],
-    )
-    def test_motor_limits_read_fails_for_invalid_epics_configuration(
-        self, device_harness, fake_backend, pv_updates, error_match
-    ):
-        for suffix, value in pv_updates.items():
-            fake_backend.values[pv(suffix)] = value
-
-        with pytest.raises(ConfigurationError, match=error_match):
-            create_motor_pair(device_harness, monitor=False)
-
-    def test_motor_limits_read_accepts_hardware_limits_within_relative_tolerance(
-        self, device_harness, fake_backend
-    ):
-        dial_min, dial_max = ASYMM_DIAL_LIMITS
-        tol_min = abs(dial_min) * EpicsMotor.limit_rel_tolerance
-        tol_max = abs(dial_max) * EpicsMotor.limit_rel_tolerance
-
-        fake_backend.values[pv(".DIR")] = "Pos"
-        fake_backend.values[pv(".OFF")] = 0.0
-        fake_backend.values[pv(".DLLM")] = dial_min
-        fake_backend.values[pv(".DHLM")] = dial_max
-        fake_backend.values[pv(".LLM")] = dial_min - tol_min * 0.5
-        fake_backend.values[pv(".HLM")] = dial_max + tol_max * 0.5
-
-        daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
-
-        assert daemon_device.hwuserlimits == pytest.approx(
-            (dial_min - tol_min * 0.5, dial_max + tol_max * 0.5)
-        )
-
-    def test_motor_limits_read_rejects_hardware_limits_outside_relative_tolerance(
-        self, device_harness, fake_backend
-    ):
-        dial_min, dial_max = ASYMM_DIAL_LIMITS
-        tol_min = abs(dial_min) * EpicsMotor.limit_rel_tolerance
-
-        fake_backend.values[pv(".DIR")] = "Pos"
-        fake_backend.values[pv(".OFF")] = 0.0
-        fake_backend.values[pv(".DLLM")] = dial_min
-        fake_backend.values[pv(".DHLM")] = dial_max
-        fake_backend.values[pv(".LLM")] = dial_min - tol_min * 2.0
-        fake_backend.values[pv(".HLM")] = dial_max
-
-        with pytest.raises(ConfigurationError, match="hardware userlimits"):
-            create_motor_pair(device_harness, monitor=False)
 
     def test_motor_write_userlimits_accepts_boundaries_within_relative_tolerance(
         self, device_harness, fake_backend

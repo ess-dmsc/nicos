@@ -80,6 +80,13 @@ class FakeEpicsMotor(EpicsMotor):
     def _put_pv(self, pvparam, value, wait=False):
         self.values[pvparam] = value
 
+        # fake the behaviour of the motor record when in calibration mode
+        if pvparam == "target" and self.values.get("set") == 1:
+            if self.values.get("foff") == 0:
+                direction = 1 if self.values["dir"] == "Pos" else -1
+                self.values["offset"] = value - self.values["dialvalue"] * direction
+                self._cache.put(self, "offset", self.values["offset"])
+
     def _get_pv(self, pvparam, as_string=False):
         return self.values[pvparam]
 
