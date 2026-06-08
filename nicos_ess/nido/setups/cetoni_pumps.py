@@ -27,14 +27,20 @@ devices = dict(
         readpv=f"{pump2_pvroot}SyrType-SP",
         writepv=f"{pump2_pvroot}SyrType-SP",
     ),
-    linked_mode=device(
+    linked_pumping_control=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode",
         pvroot="",
         sp1="pump1",
         sp2="pump2",
-        pump_time="linked_mode_time",
+        pump_time="linked_pumping_time",
     ),
-    linked_mode_time=device(
+    linked_pumping_mode=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Device to set the configuration of cetoni pump SP2",
+        readpv=f"{linked_pvroot}StopMode-SP",
+        writepv=f"{linked_pvroot}StopMode-SP",
+    ),
+    linked_pumping_time=device(
         "nicos_ess.devices.epics.pva.epics_devices.EpicsDigitalMoveable",
         readpv=f"{linked_pvroot}MaxDosingTime-SP",
         writepv=f"{linked_pvroot}MaxDosingTime-SP",
