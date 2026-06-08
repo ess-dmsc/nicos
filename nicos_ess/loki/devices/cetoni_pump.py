@@ -475,7 +475,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
 
     def doInit(self, mode):
         if mode != SIMULATION:
-            self._set_mapping(self._get_pv_name("target"))
+            self._set_mapping()
         if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._set_up_subscriptions()
         MappedMoveable.doInit(self, mode)
@@ -568,11 +568,8 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
                 )
                 self._epics_subscriptions.append(status_subscription)
 
-    def _set_mapping(self, pv_name):
-        choices = self._get_mapped_choices(pv_name)
-        new_mapping = {}
-        for i, choice in enumerate(choices):
-            new_mapping[choice] = i
+    def _set_mapping(self):
+        new_mapping = {"Start": 0}
         self._setROParam("mapping", new_mapping)
         self._inverse_mapping = {}
         for k, v in self.mapping.items():
@@ -628,18 +625,13 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         return True
 
     def doRead(self, maxage=0):
-        return self._get_cached_mappedpv_or_ask("value")
-
-    def _startRaw(self, target):
-        self._put_pv_val("target", target)
+        return ""
 
     def doStart(self, target):
         is_enabled = self._get_cached_pv_or_ask("is_enabled")
         if not is_enabled:
             self.log.warning("Please enable before starting")
             return
-        self._startRaw(self._mapTargetValue(target))
-        sleep(0.5)
         self._put_pv_val("start", 1)
 
     def doReadFlowrate(self):
