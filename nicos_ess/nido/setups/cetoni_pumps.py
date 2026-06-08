@@ -27,7 +27,7 @@ devices = dict(
         readpv=f"{pump2_pvroot}SyrType-SP",
         writepv=f"{pump2_pvroot}SyrType-SP",
     ),
-    linked_pumping_control=device(
+    linked_pumping=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode",
         pvroot="",
         sp1="pump1",
