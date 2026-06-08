@@ -482,16 +482,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
 
     def _get_record_fields(self):
         return {
-            "value": RecordInfo(
-                cache_key="value",
-                pv_suffix="B02-CSLab:SE-Pumps:LnkdStopMode-SP",
-                record_type=RecordType.VALUE,
-            ),
-            "target": RecordInfo(
-                cache_key="target",
-                pv_suffix="B02-CSLab:SE-Pumps:LnkdStopMode-SP",
-                record_type=RecordType.VALUE,
-            ),
             "flowrate": RecordInfo(
                 cache_key="flowrate",
                 pv_suffix="B02-CSLab:SE-Pumps:LnkdFlowRate-SP",
@@ -632,7 +622,8 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         if not is_enabled:
             self.log.warning("Please enable before starting")
             return
-        self._put_pv_val("start", 1)
+        if target.lower() == "start":
+            self._put_pv_val("start", 1)
 
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
