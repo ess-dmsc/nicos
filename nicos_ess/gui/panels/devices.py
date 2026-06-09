@@ -36,6 +36,7 @@ from nicos.guisupport.typedvalue import (
 )
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
+from nicos_ess.gui.dialogs.homing_warning import HomingWarningDialog
 from nicos_ess.gui.utils import get_icon
 
 # QTreeWidgetItem types
@@ -1305,6 +1306,12 @@ class ControlDialog(QDialog):
 
     @pyqtSlot()
     def on_actionHome_triggered(self):
+        if self.devrepr.warn_ref_msg:
+            qwindow = HomingWarningDialog(self.devrepr.warn_ref_msg)
+            result = qwindow.exec()
+            if result == QMessageBox.StandardButton.Cancel:
+                return
+        print("homing")
         self.device_panel.exec_command("home(%s)" % self.devrepr)
 
     @pyqtSlot()
