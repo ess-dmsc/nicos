@@ -641,8 +641,8 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
 
     def doStart(self, target):
         if self._attached_linked_pump_device._get_cached_pv_or_ask("is_enabled"):
-            self.log.info(
-                f"Please disable {self._attached_linked_pump_device.name} first"
+            self.log.warning(
+                f"Please disable device: {self._attached_linked_pump_device.name} first"
             )
             return
         self._put_pv_val("target", target)
