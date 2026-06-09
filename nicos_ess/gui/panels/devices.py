@@ -1306,13 +1306,17 @@ class ControlDialog(QDialog):
 
     @pyqtSlot()
     def on_actionHome_triggered(self):
-        if self.devrepr.warn_ref_msg:
-            qwindow = HomingWarningDialog(self.devrepr.warn_ref_msg)
-            result = qwindow.exec()
-            if result == QMessageBox.StandardButton.Cancel:
-                return
-        print("homing")
-        self.device_panel.exec_command("home(%s)" % self.devrepr)
+        try:
+            warn_ref_msg = self.client.eval(
+                f"session.getDevice({self.devname}).warn_ref_msg", None
+            )
+            if warn_ref_msg:
+                qwindow = HomingWarningDialog(warn_ref_msg)
+                result = qwindow.exec()
+                if result == QMessageBox.StandardButton.Cancel:
+                    return
+        finally:
+            self.device_panel.exec_command("home(%s)" % self.devrepr)
 
     @pyqtSlot()
     def on_actionFix_triggered(self):
