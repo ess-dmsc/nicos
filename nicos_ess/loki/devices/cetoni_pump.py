@@ -404,6 +404,11 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             description="Piston stroke unit",
             type=str,
         ),
+        "warn_ref_msg": Param(
+            description="Message to warn before performed 'home' command",
+            type=str,
+            mandatory=False,
+        ),
     }
 
     parameter_overrides = {
