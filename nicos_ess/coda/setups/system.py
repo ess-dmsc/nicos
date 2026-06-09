@@ -17,11 +17,12 @@ alias_config = {
         "NexusStructure_bifrost": 99,
         "NexusStructure_dream": 98,
         "NexusStructure_estia": 97,
-        "NexusStructure_magic": 96,
-        "NexusStructure_loki": 95,
-        "NexusStructure_nmx": 94,
-        "NexusStructure_odin": 93,
-        "NexusStructure_tbl": 92,
+        "NexusStructure_freia": 96,
+        "NexusStructure_magic": 95,
+        "NexusStructure_loki": 94,
+        "NexusStructure_nmx": 93,
+        "NexusStructure_odin": 92,
+        "NexusStructure_tbl": 91,
     },
 }
 
@@ -115,6 +116,13 @@ devices = dict(
         description="Provides the NeXus structure",
         nexus_config_path="nexus-json-templates/magic/magic-dynamic.json",
         instrument_name="magic",
+        visibility=(),
+    ),
+    NexusStructure_freia=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/freia/freia-dynamic.json",
+        instrument_name="freia",
         visibility=(),
     ),
     NexusStructure=device(
