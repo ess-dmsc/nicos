@@ -459,12 +459,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
-    attached_devices = {
-        "sp1": Attach("controller for syringe SP1", CetoniPumpController),
-        "sp2": Attach("controller for syringe SP2", CetoniPumpController),
-        "pump_time": Attach("Time for linked syringe mode 'Time'", Moveable),
-    }
-
     def doPreinit(self, mode):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
@@ -668,14 +662,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         return get_from_cache_or(self, "status", self._do_status)
 
     def _do_status(self):
-        is_sp1_fault = self._attached_sp1._get_cached_pv_or_ask("is_fault")
-        if is_sp1_fault:
-            return status.ERROR, "SP1 in faulty state"
-
-        is_sp2_fault = self._attached_sp2._get_cached_pv_or_ask("is_fault")
-        if is_sp2_fault:
-            return status.ERROR, "SP2 in faulty state"
-
         is_pumping = self._get_cached_pv_or_ask("is_pumping")
         mode = self.read()
         if is_pumping:
