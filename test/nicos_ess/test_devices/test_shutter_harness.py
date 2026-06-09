@@ -24,7 +24,7 @@
 
 import pytest
 
-from nicos_ess.devices.epics.pva import epics_devices
+from nicos_ess.devices.epics.pva import epics_common
 from nicos_ess.devices.epics.pva import shutter
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
@@ -33,7 +33,7 @@ from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
     monkeypatch.setattr(
-        epics_devices, "create_wrapper", lambda timeout, use_pva: backend
+        epics_common, "create_wrapper", lambda timeout, use_pva: backend
     )
     backend.values["SIM:SHUTTER:READ"] = "Closed"
     backend.values["SIM:SHUTTER:WRITE"] = "Close"

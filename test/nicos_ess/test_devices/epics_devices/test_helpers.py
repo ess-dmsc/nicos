@@ -22,15 +22,15 @@
 #
 # *****************************************************************************
 
-"""Tests for helper functions, enums, and shared EPICS parameter defaults."""
-
 from types import SimpleNamespace
 
 import pytest
 
 from nicos_ess.devices.epics.pva.epics_devices import (
-    EpicsParameters,
     EpicsReadable,
+)
+from nicos_ess.devices.epics.pva.epics_common import (
+    EpicsParameters,
     PvReadOrWrite,
     RecordType,
     _update_mapped_choices,
@@ -39,7 +39,16 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 
 
 class TestHelpers:
-    """Tests for helper functions and enums in the module."""
+    class CacheProbe:
+        def __init__(self, value=Ellipsis):
+            self.value = value
+            self.calls = []
+
+        def get(self, dev, key, default=None, mintime=None):
+            self.calls.append((dev, key, default, mintime))
+            if self.value is Ellipsis:
+                return default
+            return self.value
 
     def test_record_type_enum_values_are_stable(self):
         assert RecordType.VALUE.value == 1
@@ -48,10 +57,11 @@ class TestHelpers:
 
     def test_get_from_cache_or_prefers_cache_when_monitor_enabled(self):
         called = {"count": 0}
+        cache = self.CacheProbe(123)
         device = SimpleNamespace(
             monitor=True,
             _name="dummy",
-            _cache=SimpleNamespace(get=lambda dev, key: 123),
+            _cache=cache,
         )
 
         def fallback():
@@ -62,13 +72,31 @@ class TestHelpers:
 
         assert result == 123
         assert called["count"] == 0
+        assert cache.calls == [("dummy", "value", Ellipsis, None)]
 
-    def test_get_from_cache_or_uses_fallback_when_cache_has_no_value(self):
+    def test_get_from_cache_or_returns_cached_none_as_value(self):
         called = {"count": 0}
         device = SimpleNamespace(
             monitor=True,
             _name="dummy",
-            _cache=SimpleNamespace(get=lambda dev, key: None),
+            _cache=self.CacheProbe(None),
+        )
+
+        def fallback():
+            called["count"] += 1
+            return 777
+
+        result = get_from_cache_or(device, "value", fallback)
+
+        assert result is None
+        assert called["count"] == 0
+
+    def test_get_from_cache_or_uses_fallback_when_cache_is_missing(self):
+        called = {"count": 0}
+        device = SimpleNamespace(
+            monitor=True,
+            _name="dummy",
+            _cache=self.CacheProbe(),
         )
 
         def fallback():
@@ -79,6 +107,49 @@ class TestHelpers:
 
         assert result == 777
         assert called["count"] == 1
+
+    def test_get_from_cache_or_maxage_zero_uses_fallback(self):
+        called = {"count": 0}
+        device = SimpleNamespace(
+            monitor=True,
+            _name="dummy",
+            _cache=self.CacheProbe(123),
+        )
+
+        def fallback():
+            called["count"] += 1
+            return 777
+
+        result = get_from_cache_or(device, "value", fallback, maxage=0)
+
+        assert result == 777
+        assert called["count"] == 1
+        assert device._cache.calls == []
+
+    def test_get_from_cache_or_maxage_none_accepts_cache_without_mintime(self):
+        device = SimpleNamespace(
+            monitor=True,
+            _name="dummy",
+            _cache=self.CacheProbe(123),
+        )
+
+        result = get_from_cache_or(device, "value", lambda: 777, maxage=None)
+
+        assert result == 123
+        assert device._cache.calls == [("dummy", "value", Ellipsis, None)]
+
+    def test_get_from_cache_or_positive_maxage_passes_mintime(self):
+        device = SimpleNamespace(
+            monitor=True,
+            _name="dummy",
+            _cache=self.CacheProbe(),
+        )
+
+        result = get_from_cache_or(device, "value", lambda: 777, maxage=5)
+
+        assert result == 777
+        assert len(device._cache.calls) == 1
+        assert isinstance(device._cache.calls[0][3], float)
 
     @pytest.mark.parametrize(
         "selector,expected_pv",
@@ -94,8 +165,13 @@ class TestHelpers:
             _epics_wrapper=fake_backend,
             mapping={},
             _inverse_mapping={},
+            fallback=None,
         )
-        mapped_device._setROParam = lambda name, value: setattr(mapped_device, name, value)
+
+        def set_ro_param(name, value):
+            setattr(mapped_device, name, value)
+
+        mapped_device._setROParam = set_ro_param
 
         _update_mapped_choices(mapped_device, selector)
 

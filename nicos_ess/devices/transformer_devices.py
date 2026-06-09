@@ -61,8 +61,8 @@ class ChopperPhase(TransformedMoveable):
     def _mapReadValue(self, value):
         return self._nanoseconds_to_degrees(value) - self.offset
 
-    def doReadSpeed(self, maxage=0):
-        target_val = self._attached_mapped_speed_dev.doReadTarget(maxage=maxage)
+    def doReadSpeed(self):
+        target_val = self._attached_mapped_speed_dev.doReadTarget()
         raw_target = self._attached_mapped_speed_dev.mapping.get(
             target_val, target_val
         )  # if the target value is not in the mapping, assume it is a raw value and use it directly

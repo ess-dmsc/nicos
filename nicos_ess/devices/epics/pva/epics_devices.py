@@ -21,22 +21,12 @@
 #
 # *****************************************************************************
 
-"""
-This module contains some classes for NICOS - EPICS integration.
-"""
+"""Concrete ESS EPICS PVA devices."""
 
-import os
 import time
-from collections import namedtuple
-from enum import Enum
 
-import numpy
-
-from nicos import session
 from nicos.core import (
-    POLLER,
     SIMULATION,
-    ConfigurationError,
     HasLimits,
     HasPrecision,
     Moveable,
@@ -45,65 +35,21 @@ from nicos.core import (
     PositionError,
     Readable,
     anytype,
-    floatrange,
-    none_or,
     pvname,
     status,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable
-from nicos_ess.devices.mixins import HasNexusConfig
-
-DEFAULT_EPICS_PROTOCOL = os.environ.get("DEFAULT_EPICS_PROTOCOL", "ca")
-
-
-RecordInfo = namedtuple("RecordInfo", ("cache_key", "pv_suffix", "record_type"))
-
-
-class RecordType(Enum):
-    VALUE = 1
-    STATUS = 2
-    BOTH = 3
+from nicos_ess.devices.epics.pva.epics_common import (
+    EpicsDeviceBase,
+    EpicsMappedChoiceSupport,
+    EpicsReadWriteBase,
+    RecordInfo,
+    RecordType,
+    _update_mapped_choices,
+)
 
 
-class EpicsParameters(HasNexusConfig):
-    parameters = {
-        "epicstimeout": Param(
-            "Timeout for getting EPICS PVs",
-            type=none_or(floatrange(0.1, 60)),
-            userparam=False,
-            mandatory=False,
-            default=3.0,
-        ),
-        "monitor": Param("Use a PV monitor", type=bool, default=True),
-        "pva": Param("Use pva", type=bool, default=True),
-    }
-    parameter_overrides = {
-        "pollinterval": Override(default=None),
-        "maxage": Override(default=None),
-    }
-    hardware_access = True
-
-
-def create_wrapper(timeout, use_pva):
-    if use_pva:
-        from nicos.devices.epics.pva.p4p import P4pWrapper
-
-        return P4pWrapper(timeout)
-    else:
-        from nicos.devices.epics.pva.caproto import CaprotoWrapper
-
-        return CaprotoWrapper(timeout)
-
-
-def get_from_cache_or(device, cache_key, func):
-    if device.monitor:
-        result = device._cache.get(device._name, cache_key)
-        if result is not None:
-            return result
-    return func()
-
-
-class EpicsReadable(EpicsParameters, Readable):
+class EpicsReadable(EpicsDeviceBase, Readable):
     parameters = {
         "readpv": Param(
             "PV for reading device value", type=pvname, mandatory=True, userparam=False
@@ -114,95 +60,16 @@ class EpicsReadable(EpicsParameters, Readable):
         "unit": Override(mandatory=False, settable=False, volatile=True),
     }
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH),
-    }
-
-    _epics_wrapper = None
-    _epics_subscriptions = []
+    _primary_field = "readpv"
 
     def doPreinit(self, mode):
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode == SIMULATION:
-            return
-        self._epics_wrapper.connect_pv(self.readpv)
-
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._status_change_callback,
-                    self._connection_change_callback,
-                )
-            )
+        self._record_fields = {
+            "readpv": RecordInfo("value", "", RecordType.BOTH),
+        }
+        EpicsDeviceBase.doPreinit(self, mode)
 
     def doRead(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self.readpv),
-        )
-
-    def doReadUnit(self):
-        return get_from_cache_or(
-            self, "unit", lambda: self._epics_wrapper.get_units(self.readpv)
-        )
-
-    def doStatus(self, maxage=0):
-        def _func():
-            try:
-                severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
-            except TimeoutError:
-                return status.ERROR, "timeout reading status"
-            if severity in [status.ERROR, status.WARN]:
-                return severity, msg
-            return status.OK, msg
-
-        return get_from_cache_or(self, "status", _func)
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            # Unexpected updates ignored
-            return
-        time_stamp = time.time()
-        self._cache.put(self._name, param, value, time_stamp)
-        self._cache.put(self._name, "unit", units, time_stamp)
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            # Unexpected updates ignored
-            return
-        self._cache.put(self._name, "status", (severity, message), time.time())
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if param != self._record_fields["readpv"].cache_key:
-            return
-
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
+        return self._get_cached_pv_or_ask("readpv", maxage=maxage)
 
 
 class EpicsStringReadable(EpicsReadable):
@@ -213,194 +80,50 @@ class EpicsStringReadable(EpicsReadable):
 
     valuetype = str
 
-    def doRead(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self.readpv, as_string=True),
-        )
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if isinstance(value, numpy.ndarray):
-            # It is a char waveform
-            value = "".join(chr(x) for x in value)
-        EpicsReadable._value_change_callback(
-            self, name, param, value, units, limits, severity, message, **kwargs
-        )
+    def doPreinit(self, mode):
+        self._record_fields = {
+            "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+        }
+        EpicsDeviceBase.doPreinit(self, mode)
 
 
-class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
+class EpicsAnalogMoveable(EpicsReadWriteBase, HasPrecision, HasLimits, Moveable):
     """
     Handles EPICS devices which can set and read a floating value.
     """
 
     valuetype = float
 
-    parameters = {
-        "readpv": Param(
-            "PV for reading device value", type=pvname, mandatory=True, userparam=False
-        ),
-        "writepv": Param(
-            "PV for writing device target", type=pvname, mandatory=True, userparam=False
-        ),
-        "targetpv": Param(
-            "Optional target readback PV.",
-            type=none_or(pvname),
-            mandatory=False,
-            userparam=False,
-        ),
-    }
-
     parameter_overrides = {
         "abslimits": Override(mandatory=False, volatile=True),
         "unit": Override(mandatory=False, settable=False, volatile=True),
     }
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH),
-        "writepv": RecordInfo("target", "", RecordType.VALUE),
-        "targetpv": RecordInfo("target", "", RecordType.VALUE),
-    }
-
-    _epics_wrapper = None
-    _epics_subscriptions = []
-
     def doPreinit(self, mode):
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode == SIMULATION:
-            return
-        self._epics_wrapper.connect_pv(self.readpv)
-        self._epics_wrapper.connect_pv(self.writepv)
-        if self.targetpv:
-            self._epics_wrapper.connect_pv(self.targetpv)
-
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._status_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.writepv,
-                    self._record_fields["writepv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            if self.targetpv:
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        self.targetpv,
-                        self._record_fields["targetpv"].cache_key,
-                        self._value_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
+        self._record_fields = {
+            "readpv": RecordInfo("value", "", RecordType.BOTH),
+            "writepv": RecordInfo("target", "", RecordType.STATUS),
+            "targetpv": RecordInfo("target", "", RecordType.STATUS),
+        }
+        EpicsDeviceBase.doPreinit(self, mode)
 
     def doRead(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self.readpv),
+        return self._get_cached_pv_or_ask("readpv", maxage=maxage)
+
+    def _compute_status(self, maxage=0):
+        candidates = []
+        target = self._cached_raw_target(maxage)
+        if not HasPrecision.doIsAtTarget(self, self.doRead(maxage), target):
+            candidates.append((status.BUSY, f"moving to {target}"))
+        return self._status_from_candidates(
+            self._read_primary_alarm(maxage=maxage), candidates
         )
 
-    def doReadUnit(self):
-        return get_from_cache_or(
-            self, "unit", lambda: self._epics_wrapper.get_units(self.readpv)
-        )
-
-    def _do_status(self):
-        try:
-            severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
-        except TimeoutError:
-            return status.ERROR, "timeout reading status"
-        if severity in [status.ERROR, status.WARN]:
-            return severity, msg
-
-        at_target = HasPrecision.doIsAtTarget(self, self.doRead(), self.doReadTarget())
-        if not at_target:
-            return status.BUSY, f"moving to {self.target}"
-        return status.OK, msg
-
-    def doStatus(self, maxage=0):
-        return get_from_cache_or(self, "status", self._do_status)
-
-    def doReadAbslimits(self):
-        low, high = get_from_cache_or(
-            self, "abslimits", lambda: self._epics_wrapper.get_limits(self.writepv)
-        )
-        if low == 0 and high == 0:
-            # No limits set on PV, so use defaults
-            return -1e308, 1e308
-        return low, high
-
-    def doReadTarget(self, maxage=0):
-        def _func():
-            if self.targetpv:
-                return self._epics_wrapper.get_pv_value(self.targetpv)
-            else:
-                return self._epics_wrapper.get_pv_value(self.writepv)
-
-        return get_from_cache_or(self, "target", _func)
+    def doReadTarget(self):
+        return self._cached_raw_target()
 
     def doStart(self, value):
-        self._epics_wrapper.put_pv_value(self.writepv, value)
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name not in {self.readpv, self.writepv, self.targetpv}:
-            # Unexpected updates ignored
-            return
-        time_stamp = time.time()
-        if name == self.readpv:
-            self._cache.put(self._name, param, value, time_stamp)
-            self._cache.put(self._name, "unit", units, time_stamp)
-        if name == self.writepv and limits:
-            self._cache.put(self._name, "abslimits", limits, time_stamp)
-        if name == self.writepv and not self.target:
-            self._cache.put(self._name, param, value, time_stamp)
-        if name == self.targetpv:
-            self._cache.put(self._name, param, value, time_stamp)
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            # Unexpected updates ignored
-            return
-        self._cache.put(self._name, "status", self._do_status(), time.time())
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if param != self._record_fields["readpv"].cache_key:
-            return
-
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
+        self._put_pv("writepv", value)
 
 
 class EpicsDigitalMoveable(EpicsAnalogMoveable):
@@ -415,7 +138,7 @@ class EpicsDigitalMoveable(EpicsAnalogMoveable):
     }
 
 
-class EpicsStringMoveable(EpicsParameters, Moveable):
+class EpicsStringMoveable(EpicsReadWriteBase, Moveable):
     """
     This device handles string PVs, also when they are implemented as
     character waveforms.
@@ -423,164 +146,26 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
 
     valuetype = str
 
-    parameters = {
-        "readpv": Param(
-            "PV for reading device value", type=pvname, mandatory=True, userparam=False
-        ),
-        "writepv": Param(
-            "PV for writing device target", type=pvname, mandatory=True, userparam=False
-        ),
-        "targetpv": Param(
-            "Optional target readback PV.",
-            type=none_or(pvname),
-            mandatory=False,
-            userparam=False,
-        ),
-    }
-
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, volatile=False),
     }
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH),
-        "writepv": RecordInfo("target", "", RecordType.VALUE),
-        "targetpv": RecordInfo("target", "", RecordType.VALUE),
-    }
-
-    _epics_wrapper = None
-    _epics_subscriptions = []
-
     def doPreinit(self, mode):
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode == SIMULATION:
-            return
-        self._epics_wrapper.connect_pv(self.readpv)
-        self._epics_wrapper.connect_pv(self.writepv)
-        if self.targetpv:
-            self._epics_wrapper.connect_pv(self.targetpv)
-
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._status_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.writepv,
-                    self._record_fields["writepv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            if self.targetpv:
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        self.targetpv,
-                        self._record_fields["targetpv"].cache_key,
-                        self._value_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
+        self._record_fields = {
+            "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+            "writepv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
+            "targetpv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
+        }
+        EpicsDeviceBase.doPreinit(self, mode)
 
     def doRead(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self.readpv, as_string=True),
-        )
-
-    def doStatus(self, maxage=0):
-        def _func():
-            try:
-                return self._epics_wrapper.get_alarm_status(self.readpv)
-            except TimeoutError:
-                return status.ERROR, "timeout reading status"
-
-        return get_from_cache_or(self, "status", _func)
+        return self._get_cached_pv_or_ask("readpv", maxage=maxage)
 
     def doStart(self, value):
-        self._epics_wrapper.put_pv_value(self.writepv, value)
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name not in {self.readpv, self.writepv, self.targetpv}:
-            # Unexpected updates ignored
-            return
-        time_stamp = time.time()
-        if name == self.readpv:
-            self._cache.put(self._name, param, value, time_stamp)
-            self._cache.put(self._name, "unit", units, time_stamp)
-        if name == self.writepv and not self.target:
-            self._cache.put(self._name, param, value, time_stamp)
-        if name == self.targetpv:
-            self._cache.put(self._name, param, value, time_stamp)
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            # Unexpected updates ignored
-            return
-        self._cache.put(self._name, "status", (severity, message), time.time())
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if param != self._record_fields["readpv"].cache_key:
-            return
-
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
+        self._put_pv("writepv", value)
 
 
-class PvReadOrWrite(str, Enum):
-    readpv = "readpv"
-    writepv = "writepv"
-
-
-def _update_mapped_choices(mapped_device, pv=PvReadOrWrite.readpv):
-    if pv == PvReadOrWrite.writepv:
-        selected_pv = mapped_device.writepv
-    else:
-        selected_pv = mapped_device.readpv
-    choices = mapped_device._epics_wrapper.get_value_choices(selected_pv)
-    if not choices:
-        raise ConfigurationError(
-            mapped_device, "PV %s has no value choices" % selected_pv
-        )
-
-    new_mapping = {}
-    for i, choice in enumerate(choices):
-        new_mapping[choice] = i
-    mapped_device._setROParam("mapping", new_mapping)
-    mapped_device._inverse_mapping = {}
-    for k, v in mapped_device.mapping.items():
-        mapped_device._inverse_mapping[v] = k
-
-
-class EpicsMappedReadable(EpicsReadable, MappedReadable):
+class EpicsMappedReadable(EpicsMappedChoiceSupport, EpicsReadable, MappedReadable):
     valuetype = str
 
     parameter_overrides = {
@@ -590,66 +175,28 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
         "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
-    def doInit(self, mode):
-        EpicsReadable.doInit(self, mode)
+    def doPreinit(self, mode):
+        self._record_fields = {
+            "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+        }
+        EpicsDeviceBase.doPreinit(self, mode)
 
+    def _after_subscribe(self, mode):
         if mode != SIMULATION:
             _update_mapped_choices(self)
         MappedReadable.doInit(self, mode)
 
     def doRead(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._mapReadValue(self._epics_wrapper.get_pv_value(self.readpv)),
-        )
-
-    def _mapReadValue(self, value):
-        mapped_value = self._inverse_mapping.get(value)
-        if mapped_value is None:
-            _update_mapped_choices(self)
-            mapped_value = self._inverse_mapping.get(value)
-        if mapped_value is None:
-            raise PositionError(self, "unknown unmapped position %r" % value)
-        return mapped_value
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            # Unexpected updates ignored
-            return
-        time_stamp = time.time()
-        self._cache.put(
-            self._name,
-            param,
-            self._mapReadValue(value),
-            time_stamp,
-        )
+        return self._read_mapped_choice(maxage=maxage)
 
 
-class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
+class EpicsMappedMoveable(EpicsMappedChoiceSupport, EpicsReadWriteBase, MappedMoveable):
     """
     This device handles string PVs, also when they are implemented as
     character waveforms.
     """
 
     valuetype = str
-
-    parameters = {
-        "readpv": Param(
-            "PV for reading device value", type=pvname, mandatory=True, userparam=False
-        ),
-        "writepv": Param(
-            "PV for writing device target", type=pvname, mandatory=True, userparam=False
-        ),
-        "targetpv": Param(
-            "Optional target readback PV.",
-            type=none_or(pvname),
-            mandatory=False,
-            userparam=False,
-        ),
-    }
 
     parameter_overrides = {
         # MBBI, BI, etc. do not have units
@@ -658,139 +205,28 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
         "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH),
-        "writepv": RecordInfo("target", "", RecordType.VALUE),
-        "targetpv": RecordInfo("target", "", RecordType.VALUE),
-    }
-
-    _epics_wrapper = None
-    _epics_subscriptions = []
-
     def doPreinit(self, mode):
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode == SIMULATION:
-            return
-        self._epics_wrapper.connect_pv(self.readpv)
-        self._epics_wrapper.connect_pv(self.writepv)
-        if self.targetpv:
-            self._epics_wrapper.connect_pv(self.targetpv)
+        self._record_fields = {
+            "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+            "writepv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
+            "targetpv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
+        }
+        EpicsDeviceBase.doPreinit(self, mode)
 
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._status_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.writepv,
-                    self._record_fields["writepv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            if self.targetpv:
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        self.targetpv,
-                        self._record_fields["targetpv"].cache_key,
-                        self._value_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
-
+    def _after_subscribe(self, mode):
         if mode != SIMULATION:
             _update_mapped_choices(self)
         MappedMoveable.doInit(self, mode)
 
     def doRead(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._mapReadValue(self._epics_wrapper.get_pv_value(self.readpv)),
-        )
+        return self._read_mapped_choice(maxage=maxage)
 
-    def _mapReadValue(self, value):
-        mapped_value = self._inverse_mapping.get(value)
-        if mapped_value is None:
-            _update_mapped_choices(self)
-            mapped_value = self._inverse_mapping.get(value)
-        if mapped_value is None:
-            raise PositionError(self, "unknown unmapped position %r" % value)
-        return mapped_value
-
-    def doStatus(self, maxage=0):
-        def _func():
-            try:
-                return self._epics_wrapper.get_alarm_status(self.readpv)
-            except TimeoutError:
-                return status.ERROR, "timeout reading status"
-
-        return get_from_cache_or(self, "status", _func)
-
-    def doStart(self, value):
-        self._epics_wrapper.put_pv_value(self.writepv, self.mapping[value])
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name not in {self.readpv, self.writepv, self.targetpv}:
-            # Unexpected updates ignored
-            return
-        time_stamp = time.time()
-        if name == self.readpv and param == self._record_fields["readpv"].cache_key:
-            self._cache.put(
-                self._name,
-                param,
-                self._mapReadValue(value),
-                time_stamp,
-            )
-            self._cache.put(self._name, "unit", units, time_stamp)
-        elif name == self.writepv and not self.target:
-            self._cache.put(self._name, param, self._mapReadValue(value), time_stamp)
-        elif name == self.targetpv:
-            self._cache.put(self._name, param, self._mapReadValue(value), time_stamp)
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            # Unexpected updates ignored
-            return
-        self._cache.put(self._name, "status", (severity, message), time.time())
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if param != self._record_fields["readpv"].cache_key:
-            return
-
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
+    def _startRaw(self, value):
+        self._put_pv("writepv", value)
 
 
 class EpicsManualMappedAnalogMoveable(
-    EpicsParameters, HasPrecision, HasLimits, MappedMoveable
+    EpicsReadWriteBase, HasPrecision, HasLimits, MappedMoveable
 ):
     """
     Acts as a moveable device, which reads and writes to EPICS PVs but it
@@ -798,101 +234,32 @@ class EpicsManualMappedAnalogMoveable(
     instead of allowing all values in a range.
     """
 
-    parameters = {
-        "readpv": Param(
-            "PV for reading device value", type=pvname, mandatory=True, userparam=False
-        ),
-        "writepv": Param(
-            "PV for writing device target", type=pvname, mandatory=True, userparam=False
-        ),
-        "targetpv": Param(
-            "Optional target readback PV.", type=none_or(pvname), userparam=False
-        ),
-    }
-
     parameter_overrides = {
         "abslimits": Override(mandatory=False, volatile=True),
         "unit": Override(mandatory=False, settable=False, volatile=True),
         "mapping": Override(settable=True),
     }
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH),
-        "writepv": RecordInfo("target", "", RecordType.VALUE),
-        "targetpv": RecordInfo("target", "", RecordType.VALUE),
-    }
-
     valuetype = anytype
 
     def doPreinit(self, mode):
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode == SIMULATION:
-            return
-        self._epics_wrapper.connect_pv(self.readpv)
-        self._epics_wrapper.connect_pv(self.writepv)
-        if self.targetpv:
-            self._epics_wrapper.connect_pv(self.targetpv)
+        self._record_fields = {
+            "readpv": RecordInfo("value", "", RecordType.BOTH),
+            "writepv": RecordInfo("target", "", RecordType.STATUS),
+            "targetpv": RecordInfo("target", "", RecordType.STATUS),
+        }
+        EpicsDeviceBase.doPreinit(self, mode)
 
-    def doInit(self, mode):
+    def _after_subscribe(self, mode):
         MappedMoveable.doInit(self, mode)
 
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._status_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.writepv,
-                    self._record_fields["writepv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            if self.targetpv:
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        self.targetpv,
-                        self._record_fields["targetpv"].cache_key,
-                        self._value_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
-
     def _readRaw(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self.readpv),
-        )
+        return self._get_cached_pv_or_ask("readpv", maxage=maxage)
 
     def _startRaw(self, raw_value):
-        self._epics_wrapper.put_pv_value(self.writepv, raw_value)
+        self._put_pv("writepv", raw_value)
 
     def doStart(self, value):
-        raw_target = self.mapping.get(value, value)
-        try:
-            raw_now = self.read(0)
-        except Exception:
-            raw_now = None
-
-        # probably don't need this check
-        # if raw_now is not None and abs(raw_now - raw_target) <= self.precision:
-        #     return
-
         self._cache.put(
             self._name, "status", (status.BUSY, f"moving to {value}"), time.time()
         )
@@ -900,61 +267,40 @@ class EpicsManualMappedAnalogMoveable(
         super().doStart(value)
 
     def doRead(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self.readpv),
-        )
+        return self._readRaw(maxage=maxage)
 
-    def doReadUnit(self):
-        return get_from_cache_or(
-            self, "unit", lambda: self._epics_wrapper.get_units(self.readpv)
-        )
+    def doReadTarget(self):
+        return self._map_target_readback(self._cached_raw_target())
 
-    def doReadAbslimits(self):
-        lo, hi = get_from_cache_or(
-            self, "abslimits", lambda: self._epics_wrapper.get_limits(self.writepv)
-        )
-        return (-1e308, 1e308) if (lo == 0 and hi == 0) else (lo, hi)
-
-    def doReadTarget(self, maxage=0):
-        def _func():
-            raw_value = self._epics_wrapper.get_pv_value(self.targetpv or self.writepv)
-            if hasattr(self, "_inverse_mapping"):
-                return self._inverse_mapping.get(raw_value, None)
-            # if inverse mapping not built, access it manually
-            for k, v in self.mapping.items():
-                if v == raw_value:
-                    return k
-            return None
-
-        return get_from_cache_or(
-            self,
-            "target",
-            _func,
-        )
-
-    def _do_status(self):
+    def _map_target_readback(self, value):
+        if value in self.mapping:
+            return value
+        if not hasattr(self, "_inverse_mapping"):
+            MappedReadable.doInit(self, getattr(self, "_mode", None))
         try:
-            severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
-        except TimeoutError:
-            return status.ERROR, "timeout reading status"
-        if severity in (status.ERROR, status.WARN):
-            return severity, msg
+            return MappedReadable._mapReadValue(self, value)
+        except PositionError:
+            pass
+        return None
 
+    def _raw_target(self, maxage=0):
+        target = self._cached_raw_target(maxage)
+        return self.mapping.get(target, target)
+
+    def _compute_status(self, maxage=0):
+        candidates = []
         try:
-            raw_pos = self._epics_wrapper.get_pv_value(self.readpv)
-            raw_tgt = self._epics_wrapper.get_pv_value(self.targetpv or self.writepv)
+            raw_pos = self._readRaw(maxage)
+            raw_tgt = self._raw_target(maxage)
             at_target = HasPrecision.doIsAtTarget(self, raw_pos, raw_tgt)
         except Exception:
             at_target = False
 
         if not at_target:
-            return status.BUSY, f"moving to {self.target}"
-        return status.OK, msg
-
-    def doStatus(self, maxage=0):
-        return get_from_cache_or(self, "status", self._do_status)
+            candidates.append((status.BUSY, f"moving to {self.target}"))
+        return self._status_from_candidates(
+            self._read_primary_alarm(maxage=maxage), candidates
+        )
 
     def doIsAtTarget(self, pos=None, target=None):
         if target is None:
@@ -969,43 +315,3 @@ class EpicsManualMappedAnalogMoveable(
 
     def doIsCompleted(self):
         return self.isAtTarget()
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name not in {self.readpv, self.writepv, self.targetpv}:
-            return
-        ts = time.time()
-        if name == self.readpv:
-            self._cache.put(self._name, param, value, ts)
-            self._cache.put(self._name, "unit", units, ts)
-            self._cache.put(self._name, "status", self._do_status(), ts)
-        if name == self.writepv and limits:
-            self._cache.put(self._name, "abslimits", limits, ts)
-        if name == self.writepv and not self.target:
-            self._cache.put(self._name, param, value, ts)
-            self._cache.put(self._name, "status", self._do_status(), ts)
-        if name == self.targetpv:
-            self._cache.put(self._name, param, value, ts)
-            self._cache.put(self._name, "status", self._do_status(), ts)
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            return
-        self._cache.put(self._name, "status", self._do_status(), time.time())
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if param != self._record_fields["readpv"].cache_key:
-            return
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )

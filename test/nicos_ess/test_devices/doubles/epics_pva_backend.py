@@ -22,7 +22,7 @@
 #
 # *****************************************************************************
 
-"""Reusable EPICS backend doubles for pva `epics_devices` harness tests."""
+"""EPICS backend doubles for PVA device tests."""
 
 from functools import wraps
 
@@ -42,11 +42,7 @@ def _requires_connected_backend(func):
 
 
 class FakeEpicsBackend:
-    """In-memory EPICS backend used by unit tests.
-
-    The class intentionally mirrors the tiny API consumed by
-    `nicos_ess.devices.epics.pva.epics_devices`.
-    """
+    """In-memory EPICS backend for device tests."""
 
     def __init__(self):
         self.values = {}
@@ -65,10 +61,22 @@ class FakeEpicsBackend:
 
     def _get_value(self, pvname, as_string=False):
         value = self.values[pvname]
+        if not as_string:
+            return value
+
         choices = self.value_choices.get(pvname)
-        if as_string and choices and isinstance(value, int):
-            return choices[value]
-        return value
+        if choices and isinstance(value, int):
+            try:
+                return choices[value]
+            except IndexError:
+                return value
+        if isinstance(value, bytes):
+            return value.decode()
+        if hasattr(value, "tolist"):
+            value = value.tolist()
+        if isinstance(value, (list, tuple)):
+            return "".join(chr(int(x)) for x in value)
+        return str(value)
 
     @_requires_connected_backend
     def get_pv_value(self, pvname, as_string=False):
@@ -125,6 +133,10 @@ class FakeEpicsBackend:
         self.subscriptions.append(token)
         return token
 
+    def close_subscription(self, subscription):
+        if subscription in self.subscriptions:
+            self.subscriptions.remove(subscription)
+
     def emit_update(
         self,
         pv,
@@ -151,24 +163,28 @@ class FakeEpicsBackend:
 
     def emit_connection(self, pv, is_connected):
         for sub_pv, pvparam, _, connection_callback, _ in list(self.subscriptions):
-            if sub_pv == pv:
-                if connection_callback:
-                    connection_callback(pv, pvparam, is_connected)
+            if sub_pv == pv and connection_callback:
+                connection_callback(pv, pvparam, is_connected)
 
 
-def patch_create_wrapper(monkeypatch, epics_devices_module):
-    """Patch `create_wrapper` in `epics_devices` and return backend + factory."""
+def patch_create_wrapper(monkeypatch, module):
+    """Patch ``create_wrapper`` to return a shared fake backend."""
     backend = FakeEpicsBackend()
+
+    def make_backend(timeout, use_pva):
+        del timeout, use_pva
+        return backend
+
+    from nicos_ess.devices.epics.pva import epics_common
+
+    monkeypatch.setattr(epics_common, "create_wrapper", make_backend, raising=False)
     monkeypatch.setattr(
-        epics_devices_module,
-        "create_wrapper",
-        lambda timeout, use_pva: backend,
+        module, "create_wrapper", make_backend, raising=False
     )
     return backend
 
 
 def analog_moveable_config():
-    """Configuration that mirrors common ESS setup usage."""
     return {
         "readpv": "SIM:M1.RBV",
         "writepv": "SIM:M1.VAL",
@@ -178,7 +194,6 @@ def analog_moveable_config():
 
 
 def string_moveable_config():
-    """Setup-style config for string moveables."""
     return {
         "readpv": "SIM:SEL.RBV",
         "writepv": "SIM:SEL.VAL",
@@ -187,7 +202,6 @@ def string_moveable_config():
 
 
 def mapped_config():
-    """Common mapped configuration used by mapped readable/moveable classes."""
     return {
         "readpv": "SIM:MAP.RBV",
         "writepv": "SIM:MAP.VAL",

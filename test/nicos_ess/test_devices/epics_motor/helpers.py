@@ -481,6 +481,33 @@ def set_state_pvs(fake_backend, state_pvs):
         fake_backend.values[key] = value
 
 
+def emit_motor_status_cache(fake_backend):
+    """Emit the monitor fields needed for callback-only status computation."""
+    rbv_status, rbv_message = fake_backend.alarms.get(pv(".RBV"), (status.OK, ""))
+    fake_backend.emit_update(
+        pv(".RBV"),
+        value=fake_backend.values[pv(".RBV")],
+        severity=rbv_status,
+        message=rbv_message,
+    )
+    for suffix in (
+        ".VAL",
+        ".DMOV",
+        ".MOVN",
+        ".HOMF",
+        ".HOMR",
+        ".CNEN",
+        ".MISS",
+        ".HLS",
+        ".LLS",
+        ".LVIO",
+        "-PwrAuto",
+        "-MsgTxt",
+        "-MsgTxt.SEVR",
+    ):
+        fake_backend.emit_update(pv(suffix), value=fake_backend.values[pv(suffix)])
+
+
 def assert_status_result(
     actual_status,
     actual_message,

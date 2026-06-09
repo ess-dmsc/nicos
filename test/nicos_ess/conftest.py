@@ -49,7 +49,7 @@ def daemon_device_harness():
 def fake_epics_backend_factory(monkeypatch):
     """Factory fixture to patch EPICS wrapper creation for a specific module."""
 
-    def _install(epics_devices_module):
-        return patch_create_wrapper(monkeypatch, epics_devices_module)
+    def _install(module):
+        return patch_create_wrapper(monkeypatch, module)
 
     return _install

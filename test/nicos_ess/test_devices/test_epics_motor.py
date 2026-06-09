@@ -35,41 +35,43 @@ session_setup = "ess_motors"
 
 
 class FakeEpicsMotor(EpicsMotor):
-    """
-    Epics motor with fake getting and setting of PVs.
-    """
-
     position = 0
 
-    values = {
-        "speed": 10,
-        "position": position,
-        "stop": 0,
-        "lowlimit": -110,
-        "highlimit": 110,
-        "readpv": position,
-        "writepv": position,
-        "offset": 0,
-        "enable": 1,
-        "direction": 0,
-        "unit": "mm",
-        "target": 45,
-        "position_deadband": 0.1,
-        "diallowlimit": -120,
-        "dialhighlimit": 120,
-        "dir": "Pos",
-        "description": "motor1 test device",
-        "monitor_deadband": 0.2,
-        "moving": False,
-        "donemoving": True,
-        "value": 0,
-        "dialvalue": 0,
-    }
+    @classmethod
+    def _initial_values(cls):
+        return {
+            "speed": 10,
+            "position": cls.position,
+            "stop": 0,
+            "lowlimit": -110,
+            "highlimit": 110,
+            "readpv": cls.position,
+            "writepv": cls.position,
+            "offset": 0,
+            "enable": 1,
+            "direction": 0,
+            "unit": "mm",
+            "target": 45,
+            "position_deadband": 0.1,
+            "diallowlimit": -120,
+            "dialhighlimit": 120,
+            "dir": "Pos",
+            "description": "motor1 test device",
+            "monitor_deadband": 0.2,
+            "moving": False,
+            "donemoving": True,
+            "value": 0,
+            "dialvalue": 0,
+        }
 
-    _record_fields = {}
+    @property
+    def values(self):
+        return self._values
 
     def doPreinit(self, mode):
-        pass
+        self._values = self._initial_values()
+        self._record_fields = {}
+        self._epics_subscriptions = []
 
     def doInit(self, mode):
         pass
@@ -77,8 +79,15 @@ class FakeEpicsMotor(EpicsMotor):
     def doRead(self, maxage=None):
         return self._get_pv("position")
 
+    def doReadUnit(self, maxage=None):
+        return self.values["unit"]
+
     def _put_pv(self, pvparam, value, wait=False):
         self.values[pvparam] = value
+        # In SET mode, writing VAL redefines OFF.
+        if pvparam == "target" and self.values.get("set") == 1:
+            dir_sign = 1 if self.values["dir"] == "Pos" else -1
+            self.values["offset"] = value - self.values["dialvalue"] * dir_sign
 
     def _get_pv(self, pvparam, as_string=False):
         return self.values[pvparam]
@@ -86,8 +95,8 @@ class FakeEpicsMotor(EpicsMotor):
 
 class DerivedEpicsMotor(FakeEpicsMotor):
     def doPreinit(self, mode):
-        self._record_fields = dict(FakeEpicsMotor._record_fields)
-        self._record_fields.update({"extra_field": "XTR"})
+        FakeEpicsMotor.doPreinit(self, mode)
+        self._record_fields = {"extra_field": "XTR"}
 
 
 class TestEpicsMotor:
@@ -102,73 +111,55 @@ class TestEpicsMotor:
         self.motor.offset = 0
 
     def test_adjust_command_sets_offset_correctly(self):
-        # Initial offset should be 0
         assert self.motor.offset == 0
 
-        # Redefine current position using 'adjust'
         new_pos = 50
         adjust(self.motor, new_pos)
 
-        # Check new offset value
         assert new_pos == self.motor.offset
 
     @pytest.mark.skip(reason="I don't think abslimits are supposed to change at all")
     def test_adjust_command_causes_absolute_limits_to_be_updated(self):
-        # Get initial limits
         low, high = self.motor.abslimits
 
-        # Redefine current position using 'adjust'
         new_pos = 50
         adjust(self.motor, new_pos)
 
-        # Check new limits
         assert (low + new_pos, high + new_pos) == self.motor.abslimits
 
     @pytest.mark.skip(reason="Once we configure test epics repo we can reintroduce it")
     def test_adjust_command_causes_user_limits_to_be_updated(self):
-        # Get initial limits
         low, high = self.motor.userlimits
 
-        # Redefine current position using 'adjust'
         new_pos = 50
         adjust(self.motor, new_pos)
 
-        # Check new limits
         assert (low + new_pos, high + new_pos) == self.motor.userlimits
 
     def test_setting_offset_affects_read_offset_correctly(self):
-        # Initial offset should be 0
         assert self.motor.offset == 0
 
-        # Set offset
         new_offset = 50
         self.motor.offset = new_offset
 
-        # Check new offset value
         assert new_offset == self.motor.offset
 
     @pytest.mark.skip(reason="I don't think abslimits are supposed to change at all")
     def test_setting_offset_causes_absolute_limits_to_be_updated(self):
-        # Get initial limits
         low, high = self.motor.abslimits
 
-        # Set offset
         new_offset = 50
         self.motor.offset = new_offset
 
-        # Check new limits
         assert (low + new_offset, high + new_offset) == self.motor.abslimits
 
     @pytest.mark.skip(reason="Once we configure test epics repo we can reintroduce it")
     def test_setting_offset_causes_user_limits_to_be_updated(self):
-        # Get initial limits
         low, high = self.motor.userlimits
 
-        # Set offset
         new_offset = 50
         self.motor.offset = new_offset
 
-        # Check new limits
         assert (low + new_offset, high + new_offset) == self.motor.userlimits
 
     @pytest.mark.parametrize(
@@ -194,7 +185,6 @@ class TestEpicsMotor:
     ):
         self.motor._get_msgtxt = Mock(return_value=msgtxt_return_values)
 
-        # ignore the _motor_status check and msg logging
         self.motor._log_epics_msg_info = Mock(return_value=None)
         self.motor._motor_status = None, None
 

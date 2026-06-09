@@ -11,12 +11,12 @@ from nicos.core import (
 )
 from nicos.devices.abstract import MappedMoveable
 from nicos.devices.epics.pva import EpicsMappedReadable
-from nicos_ess.devices.epics.pva.epics_devices import (
-    EpicsMappedMoveable,
+from nicos_ess.devices.epics.pva.epics_common import (
     PvReadOrWrite,
     _update_mapped_choices,
     get_from_cache_or,
 )
+from nicos_ess.devices.epics.pva.epics_devices import EpicsMappedMoveable
 
 
 class EpicsShutter(EpicsMappedMoveable):
@@ -47,34 +47,38 @@ class EpicsShutter(EpicsMappedMoveable):
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
-                    self._record_fields["readpv"].cache_key,
+                    "readpv",
                     self._value_change_callback,
                     self._connection_change_callback,
+                    as_string=self._record_fields["readpv"].as_string,
                 )
             )
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
-                    self._record_fields["readpv"].cache_key,
+                    "readpv",
                     self._status_change_callback,
                     self._connection_change_callback,
+                    as_string=self._record_fields["readpv"].as_string,
                 )
             )
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.writepv,
-                    self._record_fields["writepv"].cache_key,
+                    "writepv",
                     self._value_change_callback,
                     self._connection_change_callback,
+                    as_string=self._record_fields["writepv"].as_string,
                 )
             )
             if self.targetpv:
                 self._epics_subscriptions.append(
                     self._epics_wrapper.subscribe(
                         self.targetpv,
-                        self._record_fields["targetpv"].cache_key,
+                        "targetpv",
                         self._value_change_callback,
                         self._connection_change_callback,
+                        as_string=self._record_fields["targetpv"].as_string,
                     )
                 )
 

@@ -28,7 +28,7 @@ import pytest
 
 from nicos.core import status
 
-from nicos_ess.devices.epics.pva import epics_devices
+from nicos_ess.devices.epics.pva import epics_common
 from nicos_ess.devices.epics.pva.epics_devices import EpicsAnalogMoveable
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
     analog_moveable_config,
@@ -38,7 +38,7 @@ from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
 @pytest.fixture
 def fake_backend(fake_epics_backend_factory):
     """Install a reusable fake EPICS backend for this EPICS module."""
-    return fake_epics_backend_factory(epics_devices)
+    return fake_epics_backend_factory(epics_common)
 
 
 def assert_error_status(observed_status):

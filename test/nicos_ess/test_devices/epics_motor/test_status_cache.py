@@ -35,6 +35,7 @@ from test.nicos_ess.test_devices.epics_motor.helpers import (
     create_monitored_motor_pair,
     create_motor,
     create_motor_pair,
+    emit_motor_status_cache,
     pv,
     set_state_pvs,
 )
@@ -104,14 +105,15 @@ class TestEpicsMotorStatus:
         daemon_device, _poller_device = create_monitored_motor_pair(
             device_harness, **cfg_overrides
         )
-        assert device_harness.run_daemon(daemon_device.status, 0)[0] == status.OK
+        emit_motor_status_cache(fake_backend)
+        assert device_harness.run_daemon(daemon_device.status)[0] == status.OK
 
         for key, value in state_pvs:
             fake_backend.emit_update(key, value=value)
         for key, value in state_pvs:
             fake_backend.values[key] = changed_pv_value(value)
 
-        st, msg = device_harness.run_daemon(daemon_device.status, 0)
+        st, msg = device_harness.run_daemon(daemon_device.status)
         assert_status_result(
             st, msg, expected_status, expected_message, expect_empty_message
         )
@@ -120,11 +122,12 @@ class TestEpicsMotorStatus:
         self, device_harness, fake_backend
     ):
         daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
+        emit_motor_status_cache(fake_backend)
 
         fake_backend.emit_update(pv("-PwrAuto"), value=0)
         fake_backend.emit_update(pv(".CNEN"), value=0)
 
-        st, msg = device_harness.run_daemon(daemon_device.status, 0)
+        st, msg = device_harness.run_daemon(daemon_device.status)
         assert st == status.WARN
         assert "motor is not enabled" in msg
 
@@ -134,11 +137,12 @@ class TestEpicsMotorStatus:
         fake_backend.values[pv("-PwrAuto")] = 0
         fake_backend.values[pv(".CNEN")] = 0
         daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
-        assert device_harness.run_daemon(daemon_device.status, 0)[0] == status.WARN
+        emit_motor_status_cache(fake_backend)
+        assert device_harness.run_daemon(daemon_device.status)[0] == status.WARN
 
         fake_backend.emit_update(pv(".CNEN"), value=1)
 
-        st, msg = device_harness.run_daemon(daemon_device.status, 0)
+        st, msg = device_harness.run_daemon(daemon_device.status)
         assert st == status.OK
         assert msg == ""
 
@@ -203,8 +207,9 @@ class TestEpicsMotorStatus:
         fake_backend.values[pv("-MsgTxt")] = msgtxt
         fake_backend.values[pv("-MsgTxt.SEVR")] = msgtxt_severity
         set_state_pvs(fake_backend, state_pvs)
+        emit_motor_status_cache(fake_backend)
 
-        st, msg = device_harness.run_daemon(daemon_device.status, 0)
+        st, msg = device_harness.run_daemon(daemon_device.status)
         assert_status_result(
             st, msg, expected_status, expected_message, expect_empty_message
         )
@@ -228,12 +233,18 @@ class TestEpicsMotorStatus:
         daemon_device, _poller_device = create_monitored_motor_pair(
             device_harness, has_msgtxt=False
         )
+        emit_motor_status_cache(fake_backend)
 
         fake_backend.alarms[pv(".RBV")] = (status.ERROR, "record alarm")
-        fake_backend.emit_update(pv(".DMOV"), value=1)
+        fake_backend.emit_update(
+            pv(".RBV"),
+            value=fake_backend.values[pv(".RBV")],
+            severity=status.ERROR,
+            message="record alarm",
+        )
         fake_backend.values[pv(".DMOV")] = 0
 
-        assert device_harness.run_daemon(daemon_device.status, 0) == (
+        assert device_harness.run_daemon(daemon_device.status) == (
             status.ERROR,
             "record alarm",
         )
@@ -269,12 +280,13 @@ class TestEpicsMotorStatus:
         fake_backend.alarms[pv(".RBV")] = rbv_alarm
         fake_backend.values[pv("-MsgTxt")] = msgtxt
         fake_backend.values[pv("-MsgTxt.SEVR")] = msgtxt_severity
+        emit_motor_status_cache(fake_backend)
 
         for key, value in initial_state_pvs:
             fake_backend.emit_update(key, value=value)
 
         device_harness.run_daemon(daemon_device.start, 5.0)
-        st, msg = device_harness.run_daemon(daemon_device.status, 0)
+        st, msg = device_harness.run_daemon(daemon_device.status)
         assert_status_result(
             st,
             msg,
@@ -286,7 +298,7 @@ class TestEpicsMotorStatus:
         for key, value in post_start_updates:
             fake_backend.emit_update(key, value=value)
 
-        st, msg = device_harness.run_daemon(daemon_device.status, 0)
+        st, msg = device_harness.run_daemon(daemon_device.status)
         assert_status_result(
             st,
             msg,
@@ -332,7 +344,33 @@ class TestEpicsMotorStatus:
 
 
 class TestEpicsMotorCacheAndReadPaths:
-    def test_daemon_read_uses_poller_cached_rbv_update(
+    def test_callback_status_uses_cached_values_when_complete(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
+        emit_motor_status_cache(fake_backend)
+        fake_backend.get_calls.clear()
+
+        fake_backend.emit_update(pv(".DMOV"), value=0)
+        fake_backend.emit_update(pv(".MOVN"), value=1)
+        fake_backend.values[pv(".DMOV")] = 1
+        fake_backend.values[pv(".MOVN")] = 0
+
+        assert device_harness.run_daemon(daemon_device.status)[0] == status.BUSY
+        assert fake_backend.get_calls == []
+
+    def test_status0_reports_error_when_required_pv_is_missing(
+        self, device_harness, fake_backend
+    ):
+        del fake_backend.values[pv(".DMOV")]
+        dev = create_motor(device_harness)
+
+        st, msg = dev.status(0)
+
+        assert st == status.ERROR
+        assert "DMOV" in msg
+
+    def test_daemon_read_none_uses_poller_cached_rbv_update(
         self, device_harness, fake_backend
     ):
         daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
@@ -340,7 +378,27 @@ class TestEpicsMotorCacheAndReadPaths:
         fake_backend.emit_update(pv(".RBV"), value=9.5)
         fake_backend.values[pv(".RBV")] = 99.0
 
-        assert device_harness.run_daemon(daemon_device.read, 0) == 9.5
+        assert device_harness.run_daemon(daemon_device.read, None) == 9.5
+
+    def test_daemon_read_positive_maxage_uses_fresh_poller_cache(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
+
+        fake_backend.emit_update(pv(".RBV"), value=9.5)
+        fake_backend.values[pv(".RBV")] = 99.0
+
+        assert device_harness.run_daemon(daemon_device.read, 60) == 9.5
+
+    def test_daemon_read_zero_uses_backend_directly_when_monitor_enabled(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
+
+        fake_backend.emit_update(pv(".RBV"), value=9.5)
+        fake_backend.values[pv(".RBV")] = 99.0
+
+        assert device_harness.run_daemon(daemon_device.read, 0) == 99.0
 
     def test_daemon_iscompleted_uses_poller_cached_updates(
         self, device_harness, fake_backend

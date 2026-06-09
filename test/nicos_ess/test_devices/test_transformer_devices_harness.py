@@ -25,7 +25,7 @@
 import pytest
 
 from nicos_ess.devices import transformer_devices
-from nicos_ess.devices.epics.pva import epics_devices
+from nicos_ess.devices.epics.pva import epics_common
 from nicos_ess.devices.epics.pva import motor
 from nicos_ess.devices.epics.pva.epics_devices import EpicsManualMappedAnalogMoveable
 from test.nicos_ess.test_devices.doubles import (
@@ -60,9 +60,8 @@ def cache_raw_speed_target(device_harness, raw_target):
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
     monkeypatch.setattr(
-        epics_devices, "create_wrapper", lambda timeout, use_pva: backend
+        epics_common, "create_wrapper", lambda timeout, use_pva: backend
     )
-    monkeypatch.setattr(motor, "create_wrapper", lambda timeout, use_pva: backend)
 
     backend.values[CHOPPER_SPEED_READPV] = 0.0
     backend.values[CHOPPER_SPEED_WRITEPV] = 70.0
@@ -116,7 +115,7 @@ class TestChopperPhaseHarness:
     def test_initializes_with_raw_speed_target_in_cache(
         self, device_harness, fake_backend, attached_transformer_devices
     ):
-        # cache a speed value which is not in the mapping to verify 
+        # cache a speed value which is not in the mapping to verify
         # that the device can handle this case on initialization
         cache_raw_speed_target(device_harness, 70.0)
 

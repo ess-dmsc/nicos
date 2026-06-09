@@ -38,8 +38,6 @@ from .conftest import assert_error_status
 
 
 class TestEpicsReadable:
-    """Behavior tests for `EpicsReadable` in daemon/poller/shared-cache roles."""
-
     def test_daemon_readable_uses_direct_epics_reads_when_monitor_disabled(
         self, device_harness, fake_backend
     ):
@@ -98,6 +96,7 @@ class TestEpicsReadable:
             readpv=readpv,
         )
 
+        fake_backend.get_calls.clear()
         fake_backend.emit_update(
             readpv,
             value=5.5,
@@ -106,7 +105,7 @@ class TestEpicsReadable:
             message="trip",
         )
 
-        assert len(fake_backend.subscriptions) == 2
+        assert len(fake_backend.subscriptions) == 1
         assert device_harness.run("poller", device._cache.get, device, "value") == pytest.approx(
             5.5
         )
@@ -115,6 +114,7 @@ class TestEpicsReadable:
             status.ERROR,
             "trip",
         )
+        assert fake_backend.get_calls == []
 
     def test_poller_readable_connection_callback_sets_comm_failure(
         self, device_harness, fake_backend
@@ -138,7 +138,7 @@ class TestEpicsReadable:
         )
         fake_backend.emit_connection(readpv, False)
 
-        assert len(fake_backend.subscriptions) == 2
+        assert len(fake_backend.subscriptions) == 1
         assert_error_status(
             device_harness.run("poller", device._cache.get, device, "status")
         )
@@ -169,8 +169,6 @@ class TestEpicsReadable:
 
 
 class TestEpicsStringReadable:
-    """Behavior tests for string readable EPICS class."""
-
     def test_string_readable_requests_string_mode_from_backend(
         self, device_harness, fake_backend
     ):

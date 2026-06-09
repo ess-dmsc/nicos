@@ -39,14 +39,7 @@ from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
 from .conftest import assert_error_status, create_analog_pair
 
 
-# ---------------------------------------------------------------------------
-# Analog-specific tests
-# ---------------------------------------------------------------------------
-
-
 class TestEpicsAnalogMoveable:
-    """Behavior tests for floating-point moveable class."""
-
     def test_daemon_analog_moveable_reads_writes_and_status_transitions(
         self, device_harness, fake_backend
     ):
@@ -125,7 +118,7 @@ class TestEpicsAnalogMoveable:
         fake_backend.emit_update(config["writepv"], value=3.5, limits=(-10.0, 10.0))
         fake_backend.emit_update(config["targetpv"], value=3.5)
 
-        assert len(fake_backend.subscriptions) == 4
+        assert len(fake_backend.subscriptions) == 3
         assert device_harness.run("poller", poller_device._cache.get, poller_device, "value") == pytest.approx(
             3.0
         )
@@ -170,14 +163,7 @@ class TestEpicsAnalogMoveable:
         assert device_harness.run("daemon", daemon_device.read) == pytest.approx(5.0)
 
 
-# ---------------------------------------------------------------------------
-# Digital-specific tests
-# ---------------------------------------------------------------------------
-
-
 class TestEpicsDigitalMoveable:
-    """Behavior tests for integer moveable variant."""
-
     def test_digital_moveable_converts_start_target_to_int(
         self, device_harness, fake_backend
     ):
@@ -200,10 +186,6 @@ class TestEpicsDigitalMoveable:
         assert isinstance(fake_backend.put_calls[-1][1], int)
         assert device_harness.run("daemon", lambda: device.fmtstr) == "%d"
 
-
-# ---------------------------------------------------------------------------
-# Parametrized tests shared between Analog and Digital moveables
-# ---------------------------------------------------------------------------
 
 _MOVEABLE_PARAMS = [
     (EpicsAnalogMoveable, 28.0, 14.0, "analog_moveable"),
@@ -243,7 +225,7 @@ def test_moveable_stale_cache_does_not_complete_move_wait(
 
     device_harness.run("daemon", daemon_device.start, target_value)
     completed = device_harness.run("daemon", daemon_device.isCompleted)
-    move_status = device_harness.run("daemon", daemon_device.status, 0)
+    move_status = device_harness.run("daemon", daemon_device.status)
 
     assert completed is False
     assert move_status[0] == status.BUSY
@@ -302,7 +284,7 @@ def test_moveable_second_start_wins_when_old_callbacks_arrive_late(
     fake_backend.emit_update(config["writepv"], value=initial_value, limits=(-100.0, 100.0))
     fake_backend.emit_update(config["readpv"], value=initial_value, units="mm")
     observed_target = device_harness.run("daemon", lambda: daemon_device.target)
-    observed_status = device_harness.run("daemon", daemon_device.status, 0)
+    observed_status = device_harness.run("daemon", daemon_device.status)
 
     assert observed_target == target_value
     assert observed_status[0] == status.BUSY
@@ -338,7 +320,7 @@ def test_moveable_maw_raises_moveerror_on_disconnect(
         def controlled_delay(seconds):
             delay_calls["count"] += 1
             if delay_calls["count"] == 1:
-                fake_backend.emit_connection(config["readpv"], False)
+                fake_backend.disconnect_backend()
             if delay_calls["count"] > 20:
                 raise RuntimeError("test guard: maw did not fail on disconnect")
             return original_delay(seconds)

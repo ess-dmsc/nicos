@@ -14,7 +14,7 @@ from nicos.core import (
 )
 from nicos.devices.abstract import MappedMoveable
 from nicos.utils import createThread
-from nicos_ess.devices.epics.pva.epics_devices import (
+from nicos_ess.devices.epics.pva.epics_common import (
     EpicsParameters,
     RecordInfo,
     RecordType,

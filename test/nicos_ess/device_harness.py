@@ -22,12 +22,7 @@
 #
 # *****************************************************************************
 
-"""Helpers for fast, isolated unit tests of NICOS devices.
-
-The harnesses in this module deliberately monkeypatch the module-level
-``nicos.session`` singleton used by NICOS devices. The patching is scoped to
-context managers and always restored before control returns to the caller.
-"""
+"""Helpers for fast, isolated unit tests of NICOS devices."""
 
 from collections import defaultdict
 from contextlib import contextmanager
@@ -60,11 +55,7 @@ class _UnitClock:
 
 
 class InMemoryCache:
-    """Subset of CacheClient API used by NICOS devices in unit tests.
-
-    Method signatures intentionally mirror ``CacheClient`` even when some
-    arguments are unused in this in-memory implementation.
-    """
+    """In-memory subset of the CacheClient API."""
 
     def __init__(self):
         self._data = {}
@@ -163,11 +154,7 @@ class InMemoryCache:
 
 
 class UnitTestSession:
-    """Minimal session implementation for direct device unit tests.
-
-    Method signatures intentionally mirror ``Session`` so NICOS device code can
-    run unchanged inside harness tests.
-    """
+    """Minimal session implementation for direct device unit tests."""
 
     sessiontype = MAIN
 
@@ -248,8 +235,7 @@ class UnitTestSession:
         user = user or self.getExecutingUser()
         return user.level >= level
 
-    # No-op hooks required by device code paths; keep full Session-compatible
-    # signatures and explicitly discard unused parameters.
+    # Device hooks with Session-compatible signatures.
     def elogEvent(self, eventtype, data):
         del eventtype, data
 
@@ -408,11 +394,7 @@ class DaemonDeviceHarness:
 
 @contextmanager
 def isolated_daemon_device_harness():
-    """Yield a daemon-style harness backed by a temporary ``UnitTestSession``.
-
-    The global ``nicos.session`` object is replaced in-place for the duration of
-    the context and fully restored afterwards, even on exceptions.
-    """
+    """Yield a daemon-style harness backed by a temporary ``UnitTestSession``."""
     old_class = nicos_session.__class__
     old_dict = dict(nicos_session.__dict__)
     # Swap the singleton to a unit-test session object without changing import sites.
@@ -429,12 +411,7 @@ def isolated_daemon_device_harness():
 
 
 class DeviceHarness:
-    """Two-session harness with explicit daemon/poller role activation.
-
-    Each role stores an independent snapshot of a ``UnitTestSession`` state.
-    ``activate(role)`` swaps that snapshot into ``nicos.session`` so device code
-    sees the expected role-specific session while keeping tests single-process.
-    """
+    """Two-session harness with explicit daemon/poller role activation."""
 
     DAEMON_ROLE = "daemon"
     POLLER_ROLE = "poller"
@@ -571,12 +548,7 @@ class DeviceHarness:
 
 @contextmanager
 def isolated_device_harness():
-    """Yield a daemon+poller harness that shares one in-memory cache.
-
-    The daemon and poller sessions are initialized once, then stored as role
-    snapshots inside ``DeviceHarness``. The caller interacts through role-aware
-    create/run helpers while this context keeps global session state isolated.
-    """
+    """Yield a daemon+poller harness that shares one in-memory cache."""
     old = _capture_current_state()
     shared_cache = InMemoryCache()
 

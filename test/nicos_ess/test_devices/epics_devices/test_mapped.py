@@ -28,7 +28,6 @@ EpicsManualMappedAnalogMoveable."""
 import pytest
 
 from nicos.core import ConfigurationError, PositionError, status
-
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsManualMappedAnalogMoveable,
     EpicsMappedMoveable,
@@ -330,7 +329,7 @@ class TestEpicsMappedValueContract:
 
         assert device_harness.run("daemon", device.read, 0) == "THREE"
         assert fake_backend.get_calls == [
-            ("get_pv_value", config["readpv"], False),
+            ("get_pv_value", config["readpv"], True),
         ]
 
     def test_daemon_first_read_before_monitor_callback_returns_mapped_value(
@@ -377,8 +376,6 @@ class TestEpicsMappedValueContract:
 
 
 class TestEpicsMappedMoveable:
-    """Behavior tests for mapped moveable class."""
-
     def test_daemon_mapped_moveable_maps_user_target_to_raw_value(
         self, device_harness, fake_backend
     ):
@@ -499,6 +496,7 @@ class TestEpicsMappedMoveable:
         config["writepv"] = config["readpv"]
         config["targetpv"] = "SIM:MAP.TARGET"
         fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.value_choices[config["targetpv"]] = ["OFF", "ON"]
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["targetpv"]] = 0
 
@@ -561,8 +559,6 @@ class TestEpicsMappedMoveable:
 
 
 class TestEpicsManualMappedAnalogMoveable:
-    """Behavior tests for manual mapped analog moveable class."""
-
     def test_daemon_manual_mapped_writes_busy_status_and_raw_target(
         self, device_harness, fake_backend
     ):
@@ -642,14 +638,14 @@ class TestEpicsManualMappedAnalogMoveable:
         )
 
         device_harness.run("daemon", daemon_device.start, "10 Hz")
-        assert device_harness.run("daemon", daemon_device.status, 0)[0] == status.BUSY
+        assert device_harness.run("daemon", daemon_device.status)[0] == status.BUSY
 
         fake_backend.emit_update(config["readpv"], value=10, units="Hz")
         fake_backend.emit_update(config["writepv"], value=10, limits=(0, 20))
-        assert device_harness.run("daemon", daemon_device.status, 0)[0] == status.OK
+        assert device_harness.run("daemon", daemon_device.status)[0] == status.OK
 
         fake_backend.emit_update(config["readpv"], value=5, units="Hz")
-        assert device_harness.run("daemon", daemon_device.status, 0)[0] == status.BUSY
+        assert device_harness.run("daemon", daemon_device.status)[0] == status.BUSY
 
     def test_daemon_manual_mapped_read_prefers_cached_value_when_monitor_enabled(
         self, device_harness, fake_backend
@@ -689,7 +685,7 @@ class TestEpicsManualMappedAnalogMoveable:
         device_harness.run("daemon", daemon_device.start, "14 Hz")
         fake_backend.alarms[config["readpv"]] = (status.WARN, "limit warning")
 
-        observed_status = device_harness.run("daemon", daemon_device.status, 0)
+        observed_status = device_harness.run("daemon", daemon_device.status)
         completed = device_harness.run("daemon", daemon_device.isCompleted)
 
         assert observed_status[0] == status.BUSY
@@ -757,9 +753,9 @@ class TestEpicsManualMappedAnalogMoveable:
 
         device_harness.run("daemon", daemon_device.start, "14 Hz")
         fake_backend.emit_update(config["writepv"], value=14, limits=(0, 40))
-        status_after_write = device_harness.run("daemon", daemon_device.status, 0)
+        status_after_write = device_harness.run("daemon", daemon_device.status)
         fake_backend.emit_update(config["readpv"], value=14, units="Hz")
-        status_after_read = device_harness.run("daemon", daemon_device.status, 0)
+        status_after_read = device_harness.run("daemon", daemon_device.status)
 
         assert status_after_write[0] == status.BUSY
         assert status_after_read[0] == status.OK

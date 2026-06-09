@@ -5,7 +5,7 @@ from nicos import session
 from nicos.core import POLLER, SIMULATION, MoveError, Override, Param, pvname, status
 from nicos.core.mixins import CanDisable
 from nicos.devices.abstract import CanReference, Motor
-from nicos_ess.devices.epics.pva.epics_devices import (
+from nicos_ess.devices.epics.pva.epics_common import (
     EpicsParameters,
     RecordInfo,
     RecordType,

@@ -15,13 +15,15 @@ from nicos.core import (
     status,
 )
 from nicos.devices.abstract import MappedMoveable, Moveable
-from nicos_ess.devices.epics.pva.epics_devices import (
-    EpicsManualMappedAnalogMoveable,
+from nicos_ess.devices.epics.pva.epics_common import (
     EpicsParameters,
     RecordInfo,
     RecordType,
     create_wrapper,
     get_from_cache_or,
+)
+from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsManualMappedAnalogMoveable,
 )
 
 
@@ -394,6 +396,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         # Ignore - resetting the chopper is done via the move command.
         # What is the reset command for an ODIN chopper?
         pass
+
 
 class NmxChopperAlarms(EpicsParameters, Readable):
     """

@@ -24,8 +24,9 @@
 
 """Harness tests for EpicsStringMoveable."""
 
-from nicos.core import status
+import numpy
 
+from nicos.core import status
 from nicos_ess.devices.epics.pva.epics_devices import EpicsStringMoveable
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
     string_moveable_config,
@@ -35,8 +36,6 @@ from .conftest import assert_error_status
 
 
 class TestEpicsStringMoveable:
-    """Behavior tests for string moveable class."""
-
     def test_daemon_string_moveable_starts_with_string_target(
         self, device_harness, fake_backend
     ):
@@ -104,6 +103,34 @@ class TestEpicsStringMoveable:
         assert device_harness.run("poller", device._cache.get, device, "status") == (
             status.WARN,
             "limit",
+        )
+
+    def test_poller_string_moveable_converts_char_waveform_callbacks(
+        self, device_harness, fake_backend
+    ):
+        config = string_moveable_config()
+        fake_backend.values[config["readpv"]] = ""
+        fake_backend.values[config["writepv"]] = ""
+
+        device = device_harness.create(
+            "poller",
+            EpicsStringMoveable,
+            name="string_moveable",
+            **config,
+        )
+
+        fake_backend.emit_update(
+            config["readpv"], value=numpy.array([79, 78]), units=""
+        )
+        fake_backend.emit_update(
+            config["writepv"], value=numpy.array([79, 70, 70]), units=""
+        )
+
+        assert (
+            device_harness.run("poller", device._cache.get, device, "value") == "ON"
+        )
+        assert (
+            device_harness.run("poller", device._cache.get, device, "target") == "OFF"
         )
 
     def test_poller_string_moveable_connection_callback_sets_comm_failure(

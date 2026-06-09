@@ -14,7 +14,7 @@ from nicos.core import (
     status,
 )
 from nicos.devices.abstract import Moveable
-from nicos_ess.devices.epics.pva.epics_devices import (
+from nicos_ess.devices.epics.pva.epics_common import (
     EpicsParameters,
     RecordInfo,
     RecordType,

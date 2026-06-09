@@ -26,7 +26,7 @@ import pytest
 
 from nicos.core.errors import ConfigurationError
 
-from nicos_ess.devices.epics.pva.epics_devices import RecordInfo, RecordType
+from nicos_ess.devices.epics.pva.epics_common import RecordInfo, RecordType
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 
 from test.nicos_ess.test_devices.epics_motor.helpers import (
@@ -63,8 +63,9 @@ class TestEpicsMotorLegacyParity:
 
         device_harness.run_daemon(daemon_device.doAdjust, 0.0, 50.0)
 
-        assert device_harness.run_daemon(daemon_device.doReadOffset) == 50.0
         assert fake_backend.values[pv(".VAL")] == 50.0
+        fake_backend.values[pv(".OFF")] = 50.0
+        assert device_harness.run_daemon(daemon_device.doReadOffset) == 50.0
 
     def test_derived_motor_can_extend_record_field_mapping(self, device_harness):
         dev = device_harness.create(
@@ -170,8 +171,6 @@ class TestEpicsMotorLimits:
         )
         fake_backend.emit_update(pv(".LLM"), value=new_hw_umin)
         fake_backend.emit_update(pv(".HLM"), value=new_hw_umax)
-        fake_backend.values[pv(".LLM")] = 999.0
-        fake_backend.values[pv(".HLM")] = -999.0
 
         expected_userlimits_after_update, expected_limitoffsets_after_update = (
             userlimits_from_hw_window_and_limitoffsets(

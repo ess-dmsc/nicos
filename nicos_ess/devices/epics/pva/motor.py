@@ -2,9 +2,7 @@ import math
 import threading
 import time
 
-from nicos import session
 from nicos.core import (
-    POLLER,
     SIMULATION,
     Moveable,
     Override,
@@ -18,16 +16,15 @@ from nicos.core.errors import ConfigurationError, MoveError, PositionError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
-from nicos_ess.devices.epics.pva.epics_devices import (
-    EpicsParameters,
+from nicos_ess.devices.epics.pva.epics_common import (
+    EpicsDeviceBase,
     RecordInfo,
     RecordType,
-    create_wrapper,
     get_from_cache_or,
 )
 
 
-class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
+class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
     """
     This device exposes some of the functionality provided by the EPICS motor
     record. The PV names for the fields of the record (readback, speed, etc.)
@@ -48,6 +45,12 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     limit_rel_tolerance = 1e-12
     errorstates = {**Motor.errorstates, status.UNKNOWN: MoveError}
     _startup_moveable_limits_pending = False
+
+    _primary_field = "value"
+    _default_root_attr = "motorpv"
+
+    def _pvs_to_connect(self):
+        return [self.motorpv]
 
     parameters = {
         "motorpv": Param(
@@ -174,7 +177,6 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "set": RecordInfo("", ".SET", RecordType.VALUE),
             "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
             "dir": RecordInfo("", ".DIR", RecordType.VALUE),
-            "unit": RecordInfo("unit", ".EGU", RecordType.VALUE),
             "homeforward": RecordInfo("", ".HOMF", RecordType.VALUE),
             "homereverse": RecordInfo("", ".HOMR", RecordType.VALUE),
             "position_deadband": RecordInfo("", ".RDBD", RecordType.VALUE),
@@ -196,10 +198,6 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
             "msgtxt_severity": RecordInfo("", "-MsgTxt.SEVR", RecordType.STATUS),
         }
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode != SIMULATION:
-            # Check PV exists
-            self._epics_wrapper.connect_pv(self.motorpv)
 
         if not self.has_errorbit:
             del self._record_fields["errorbit"]
@@ -211,62 +209,41 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             del self._record_fields["msgtxt"]
             del self._record_fields["msgtxt_severity"]
 
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            for k, v in self._record_fields.items():
-                if v.record_type in [RecordType.VALUE, RecordType.BOTH]:
-                    self._epics_subscriptions.append(
-                        self._epics_wrapper.subscribe(
-                            f"{self.motorpv}{v.pv_suffix}",
-                            k,
-                            self._value_change_callback,
-                            self._connection_change_callback,
-                        )
-                    )
-                if v.record_type in [RecordType.STATUS, RecordType.BOTH]:
-                    self._epics_subscriptions.append(
-                        self._epics_wrapper.subscribe(
-                            f"{self.motorpv}{v.pv_suffix}",
-                            k,
-                            self._status_change_callback,
-                            self._connection_change_callback,
-                        )
-                    )
+        EpicsDeviceBase.doPreinit(self, mode)
+
+    def _after_subscribe(self, mode):
         self._startup_moveable_limits_pending = (
             self._uses_moveable_startup_limit_compat()
         )
 
     def doRead(self, maxage=0):
-        return self._get_cached_pv_or_ask("value")
-
-    def doReadUnit(self):
-        return self._get_cached_pv_or_ask("unit")
+        return self._get_cached_pv_or_ask("value", maxage=maxage)
 
     def doReadSpeed(self):
-        return self._get_cached_pv_or_ask("speed")
+        return self._get_pv("speed")
 
     def doReadOffset(self):
-        return self._get_cached_pv_or_ask("offset")
+        return self._get_pv("offset")
 
     def doReadTarget(self):
         return self._get_cached_pv_or_ask("target")
 
     def doReadAbslimits(self):
-        dial_min = self._get_cached_pv_or_ask("diallowlimit")
-        dial_max = self._get_cached_pv_or_ask("dialhighlimit")
+        dial_min = self._get_pv("diallowlimit")
+        dial_max = self._get_pv("dialhighlimit")
         return dial_min, dial_max
 
     def doReadHwuserlimits(self):
-        dial_min = self._get_cached_pv_or_ask("diallowlimit")
-        dial_max = self._get_cached_pv_or_ask("dialhighlimit")
+        dial_min = self._get_pv("diallowlimit")
+        dial_max = self._get_pv("dialhighlimit")
         if dial_min > dial_max:
             raise ConfigurationError(
                 self,
                 f"dial lowlimit ({dial_min}) above dial highlimit ({dial_max})",
             )
         offset = self.offset
-        hw_user_min = self._get_cached_pv_or_ask("lowlimit")
-        hw_user_max = self._get_cached_pv_or_ask("highlimit")
+        hw_user_min = self._get_pv("lowlimit")
+        hw_user_max = self._get_pv("highlimit")
         if hw_user_min > hw_user_max:
             raise ConfigurationError(
                 self,
@@ -330,16 +307,16 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return umin, umax
 
     def doReadPosition_Deadband(self):
-        return self._get_cached_pv_or_ask("position_deadband")
+        return self._get_pv("position_deadband")
 
     def doReadPv_Desc(self):
-        return self._get_cached_pv_or_ask("description")
+        return self._get_pv("description")
 
     def doReadMonitor_Deadband(self):
-        return self._get_cached_pv_or_ask("monitor_deadband")
+        return self._get_pv("monitor_deadband")
 
     def doReadPrecision(self):
-        return self._get_cached_pv_or_ask("position_deadband")
+        return self._get_pv("position_deadband")
 
     def doIsAtTarget(self, pos=None, target=None):
         return self._get_cached_pv_or_ask("miss") == 0
@@ -398,22 +375,15 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if self._get_pv("moving") or not self._get_pv("donemoving"):
             raise RuntimeError(f"{self}: cannot change OFF while motor is moving")
 
-        # Calculate the user value that makes OFF = new_off
         dir_sign = 1 if self._get_pv("dir", as_string=True) == "Pos" else -1
         dial_now = self._get_pv("dialvalue")
-        user_target = dial_now * dir_sign + new_off  # user = dial·DIR + OFF
+        user_target = dial_now * dir_sign + new_off  # user = dial * DIR + OFF
 
-        # Enter calibration mode with variable offset
+        # In SET mode with FOFF=0, writing VAL makes the record recalculate OFF.
         self._put_pv("set", 1)
         self._put_pv("foff", 0)
-
-        # Write VAL – record calculates OFF and shifts HLM/LLM
         self._put_pv("target", user_target)
-
-        # Leave calibration mode
         self._put_pv("set", 0)
-
-        self._cache.put(self._name, "offset", new_off, time.time())
         self.log.info("Offset changed to %s", new_off)
 
     def doWriteUserlimits(self, value):
@@ -468,112 +438,65 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         A maxage value of 0 forces an update of cached status.
 
         """
-        # force an update of the cached value if requested:
-        if maxage is not None and math.isclose(maxage, 0.0):
-            return self._do_status()
-        return get_from_cache_or(self, "status", self._do_status)
+        return get_from_cache_or(
+            self, "status", lambda: self._compute_status(maxage), maxage=maxage
+        )
 
-    def _do_status(self):
+    def _compute_status(self, maxage=0):
+        try:
+            return self._compute_status_from_pvs(maxage)
+        except (KeyError, TimeoutError) as err:
+            return status.ERROR, f"error reading motor status: {err}"
+
+    def _compute_status_from_pvs(self, maxage):
         with self._lock:
-            epics_status, message = self._get_alarm_status_and_msg()
+            epics_status, message = self._get_alarm_status_and_msg(maxage)
             self._motor_status = epics_status, message
         message = (message or "").strip()
         status_candidates = [self._alarm_status_candidate(epics_status, message)]
 
-        done_moving = self._get_cached_pv_or_ask("donemoving")
-        moving = self._get_cached_pv_or_ask("moving")
+        done_moving = self._get_cached_pv_or_ask("donemoving", maxage=maxage)
+        moving = self._get_cached_pv_or_ask("moving", maxage=maxage)
         if done_moving == 0 or moving != 0:
-            if self._get_cached_pv_or_ask("homeforward") or self._get_cached_pv_or_ask(
-                "homereverse"
-            ):
+            homing = self._get_cached_pv_or_ask(
+                "homeforward", maxage=maxage
+            ) or self._get_cached_pv_or_ask("homereverse", maxage=maxage)
+            if homing:
                 status_candidates.append((status.BUSY, message or "homing"))
             else:
+                target = self._get_cached_pv_or_ask("target", maxage=maxage)
                 status_candidates.append(
-                    (status.BUSY, message or f"moving to {self.target}")
+                    (status.BUSY, message or f"moving to {target}")
                 )
 
         if self.has_powerauto:
-            powerauto_enabled = self._get_cached_pv_or_ask("powerauto")
+            powerauto_enabled = self._get_cached_pv_or_ask("powerauto", maxage=maxage)
         else:
             powerauto_enabled = 0
 
-        if not powerauto_enabled and not self._get_cached_pv_or_ask("enable"):
+        if not powerauto_enabled and not self._get_cached_pv_or_ask(
+            "enable", maxage=maxage
+        ):
             status_candidates.append((status.WARN, "motor is not enabled"))
 
-        miss = self._get_cached_pv_or_ask("miss")
+        miss = self._get_cached_pv_or_ask("miss", maxage=maxage)
         if miss != 0:
             status_candidates.append(
                 (status.NOTREACHED, message or "did not reach target position.")
             )
 
-        high_limitswitch = self._get_cached_pv_or_ask("highlimitswitch")
+        high_limitswitch = self._get_cached_pv_or_ask("highlimitswitch", maxage=maxage)
         if high_limitswitch != 0:
             status_candidates.append((status.WARN, message or "at high limit switch."))
 
-        low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch")
+        low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch", maxage=maxage)
         if low_limitswitch != 0:
             status_candidates.append((status.WARN, message or "at low limit switch."))
 
-        limit_violation = self._get_cached_pv_or_ask("softlimit")
+        limit_violation = self._get_cached_pv_or_ask("softlimit", maxage=maxage)
         if limit_violation != 0:
             status_candidates.append((status.WARN, message or "soft limit violation."))
         return self._select_highest_status(status_candidates)
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        time_stamp = time.time()
-        cache_key = self._record_fields[param].cache_key
-        cache_key = param if not cache_key else cache_key
-        self._cache.put(self._name, cache_key, value, time_stamp)
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        time_stamp = time.time()
-        cache_key = self._record_fields[param].cache_key
-        cache_key = param if not cache_key else cache_key
-
-        if param == "value":
-            self._cache.put(self._name, "value_status", (severity, message), time_stamp)
-        else:
-            self._cache.put(self._name, cache_key, value, time_stamp)
-        self._cache.put(self._name, "status", self._do_status(), time_stamp)
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if param != self._record_fields["value"].cache_key:
-            return
-
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
-
-    def _get_cached_pv_or_ask(self, param, as_string=False):
-        """
-        Gets the PV value from the cache if possible, else get it from the device.
-        """
-        return get_from_cache_or(
-            self,
-            param,
-            lambda: self._get_pv(param, as_string),
-        )
-
-    def _get_pv(self, param, as_string=False):
-        return self._epics_wrapper.get_pv_value(
-            f"{self.motorpv}{self._record_fields[param].pv_suffix}", as_string
-        )
-
-    def _put_pv(self, param, value):
-        self._epics_wrapper.put_pv_value(
-            f"{self.motorpv}{self._record_fields[param].pv_suffix}", value
-        )
 
     def _get_valid_speed(self, value):
         max_speed = self._get_cached_pv_or_ask("maxspeed")
@@ -604,7 +527,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if self._cache is None:
             return
         try:
-            current_status = self._do_status()
+            current_status = self._compute_status()
         except Exception:
             # Keep the current cached state if status cannot be determined
             # reliably at this point.
@@ -612,20 +535,24 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if candidate_status[0] > current_status[0]:
             self._cache.put(self._name, "status", candidate_status, time.time())
 
-    def _get_msgtxt(self):
-        msg_txt = self._get_cached_pv_or_ask("msgtxt", as_string=True).strip()
+    def _get_msgtxt(self, maxage=0):
+        msg_txt = self._get_cached_pv_or_ask(
+            "msgtxt", as_string=True, maxage=maxage
+        ).strip()
 
-        msg_stat = SEVERITY_TO_STATUS.get(
-            self._get_cached_pv_or_ask("msgtxt_severity"), status.UNKNOWN
-        )
+        if "msgtxt_severity" in self._record_fields:
+            msg_severity = self._get_cached_pv_or_ask("msgtxt_severity", maxage=maxage)
+        else:
+            msg_severity = 0
+        msg_stat = SEVERITY_TO_STATUS.get(msg_severity, status.UNKNOWN)
         return msg_stat, msg_txt
 
     def increase_severity_if_msgtxt_severity_higher(self, msg_stat, motor_stat):
         return max(msg_stat, motor_stat)
 
-    def _update_status_with_msgtxt(self, motor_stat, motor_msg):
+    def _update_status_with_msgtxt(self, motor_stat, motor_msg, maxage=0):
         motor_msg = (motor_msg or "").strip()
-        msg_stat, msg_txt = self._get_msgtxt()
+        msg_stat, msg_txt = self._get_msgtxt(maxage)
         merged_stat = self.increase_severity_if_msgtxt_severity_higher(
             msg_stat, motor_stat
         )
@@ -646,19 +573,19 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             self._log_epics_msg_info(merged_msg, merged_stat, motor_msg)
         return merged_stat, merged_msg
 
-    def _get_alarm_status_and_msg(self):
+    def _get_alarm_status_and_msg(self, maxage=0):
         def _get_value_status():
             pv = f"{self.motorpv}{self._record_fields['value'].pv_suffix}"
             return self._epics_wrapper.get_alarm_status(pv)
 
         motor_stat, motor_msg = get_from_cache_or(
-            self, "value_status", _get_value_status
+            self, "value_status", _get_value_status, maxage=maxage
         )
         motor_msg = (motor_msg or "").strip()
 
         if self.has_msgtxt:
             motor_stat, motor_msg = self._update_status_with_msgtxt(
-                motor_stat, motor_msg
+                motor_stat, motor_msg, maxage
             )
         elif motor_stat == status.OK:
             motor_msg = ""
@@ -790,23 +717,19 @@ class EpicsJogMotor(EpicsMotor):
         super().doPreinit(mode)
         self._record_fields.update(
             {
-                "target": RecordInfo(
-                    "", ".JVEL", RecordType.VALUE
-                ),  # override cache key (unchanged)
+                "target": RecordInfo("", ".JVEL", RecordType.VALUE),
                 "jog_velocity": RecordInfo("jog_velocity", ".JVEL", RecordType.VALUE),
-                "value": RecordInfo(
-                    "value", ".JVEL", RecordType.STATUS
-                ),  # STATUS-only on purpose
+                "value": RecordInfo("value", ".JVEL", RecordType.STATUS),
                 "jogforward": RecordInfo("", ".JOGF", RecordType.VALUE),
                 "jogreverse": RecordInfo("", ".JOGR", RecordType.VALUE),
             }
         )
 
     def doReadSpeed(self):
-        return self._get_cached_pv_or_ask("jog_velocity")
+        return self._get_pv("jog_velocity")
 
-    def _read_jog_with_sign(self):
-        jvel = abs(self._get_cached_pv_or_ask("jog_velocity"))
+    def _read_jog_with_sign(self, maxage=0):
+        jvel = abs(self._get_cached_pv_or_ask("jog_velocity", maxage=maxage))
         if self.jog_dir < 0:
             return -jvel
         if self.jog_dir > 0:
@@ -814,13 +737,13 @@ class EpicsJogMotor(EpicsMotor):
         return 0.0
 
     def doRead(self, maxage=0):
-        return self._read_jog_with_sign()
+        return self._read_jog_with_sign(maxage)
 
     def doReadTarget(self):
         return self._read_jog_with_sign()
 
     def doReadAbslimits(self):
-        max_speed = self._get_cached_pv_or_ask("maxspeed")
+        max_speed = self._get_pv("maxspeed")
         return -max_speed, max_speed
 
     def doWriteUserlimits(self, value):
@@ -830,7 +753,7 @@ class EpicsJogMotor(EpicsMotor):
         return self.userlimits
 
     def doReadUserlimits(self):
-        max_speed = self._get_cached_pv_or_ask("maxspeed")
+        max_speed = self._get_pv("maxspeed")
         return -max_speed, max_speed
 
     def doWriteSpeed(self, value):
@@ -858,7 +781,6 @@ class EpicsJogMotor(EpicsMotor):
         return valid_speed
 
     def _wait_until(self, pv_name, expected_value, timeout=5.0):
-        """Set up a subscription and wait until the PV reaches the expected value."""
         event = threading.Event()
 
         def callback(name, param, value, units, limits, severity, message, **kwargs):
@@ -871,11 +793,9 @@ class EpicsJogMotor(EpicsMotor):
             callback,
         )
         try:
-            # already done? exit immediately
             current_value = self._get_cached_pv_or_ask(pv_name)
             if current_value == expected_value:
                 return
-            # wait for callback to signal completion
             if not event.wait(timeout):
                 raise TimeoutError(
                     f"Timeout waiting for {pv_name} to become {expected_value}"
@@ -892,14 +812,12 @@ class EpicsJogMotor(EpicsMotor):
 
         jog_speed = self._get_valid_speed(abs(value))
 
-        self.jog_dir = 1 if value > 0 else -1  # <-- set before writing JVEL
+        self.jog_dir = 1 if value > 0 else -1
 
-        # remove this later when EPICS motor record supports speed changes on the fly
-        # stop any existing motion first
+        # JVEL updates may arrive before the direction callbacks.
         self.stop()
         self._wait_until("donemoving", 1)
 
-        # write .JVEL (raw jog_velocity); callbacks will synthesize "value"
         self._put_pv("jog_velocity", jog_speed)
 
         jf = self._get_cached_pv_or_ask("jogforward")
@@ -930,80 +848,80 @@ class EpicsJogMotor(EpicsMotor):
         moving = self._get_cached_pv_or_ask("moving")
         return moving == 0
 
-    def _do_status(self):
+    def _compute_status(self, maxage=0):
         with self._lock:
-            epics_status, message = self._get_alarm_status_and_msg()
+            epics_status, message = self._get_alarm_status_and_msg(maxage)
             self._motor_status = epics_status, message
         if epics_status in (status.ERROR, status.UNKNOWN):
             return epics_status, message or "Unknown problem in record"
         elif epics_status == status.WARN:
             return status.WARN, message
 
-        done_moving = self._get_cached_pv_or_ask("donemoving")
-        moving = self._get_cached_pv_or_ask("moving")
+        done_moving = self._get_cached_pv_or_ask("donemoving", maxage=maxage)
+        moving = self._get_cached_pv_or_ask("moving", maxage=maxage)
         if done_moving == 0 or moving != 0:
             return status.BUSY, message or "moving"
 
         if self.has_powerauto:
-            powerauto_enabled = self._get_cached_pv_or_ask("powerauto")
+            powerauto_enabled = self._get_cached_pv_or_ask("powerauto", maxage=maxage)
         else:
             powerauto_enabled = 0
 
-        if not powerauto_enabled and not self._get_cached_pv_or_ask("enable"):
+        if not powerauto_enabled and not self._get_cached_pv_or_ask(
+            "enable", maxage=maxage
+        ):
             return status.WARN, "motor is not enabled"
 
-        high_limitswitch = self._get_cached_pv_or_ask("highlimitswitch")
+        high_limitswitch = self._get_cached_pv_or_ask("highlimitswitch", maxage=maxage)
         if high_limitswitch != 0:
             return status.WARN, message or "at high limit switch."
 
-        low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch")
+        low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch", maxage=maxage)
         if low_limitswitch != 0:
             return status.WARN, message or "at low limit switch."
-        limit_violation = self._get_cached_pv_or_ask("softlimit")
+        limit_violation = self._get_cached_pv_or_ask("softlimit", maxage=maxage)
         if limit_violation != 0:
             return status.WARN, message or "soft limit violation."
 
         return status.OK, message
 
     def doReadUnit(self):
-        raw_unit = self._get_pv("unit", as_string=True)
-        unit = f"{raw_unit}/s" if raw_unit else "units/s"
-        return unit
+        raw_unit = self._epics_wrapper.get_units(f"{self.motorpv}.RBV")
+        return f"{raw_unit}/s" if raw_unit else "units/s"
 
-    def _value_change_callback(self, name, param, value, *args, **kwargs):
-        time_stamp = time.time()
-        cache_key = self._record_fields[param].cache_key or param
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        ts = time.time()
 
         if param == "jog_velocity":
-            self._cache.put(self._name, "jog_velocity", value, time_stamp)
+            self._cache.put(self._name, "jog_velocity", value, ts)
             signed = -abs(value) if self.jog_dir < 0 else abs(value)
-            self._cache.put(self._name, "value", signed, time_stamp)
+            self._cache.put(self._name, "value", signed, ts)
             return
 
-        # Update the signed "value" when direction or moving state changes
-        cur_jvel = abs(self._get_cached_pv_or_ask("jog_velocity"))
-        if param == "jogforward":
+        # Update the signed "value" when direction or moving state changes.
+        if param in ("jogforward", "jogreverse"):
+            cur_jvel = abs(self._get_cached_pv_or_ask("jog_velocity"))
+            other = "jogreverse" if param == "jogforward" else "jogforward"
+            sign = 1 if param == "jogforward" else -1
             if value == 1:
-                self._cache.put(self._name, "jog_dir", 1, time_stamp)
-                self._cache.put(self._name, "value", cur_jvel, time_stamp)
-            else:
-                # check if we are still jogging in reverse
-                jog_rev = self._get_cached_pv_or_ask("jogreverse")
-                if not jog_rev:
-                    self._cache.put(self._name, "jog_dir", 0, time_stamp)
-                    self._cache.put(self._name, "value", 0.0, time_stamp)
-        elif param == "jogreverse":
-            if value == 1:
-                self._cache.put(self._name, "jog_dir", -1, time_stamp)
-                self._cache.put(self._name, "value", -cur_jvel, time_stamp)
-            else:
-                # check if we are still jogging forward
-                jog_fwd = self._get_cached_pv_or_ask("jogforward")
-                if not jog_fwd:
-                    self._cache.put(self._name, "jog_dir", 0, time_stamp)
-                    self._cache.put(self._name, "value", 0.0, time_stamp)
+                self._cache.put(self._name, "jog_dir", sign, ts)
+                self._cache.put(self._name, "value", sign * cur_jvel, ts)
+            elif not self._get_cached_pv_or_ask(other):
+                self._cache.put(self._name, "jog_dir", 0, ts)
+                self._cache.put(self._name, "value", 0.0, ts)
+            self._cache.put(self._name, param, value, ts)
+            return
 
-        self._cache.put(self._name, cache_key, value, time_stamp)
+        if param == "value":
+            self._cache.put(self._name, "value_status", (severity, message), ts)
+            self._refresh_cached_status(ts)
+            return
+
+        super()._value_change_callback(
+            name, param, value, units, limits, severity, message, **kwargs
+        )
 
 
 class SmaractPiezoMotor(EpicsMotor):
@@ -1051,7 +969,6 @@ class SmaractPiezoMotor(EpicsMotor):
 
     def doPreinit(self, mode):
         self._lock = threading.Lock()
-        self._epics_subscriptions = []
         self._motor_status = (status.OK, "")
         self._record_fields = {
             "value": RecordInfo("value", ".RBV", RecordType.BOTH),
@@ -1068,7 +985,6 @@ class SmaractPiezoMotor(EpicsMotor):
             "set": RecordInfo("", ".SET", RecordType.VALUE),
             "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
             "dir": RecordInfo("", ".DIR", RecordType.VALUE),
-            "unit": RecordInfo("unit", ".EGU", RecordType.VALUE),
             "homeforward": RecordInfo("", ".HOMF", RecordType.VALUE),
             "homereverse": RecordInfo("", ".HOMR", RecordType.VALUE),
             "position_deadband": RecordInfo("", ".RDBD", RecordType.VALUE),
@@ -1090,16 +1006,14 @@ class SmaractPiezoMotor(EpicsMotor):
             "mclfrequency": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
             "mclfrequency_rb": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
         }
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode != SIMULATION:
-            # Check PV exists
-            self._epics_wrapper.connect_pv(self.motorpv)
 
         if not self.has_msgtxt:
             del self._record_fields["msgtxt"]
 
+        EpicsDeviceBase.doPreinit(self, mode)
+
     def doReadStepfrequency(self):
-        return self._get_cached_pv_or_ask("stepfrequency")
+        return self._get_pv("stepfrequency")
 
     def doWriteStepfrequency(self, value):
         if value < 0:
@@ -1107,7 +1021,7 @@ class SmaractPiezoMotor(EpicsMotor):
         self._put_pv("stepfrequency", value)
 
     def doReadStepsizeforward(self):
-        return self._get_cached_pv_or_ask("stepsizeforward")
+        return self._get_pv("stepsizeforward")
 
     def doWriteStepsizeforward(self, value):
         if value < 0:
@@ -1115,7 +1029,7 @@ class SmaractPiezoMotor(EpicsMotor):
         self._put_pv("stepsizeforward", value)
 
     def doReadStepsizereverse(self):
-        return self._get_cached_pv_or_ask("stepsizereverse")
+        return self._get_pv("stepsizereverse")
 
     def doWriteStepsizereverse(self, value):
         if value < 0:
@@ -1123,7 +1037,7 @@ class SmaractPiezoMotor(EpicsMotor):
         self._put_pv("stepsizereverse", value)
 
     def doReadMclfrequency(self):
-        return self._get_cached_pv_or_ask("mclfrequency_rb")
+        return self._get_pv("mclfrequency_rb")
 
     def doWriteMclfrequency(self, value):
         if value < 0:

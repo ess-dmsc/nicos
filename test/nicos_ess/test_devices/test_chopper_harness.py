@@ -25,7 +25,7 @@
 import pytest
 
 from nicos_ess.devices.epics import chopper as chopper_mod
-from nicos_ess.devices.epics.pva import epics_devices
+from nicos_ess.devices.epics.pva import epics_common
 from nicos_ess.devices.epics.pva.epics_devices import EpicsManualMappedAnalogMoveable
 from test.nicos_ess.test_devices.doubles import (
     FakeEpicsBackend,
@@ -42,7 +42,7 @@ def fake_backend(monkeypatch):
         chopper_mod, "create_wrapper", lambda timeout, use_pva: backend
     )
     monkeypatch.setattr(
-        epics_devices, "create_wrapper", lambda timeout, use_pva: backend
+        epics_common, "create_wrapper", lambda timeout, use_pva: backend
     )
 
     backend.values["SIM:CHOP:ChopState_R"] = "stop"
