@@ -10,6 +10,7 @@ devices = dict(
         description="Control device for cetoni pump SP1",
         pvroot=pump1_pvroot,
         linked_pump_device="linked_pumping",
+        warn_ref_msg="please make sure syringes are removed before homing",
     ),
     pump1_syringe_config=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
