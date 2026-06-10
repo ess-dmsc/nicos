@@ -642,6 +642,8 @@ class DevicesPanel(Panel):
             if ldevname in self._control_dialogs:
                 dlg = self._control_dialogs[ldevname]
                 fmtstr = devinfo.fmtstr
+                if max(abs(value[0]), abs(value[1])) >= 1e10:
+                    fmtstr = "%e"
                 dlg.limitMin.setText(fmtstr % value[0])
                 dlg.limitMax.setText(fmtstr % value[1])
         elif subkey == "classes":
@@ -1066,6 +1068,11 @@ class ControlDialog(QDialog):
                 self.limitFrame.setVisible(False)
             else:
                 fmtstr = params["fmtstr"]
+                if (
+                    max(abs(params["userlimits"][0]), abs(params["userlimits"][1]))
+                    >= 1e10
+                ):
+                    fmtstr = "%e"
                 self.limitMin.setText(fmtstr % params["userlimits"][0])
                 self.limitMax.setText(fmtstr % params["userlimits"][1])
 
@@ -1226,6 +1233,9 @@ class ControlDialog(QDialog):
 
         userlimits = self.client.getDeviceParam(self.devname, "userlimits")
         fmtstr = self.devinfo.fmtstr
+        # check if the values are larger than e10, if so, use exponential format for the limits
+        if max(abs(userlimits[0]), abs(userlimits[1])) >= 1e10:
+            fmtstr = "%e"
         dlg.limitMin.setText(fmtstr % userlimits[0])
         dlg.limitMax.setText(fmtstr % userlimits[1])
 
