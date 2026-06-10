@@ -408,6 +408,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             description="Warning message before performing 'home' command",
             type=str,
             mandatory=False,
+            userparam=False,
         ),
     }
 
