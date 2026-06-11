@@ -1,5 +1,6 @@
 from nicos.core import DeviceMixinBase, Param
 from nicos.core.params import string
+from nicos.devices.abstract import CanReference
 from nicos.utils import readonlydict, readonlylist
 
 
@@ -191,5 +192,16 @@ class HasNexusConfig(DeviceMixinBase):
             default=[],
             userparam=False,
             settable=True,
+        ),
+    }
+
+
+class CanReferenceWithWarning(CanReference):
+    parameters = {
+        "home_warning_msg": Param(
+            description="Warning message before performing 'home' command",
+            type=str,
+            mandatory=False,
+            userparam=False,
         ),
     }
