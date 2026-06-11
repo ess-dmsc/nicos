@@ -1,5 +1,6 @@
 from nicos.core import DeviceMixinBase, Param
 from nicos.core.params import string
+from nicos.devices.abstract import CanReference
 from nicos.utils import readonlydict, readonlylist
 from nicos.devices.abstract import CanReference
 
