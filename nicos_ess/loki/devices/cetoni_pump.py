@@ -18,7 +18,7 @@ from nicos.core import (
     PositionError,
     ConfigurationError,
 )
-from nicos.devices.abstract import CanReference, MappedMoveable
+from nicos.devices.abstract import MappedMoveable
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
     create_wrapper,
@@ -27,6 +27,7 @@ from nicos_ess.devices.epics.pva.epics_devices import (
     get_from_cache_or,
     _update_mapped_choices,
 )
+from nicos_ess.devices.mixins import CanReferenceWithWarning
 
 
 class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
@@ -353,7 +354,9 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             )
 
 
-class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
+class CetoniPumpController(
+    EpicsParameters, CanReferenceWithWarning, HasLimits, Moveable
+):
     parameters = {
         "pvroot": Param(
             "The root of the pv",
@@ -403,12 +406,6 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         "stroke_unit": Param(
             description="Piston stroke unit",
             type=str,
-        ),
-        "home_warning_msg": Param(
-            description="Warning message before performing 'home' command",
-            type=str,
-            mandatory=False,
-            userparam=False,
         ),
     }
 
