@@ -1306,12 +1306,7 @@ class ControlDialog(QDialog):
 
     @pyqtSlot()
     def on_actionHome_triggered(self):
-        try:
-            home_warning_msg = self.client.eval(
-                f"session.getDevice({self.devname}).home_warning_msg", None
-            )
-        except:
-            home_warning_msg = ""
+        home_warning_msg = self.paramvalues.get("home_warning_msg", None)
         if home_warning_msg:
             qwindow = HomingCheckDialog(home_warning_msg)
             if not qwindow.exec():
