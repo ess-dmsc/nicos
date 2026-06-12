@@ -42,10 +42,15 @@ from nicos.devices.abstract import MappedMoveable, MappedReadable
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsDeviceBase,
     EpicsMappedChoiceSupport,
+    EpicsParameters,  # noqa: F401  (re-export for existing importers)
     EpicsReadWriteBase,
+    PvReadOrWrite,  # noqa: F401  (re-export for existing importers)
     RecordInfo,
     RecordType,
     _update_mapped_choices,
+    create_wrapper,  # noqa: F401  (re-export for existing importers)
+    get_from_cache_or,  # noqa: F401  (re-export for existing importers)
+    status_from_candidates,
 )
 
 
@@ -61,15 +66,12 @@ class EpicsReadable(EpicsDeviceBase, Readable):
     }
 
     _primary_field = "readpv"
-
-    def doPreinit(self, mode):
-        self._record_fields = {
-            "readpv": RecordInfo("value", "", RecordType.BOTH),
-        }
-        EpicsDeviceBase.doPreinit(self, mode)
+    _record_fields = {
+        "readpv": RecordInfo("value", "", RecordType.BOTH),
+    }
 
     def doRead(self, maxage=0):
-        return self._get_cached_pv_or_ask("readpv", maxage=maxage)
+        return self._read_cached("readpv", maxage=maxage)
 
 
 class EpicsStringReadable(EpicsReadable):
@@ -80,11 +82,9 @@ class EpicsStringReadable(EpicsReadable):
 
     valuetype = str
 
-    def doPreinit(self, mode):
-        self._record_fields = {
-            "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
-        }
-        EpicsDeviceBase.doPreinit(self, mode)
+    _record_fields = {
+        "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+    }
 
 
 class EpicsAnalogMoveable(EpicsReadWriteBase, HasPrecision, HasLimits, Moveable):
@@ -99,23 +99,21 @@ class EpicsAnalogMoveable(EpicsReadWriteBase, HasPrecision, HasLimits, Moveable)
         "unit": Override(mandatory=False, settable=False, volatile=True),
     }
 
-    def doPreinit(self, mode):
-        self._record_fields = {
-            "readpv": RecordInfo("value", "", RecordType.BOTH),
-            "writepv": RecordInfo("target", "", RecordType.STATUS),
-            "targetpv": RecordInfo("target", "", RecordType.STATUS),
-        }
-        EpicsDeviceBase.doPreinit(self, mode)
+    _record_fields = {
+        "readpv": RecordInfo("value", "", RecordType.BOTH),
+        "writepv": RecordInfo("target", "", RecordType.STATUS),
+        "targetpv": RecordInfo("target", "", RecordType.STATUS),
+    }
 
     def doRead(self, maxage=0):
-        return self._get_cached_pv_or_ask("readpv", maxage=maxage)
+        return self._read_cached("readpv", maxage=maxage)
 
     def _compute_status(self, maxage=0):
         candidates = []
         target = self._cached_raw_target(maxage)
         if not HasPrecision.doIsAtTarget(self, self.doRead(maxage), target):
             candidates.append((status.BUSY, f"moving to {target}"))
-        return self._status_from_candidates(
+        return status_from_candidates(
             self._read_primary_alarm(maxage=maxage), candidates
         )
 
@@ -123,7 +121,7 @@ class EpicsAnalogMoveable(EpicsReadWriteBase, HasPrecision, HasLimits, Moveable)
         return self._cached_raw_target()
 
     def doStart(self, value):
-        self._put_pv("writepv", value)
+        self._epics.put_pv("writepv", value)
 
 
 class EpicsDigitalMoveable(EpicsAnalogMoveable):
@@ -150,19 +148,17 @@ class EpicsStringMoveable(EpicsReadWriteBase, Moveable):
         "unit": Override(mandatory=False, settable=False, volatile=False),
     }
 
-    def doPreinit(self, mode):
-        self._record_fields = {
-            "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
-            "writepv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
-            "targetpv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
-        }
-        EpicsDeviceBase.doPreinit(self, mode)
+    _record_fields = {
+        "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+        "writepv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
+        "targetpv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
+    }
 
     def doRead(self, maxage=0):
-        return self._get_cached_pv_or_ask("readpv", maxage=maxage)
+        return self._read_cached("readpv", maxage=maxage)
 
     def doStart(self, value):
-        self._put_pv("writepv", value)
+        self._epics.put_pv("writepv", value)
 
 
 class EpicsMappedReadable(EpicsMappedChoiceSupport, EpicsReadable, MappedReadable):
@@ -175,11 +171,9 @@ class EpicsMappedReadable(EpicsMappedChoiceSupport, EpicsReadable, MappedReadabl
         "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
-    def doPreinit(self, mode):
-        self._record_fields = {
-            "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
-        }
-        EpicsDeviceBase.doPreinit(self, mode)
+    _record_fields = {
+        "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+    }
 
     def _after_subscribe(self, mode):
         if mode != SIMULATION:
@@ -205,13 +199,11 @@ class EpicsMappedMoveable(EpicsMappedChoiceSupport, EpicsReadWriteBase, MappedMo
         "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
-    def doPreinit(self, mode):
-        self._record_fields = {
-            "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
-            "writepv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
-            "targetpv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
-        }
-        EpicsDeviceBase.doPreinit(self, mode)
+    _record_fields = {
+        "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+        "writepv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
+        "targetpv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
+    }
 
     def _after_subscribe(self, mode):
         if mode != SIMULATION:
@@ -222,7 +214,7 @@ class EpicsMappedMoveable(EpicsMappedChoiceSupport, EpicsReadWriteBase, MappedMo
         return self._read_mapped_choice(maxage=maxage)
 
     def _startRaw(self, value):
-        self._put_pv("writepv", value)
+        self._epics.put_pv("writepv", value)
 
 
 class EpicsManualMappedAnalogMoveable(
@@ -242,22 +234,20 @@ class EpicsManualMappedAnalogMoveable(
 
     valuetype = anytype
 
-    def doPreinit(self, mode):
-        self._record_fields = {
-            "readpv": RecordInfo("value", "", RecordType.BOTH),
-            "writepv": RecordInfo("target", "", RecordType.STATUS),
-            "targetpv": RecordInfo("target", "", RecordType.STATUS),
-        }
-        EpicsDeviceBase.doPreinit(self, mode)
+    _record_fields = {
+        "readpv": RecordInfo("value", "", RecordType.BOTH),
+        "writepv": RecordInfo("target", "", RecordType.STATUS),
+        "targetpv": RecordInfo("target", "", RecordType.STATUS),
+    }
 
     def _after_subscribe(self, mode):
         MappedMoveable.doInit(self, mode)
 
     def _readRaw(self, maxage=0):
-        return self._get_cached_pv_or_ask("readpv", maxage=maxage)
+        return self._read_cached("readpv", maxage=maxage)
 
     def _startRaw(self, raw_value):
-        self._put_pv("writepv", raw_value)
+        self._epics.put_pv("writepv", raw_value)
 
     def doStart(self, value):
         self._cache.put(
@@ -298,7 +288,7 @@ class EpicsManualMappedAnalogMoveable(
 
         if not at_target:
             candidates.append((status.BUSY, f"moving to {self.target}"))
-        return self._status_from_candidates(
+        return status_from_candidates(
             self._read_primary_alarm(maxage=maxage), candidates
         )
 

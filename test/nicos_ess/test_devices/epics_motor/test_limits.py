@@ -25,10 +25,8 @@
 import pytest
 
 from nicos.core.errors import ConfigurationError
-
 from nicos_ess.devices.epics.pva.epics_common import RecordInfo, RecordType
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
-
 from test.nicos_ess.test_devices.epics_motor.helpers import (
     ASYMM_DIAL_LIMITS,
     DYNAMIC_HW_DIAL_LIMIT_CASES,
@@ -47,9 +45,10 @@ from test.nicos_ess.test_devices.epics_motor.helpers import (
 
 
 class DerivedRecordFieldEpicsMotor(EpicsMotor):
-    def doPreinit(self, mode):
-        super().doPreinit(mode)
-        self._record_fields["extra_field"] = RecordInfo("", ".XTR", RecordType.VALUE)
+    def _build_record_fields(self):
+        record_fields = super()._build_record_fields()
+        record_fields["extra_field"] = RecordInfo("", ".XTR", RecordType.VALUE)
+        return record_fields
 
 
 class TestEpicsMotorLegacyParity:
@@ -76,12 +75,13 @@ class TestEpicsMotorLegacyParity:
         )
         assert "extra_field" in dev._record_fields
         assert dev._record_fields["extra_field"].pv_suffix == ".XTR"
+        assert dev._epics.pv_name("extra_field") == pv(".XTR")
 
 
 class TestEpicsMotorLimits:
     @pytest.mark.parametrize("offset", OFFSET_CASES)
     @pytest.mark.parametrize("direction", ["Pos", "Neg"], ids=["dir_pos", "dir_neg"])
-    def test_motor_limits_are_read_for_all_direction_and_offset_cases_with_asymmetric_dial_limits(
+    def test_motor_limits_from_asymmetric_dial_limits_for_direction_and_offset(
         self, device_harness, fake_backend, direction, offset
     ):
         hw_umin, hw_umax = seed_limits(
@@ -98,7 +98,7 @@ class TestEpicsMotorLimits:
 
     @pytest.mark.parametrize("offset", OFFSET_CASES)
     @pytest.mark.parametrize("direction", ["Pos", "Neg"], ids=["dir_pos", "dir_neg"])
-    def test_motor_userlimits_are_written_for_all_direction_and_offset_cases_with_asymmetric_dial_limits(
+    def test_motor_userlimits_written_for_asymmetric_dial_limits(
         self, device_harness, fake_backend, direction, offset
     ):
         hw_umin, hw_umax = seed_limits(
@@ -129,7 +129,7 @@ class TestEpicsMotorLimits:
     )
     @pytest.mark.parametrize("offset", OFFSET_CASES)
     @pytest.mark.parametrize("direction", ["Pos", "Neg"], ids=["dir_pos", "dir_neg"])
-    def test_motor_userlimits_follow_dynamic_hardware_limit_updates_for_all_direction_and_offset_cases(
+    def test_motor_userlimits_follow_dynamic_hardware_limit_updates(
         self,
         device_harness,
         fake_backend,

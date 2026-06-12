@@ -21,15 +21,15 @@
 #
 # *****************************************************************************
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 # pytest.importorskip("graypy")
 from nicos.commands.device import adjust
 from nicos.core import status
-
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
-
+from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsComponent
 
 session_setup = "ess_motors"
 
@@ -71,26 +71,19 @@ class FakeEpicsMotor(EpicsMotor):
     def doPreinit(self, mode):
         self._values = self._initial_values()
         self._record_fields = {}
-        self._epics_subscriptions = []
+        self._epics = FakeEpicsComponent(self._values)
 
     def doInit(self, mode):
         pass
 
     def doRead(self, maxage=None):
-        return self._get_pv("position")
+        return self._epics.get_pv("position")
 
     def doReadUnit(self, maxage=None):
         return self.values["unit"]
 
-    def _put_pv(self, pvparam, value, wait=False):
-        self.values[pvparam] = value
-        # In SET mode, writing VAL redefines OFF.
-        if pvparam == "target" and self.values.get("set") == 1:
-            dir_sign = 1 if self.values["dir"] == "Pos" else -1
-            self.values["offset"] = value - self.values["dialvalue"] * dir_sign
-
-    def _get_pv(self, pvparam, as_string=False):
-        return self.values[pvparam]
+    def _read_cached(self, field, as_string=None, maxage=None):
+        return self.values[field]
 
 
 class DerivedEpicsMotor(FakeEpicsMotor):

@@ -162,11 +162,15 @@ class TestHelpers:
         mapped_device = SimpleNamespace(
             readpv="PV:READ",
             writepv="PV:WRITE",
-            _epics_wrapper=fake_backend,
             mapping={},
             _inverse_mapping={},
             fallback=None,
         )
+
+        def get_value_choices(field):
+            return fake_backend.get_value_choices(getattr(mapped_device, field))
+
+        mapped_device._epics = SimpleNamespace(get_value_choices=get_value_choices)
 
         def set_ro_param(name, value):
             setattr(mapped_device, name, value)

@@ -32,8 +32,6 @@ from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
     string_moveable_config,
 )
 
-from .conftest import assert_error_status
-
 
 class TestEpicsStringMoveable:
     def test_daemon_string_moveable_starts_with_string_target(
@@ -56,7 +54,7 @@ class TestEpicsStringMoveable:
         assert fake_backend.put_calls[-1] == (config["writepv"], "ON", False)
         assert device_harness.run("daemon", device.status, 0) == (status.OK, "ok")
 
-    def test_daemon_string_moveable_status_returns_timeout_error(
+    def test_daemon_string_moveable_status_returns_unknown_on_backend_timeout(
         self, device_harness, fake_backend
     ):
         config = string_moveable_config()
@@ -72,8 +70,8 @@ class TestEpicsStringMoveable:
             **config,
         )
         assert device_harness.run("daemon", device.status, 0) == (
-            status.ERROR,
-            "timeout reading status",
+            status.UNKNOWN,
+            "lost connection to EPICS",
         )
 
     def test_poller_string_moveable_value_and_status_callbacks_update_cache(
@@ -126,14 +124,12 @@ class TestEpicsStringMoveable:
             config["writepv"], value=numpy.array([79, 70, 70]), units=""
         )
 
-        assert (
-            device_harness.run("poller", device._cache.get, device, "value") == "ON"
-        )
+        assert device_harness.run("poller", device._cache.get, device, "value") == "ON"
         assert (
             device_harness.run("poller", device._cache.get, device, "target") == "OFF"
         )
 
-    def test_poller_string_moveable_connection_callback_sets_comm_failure(
+    def test_poller_string_moveable_connection_callback_sets_lost_epics_connection(
         self, device_harness, fake_backend
     ):
         config = string_moveable_config()
@@ -148,8 +144,9 @@ class TestEpicsStringMoveable:
         )
         fake_backend.emit_connection(config["readpv"], False)
 
-        assert_error_status(
-            device_harness.run("poller", device._cache.get, device, "status")
+        assert device_harness.run("poller", device._cache.get, device, "status") == (
+            status.UNKNOWN,
+            "lost connection to EPICS",
         )
 
     def test_daemon_string_moveable_prefers_cached_value_and_status_from_poller(

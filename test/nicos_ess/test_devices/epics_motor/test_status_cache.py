@@ -25,7 +25,6 @@
 import pytest
 
 from nicos.core import status
-
 from test.nicos_ess.test_devices.epics_motor.helpers import (
     START_STATUS_TRANSITION_CASES,
     STATUS_CASES,
@@ -307,23 +306,21 @@ class TestEpicsMotorStatus:
             expect_empty_message_after_updates,
         )
 
-    def test_motor_connection_loss_sets_communication_failure_status_in_monitor_mode(
+    def test_motor_connection_loss_sets_lost_epics_connection_status_in_monitor_mode(
         self, device_harness, fake_backend
     ):
         daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
 
         fake_backend.disconnect_backend()
 
-        # Cached status should immediately reflect communication failure
         assert device_harness.run_daemon(daemon_device.status) == (
-            status.ERROR,
-            "communication failure",
+            status.UNKNOWN,
+            "lost connection to EPICS",
         )
 
         # With maxage=0, monitor mode still forces a direct backend status read.
         hardware_status = device_harness.run_daemon(daemon_device.status, 0)
-        assert hardware_status[0] == status.ERROR
-        assert "timed out" in hardware_status[1]
+        assert hardware_status == (status.UNKNOWN, "lost connection to EPICS")
 
     def test_motor_status0_clears_stale_busy_cache_after_backend_has_completed(
         self, device_harness, fake_backend
@@ -433,3 +430,29 @@ class TestEpicsMotorCacheAndReadPaths:
         fake_backend.values[pv(".MISS")] = 0
 
         assert device_harness.run_daemon(daemon_device.status, 0)[0] == status.OK
+
+    @pytest.mark.parametrize(
+        "suffix,method_name,cached_value,hardware_value",
+        [
+            pytest.param(".VELO", "doReadSpeed", 1.0, 4.0, id="speed"),
+            pytest.param(".OFF", "doReadOffset", 0.0, 3.0, id="offset"),
+            pytest.param(".RDBD", "doReadPrecision", 0.1, 0.4, id="precision"),
+        ],
+    )
+    def test_volatile_parameter_reads_use_hardware_not_monitor_cache(
+        self,
+        device_harness,
+        fake_backend,
+        suffix,
+        method_name,
+        cached_value,
+        hardware_value,
+    ):
+        daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
+
+        fake_backend.emit_update(pv(suffix), value=cached_value)
+        fake_backend.values[pv(suffix)] = hardware_value
+
+        assert device_harness.run_daemon(
+            getattr(daemon_device, method_name)
+        ) == pytest.approx(hardware_value)

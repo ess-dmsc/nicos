@@ -167,6 +167,37 @@ class FakeEpicsBackend:
                 connection_callback(pv, pvparam, is_connected)
 
 
+class FakeEpicsComponent:
+    """Value-dict backed stand-in for the EpicsRecordComponent surface that
+    device classes touch, for harness tests that fake out EPICS entirely.
+
+    Pair it with a device-side ``_read_cached`` override returning the same
+    values dict, so cached reads bypass the session cache too.
+    """
+
+    def __init__(self, values):
+        self.values = values
+
+    def get_pv(self, field, as_string=False):
+        return self.values[field]
+
+    def put_pv(self, field, value):
+        self.values[field] = value
+        # In SET mode, writing VAL redefines OFF (EPICS motor record).
+        if field == "target" and self.values.get("set") == 1:
+            dir_sign = 1 if self.values["dir"] == "Pos" else -1
+            self.values["offset"] = value - self.values["dialvalue"] * dir_sign
+
+    def get_alarm_status(self, field):
+        return status.OK, ""
+
+    def get_units(self, field, default=""):
+        return self.values.get("unit", default)
+
+    def shutdown(self):
+        pass
+
+
 def patch_create_wrapper(monkeypatch, module):
     """Patch ``create_wrapper`` to return a shared fake backend."""
     backend = FakeEpicsBackend()
@@ -178,9 +209,7 @@ def patch_create_wrapper(monkeypatch, module):
     from nicos_ess.devices.epics.pva import epics_common
 
     monkeypatch.setattr(epics_common, "create_wrapper", make_backend, raising=False)
-    monkeypatch.setattr(
-        module, "create_wrapper", make_backend, raising=False
-    )
+    monkeypatch.setattr(module, "create_wrapper", make_backend, raising=False)
     return backend
 
 

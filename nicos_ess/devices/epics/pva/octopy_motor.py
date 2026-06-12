@@ -1,20 +1,17 @@
 import threading
 import time
 
-from nicos import session
-from nicos.core import POLLER, SIMULATION, MoveError, Override, Param, pvname, status
+from nicos.core import MoveError, Override, Param, pvname, status
 from nicos.core.mixins import CanDisable
 from nicos.devices.abstract import CanReference, Motor
 from nicos_ess.devices.epics.pva.epics_common import (
-    EpicsParameters,
+    EpicsDeviceBase,
     RecordInfo,
     RecordType,
-    create_wrapper,
-    get_from_cache_or,
 )
 
 
-class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
+class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
     """Motor device for controllers exposing *Octopy*‑style PVs.
 
     Unlike the standard *EPICS motor record*, an Octopy axis only provides a
@@ -52,98 +49,35 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         "speed": Override(volatile=True, unit="mm/s"),
     }
 
+    _primary_field = "value"
+    _default_root_attr = "motorpv"
+    _record_fields = {
+        "value": RecordInfo("value", "-position-r", RecordType.BOTH),
+        "target": RecordInfo("target", "-s", RecordType.VALUE),
+        "stop": RecordInfo("", "-halt-s", RecordType.VALUE),
+        "speed": RecordInfo("", "-velocity-s", RecordType.VALUE),
+        "enable": RecordInfo("", "-enable-s", RecordType.STATUS),
+        "home": RecordInfo("", "-home-s", RecordType.VALUE),
+        "reset": RecordInfo("", "-reset-s", RecordType.VALUE),
+        "busy": RecordInfo("", "-busy-r", RecordType.STATUS),
+        "move_done": RecordInfo("", "-move_done-r", RecordType.STATUS),
+    }
+
     def doPreinit(self, mode):
         self._lock = threading.Lock()
-        self._epics_subscriptions = []
-        self._cache_key_status = "status"
+        EpicsDeviceBase.doPreinit(self, mode)
 
-        self._record_fields = {
-            "value": RecordInfo("value", "-position-r", RecordType.BOTH),
-            "target": RecordInfo("target", "-s", RecordType.VALUE),
-            "stop": RecordInfo("", "-halt-s", RecordType.VALUE),
-            "speed": RecordInfo("", "-velocity-s", RecordType.VALUE),
-            "enable": RecordInfo("", "-enable-s", RecordType.VALUE),
-            "home": RecordInfo("", "-home-s", RecordType.VALUE),
-            "reset": RecordInfo("", "-reset-s", RecordType.VALUE),
-            "busy": RecordInfo("", "-busy-r", RecordType.VALUE),
-            "move_done": RecordInfo("", "-move_done-r", RecordType.VALUE),
-        }
-
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode != SIMULATION:
-            self._epics_wrapper.connect_pv(f"{self.motorpv}-s")
-
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            for key, info in self._record_fields.items():
-                if info.record_type in (RecordType.VALUE, RecordType.BOTH):
-                    self._epics_subscriptions.append(
-                        self._epics_wrapper.subscribe(
-                            f"{self.motorpv}{info.pv_suffix}",
-                            key,
-                            self._value_change_callback,
-                            self._connection_change_callback,
-                        )
-                    )
-
-    def _get_cached_pv_or_ask(self, param, as_string=False):
-        return get_from_cache_or(self, param, lambda: self._get_pv(param, as_string))
-
-    def _get_pv(self, param, as_string=False):
-        return self._epics_wrapper.get_pv_value(
-            f"{self.motorpv}{self._record_fields[param].pv_suffix}", as_string
-        )
-
-    def _put_pv(self, param, value):
-        self._epics_wrapper.put_pv_value(
-            f"{self.motorpv}{self._record_fields[param].pv_suffix}", value
-        )
-
-    def _wait_until(self, pv_name, expected_value, precision=None, timeout=5.0):
-        """Set up a subscription and wait until the PV reaches the expected value."""
-        event = threading.Event()
-
-        def callback(name, param, value, units, limits, severity, message, **kwargs):
-            if precision is not None and isinstance(value, (int, float)):
-                if abs(value - expected_value) <= precision:
-                    event.set()
-            else:
-                if value == expected_value:
-                    event.set()
-
-        sub = self._epics_wrapper.subscribe(
-            f"{self.motorpv}{self._record_fields[pv_name].pv_suffix}",
-            pv_name,
-            callback,
-        )
-        try:
-            # already done? exit immediately
-            current_value = self._get_pv(
-                pv_name,
-                as_string=False if isinstance(expected_value, (int, float)) else True,
-            )
-            if precision is not None and isinstance(current_value, (int, float)):
-                if abs(current_value - expected_value) <= precision:
-                    return
-            else:
-                if current_value == expected_value:
-                    return
-            # wait for callback to signal completion
-            if not event.wait(timeout):
-                raise TimeoutError(
-                    f"Timeout waiting for {pv_name} to become {expected_value}"
-                )
-        finally:
-            self._epics_wrapper.close_subscription(sub)
+    def _pvs_to_connect(self):
+        return [f"{self.motorpv}-s"]
 
     def doRead(self, maxage=0):
-        return self._get_cached_pv_or_ask("value")
+        return self._read_cached("value", maxage=maxage)
 
     def doReadTarget(self):
-        return self._get_cached_pv_or_ask("target")
+        return self._read_cached("target")
 
     def doReadSpeed(self):
-        return self._get_cached_pv_or_ask("speed")
+        return self._epics.get_pv("speed")
 
     def doStart(self, value):
         if abs(self.read(0) - value) <= self.precision:
@@ -154,31 +88,29 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
             self._cache.invalidate(self, "busy")
             self._cache.invalidate(self, "move_done")
 
-        if self._get_cached_pv_or_ask("busy") == 1:
+        if self._read_cached("busy", maxage=0) == 1:
             raise MoveError("Motor is busy")
 
-        self._cache.put(
-            self._name, self._cache_key_status, (status.BUSY, "Moving"), time.time()
-        )
-        self._put_pv("target", value)
+        self._cache.put(self._name, "status", (status.BUSY, "Moving"), time.time())
+        self._epics.put_pv("target", value)
         # octopy does not update move_done immediately, so we need to wait here
         # until it is set to 0.
-        self._wait_until("move_done", 0, timeout=5.0)
+        self._epics.wait_for("move_done", 0, timeout=5.0)
 
     def doStop(self):
-        self._put_pv("stop", 1)
+        self._epics.put_pv("stop", 1)
 
     def doEnable(self, on):
-        self._put_pv("enable", 1 if on else 0)
+        self._epics.put_pv("enable", 1 if on else 0)
 
     def doWriteSpeed(self, value):
-        self._put_pv("speed", max(0.0, value))
+        self._epics.put_pv("speed", max(0.0, value))
 
     def doReference(self):
-        self._put_pv("home", 1)
+        self._epics.put_pv("home", 1)
 
     def doReset(self):
-        self._put_pv("reset", 1)
+        self._epics.put_pv("reset", 1)
 
     def doIsAtTarget(self, pos=None, target=None):
         """
@@ -191,46 +123,43 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
 
         within_target = abs(target - pos) <= self.precision
 
-        return within_target and self._get_cached_pv_or_ask("move_done") == 1
+        return within_target and self._read_cached("move_done", maxage=0) == 1
 
     def doIsCompleted(self):
         """
         Continuously check if a movement is completed.
         """
-        busy = self._get_cached_pv_or_ask("busy") == 1
-        move_done = self._get_cached_pv_or_ask("move_done") == 1
+        return self._is_completed(maxage=0)
+
+    def _is_completed(self, maxage=0):
+        busy = self._read_cached("busy", maxage=maxage) == 1
+        move_done = self._read_cached("move_done", maxage=maxage) == 1
         return not busy and move_done
 
-    def doStatus(self, maxage=0):
-        return get_from_cache_or(self, self._cache_key_status, self._do_status)
+    def _compute_status(self, maxage=0):
+        try:
+            if not self._is_completed(maxage=maxage):
+                target = self._read_cached("target", maxage=maxage)
+                return status.BUSY, f"moving to {target}"
 
-    def _do_status(self):
-        if not self.doIsCompleted():
-            return status.BUSY, f"moving to {self.target}"
-
-        # Check if the motor is enabled
-        is_enabled = self._get_cached_pv_or_ask("enable") == 1
-        if not is_enabled:
-            return status.WARN, "Motor is not enabled"
+            # Check if the motor is enabled
+            is_enabled = self._read_cached("enable", maxage=maxage) == 1
+            if not is_enabled:
+                return status.WARN, "Motor is not enabled"
+        except TimeoutError:
+            return status.UNKNOWN, "lost connection to EPICS"
 
         return status.OK, "ready"
 
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        self._cache.put(self._name, param, value, time.time())
-        self._cache.put(
-            self._name, self._cache_key_status, self._do_status(), time.time()
-        )
-
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if not is_connected:
+        # Any of the few octopy PVs dropping means the axis is unusable.
+        if is_connected:
+            self.log.debug("%s connected!", name)
+        else:
             self.log.warning("%s disconnected!", name)
             self._cache.put(
                 self._name,
-                self._cache_key_status,
-                (status.ERROR, "communication failure"),
+                "status",
+                (status.UNKNOWN, "lost connection to EPICS"),
                 time.time(),
             )
-        else:
-            self.log.debug("%s connected!", name)

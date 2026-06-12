@@ -41,8 +41,8 @@ def fake_backend(fake_epics_backend_factory):
     return fake_epics_backend_factory(epics_common)
 
 
-def assert_error_status(observed_status):
-    assert observed_status[0] == status.ERROR
+def assert_connection_unknown_status(observed_status):
+    assert observed_status == (status.UNKNOWN, "lost connection to EPICS")
 
 
 def manual_moveable_config():

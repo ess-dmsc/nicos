@@ -4,6 +4,7 @@ import pytest
 
 from nicos.core import LimitError, status
 from nicos_ess.loki.devices.detector_motion import LOKIDetectorMotion
+from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsComponent
 
 session_setup = None
 
@@ -43,21 +44,15 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
 
     def doPreinit(self, mode):
         self._lock = threading.Lock()
-        self._epics_subscriptions = []
         self._motor_status = (status.OK, "")
         self._record_fields = self._initial_record_fields()
+        self._epics = FakeEpicsComponent(self._record_fields)
 
     def doInit(self, mode):
         pass
 
-    def _put_pv(self, pvparam, value, wait=False):
-        self._record_fields[pvparam] = value
-
-    def _get_pv(self, pvparam, as_string=False):
-        return self._record_fields[pvparam]
-
-    def _get_cached_pv_or_ask(self, param, as_string=False, maxage=None):
-        return self._get_pv(param, as_string)
+    def _read_cached(self, field, as_string=None, maxage=None):
+        return self._record_fields[field]
 
     def doReadUnit(self, maxage=None):
         return self._record_fields["unit"]

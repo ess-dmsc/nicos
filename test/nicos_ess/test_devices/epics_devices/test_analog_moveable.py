@@ -36,7 +36,7 @@ from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
     analog_moveable_config,
 )
 
-from .conftest import assert_error_status, create_analog_pair
+from .conftest import assert_connection_unknown_status, create_analog_pair
 
 
 class TestEpicsAnalogMoveable:
@@ -69,7 +69,7 @@ class TestEpicsAnalogMoveable:
             100.0,
         )
 
-    def test_daemon_analog_moveable_status_returns_timeout_error(
+    def test_daemon_analog_moveable_status_returns_unknown_on_backend_timeout(
         self, device_harness, fake_backend
     ):
         config = analog_moveable_config()
@@ -86,8 +86,8 @@ class TestEpicsAnalogMoveable:
         )
 
         assert device_harness.run("daemon", daemon_device.status, 0) == (
-            status.ERROR,
-            "timeout reading status",
+            status.UNKNOWN,
+            "lost connection to EPICS",
         )
 
     def test_poller_analog_moveable_callbacks_cache_target_limits_and_status(
@@ -135,7 +135,7 @@ class TestEpicsAnalogMoveable:
         )
 
         fake_backend.emit_connection(config["readpv"], False)
-        assert_error_status(
+        assert_connection_unknown_status(
             device_harness.run("poller", poller_device._cache.get, poller_device, "status")
         )
 
