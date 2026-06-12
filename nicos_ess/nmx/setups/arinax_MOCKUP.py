@@ -2,6 +2,8 @@ description = "ARINAX controls (from the mockup software)"
 
 group = "optional"
 
+pv_root = "NMX-mockup:"
+
 SAMPLE_STORAGE = {
     f'Sample Storage {s} - SS{i}': (f"Sample_Storage_{s}", f"SS{i}")  
     for s in range(1,4)
@@ -19,7 +21,7 @@ devices = dict(
     arinax_state=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="ARINAX System State (mockup)",
-        readpv="NMX-mockup:getState",
+        readpv=f"{pv_root}getState",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -28,7 +30,7 @@ devices = dict(
     arinax_status=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="ARINAX System Status (mockup)",
-        readpv="NMX-mockup:getStatus",
+        readpv=f"{pv_root}getStatus",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -38,8 +40,8 @@ devices = dict(
     detector_config_control=device(
         "nicos_ess.nmx.devices.arinax.ConfigurableEpicsMappedMoveable",
         description="ARINAX DPU Configuration, control (mockup)",
-        readpv="NMX-mockup:getDPUConfiguration",
-        writepv="NMX-mockup:setDPUConfiguration",
+        readpv=f"{pv_root}getDPUConfiguration",
+        writepv=f"{pv_root}setDPUConfiguration",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -49,7 +51,7 @@ devices = dict(
     detector_config_readback=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="ARINAX DPU Configuration, readback (mockup)",
-        readpv="NMX-mockup:getDPUConfiguration",
+        readpv=f"{pv_root}getDPUConfiguration",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -60,7 +62,7 @@ devices = dict(
         # Just for testing, coudl be removed later.
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="ARINAX DPU Configuration, setpoint readback (mockup)",
-        readpv="NMX-mockup:setDPUConfiguration",
+        readpv=f"{pv_root}setDPUConfiguration",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -72,24 +74,24 @@ devices = dict(
     sample__centring1_phi=device(
         "nicos_ess.nmx.devices.arinax.EpicsArinaxMoveable",
         description="ARINAX sample centring motor Phi (mockup)",
-        readpv="NMX-mockup:getPhiPosition",
-        writepv="NMX-mockup:setPhiPosition",
+        readpv=f"{pv_root}getPhiPosition",
+        writepv=f"{pv_root}setPhiPosition",
         unit="mm",
         pva=False,
     ),
     sample__centring2_chi=device(
         "nicos_ess.nmx.devices.arinax.EpicsArinaxMoveable",
         description="ARINAX sample centring motor Chi (mockup)",
-        readpv="NMX-mockup:getChiPosition",
-        writepv="NMX-mockup:setChiPosition",
+        readpv=f"{pv_root}getChiPosition",
+        writepv=f"{pv_root}setChiPosition",
         unit="mm",
         pva=False,
     ),
     sample__centring3_theta=device(
         "nicos_ess.nmx.devices.arinax.EpicsArinaxMoveable",
         description="ARINAX sample centring motor Theta (mockup)",
-        readpv="NMX-mockup:getThetaPosition",
-        writepv="NMX-mockup:setThetaPosition",
+        readpv=f"{pv_root}getThetaPosition",
+        writepv=f"{pv_root}setThetaPosition",
         unit="mm",
         pva=False,
     ),
@@ -97,8 +99,8 @@ devices = dict(
     sample__load_SS_sample=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU load sample from storage, control (mockup)",
-        readpv="NMX-mockup:LoadSSSample",
-        writepv="NMX-mockup:LoadSSSample",
+        readpv=f"{pv_root}LoadSSSample",
+        writepv=f"{pv_root}LoadSSSample",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -108,8 +110,8 @@ devices = dict(
     sample__load_UP_sample=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU load sample from unipucks, control (mockup)",
-        readpv="NMX-mockup:LoadUPSample",
-        writepv="NMX-mockup:LoadUPSample",
+        readpv=f"{pv_root}LoadUPSample",
+        writepv=f"{pv_root}LoadUPSample",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -121,7 +123,7 @@ devices = dict(
     sample__sample_is_loaded=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="ARINAX SPU sample is mounted, readback (mockup)",
-        readpv="NMX-mockup:getIsSampleLoaded",
+        readpv=f"{pv_root}getIsSampleLoaded",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -135,8 +137,8 @@ devices = dict(
     sample__unload_sample=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU unload sample, control (mockup)",
-        readpv="NMX-mockup:UnLoadSample",
-        writepv="NMX-mockup:UnLoadSample",
+        readpv=f"{pv_root}UnLoadSample",
+        writepv=f"{pv_root}UnLoadSample",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -149,7 +151,7 @@ devices = dict(
     tool__current_tool=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="ARINAX SPU current mounted tool, readback (mockup)",
-        readpv="NMX-mockup:getCurrentTool",
+        readpv=f"{pv_root}getCurrentTool",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -159,8 +161,8 @@ devices = dict(
     tool__load_tool=device(
         "nicos_ess.nmx.devices.arinax.ConfigurableEpicsMappedMoveable",
         description="ARINAX SPU desired tool loading, control (mockup)",
-        readpv="NMX-mockup:getCurrentTool",
-        writepv="NMX-mockup:LoadTool",
+        readpv=f"{pv_root}getCurrentTool",
+        writepv=f"{pv_root}LoadTool",
         pva=False,
         monitor=True,
         pollinterval=0.5,
