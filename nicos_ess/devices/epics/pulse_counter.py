@@ -29,17 +29,25 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         "type": Override(default="counter", settable=False, mandatory=False),
     }
 
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            # Unexpected updates ignored
+    def _on_channel_update(self, update):
+        if update.channel != "read":
             return
         time_stamp = time.time()
-        self._cache.put(self._name, "unit", units, time_stamp)
+        self._cache.put(self._name, "unit", update.units, time_stamp)
+        self._cache.put(
+            self._name,
+            "value_status",
+            (update.severity, update.message),
+            time_stamp,
+        )
         if self.started:
-            self._cache.put(self._name, param, value - self.offset, time_stamp)
-            self._setROParam("total", value)
+            self._cache.put(
+                self._name,
+                self._epics.cache_key_for(update.channel),
+                update.value - self.offset,
+                time_stamp,
+            )
+            self._setROParam("total", update.value)
 
     def doPrepare(self):
         self.total = 0
@@ -47,7 +55,7 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
 
     def doStart(self):
         self.total = 0
-        self.offset = self._epics_wrapper.get_pv_value(self.readpv)
+        self.offset = self._epics.get_channel_value("read")
         self.started = True
 
     def doFinish(self):

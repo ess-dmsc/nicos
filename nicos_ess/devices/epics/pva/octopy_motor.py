@@ -5,9 +5,9 @@ from nicos.core import MoveError, Override, Param, pvname, status
 from nicos.core.mixins import CanDisable
 from nicos.devices.abstract import CanReference, Motor
 from nicos_ess.devices.epics.pva.epics_common import (
-    EpicsDeviceBase,
     EpicsChannelInfo,
     EpicsChannelRole,
+    EpicsDeviceBase,
 )
 
 
@@ -153,12 +153,12 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
 
         return status.OK, "ready"
 
-    def _connection_change_callback(self, pv_name, channel, is_connected, **kwargs):
+    def _on_connection_change(self, change):
         # Any of the few octopy PVs dropping means the axis is unusable.
-        if is_connected:
-            self.log.debug("%s connected!", pv_name)
+        if change.is_connected:
+            self.log.debug("%s connected!", change.pv_name)
         else:
-            self.log.warning("%s disconnected!", pv_name)
+            self.log.warning("%s disconnected!", change.pv_name)
             self._cache.put(
                 self._name,
                 "status",

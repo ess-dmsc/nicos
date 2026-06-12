@@ -10,7 +10,7 @@ from nicos.core import (
     oneof,
     status,
 )
-from nicos.devices.abstract import MappedMoveable, Moveable
+from nicos.devices.abstract import MappedMoveable
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsChannelInfo,
     EpicsChannelRole,
@@ -65,12 +65,13 @@ class ChopperAlarms(EpicsDeviceBase, Readable):
     def doRead(self, maxage=0):
         return ""
 
-    def _value_change_callback(
-        self, pv_name, channel, value, units, limits, severity, message, **kwargs
-    ):
+    def _on_channel_update(self, update):
         ts = time.time()
         self._cache.put(
-            self._name, self._epics.cache_key_for(channel), (severity, message), ts
+            self._name,
+            self._epics.cache_key_for(update.channel),
+            (update.severity, update.message),
+            ts,
         )
         self._refresh_status(ts)
 
@@ -162,7 +163,7 @@ class EssChopperController(MappedMoveable):
             try:
                 target_speed = self._attached_speed._inverse_mapping.get(0, "0 Hz")
                 self._attached_speed.move(target_speed)
-            except Exception as e:
+            except Exception:
                 self.log.exception(
                     "Failed to set speed to 0 when stopping chopper. "
                     "Will still send stop command."
@@ -350,7 +351,7 @@ class NmxChopperController(MappedMoveable):
             try:
                 target_speed = self._attached_speed._inverse_mapping.get(0, "0 Hz")
                 self._attached_speed.move(target_speed)
-            except Exception as e:
+            except Exception:
                 self.log.exception(
                     "Failed to set speed to 0 when stopping chopper. "
                     "Will still send stop command."

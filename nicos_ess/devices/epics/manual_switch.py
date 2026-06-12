@@ -1,4 +1,5 @@
 import time
+from dataclasses import replace
 
 from nicos.core import (
     Override,
@@ -83,10 +84,6 @@ class ManualSwitch(EpicsDeviceBase, Moveable):
         ok = target in self.states
         return ok, "" if ok else f"{target!r} is not in {self.states!r}"
 
-    def _value_change_callback(
-        self, pv_name, channel, value, units, limits, severity, message, **kwargs
-    ):
-        value = self._reverse_mapping.get(value, value)
-        super()._value_change_callback(
-            pv_name, channel, value, units, limits, severity, message, **kwargs
-        )
+    def _on_channel_update(self, update):
+        value = self._reverse_mapping.get(update.value, update.value)
+        super()._on_channel_update(replace(update, value=value))

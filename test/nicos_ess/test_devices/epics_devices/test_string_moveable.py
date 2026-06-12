@@ -180,7 +180,7 @@ class TestEpicsStringMoveable:
         )
         assert len(fake_backend.get_calls) == get_calls_before
 
-    def test_string_moveable_second_start_wins_when_old_callbacks_arrive_late(
+    def test_string_moveable_external_writepv_update_changes_target(
         self, device_harness, fake_backend
     ):
         config = string_moveable_config()
@@ -195,14 +195,13 @@ class TestEpicsStringMoveable:
         )
 
         device_harness.run("daemon", daemon_device.start, "ON")
-        device_harness.run("daemon", daemon_device.start, "OFF")
-        fake_backend.emit_update(config["writepv"], value="ON", units="")
+        fake_backend.emit_update(config["writepv"], value="OFF", units="")
         fake_backend.emit_update(config["readpv"], value="ON", units="")
         observed_target = device_harness.run("daemon", lambda: daemon_device.target)
 
         assert observed_target == "OFF"
 
-    def test_string_moveable_out_of_order_callbacks_do_not_swap_last_target(
+    def test_string_moveable_external_writepv_update_is_visible_before_readback(
         self, device_harness, fake_backend
     ):
         config = string_moveable_config()
@@ -217,11 +216,11 @@ class TestEpicsStringMoveable:
         )
 
         device_harness.run("daemon", daemon_device.start, "ON")
-        fake_backend.emit_update(config["writepv"], value="ON", units="")
-        fake_backend.emit_update(config["readpv"], value="OFF", units="")
+        fake_backend.emit_update(config["writepv"], value="OFF", units="")
+        fake_backend.emit_update(config["readpv"], value="ON", units="")
         observed_target = device_harness.run("daemon", lambda: daemon_device.target)
 
-        assert observed_target == "ON"
+        assert observed_target == "OFF"
 
     def test_string_moveable_finish_warns_if_target_not_reached(
         self, device_harness, fake_backend

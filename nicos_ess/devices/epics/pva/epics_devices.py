@@ -122,6 +122,7 @@ class EpicsAnalogMoveable(EpicsReadWriteBase, HasPrecision, HasLimits, Moveable)
             "",
             EpicsChannelRole.STATUS,
             pv_attr="writepv",
+            limits_cache_key="abslimits",
         ),
         "target": EpicsChannelInfo(
             "target",
@@ -317,6 +318,7 @@ class EpicsManualMappedAnalogMoveable(
             "",
             EpicsChannelRole.STATUS,
             pv_attr="writepv",
+            limits_cache_key="abslimits",
         ),
         "target": EpicsChannelInfo(
             "target",

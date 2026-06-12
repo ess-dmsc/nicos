@@ -37,10 +37,12 @@ import pytest
 
 from nicos.core import ConfigurationError, status
 from nicos_ess.devices.epics.pva.epics_common import (
-    EpicsDeviceBase,
+    ChannelUpdate,
+    ConnectionChange,
     EpicsChannelComponent,
     EpicsChannelInfo,
     EpicsChannelRole,
+    EpicsDeviceBase,
     resolve_channel_pv_names,
 )
 from nicos_ess.devices.epics.pva.epics_multisource import (
@@ -168,6 +170,14 @@ class TestPvResolution:
         assert component.cache_key_for("value") == "value"
         assert component.cache_key_for("moving") == "moving"
         assert component.cache_key_for("not_a_channel") == "not_a_channel"
+
+    def test_cache_key_for_none_disables_caching(self):
+        channels = dict(
+            EPICS_CHANNELS,
+            target=EpicsChannelInfo(None, ".VAL", EpicsChannelRole.VALUE),
+        )
+        component, _ = make_component(epics_channels=channels)
+        assert component.cache_key_for("target") is None
 
     def test_pvs_to_connect_skips_missing_and_deduplicates(self):
         pv_names_by_channel = dict(PV_NAMES, label=None, speed="SIM:M1.RBV")
@@ -339,8 +349,8 @@ class GlueProbe:
     """Duck-typed device exercising the real EpicsDeviceBase glue methods
     without the NICOS device machinery."""
 
-    _value_change_callback = EpicsDeviceBase._value_change_callback
-    _connection_change_callback = EpicsDeviceBase._connection_change_callback
+    _on_channel_update = EpicsDeviceBase._on_channel_update
+    _on_connection_change = EpicsDeviceBase._on_connection_change
     _refresh_status = EpicsDeviceBase._refresh_status
     _read_channel_cached = EpicsDeviceBase._read_channel_cached
     _read_primary_alarm = EpicsDeviceBase._read_primary_alarm
@@ -365,19 +375,55 @@ class GlueProbe:
 class TestDeviceGlue:
     def test_value_change_caches_under_resolved_key(self):
         probe = GlueProbe()
-        probe._value_change_callback(
-            "SIM:M1.VAL", "target", 42.0, "mm", None, status.OK, ""
+        probe._on_channel_update(
+            ChannelUpdate(
+                pv_name="SIM:M1.VAL",
+                channel="target",
+                value=42.0,
+                units="mm",
+            )
         )
         assert probe._cache.data["target"] == 42.0
 
     def test_primary_channel_also_caches_unit_and_alarm(self):
         probe = GlueProbe()
-        probe._value_change_callback(
-            "SIM:M1.RBV", "value", 1.0, "mm", None, status.WARN, "hot"
+        probe._on_channel_update(
+            ChannelUpdate(
+                pv_name="SIM:M1.RBV",
+                channel="value",
+                value=1.0,
+                units="mm",
+                severity=status.WARN,
+                message="hot",
+            )
         )
         assert probe._cache.data["value"] == 1.0
         assert probe._cache.data["unit"] == "mm"
         assert probe._cache.data["value_status"] == (status.WARN, "hot")
+
+    def test_limits_cache_key_caches_update_limits(self):
+        channels = dict(
+            EPICS_CHANNELS,
+            target=EpicsChannelInfo(
+                "target",
+                ".VAL",
+                EpicsChannelRole.VALUE,
+                limits_cache_key="abslimits",
+            ),
+        )
+        probe = GlueProbe()
+        probe._epics, probe.backend = make_component(epics_channels=channels)
+        probe._epics.connect()
+        probe._epics_channels = probe._epics.epics_channels
+        probe._on_channel_update(
+            ChannelUpdate(
+                pv_name="SIM:M1.VAL",
+                channel="target",
+                value=42.0,
+                limits=(-1.0, 1.0),
+            )
+        )
+        assert probe._cache.data["abslimits"] == (-1.0, 1.0)
 
     def test_status_channel_triggers_status_recompute(self):
         calls = []
@@ -387,8 +433,8 @@ class TestDeviceGlue:
             return status.BUSY, "moving"
 
         probe = GlueProbe(compute_status=compute)
-        probe._value_change_callback(
-            "SIM:M1.MOVN", "moving", 1, "", None, status.OK, ""
+        probe._on_channel_update(
+            ChannelUpdate(pv_name="SIM:M1.MOVN", channel="moving", value=1)
         )
         assert calls == [None]
         assert probe._cache.data["status"] == (status.BUSY, "moving")
@@ -398,14 +444,21 @@ class TestDeviceGlue:
             raise AssertionError("status must not be recomputed for VALUE channels")
 
         probe = GlueProbe(compute_status=compute)
-        probe._value_change_callback(
-            "SIM:M1.VAL", "target", 42.0, "mm", None, status.OK, ""
+        probe._on_channel_update(
+            ChannelUpdate(
+                pv_name="SIM:M1.VAL",
+                channel="target",
+                value=42.0,
+                units="mm",
+            )
         )
         assert "status" not in probe._cache.data
 
     def test_primary_disconnect_caches_lost_epics_connection(self):
         probe = GlueProbe()
-        probe._connection_change_callback("SIM:M1.RBV", "value", False)
+        probe._on_connection_change(
+            ConnectionChange("value", False, pv_name="SIM:M1.RBV")
+        )
         assert probe._cache.data["status"] == (
             status.UNKNOWN,
             "lost connection to EPICS",
@@ -414,7 +467,9 @@ class TestDeviceGlue:
 
     def test_non_primary_disconnect_is_ignored(self):
         probe = GlueProbe()
-        probe._connection_change_callback("SIM:M1.VAL", "target", False)
+        probe._on_connection_change(
+            ConnectionChange("target", False, pv_name="SIM:M1.VAL")
+        )
         assert "status" not in probe._cache.data
         assert probe.log.messages == []
 
@@ -471,7 +526,7 @@ def make_multi_component():
 
 
 class MultiGlueProbe:
-    _connection_change_callback = EpicsMultiSourceBase._connection_change_callback
+    _on_connection_change = EpicsMultiSourceBase._on_connection_change
     _source_connection_key = EpicsMultiSourceBase._source_connection_key
     _source_connection_status = EpicsMultiSourceBase._source_connection_status
     _worst_status = staticmethod(EpicsMultiSourceBase._worst_status)
@@ -511,14 +566,24 @@ class TestMultiSource:
         assert "SIM:HVM-0:Ch0-Pw" in pvs
         assert "SIM:HVM-0:Ch1-Status-ON" in pvs
 
-    def test_subscribe_channels_passes_source_and_channel_as_param(self):
+    def test_subscribe_channels_populates_source_id_on_updates(self):
         component, backend = make_multi_component()
         component.connect()
-        component.subscribe_channels(lambda *a, **k: None)
-        params = {param for _, param, *_ in backend.subscriptions}
-        assert ("ch0", "voltage") in params
-        assert ("ch1", "status_on") in params
-        assert len(params) == len(SOURCES) * len(MULTI_CHANNELS)
+        updates = []
+        component.subscribe_channels(updates.append)
+
+        backend.values["SIM:HVM-0:Ch1-VMon"] = 999.0
+        backend.emit_update("SIM:HVM-0:Ch1-VMon")
+
+        assert len(backend.subscriptions) == len(SOURCES) * len(MULTI_CHANNELS)
+        assert updates == [
+            ChannelUpdate(
+                channel="voltage",
+                value=999.0,
+                pv_name="SIM:HVM-0:Ch1-VMon",
+                source_id="ch1",
+            )
+        ]
 
     def test_get_source_value_reads_the_source_pv(self):
         component, backend = make_multi_component()
@@ -535,8 +600,13 @@ class TestMultiSource:
     def test_connection_loss_is_part_of_worst_case_status(self):
         probe = MultiGlueProbe()
 
-        probe._connection_change_callback(
-            "SIM:HVM-0:Ch1-Status-ON", ("ch1", "status_on"), False
+        probe._on_connection_change(
+            ConnectionChange(
+                "status_on",
+                False,
+                pv_name="SIM:HVM-0:Ch1-Status-ON",
+                source_id="ch1",
+            )
         )
 
         assert probe.doStatus(maxage=None) == (
@@ -550,12 +620,22 @@ class TestMultiSource:
 
     def test_reconnect_clears_source_connection_loss_status(self):
         probe = MultiGlueProbe()
-        probe._connection_change_callback(
-            "SIM:HVM-0:Ch1-Status-ON", ("ch1", "status_on"), False
+        probe._on_connection_change(
+            ConnectionChange(
+                "status_on",
+                False,
+                pv_name="SIM:HVM-0:Ch1-Status-ON",
+                source_id="ch1",
+            )
         )
 
-        probe._connection_change_callback(
-            "SIM:HVM-0:Ch1-Status-ON", ("ch1", "status_on"), True
+        probe._on_connection_change(
+            ConnectionChange(
+                "status_on",
+                True,
+                pv_name="SIM:HVM-0:Ch1-Status-ON",
+                source_id="ch1",
+            )
         )
 
         assert probe.doStatus(maxage=None) == (status.OK, "")

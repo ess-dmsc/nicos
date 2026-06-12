@@ -2,7 +2,7 @@ import os
 import threading
 import time
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Optional
 
@@ -39,7 +39,8 @@ class EpicsChannelRole(Enum):
 
 @dataclass(frozen=True)
 class EpicsChannelInfo:
-    cache_key: str
+    # "" means "cache under the channel name"; None means "do not cache".
+    cache_key: Optional[str]
     pv_suffix: str
     role: EpicsChannelRole
     as_string: bool = False
@@ -49,6 +50,33 @@ class EpicsChannelInfo:
     # Optional channels may resolve to no PV (e.g. a none_or(pvname)
     # parameter left unset); they are skipped by connect/subscribe.
     optional: bool = False
+    # Cache key for the display limits delivered with updates on this
+    # channel (e.g. "abslimits" on a write channel).
+    limits_cache_key: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class ChannelUpdate:
+    """A monitor update, delivered to ``_on_channel_update``."""
+
+    channel: str
+    value: object
+    units: str = ""
+    limits: Optional[tuple] = None
+    severity: int = status.OK
+    message: str = ""
+    pv_name: str = ""
+    source_id: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class ConnectionChange:
+    """A connection state change, delivered to ``_on_connection_change``."""
+
+    channel: str
+    is_connected: bool
+    pv_name: str = ""
+    source_id: Optional[str] = None
 
 
 class EpicsParameters(HasNexusConfig):
@@ -144,26 +172,21 @@ class MappedChoiceSource(str, Enum):
 def _update_mapped_choices(
     mapped_device, source=MappedChoiceSource.READ, *, publish=True
 ):
-    if source == MappedChoiceSource.WRITE:
-        selected_channel = "write"
-        selected_pv = mapped_device.writepv
-        mapping_attr = "_write_mapping"
-        inverse_attr = "_write_inverse_mapping"
-    else:
-        selected_channel = "read"
-        selected_pv = mapped_device.readpv
-        mapping_attr = "_read_mapping"
-        inverse_attr = "_read_inverse_mapping"
-
-    choices = mapped_device._epics.get_channel_value_choices(selected_channel)
+    channel = source.value
+    choices = mapped_device._epics.get_channel_value_choices(channel)
     if not choices:
         raise ConfigurationError(
-            mapped_device, f"PV {selected_pv} has no value choices"
+            mapped_device,
+            f"PV {mapped_device._epics.pv_name_for(channel)} has no value choices",
         )
 
     new_mapping = {choice: i for i, choice in enumerate(choices)}
-    setattr(mapped_device, mapping_attr, new_mapping)
-    setattr(mapped_device, inverse_attr, {v: k for k, v in new_mapping.items()})
+    setattr(mapped_device, f"_{channel}_mapping", new_mapping)
+    setattr(
+        mapped_device,
+        f"_{channel}_inverse_mapping",
+        {v: k for k, v in new_mapping.items()},
+    )
     if not publish:
         return
     mapped_device._setROParam("mapping", new_mapping)
@@ -193,9 +216,11 @@ class EpicsChannelComponent:
 
     def cache_key_for(self, channel):
         info = self.epics_channels.get(channel)
-        if info is not None and info.cache_key:
-            return info.cache_key
-        return channel
+        if info is None:
+            return channel
+        if info.cache_key is None:
+            return None
+        return info.cache_key or channel
 
     def pvs_to_connect(self):
         names = []
@@ -228,22 +253,60 @@ class EpicsChannelComponent:
     def subscribe_channel(
         self,
         channel,
-        change_callback,
+        update_callback,
         connection_callback=None,
-        subscription_param=None,
         as_string=None,
+        source_id=None,
     ):
         pv = self.pv_name_for(channel)
         if not pv:
             return None
         if as_string is None:
             as_string = self.epics_channels[channel].as_string
+        return self._subscribe_pv(
+            pv, channel, update_callback, connection_callback, as_string, source_id
+        )
+
+    def _subscribe_pv(
+        self,
+        pv,
+        channel,
+        update_callback,
+        connection_callback,
+        as_string,
+        source_id=None,
+    ):
+        # Adapt the wrapper-shaped callbacks to single event objects here, so
+        # devices never see the wrapper signature.
+        def _on_change(pv_name, param, value, units, limits, severity, message, **kw):
+            update_callback(
+                ChannelUpdate(
+                    channel=channel,
+                    value=value,
+                    units=units,
+                    limits=limits,
+                    severity=severity,
+                    message=message,
+                    pv_name=pv_name,
+                    source_id=source_id,
+                )
+            )
+
+        _on_connection = None
+        if connection_callback is not None:
+
+            def _on_connection(pv_name, param, is_connected, **kw):
+                connection_callback(
+                    ConnectionChange(
+                        channel=channel,
+                        is_connected=is_connected,
+                        pv_name=pv_name,
+                        source_id=source_id,
+                    )
+                )
+
         sub = self.wrapper.subscribe(
-            pv,
-            channel if subscription_param is None else subscription_param,
-            change_callback,
-            connection_callback,
-            as_string=as_string,
+            pv, channel, _on_change, _on_connection, as_string=as_string
         )
         self.subscriptions.append(sub)
         return sub
@@ -297,8 +360,8 @@ class EpicsChannelComponent:
                 return abs(value - expected) <= precision
             return value == expected
 
-        def callback(pv_name, channel, value, units, limits, severity, message, **kw):
-            if matches(value):
+        def callback(update):
+            if matches(update.value):
                 event.set()
 
         sub = self.subscribe_channel(channel, callback)
@@ -371,7 +434,7 @@ class EpicsDeviceBase(EpicsParameters):
             )
         if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._epics.subscribe_channels(
-                self._value_change_callback, self._connection_change_callback
+                self._on_channel_update, self._on_connection_change
             )
         self._after_subscribe(mode)
 
@@ -386,28 +449,32 @@ class EpicsDeviceBase(EpicsParameters):
     def _after_subscribe(self, mode):
         pass
 
-    def _value_change_callback(
-        self, pv_name, channel, value, units, limits, severity, message, **kwargs
-    ):
+    def _on_channel_update(self, update):
         ts = time.time()
-        self._cache.put(self._name, self._epics.cache_key_for(channel), value, ts)
-        if pv_name == self._epics.pv_name_for(self._primary_channel):
-            self._cache.put(self._name, "unit", units, ts)
-            self._cache.put(self._name, "value_status", (severity, message), ts)
-        info = self._epics_channels.get(channel)
+        info = self._epics_channels.get(update.channel)
+        cache_key = self._epics.cache_key_for(update.channel)
+        if cache_key is not None:
+            self._cache.put(self._name, cache_key, update.value, ts)
+        if info and info.limits_cache_key and update.limits:
+            self._cache.put(self._name, info.limits_cache_key, update.limits, ts)
+        if update.channel == self._primary_channel:
+            self._cache.put(self._name, "unit", update.units, ts)
+            self._cache.put(
+                self._name, "value_status", (update.severity, update.message), ts
+            )
         if info and info.role in (
             EpicsChannelRole.STATUS,
             EpicsChannelRole.VALUE_AND_STATUS,
         ):
             self._refresh_status(ts)
 
-    def _connection_change_callback(self, pv_name, channel, is_connected, **kwargs):
-        if pv_name != self._epics.pv_name_for(self._primary_channel):
+    def _on_connection_change(self, change):
+        if change.channel != self._primary_channel:
             return
-        if is_connected:
-            self.log.debug("%s connected!", pv_name)
+        if change.is_connected:
+            self.log.debug("%s connected!", change.pv_name)
         else:
-            self.log.warning("%s disconnected!", pv_name)
+            self.log.warning("%s disconnected!", change.pv_name)
             self._cache.put(
                 self._name,
                 "status",
@@ -463,28 +530,13 @@ class EpicsReadWriteBase(EpicsDeviceBase):
         ),
     }
 
-    def _value_change_callback(
-        self, pv_name, channel, value, units, limits, severity, message, **kwargs
-    ):
-        ts = time.time()
-        # Separate ifs: read and write may subscribe to the same PV.
-        if channel == "read":
-            self._cache.put(self._name, "value", value, ts)
-            self._cache.put(self._name, "unit", units, ts)
-            self._cache.put(self._name, "value_status", (severity, message), ts)
-        if channel == "write":
-            if limits:
-                self._cache.put(self._name, "abslimits", limits, ts)
-            if not self.target:
-                self._cache.put(self._name, "target", value, ts)
-        if channel == "target":
-            self._cache.put(self._name, "target", value, ts)
-        info = self._epics_channels.get(channel)
-        if info and info.role in (
-            EpicsChannelRole.STATUS,
-            EpicsChannelRole.VALUE_AND_STATUS,
-        ):
-            self._refresh_status(ts)
+    def _build_epics_channels(self):
+        epics_channels = dict(self._epics_channels)
+        if self.targetpv and "write" in epics_channels:
+            # A real target readback exists, so the write echo must not double
+            # as the cached target.
+            epics_channels["write"] = replace(epics_channels["write"], cache_key=None)
+        return epics_channels
 
     def _cached_raw_target(self, maxage=None):
         def _read():
@@ -523,8 +575,8 @@ class EpicsMappedChoiceSupport:
             positions = ", ".join(repr(pos) for pos in mapping)
             raise InvalidValueError(
                 self,
-                "%r is an invalid position for this device; valid positions "
-                "are %s" % (target, positions),
+                f"{target!r} is an invalid position for this device; valid "
+                f"positions are {positions}",
             )
         return mapping.get(target, target)
 
@@ -547,11 +599,7 @@ class EpicsMappedChoiceSupport:
         )
         return self._validate_mapped_choice(value)
 
-    def _value_change_callback(
-        self, pv_name, channel, value, units, limits, severity, message, **kwargs
-    ):
-        if self._epics.cache_key_for(channel) == "value":
-            value = self._validate_mapped_choice(value)
-        super()._value_change_callback(
-            pv_name, channel, value, units, limits, severity, message, **kwargs
-        )
+    def _on_channel_update(self, update):
+        if self._epics.cache_key_for(update.channel) == "value":
+            update = replace(update, value=self._validate_mapped_choice(update.value))
+        super()._on_channel_update(update)

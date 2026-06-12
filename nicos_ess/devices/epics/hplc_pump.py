@@ -250,12 +250,12 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
         self._update_status(status.BUSY, "Starting pump")
         self._epics.put_channel_value("pump_for_time", 1)
 
-    def _value_change_callback(
-        self, pv_name, channel, value, units, limits, severity, message, **kwargs
-    ):
+    def _on_channel_update(self, update):
         # Fast-path: clear transitional flag as soon as IOC leaves Off
-        if channel == "run_status" and self.run_started and value != self._STATE_OFF:
+        if (
+            update.channel == "run_status"
+            and self.run_started
+            and update.value != self._STATE_OFF
+        ):
             self._setROParam("run_started", False)
-        super()._value_change_callback(
-            pv_name, channel, value, units, limits, severity, message, **kwargs
-        )
+        super()._on_channel_update(update)

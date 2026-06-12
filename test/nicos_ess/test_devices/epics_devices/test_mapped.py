@@ -423,11 +423,12 @@ class TestEpicsMappedMoveable:
         assert device_harness.run("poller", device._cache.get, device, "target") == "ON"
         assert fake_backend.get_calls == []
 
-    def test_mapped_moveable_second_start_wins_when_old_callbacks_arrive_late(
+    def test_mapped_moveable_external_writepv_update_changes_target(
         self, device_harness, fake_backend
     ):
         config = mapped_config()
         fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.value_choices[config["writepv"]] = ["OFF", "ON"]
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["writepv"]] = 0
         fake_backend.alarms[config["readpv"]] = (status.OK, "ok")
@@ -450,18 +451,18 @@ class TestEpicsMappedMoveable:
         )
 
         device_harness.run("daemon", daemon_device.start, "ON")
-        device_harness.run("daemon", daemon_device.start, "OFF")
-        fake_backend.emit_update(config["writepv"], value=1, units="")
+        fake_backend.emit_update(config["writepv"], value=0, units="")
         fake_backend.emit_update(config["readpv"], value=1, units="")
         observed_target = device_harness.run("daemon", lambda: daemon_device.target)
 
         assert observed_target == "OFF"
 
-    def test_mapped_moveable_out_of_order_callbacks_do_not_swap_last_target(
+    def test_mapped_moveable_external_writepv_update_is_visible_before_readback(
         self, device_harness, fake_backend
     ):
         config = mapped_config()
         fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.value_choices[config["writepv"]] = ["OFF", "ON"]
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["writepv"]] = 0
         fake_backend.alarms[config["readpv"]] = (status.OK, "ok")
@@ -483,11 +484,11 @@ class TestEpicsMappedMoveable:
         )
 
         device_harness.run("daemon", daemon_device.start, "ON")
-        fake_backend.emit_update(config["writepv"], value=1, units="")
-        fake_backend.emit_update(config["readpv"], value=0, units="")
+        fake_backend.emit_update(config["writepv"], value=0, units="")
+        fake_backend.emit_update(config["readpv"], value=1, units="")
         observed_target = device_harness.run("daemon", lambda: daemon_device.target)
 
-        assert observed_target == "ON"
+        assert observed_target == "OFF"
 
     def test_mapped_moveable_targetpv_callback_maps_target(
         self, device_harness, fake_backend

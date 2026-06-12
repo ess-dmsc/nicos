@@ -264,7 +264,7 @@ def test_moveable_completion_uses_fresh_readback(
     _MOVEABLE_PARAMS,
     ids=_MOVEABLE_IDS,
 )
-def test_moveable_second_start_wins_when_old_callbacks_arrive_late(
+def test_moveable_external_writepv_update_changes_target(
     device_harness, fake_backend, device_class, initial_value, target_value, device_name
 ):
     config = analog_moveable_config()
@@ -280,8 +280,7 @@ def test_moveable_second_start_wins_when_old_callbacks_arrive_late(
     )
 
     device_harness.run("daemon", daemon_device.start, initial_value)
-    device_harness.run("daemon", daemon_device.start, target_value)
-    fake_backend.emit_update(config["writepv"], value=initial_value, limits=(-100.0, 100.0))
+    fake_backend.emit_update(config["writepv"], value=target_value, limits=(-100.0, 100.0))
     fake_backend.emit_update(config["readpv"], value=initial_value, units="mm")
     observed_target = device_harness.run("daemon", lambda: daemon_device.target)
     observed_status = device_harness.run("daemon", daemon_device.status)

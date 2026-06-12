@@ -20,8 +20,10 @@ class EpicsMultiSourceComponent(EpicsChannelComponent):
         return f"{self.sources[source_id]}{self.epics_channels[channel].pv_suffix}"
 
     def source_key(self, source_id, channel):
-        info = self.epics_channels[channel]
-        return f"{source_id}/{info.cache_key or channel}"
+        cache_key = self.cache_key_for(channel)
+        if cache_key is None:
+            return None
+        return f"{source_id}/{cache_key}"
 
     def pvs_to_connect(self):
         return [
@@ -35,14 +37,13 @@ class EpicsMultiSourceComponent(EpicsChannelComponent):
             for channel, info in self.epics_channels.items():
                 if not info.subscribe:
                     continue
-                self.subscriptions.append(
-                    self.wrapper.subscribe(
-                        self.source_pv(source_id, channel),
-                        (source_id, channel),
-                        change_callback,
-                        connection_callback,
-                        as_string=info.as_string,
-                    )
+                self._subscribe_pv(
+                    self.source_pv(source_id, channel),
+                    channel,
+                    change_callback,
+                    connection_callback,
+                    info.as_string,
+                    source_id=source_id,
                 )
 
     def get_source_value(self, source_id, channel):
@@ -83,32 +84,28 @@ class EpicsMultiSourceBase(EpicsDeviceBase):
             use_pva=self.pva,
         )
 
-    def _value_change_callback(
-        self, pv_name, param, value, units, limits, severity, message, **kwargs
-    ):
-        source_id, channel = param
+    def _on_channel_update(self, update):
         ts = time.time()
-        self._cache.put(
-            self._name, self._epics.source_key(source_id, channel), value, ts
-        )
-        if self._epics_channels[channel].role in (
+        cache_key = self._epics.source_key(update.source_id, update.channel)
+        if cache_key is not None:
+            self._cache.put(self._name, cache_key, update.value, ts)
+        if self._epics_channels[update.channel].role in (
             EpicsChannelRole.STATUS,
             EpicsChannelRole.VALUE_AND_STATUS,
         ):
             self._refresh_status(ts)
 
-    def _connection_change_callback(self, pv_name, param, is_connected, **kwargs):
-        source_id, channel = param
+    def _on_connection_change(self, change):
         ts = time.time()
-        if is_connected:
-            self.log.debug("%s connected!", pv_name)
+        if change.is_connected:
+            self.log.debug("%s connected!", change.pv_name)
             connection_status = status.OK, ""
         else:
-            self.log.warning("%s disconnected!", pv_name)
+            self.log.warning("%s disconnected!", change.pv_name)
             connection_status = status.UNKNOWN, "lost connection to EPICS"
         self._cache.put(
             self._name,
-            self._source_connection_key(source_id, channel),
+            self._source_connection_key(change.source_id, change.channel),
             connection_status,
             ts,
         )

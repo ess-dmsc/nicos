@@ -16,9 +16,9 @@ from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
 from nicos_ess.devices.epics.pva.epics_common import (
-    EpicsDeviceBase,
     EpicsChannelInfo,
     EpicsChannelRole,
+    EpicsDeviceBase,
     get_from_cache_or,
 )
 
@@ -868,39 +868,37 @@ class EpicsJogMotor(EpicsMotor):
         raw_unit = self._epics.get_channel_units("value")
         return f"{raw_unit}/s" if raw_unit else "units/s"
 
-    def _value_change_callback(
-        self, pv_name, channel, value, units, limits, severity, message, **kwargs
-    ):
+    def _on_channel_update(self, update):
         ts = time.time()
 
-        if channel == "jog_velocity":
-            self._cache.put(self._name, "jog_velocity", value, ts)
-            signed = -abs(value) if self.jog_dir < 0 else abs(value)
+        if update.channel == "jog_velocity":
+            self._cache.put(self._name, "jog_velocity", update.value, ts)
+            signed = -abs(update.value) if self.jog_dir < 0 else abs(update.value)
             self._cache.put(self._name, "value", signed, ts)
             return
 
         # Update the signed "value" when direction or moving state changes.
-        if channel in ("jogforward", "jogreverse"):
+        if update.channel in ("jogforward", "jogreverse"):
             cur_jvel = abs(self._read_channel_cached("jog_velocity"))
-            other = "jogreverse" if channel == "jogforward" else "jogforward"
-            sign = 1 if channel == "jogforward" else -1
-            if value == 1:
+            other = "jogreverse" if update.channel == "jogforward" else "jogforward"
+            sign = 1 if update.channel == "jogforward" else -1
+            if update.value == 1:
                 self._cache.put(self._name, "jog_dir", sign, ts)
                 self._cache.put(self._name, "value", sign * cur_jvel, ts)
             elif not self._read_channel_cached(other):
                 self._cache.put(self._name, "jog_dir", 0, ts)
                 self._cache.put(self._name, "value", 0.0, ts)
-            self._cache.put(self._name, channel, value, ts)
+            self._cache.put(self._name, update.channel, update.value, ts)
             return
 
-        if channel == "value":
-            self._cache.put(self._name, "value_status", (severity, message), ts)
+        if update.channel == "value":
+            self._cache.put(
+                self._name, "value_status", (update.severity, update.message), ts
+            )
             self._refresh_status(ts)
             return
 
-        super()._value_change_callback(
-            pv_name, channel, value, units, limits, severity, message, **kwargs
-        )
+        super()._on_channel_update(update)
 
 
 class SmaractPiezoMotor(EpicsMotor):
