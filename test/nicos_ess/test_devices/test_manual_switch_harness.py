@@ -25,6 +25,7 @@
 import pytest
 
 from nicos_ess.devices.epics import manual_switch
+from nicos_ess.devices.epics.pva import epics_common
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 
@@ -32,16 +33,15 @@ from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
     monkeypatch.setattr(
-        manual_switch, "create_wrapper", lambda timeout, use_pva: backend
+        epics_common, "create_wrapper", lambda timeout, use_pva: backend
     )
     backend.values["SIM:SWITCH:WRITE"] = "ON"
     return backend
 
 
 class TestManualSwitchHarness:
-    def test_initializes(self, device_harness, fake_backend):
-        del fake_backend
-        daemon_device, poller_device = device_harness.create_pair(
+    def _create_pair(self, device_harness):
+        return device_harness.create_pair(
             manual_switch.ManualSwitch,
             name="manual_switch",
             shared={
@@ -53,5 +53,19 @@ class TestManualSwitchHarness:
             },
         )
 
+    def test_initializes(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, poller_device = self._create_pair(device_harness)
+
         assert daemon_device is not None
         assert poller_device is not None
+
+    def test_move_writes_pv_and_read_follows_target(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        daemon_device.move("OFF")
+
+        assert fake_backend.values["SIM:SWITCH:WRITE"] == "OFF"
+        assert daemon_device.read(0) == "OFF"

@@ -7,9 +7,9 @@ from nicos.core import (
 )
 from nicos.devices.abstract import MappedMoveable
 from nicos_ess.devices.epics.pva.epics_common import (
-    PvReadOrWrite,
-    RecordInfo,
-    RecordType,
+    MappedChoiceSource,
+    EpicsChannelInfo,
+    EpicsChannelRole,
     _update_mapped_choices,
 )
 from nicos_ess.devices.epics.pva.epics_devices import (
@@ -46,8 +46,8 @@ class EpicsShutter(EpicsMappedMoveable):
         # (read includes transient states like Opening/Closing). Keep separate
         # internal maps and publish the write map as the accepted target set.
         if mode != SIMULATION:
-            _update_mapped_choices(self, PvReadOrWrite.readpv, publish=False)
-            _update_mapped_choices(self, PvReadOrWrite.writepv)
+            _update_mapped_choices(self, MappedChoiceSource.READ, publish=False)
+            _update_mapped_choices(self, MappedChoiceSource.WRITE)
         MappedMoveable.doInit(self, mode)
 
     def _read_msgtxt(self):
@@ -79,19 +79,27 @@ class EpicsHeavyShutter(EpicsMappedReadable):
         ),
     }
 
-    def _build_record_fields(self):
-        record_fields = {
-            "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+    def _build_epics_channels(self):
+        epics_channels = {
+            "read": EpicsChannelInfo(
+                "value",
+                "",
+                EpicsChannelRole.VALUE_AND_STATUS,
+                as_string=True,
+                pv_attr="readpv",
+            ),
         }
         if self.resetpv:
-            record_fields["resetpv"] = RecordInfo("", "", RecordType.VALUE)
-        return record_fields
+            epics_channels["reset"] = EpicsChannelInfo(
+                "", "", EpicsChannelRole.VALUE, pv_attr="resetpv"
+            )
+        return epics_channels
 
     def doReset(self):
         """Reset shutter state by writing on the configured 'resetpv' parameter"""
 
         if self.resetpv:
-            self._epics.put_pv("resetpv", True)
+            self._epics.put_channel_value("reset", True)
         else:
             self.log.warning(
                 "Reset isn't available on device or the resetpv is missing"

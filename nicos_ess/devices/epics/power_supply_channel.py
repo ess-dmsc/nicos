@@ -1,10 +1,4 @@
-import threading
-import time
-
-from nicos import session
 from nicos.core import (
-    POLLER,
-    SIMULATION,
     Attach,
     CanDisable,
     Override,
@@ -12,17 +6,15 @@ from nicos.core import (
     pvname,
     status,
 )
-from nicos.devices.abstract import MappedMoveable, MappedReadable, Readable
+from nicos.devices.abstract import MappedReadable
 from nicos_ess.devices.epics.pva.epics_common import (
-    EpicsParameters,
-    RecordInfo,
-    RecordType,
-    create_wrapper,
-    get_from_cache_or,
+    EpicsChannelInfo,
+    EpicsChannelRole,
+    EpicsDeviceBase,
 )
 
 
-class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
+class PowerSupplyChannel(EpicsDeviceBase, CanDisable, MappedReadable):
     """Power Supply Channel class
 
     It can reads and control the power of a channel (enable/disable the device).
@@ -63,62 +55,52 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         ),
     }
 
-    hardware_access = True
     valuetype = int
 
-    def doPreinit(self, mode):
-        """From EpicsMotor class."""
-        self._lock = threading.Lock()
-        self._epics_subscriptions = []
-        self._ps_status = (status.OK, "")
-        self._record_fields = {
-            "voltage_monitor": RecordInfo("", "-VMon", RecordType.VALUE),
-            "current_monitor": RecordInfo("", "-IMon", RecordType.VALUE),
-            "power_rb": RecordInfo("", "-Pw-RB", RecordType.VALUE),
-            "power": RecordInfo("", "-Pw", RecordType.VALUE),
-            "status_on": RecordInfo("", "-Status-ON", RecordType.VALUE),
-        }
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        # Check if PV exists
-        if mode != SIMULATION:
-            self._epics_wrapper.connect_pv(self.ps_pv + "-VMon")
+    _default_pv_root_attr = "ps_pv"
+    _primary_channel = "power_rb"
+    _epics_channels = {
+        "voltage_monitor": EpicsChannelInfo(
+            "", "-VMon", EpicsChannelRole.VALUE_AND_STATUS
+        ),
+        "current_monitor": EpicsChannelInfo(
+            "", "-IMon", EpicsChannelRole.VALUE_AND_STATUS
+        ),
+        "power_rb": EpicsChannelInfo("", "-Pw-RB", EpicsChannelRole.VALUE_AND_STATUS),
+        "power": EpicsChannelInfo("", "-Pw", EpicsChannelRole.VALUE, subscribe=False),
+        "status_on": EpicsChannelInfo(
+            "", "-Status-ON", EpicsChannelRole.VALUE_AND_STATUS
+        ),
+    }
 
-    def doInit(self, mode):
-        """From EpicsMotor class."""
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            for k, v in self._record_fields.items():
-                if v.record_type in [RecordType.VALUE, RecordType.BOTH]:
-                    self._epics_subscriptions.append(
-                        self._epics_wrapper.subscribe(
-                            f"{self.ps_pv}{v.pv_suffix}",
-                            k,
-                            self._value_change_callback,
-                            self._connection_change_callback,
-                        )
-                    )
+    def _pvs_to_connect(self):
+        # Checking one PV is enough to see that the IOC is there.
+        return [self._epics.pv_name_for("voltage_monitor")]
+
+    def _after_subscribe(self, mode):
         MappedReadable.doInit(self, mode)
 
     def _readRaw(self, maxage=0):
-        return self._get_cached_pv_or_ask("power_rb")
+        return self._read_channel_cached("power_rb", maxage=maxage)
 
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
 
     def status_on(self):
         """Returns a simplified (bool) status."""
-        return bool(self._get_cached_pv_or_ask("status_on"))
+        return bool(self._read_channel_cached("status_on"))
 
-    def doStatus(self, maxage=0):
+    def _compute_status(self, maxage=0):
         # TODO: Check other status bit PVs for errors?
 
         # First part of the msg
         channel_stat_msg = "Channel is ON" if self.status_on() else "Channel is OFF"
 
         # Check voltage
-        voltage_val = self.doReadVoltage_Monitor()
+        voltage_val = self._read_channel_cached("voltage_monitor", maxage=maxage)
         voltage_val = self.fmtstr % voltage_val if type(voltage_val) == float else None
         # and current
-        current_val = self.doReadCurrent_Monitor()
+        current_val = self._read_channel_cached("current_monitor", maxage=maxage)
         current_val = self.fmtstr % current_val if type(current_val) == float else None
 
         # Build message
@@ -134,58 +116,13 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         return status.OK, msg
 
     def doEnable(self, on):
-        self._put_pv("power", 1 if on else 0)
+        self._epics.put_channel_value("power", 1 if on else 0)
 
     def doReadVoltage_Monitor(self):
-        return self._get_cached_pv_or_ask("voltage_monitor")
+        return self._epics.get_channel_value("voltage_monitor")
 
     def doReadCurrent_Monitor(self):
-        return self._get_cached_pv_or_ask("current_monitor")
-
-    def _get_cached_pv_or_ask(self, param, as_string=False):
-        """
-        From EpicsMotor class.
-        Gets the PV value from the cache if possible, else get it from the device.
-        """
-        return get_from_cache_or(
-            self,
-            param,
-            lambda: self._get_pv(param, as_string),
-        )
-
-    def _get_pv(self, param, as_string=False):
-        """From EpicsMotor class"""
-        return self._epics_wrapper.get_pv_value(
-            f"{self.ps_pv}{self._record_fields[param].pv_suffix}", as_string
-        )
-
-    def _put_pv(self, param, value):
-        """From EpicsMotor class"""
-        self._epics_wrapper.put_pv_value(
-            f"{self.ps_pv}{self._record_fields[param].pv_suffix}", value
-        )
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        """From EpicsMotor class"""
-        time_stamp = time.time()
-        cache_key = self._record_fields[param].cache_key
-        cache_key = param if not cache_key else cache_key
-        self._cache.put(self._name, cache_key, value, time_stamp)
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        """From EpicsMotor class"""
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
+        return self._epics.get_channel_value("current_monitor")
 
 
 class PowerSupplyBank(CanDisable, MappedReadable):

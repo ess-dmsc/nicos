@@ -6,8 +6,8 @@ from nicos.core.mixins import CanDisable
 from nicos.devices.abstract import CanReference, Motor
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsDeviceBase,
-    RecordInfo,
-    RecordType,
+    EpicsChannelInfo,
+    EpicsChannelRole,
 )
 
 
@@ -49,18 +49,20 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
         "speed": Override(volatile=True, unit="mm/s"),
     }
 
-    _primary_field = "value"
-    _default_root_attr = "motorpv"
-    _record_fields = {
-        "value": RecordInfo("value", "-position-r", RecordType.BOTH),
-        "target": RecordInfo("target", "-s", RecordType.VALUE),
-        "stop": RecordInfo("", "-halt-s", RecordType.VALUE),
-        "speed": RecordInfo("", "-velocity-s", RecordType.VALUE),
-        "enable": RecordInfo("", "-enable-s", RecordType.STATUS),
-        "home": RecordInfo("", "-home-s", RecordType.VALUE),
-        "reset": RecordInfo("", "-reset-s", RecordType.VALUE),
-        "busy": RecordInfo("", "-busy-r", RecordType.STATUS),
-        "move_done": RecordInfo("", "-move_done-r", RecordType.STATUS),
+    _primary_channel = "value"
+    _default_pv_root_attr = "motorpv"
+    _epics_channels = {
+        "value": EpicsChannelInfo(
+            "value", "-position-r", EpicsChannelRole.VALUE_AND_STATUS
+        ),
+        "target": EpicsChannelInfo("target", "-s", EpicsChannelRole.VALUE),
+        "stop": EpicsChannelInfo("", "-halt-s", EpicsChannelRole.VALUE),
+        "speed": EpicsChannelInfo("", "-velocity-s", EpicsChannelRole.VALUE),
+        "enable": EpicsChannelInfo("", "-enable-s", EpicsChannelRole.STATUS),
+        "home": EpicsChannelInfo("", "-home-s", EpicsChannelRole.VALUE),
+        "reset": EpicsChannelInfo("", "-reset-s", EpicsChannelRole.VALUE),
+        "busy": EpicsChannelInfo("", "-busy-r", EpicsChannelRole.STATUS),
+        "move_done": EpicsChannelInfo("", "-move_done-r", EpicsChannelRole.STATUS),
     }
 
     def doPreinit(self, mode):
@@ -71,13 +73,13 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
         return [f"{self.motorpv}-s"]
 
     def doRead(self, maxage=0):
-        return self._read_cached("value", maxage=maxage)
+        return self._read_channel_cached("value", maxage=maxage)
 
     def doReadTarget(self):
-        return self._read_cached("target")
+        return self._read_channel_cached("target")
 
     def doReadSpeed(self):
-        return self._epics.get_pv("speed")
+        return self._epics.get_channel_value("speed")
 
     def doStart(self, value):
         if abs(self.read(0) - value) <= self.precision:
@@ -88,29 +90,29 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
             self._cache.invalidate(self, "busy")
             self._cache.invalidate(self, "move_done")
 
-        if self._read_cached("busy", maxage=0) == 1:
+        if self._read_channel_cached("busy", maxage=0) == 1:
             raise MoveError("Motor is busy")
 
         self._cache.put(self._name, "status", (status.BUSY, "Moving"), time.time())
-        self._epics.put_pv("target", value)
+        self._epics.put_channel_value("target", value)
         # octopy does not update move_done immediately, so we need to wait here
         # until it is set to 0.
         self._epics.wait_for("move_done", 0, timeout=5.0)
 
     def doStop(self):
-        self._epics.put_pv("stop", 1)
+        self._epics.put_channel_value("stop", 1)
 
     def doEnable(self, on):
-        self._epics.put_pv("enable", 1 if on else 0)
+        self._epics.put_channel_value("enable", 1 if on else 0)
 
     def doWriteSpeed(self, value):
-        self._epics.put_pv("speed", max(0.0, value))
+        self._epics.put_channel_value("speed", max(0.0, value))
 
     def doReference(self):
-        self._epics.put_pv("home", 1)
+        self._epics.put_channel_value("home", 1)
 
     def doReset(self):
-        self._epics.put_pv("reset", 1)
+        self._epics.put_channel_value("reset", 1)
 
     def doIsAtTarget(self, pos=None, target=None):
         """
@@ -123,7 +125,7 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
 
         within_target = abs(target - pos) <= self.precision
 
-        return within_target and self._read_cached("move_done", maxage=0) == 1
+        return within_target and self._read_channel_cached("move_done", maxage=0) == 1
 
     def doIsCompleted(self):
         """
@@ -132,18 +134,18 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
         return self._is_completed(maxage=0)
 
     def _is_completed(self, maxage=0):
-        busy = self._read_cached("busy", maxage=maxage) == 1
-        move_done = self._read_cached("move_done", maxage=maxage) == 1
+        busy = self._read_channel_cached("busy", maxage=maxage) == 1
+        move_done = self._read_channel_cached("move_done", maxage=maxage) == 1
         return not busy and move_done
 
     def _compute_status(self, maxage=0):
         try:
             if not self._is_completed(maxage=maxage):
-                target = self._read_cached("target", maxage=maxage)
+                target = self._read_channel_cached("target", maxage=maxage)
                 return status.BUSY, f"moving to {target}"
 
             # Check if the motor is enabled
-            is_enabled = self._read_cached("enable", maxage=maxage) == 1
+            is_enabled = self._read_channel_cached("enable", maxage=maxage) == 1
             if not is_enabled:
                 return status.WARN, "Motor is not enabled"
         except TimeoutError:
@@ -151,12 +153,12 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
 
         return status.OK, "ready"
 
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
+    def _connection_change_callback(self, pv_name, channel, is_connected, **kwargs):
         # Any of the few octopy PVs dropping means the axis is unusable.
         if is_connected:
-            self.log.debug("%s connected!", name)
+            self.log.debug("%s connected!", pv_name)
         else:
-            self.log.warning("%s disconnected!", name)
+            self.log.warning("%s disconnected!", pv_name)
             self._cache.put(
                 self._name,
                 "status",

@@ -2,56 +2,57 @@ import time
 
 from nicos.core import Param, dictof, pvname, status
 from nicos_ess.devices.epics.pva.epics_common import (
+    EpicsChannelComponent,
+    EpicsChannelRole,
     EpicsDeviceBase,
-    EpicsRecordComponent,
-    RecordType,
     get_from_cache_or,
 )
 
 
-class EpicsMultiSourceComponent(EpicsRecordComponent):
+class EpicsMultiSourceComponent(EpicsChannelComponent):
     """Prefix matrix helper for sources sharing one suffix table."""
 
-    def __init__(self, record_fields, sources, **kwargs):
-        super().__init__(record_fields, dict.fromkeys(record_fields), **kwargs)
+    def __init__(self, epics_channels, sources, **kwargs):
+        super().__init__(epics_channels, dict.fromkeys(epics_channels), **kwargs)
         self.sources = sources
 
-    def source_pv(self, source_id, field):
-        return f"{self.sources[source_id]}{self.record_fields[field].pv_suffix}"
+    def source_pv(self, source_id, channel):
+        return f"{self.sources[source_id]}{self.epics_channels[channel].pv_suffix}"
 
-    def source_key(self, source_id, field):
-        info = self.record_fields[field]
-        return f"{source_id}/{info.cache_key or field}"
+    def source_key(self, source_id, channel):
+        info = self.epics_channels[channel]
+        return f"{source_id}/{info.cache_key or channel}"
 
     def pvs_to_connect(self):
         return [
-            self.source_pv(source_id, field)
+            self.source_pv(source_id, channel)
             for source_id in self.sources
-            for field in self.record_fields
+            for channel in self.epics_channels
         ]
 
-    def subscribe_fields(self, change_callback, connection_callback=None):
+    def subscribe_channels(self, change_callback, connection_callback=None):
         for source_id in self.sources:
-            for field, info in self.record_fields.items():
-                if not info.monitor:
+            for channel, info in self.epics_channels.items():
+                if not info.subscribe:
                     continue
                 self.subscriptions.append(
                     self.wrapper.subscribe(
-                        self.source_pv(source_id, field),
-                        (source_id, field),
+                        self.source_pv(source_id, channel),
+                        (source_id, channel),
                         change_callback,
                         connection_callback,
                         as_string=info.as_string,
                     )
                 )
 
-    def get_source_pv(self, source_id, field):
+    def get_source_value(self, source_id, channel):
         return self.wrapper.get_pv_value(
-            self.source_pv(source_id, field), self.record_fields[field].as_string
+            self.source_pv(source_id, channel),
+            self.epics_channels[channel].as_string,
         )
 
-    def put_source(self, source_id, field, value):
-        self.wrapper.put_pv_value(self.source_pv(source_id, field), value)
+    def put_source_value(self, source_id, channel, value):
+        self.wrapper.put_pv_value(self.source_pv(source_id, channel), value)
 
 
 class EpicsMultiSourceBase(EpicsDeviceBase):
@@ -76,43 +77,45 @@ class EpicsMultiSourceBase(EpicsDeviceBase):
 
     def _create_epics_component(self):
         return EpicsMultiSourceComponent(
-            self._record_fields,
+            self._epics_channels,
             dict(self.sources),
             timeout=self.epicstimeout,
             use_pva=self.pva,
         )
 
     def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
+        self, pv_name, param, value, units, limits, severity, message, **kwargs
     ):
-        source_id, field = param
+        source_id, channel = param
         ts = time.time()
-        self._cache.put(self._name, self._epics.source_key(source_id, field), value, ts)
-        if self._record_fields[field].record_type in (
-            RecordType.STATUS,
-            RecordType.BOTH,
+        self._cache.put(
+            self._name, self._epics.source_key(source_id, channel), value, ts
+        )
+        if self._epics_channels[channel].role in (
+            EpicsChannelRole.STATUS,
+            EpicsChannelRole.VALUE_AND_STATUS,
         ):
             self._refresh_status(ts)
 
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        source_id, field = param
+    def _connection_change_callback(self, pv_name, param, is_connected, **kwargs):
+        source_id, channel = param
         ts = time.time()
         if is_connected:
-            self.log.debug("%s connected!", name)
+            self.log.debug("%s connected!", pv_name)
             connection_status = status.OK, ""
         else:
-            self.log.warning("%s disconnected!", name)
+            self.log.warning("%s disconnected!", pv_name)
             connection_status = status.UNKNOWN, "lost connection to EPICS"
         self._cache.put(
             self._name,
-            self._source_connection_key(source_id, field),
+            self._source_connection_key(source_id, channel),
             connection_status,
             ts,
         )
         self._refresh_status(ts)
 
-    def _source_connection_key(self, source_id, field):
-        return f"{source_id}/{field}/{self._source_connection_cache_key}"
+    def _source_connection_key(self, source_id, channel):
+        return f"{source_id}/{channel}/{self._source_connection_cache_key}"
 
     def _source_connection_status(self, maxage=0):
         # Connection state is callback-maintained; a fresh status read must not
@@ -120,8 +123,8 @@ class EpicsMultiSourceBase(EpicsDeviceBase):
         del maxage
         candidates = []
         for source_id in self.sources:
-            for field, info in self._record_fields.items():
-                if not info.monitor:
+            for channel, info in self._epics_channels.items():
+                if not info.subscribe:
                     continue
                 if self._cache is None:
                     candidates.append((status.OK, ""))
@@ -129,7 +132,7 @@ class EpicsMultiSourceBase(EpicsDeviceBase):
                 candidates.append(
                     self._cache.get(
                         self._name,
-                        self._source_connection_key(source_id, field),
+                        self._source_connection_key(source_id, channel),
                         (status.OK, ""),
                     )
                 )
@@ -142,16 +145,16 @@ class EpicsMultiSourceBase(EpicsDeviceBase):
             return status.OK, ""
         return max(candidates, key=lambda candidate: candidate[0])
 
-    def _read_source(self, source_id, field, maxage=None):
+    def _read_source(self, source_id, channel, maxage=None):
         return get_from_cache_or(
             self,
-            self._epics.source_key(source_id, field),
-            lambda: self._epics.get_source_pv(source_id, field),
+            self._epics.source_key(source_id, channel),
+            lambda: self._epics.get_source_value(source_id, channel),
             maxage=maxage,
         )
 
-    def _put_source(self, source_id, field, value):
-        self._epics.put_source(source_id, field, value)
+    def _put_source(self, source_id, channel, value):
+        self._epics.put_source_value(source_id, channel, value)
 
     def doReadUnit(self):
         return self._config.get("unit", "") or self._params.get("unit", "")

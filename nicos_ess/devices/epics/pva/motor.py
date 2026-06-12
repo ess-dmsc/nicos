@@ -17,8 +17,8 @@ from nicos.devices.abstract import CanReference, Motor
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsDeviceBase,
-    RecordInfo,
-    RecordType,
+    EpicsChannelInfo,
+    EpicsChannelRole,
     get_from_cache_or,
 )
 
@@ -45,8 +45,8 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
     errorstates = {**Motor.errorstates, status.UNKNOWN: MoveError}
     _startup_moveable_limits_pending = False
 
-    _primary_field = "value"
-    _default_root_attr = "motorpv"
+    _primary_channel = "value"
+    _default_pv_root_attr = "motorpv"
 
     def _pvs_to_connect(self):
         return [self.motorpv]
@@ -163,54 +163,58 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
         self._motor_status = (status.OK, "")
         EpicsDeviceBase.doPreinit(self, mode)
 
-    def _build_record_fields(self):
-        record_fields = {
-            "value": RecordInfo("value", ".RBV", RecordType.BOTH),
-            "dialvalue": RecordInfo("", ".DRBV", RecordType.VALUE),
-            "target": RecordInfo("target", ".VAL", RecordType.VALUE),
-            "stop": RecordInfo("", ".STOP", RecordType.VALUE),
-            "speed": RecordInfo("", ".VELO", RecordType.VALUE),
-            "offset": RecordInfo("", ".OFF", RecordType.VALUE),
-            "highlimit": RecordInfo("", ".HLM", RecordType.VALUE),
-            "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
-            "dialhighlimit": RecordInfo("", ".DHLM", RecordType.VALUE),
-            "diallowlimit": RecordInfo("", ".DLLM", RecordType.VALUE),
-            "enable": RecordInfo("", ".CNEN", RecordType.BOTH),
-            "set": RecordInfo("", ".SET", RecordType.VALUE),
-            "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
-            "dir": RecordInfo("", ".DIR", RecordType.VALUE),
-            "homeforward": RecordInfo("", ".HOMF", RecordType.VALUE),
-            "homereverse": RecordInfo("", ".HOMR", RecordType.VALUE),
-            "position_deadband": RecordInfo("", ".RDBD", RecordType.VALUE),
-            "description": RecordInfo("", ".DESC", RecordType.VALUE),
-            "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
-            "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
-            "minspeed": RecordInfo("", ".VBAS", RecordType.VALUE),
-            "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
-            "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
-            "miss": RecordInfo("", ".MISS", RecordType.STATUS),
-            "alarm_status": RecordInfo("", ".STAT", RecordType.STATUS),
-            "alarm_severity": RecordInfo("", ".SEVR", RecordType.STATUS),
-            "softlimit": RecordInfo("", ".LVIO", RecordType.STATUS),
-            "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
-            "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
-            "errorbit": RecordInfo("", "-Err", RecordType.STATUS),
-            "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
-            "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
-            "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "msgtxt_severity": RecordInfo("", "-MsgTxt.SEVR", RecordType.STATUS),
+    def _build_epics_channels(self):
+        epics_channels = {
+            "value": EpicsChannelInfo(
+                "value", ".RBV", EpicsChannelRole.VALUE_AND_STATUS
+            ),
+            "dialvalue": EpicsChannelInfo("", ".DRBV", EpicsChannelRole.VALUE),
+            "target": EpicsChannelInfo("target", ".VAL", EpicsChannelRole.VALUE),
+            "stop": EpicsChannelInfo("", ".STOP", EpicsChannelRole.VALUE),
+            "speed": EpicsChannelInfo("", ".VELO", EpicsChannelRole.VALUE),
+            "offset": EpicsChannelInfo("", ".OFF", EpicsChannelRole.VALUE),
+            "highlimit": EpicsChannelInfo("", ".HLM", EpicsChannelRole.VALUE),
+            "lowlimit": EpicsChannelInfo("", ".LLM", EpicsChannelRole.VALUE),
+            "dialhighlimit": EpicsChannelInfo("", ".DHLM", EpicsChannelRole.VALUE),
+            "diallowlimit": EpicsChannelInfo("", ".DLLM", EpicsChannelRole.VALUE),
+            "enable": EpicsChannelInfo("", ".CNEN", EpicsChannelRole.VALUE_AND_STATUS),
+            "set": EpicsChannelInfo("", ".SET", EpicsChannelRole.VALUE),
+            "foff": EpicsChannelInfo("", ".FOFF", EpicsChannelRole.VALUE),
+            "dir": EpicsChannelInfo("", ".DIR", EpicsChannelRole.VALUE),
+            "homeforward": EpicsChannelInfo("", ".HOMF", EpicsChannelRole.VALUE),
+            "homereverse": EpicsChannelInfo("", ".HOMR", EpicsChannelRole.VALUE),
+            "position_deadband": EpicsChannelInfo("", ".RDBD", EpicsChannelRole.VALUE),
+            "description": EpicsChannelInfo("", ".DESC", EpicsChannelRole.VALUE),
+            "monitor_deadband": EpicsChannelInfo("", ".MDEL", EpicsChannelRole.VALUE),
+            "maxspeed": EpicsChannelInfo("", ".VMAX", EpicsChannelRole.VALUE),
+            "minspeed": EpicsChannelInfo("", ".VBAS", EpicsChannelRole.VALUE),
+            "donemoving": EpicsChannelInfo("", ".DMOV", EpicsChannelRole.STATUS),
+            "moving": EpicsChannelInfo("", ".MOVN", EpicsChannelRole.STATUS),
+            "miss": EpicsChannelInfo("", ".MISS", EpicsChannelRole.STATUS),
+            "alarm_status": EpicsChannelInfo("", ".STAT", EpicsChannelRole.STATUS),
+            "alarm_severity": EpicsChannelInfo("", ".SEVR", EpicsChannelRole.STATUS),
+            "softlimit": EpicsChannelInfo("", ".LVIO", EpicsChannelRole.STATUS),
+            "lowlimitswitch": EpicsChannelInfo("", ".LLS", EpicsChannelRole.STATUS),
+            "highlimitswitch": EpicsChannelInfo("", ".HLS", EpicsChannelRole.STATUS),
+            "errorbit": EpicsChannelInfo("", "-Err", EpicsChannelRole.STATUS),
+            "reseterror": EpicsChannelInfo("", "-ErrRst", EpicsChannelRole.STATUS),
+            "powerauto": EpicsChannelInfo("", "-PwrAuto", EpicsChannelRole.STATUS),
+            "msgtxt": EpicsChannelInfo("", "-MsgTxt", EpicsChannelRole.STATUS),
+            "msgtxt_severity": EpicsChannelInfo(
+                "", "-MsgTxt.SEVR", EpicsChannelRole.STATUS
+            ),
         }
 
         if not self.has_errorbit:
-            del record_fields["errorbit"]
+            del epics_channels["errorbit"]
         if not self.has_reseterror:
-            del record_fields["reseterror"]
+            del epics_channels["reseterror"]
         if not self.has_powerauto:
-            del record_fields["powerauto"]
+            del epics_channels["powerauto"]
         if not self.has_msgtxt:
-            del record_fields["msgtxt"]
-            del record_fields["msgtxt_severity"]
-        return record_fields
+            del epics_channels["msgtxt"]
+            del epics_channels["msgtxt_severity"]
+        return epics_channels
 
     def _after_subscribe(self, mode):
         self._startup_moveable_limits_pending = (
@@ -218,33 +222,33 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
         )
 
     def doRead(self, maxage=0):
-        return self._read_cached("value", maxage=maxage)
+        return self._read_channel_cached("value", maxage=maxage)
 
     def doReadSpeed(self):
-        return self._epics.get_pv("speed")
+        return self._epics.get_channel_value("speed")
 
     def doReadOffset(self):
-        return self._epics.get_pv("offset")
+        return self._epics.get_channel_value("offset")
 
     def doReadTarget(self):
-        return self._read_cached("target")
+        return self._read_channel_cached("target")
 
     def doReadAbslimits(self):
-        dial_min = self._epics.get_pv("diallowlimit")
-        dial_max = self._epics.get_pv("dialhighlimit")
+        dial_min = self._epics.get_channel_value("diallowlimit")
+        dial_max = self._epics.get_channel_value("dialhighlimit")
         return dial_min, dial_max
 
     def doReadHwuserlimits(self):
-        dial_min = self._epics.get_pv("diallowlimit")
-        dial_max = self._epics.get_pv("dialhighlimit")
+        dial_min = self._epics.get_channel_value("diallowlimit")
+        dial_max = self._epics.get_channel_value("dialhighlimit")
         if dial_min > dial_max:
             raise ConfigurationError(
                 self,
                 f"dial lowlimit ({dial_min}) above dial highlimit ({dial_max})",
             )
         offset = self.offset
-        hw_user_min = self._epics.get_pv("lowlimit")
-        hw_user_max = self._epics.get_pv("highlimit")
+        hw_user_min = self._epics.get_channel_value("lowlimit")
+        hw_user_max = self._epics.get_channel_value("highlimit")
         if hw_user_min > hw_user_max:
             raise ConfigurationError(
                 self,
@@ -254,7 +258,7 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
         if not self._user_limits_fit_dial_window(
             hw_user_min, hw_user_max, dial_min, dial_max, offset
         ):
-            direction = self._epics.get_pv("dir", as_string=True)
+            direction = self._epics.get_channel_value("dir", as_string=True)
             raise ConfigurationError(
                 self,
                 f"hardware userlimits ({hw_user_min}, {hw_user_max}) are "
@@ -303,19 +307,19 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
         return umin, umax
 
     def doReadPosition_Deadband(self):
-        return self._epics.get_pv("position_deadband")
+        return self._epics.get_channel_value("position_deadband")
 
     def doReadPv_Desc(self):
-        return self._epics.get_pv("description")
+        return self._epics.get_channel_value("description")
 
     def doReadMonitor_Deadband(self):
-        return self._epics.get_pv("monitor_deadband")
+        return self._epics.get_channel_value("monitor_deadband")
 
     def doReadPrecision(self):
-        return self._epics.get_pv("position_deadband")
+        return self._epics.get_channel_value("position_deadband")
 
     def doIsAtTarget(self, pos=None, target=None):
-        return self._read_cached("miss") == 0
+        return self._read_channel_cached("miss") == 0
 
     def doIsCompleted(self):
         if self._sim_intercept:
@@ -327,10 +331,10 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
         if cur_status in self.errorstates:
             raise self.errorstates[cur_status](self, cur_message)
 
-        moving = self._read_cached("moving")
-        pos = self._read_cached("value")
-        target = self._read_cached("target")
-        deadband = self._read_cached("position_deadband")
+        moving = self._read_channel_cached("moving")
+        pos = self._read_channel_cached("value")
+        target = self._read_channel_cached("target")
+        deadband = self._read_channel_cached("position_deadband")
 
         # check whether target has been reached within deadband:
         if not math.isclose(target, pos, abs_tol=deadband):
@@ -342,7 +346,7 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
             return
 
         self._cache_status_if_higher((status.BUSY, "Moving abs"))
-        self._epics.put_pv("target", value)
+        self._epics.put_channel_value("target", value)
 
     def doWriteSpeed(self, value):
         speed = self._get_valid_speed(value)
@@ -354,30 +358,34 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
                 speed,
             )
 
-        self._epics.put_pv("speed", speed)
+        self._epics.put_channel_value("speed", speed)
         return speed
 
     def doWriteMonitor_Deadband(self, value):
         deadband = value
-        self._epics.put_pv("monitor_deadband", max(deadband, 0))
+        self._epics.put_channel_value("monitor_deadband", max(deadband, 0))
 
     def doWriteOffset(self, new_off):
         """Shift the user ↔ dial offset via SET/FOFF; limits follow automatically."""
         if self.offset == new_off:
             return
 
-        if self._epics.get_pv("moving") or not self._epics.get_pv("donemoving"):
+        if self._epics.get_channel_value("moving") or not self._epics.get_channel_value(
+            "donemoving"
+        ):
             raise RuntimeError(f"{self}: cannot change OFF while motor is moving")
 
-        dir_sign = 1 if self._epics.get_pv("dir", as_string=True) == "Pos" else -1
-        dial_now = self._epics.get_pv("dialvalue")
+        dir_sign = (
+            1 if self._epics.get_channel_value("dir", as_string=True) == "Pos" else -1
+        )
+        dial_now = self._epics.get_channel_value("dialvalue")
         user_target = dial_now * dir_sign + new_off  # user = dial * DIR + OFF
 
         # In SET mode with FOFF=0, writing VAL makes the record recalculate OFF.
-        self._epics.put_pv("set", 1)
-        self._epics.put_pv("foff", 0)
-        self._epics.put_pv("target", user_target)
-        self._epics.put_pv("set", 0)
+        self._epics.put_channel_value("set", 1)
+        self._epics.put_channel_value("foff", 0)
+        self._epics.put_channel_value("target", user_target)
+        self._epics.put_channel_value("set", 0)
         self.log.info("Offset changed to %s", new_off)
 
     def doWriteUserlimits(self, value):
@@ -397,28 +405,28 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
         self.offset -= diff
 
     def doStop(self):
-        self._epics.put_pv("stop", 1)
+        self._epics.put_channel_value("stop", 1)
 
     def doReset(self):
         if self.has_errorbit and self.has_reseterror:
-            error_bit = self._read_cached("errorbit")
+            error_bit = self._read_channel_cached("errorbit")
             if error_bit == 0:
                 self.log.warning("Error bit is not set, can not reset error state.")
             else:
-                self._epics.put_pv("reseterror", 1)
+                self._epics.put_channel_value("reseterror", 1)
 
     def doReference(self):
-        self._epics.put_pv(f"home{self.reference_direction}", 1)
+        self._epics.put_channel_value(f"home{self.reference_direction}", 1)
 
     def doEnable(self, on):
-        self._epics.put_pv("enable", 1 if on else 0)
+        self._epics.put_channel_value("enable", 1 if on else 0)
 
     def doSetPosition(self, pos):
-        self._epics.put_pv("set", 1)
-        self._epics.put_pv("foff", 1)
-        self._epics.put_pv("target", pos)
-        self._epics.put_pv("set", 0)
-        self._epics.put_pv("foff", 0)
+        self._epics.put_channel_value("set", 1)
+        self._epics.put_channel_value("foff", 1)
+        self._epics.put_channel_value("target", pos)
+        self._epics.put_channel_value("set", 0)
+        self._epics.put_channel_value("foff", 0)
 
     def isAllowed(self, pos):
         if self.userlimits == (0, 0) and self.abslimits == (0, 0):
@@ -441,50 +449,52 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
         message = (message or "").strip()
         status_candidates = [self._alarm_status_candidate(epics_status, message)]
 
-        done_moving = self._read_cached("donemoving", maxage=maxage)
-        moving = self._read_cached("moving", maxage=maxage)
+        done_moving = self._read_channel_cached("donemoving", maxage=maxage)
+        moving = self._read_channel_cached("moving", maxage=maxage)
         if done_moving == 0 or moving != 0:
-            homing = self._read_cached(
+            homing = self._read_channel_cached(
                 "homeforward", maxage=maxage
-            ) or self._read_cached("homereverse", maxage=maxage)
+            ) or self._read_channel_cached("homereverse", maxage=maxage)
             if homing:
                 status_candidates.append((status.BUSY, message or "homing"))
             else:
-                target = self._read_cached("target", maxage=maxage)
+                target = self._read_channel_cached("target", maxage=maxage)
                 status_candidates.append(
                     (status.BUSY, message or f"moving to {target}")
                 )
 
         if self.has_powerauto:
-            powerauto_enabled = self._read_cached("powerauto", maxage=maxage)
+            powerauto_enabled = self._read_channel_cached("powerauto", maxage=maxage)
         else:
             powerauto_enabled = 0
 
-        if not powerauto_enabled and not self._read_cached("enable", maxage=maxage):
+        if not powerauto_enabled and not self._read_channel_cached(
+            "enable", maxage=maxage
+        ):
             status_candidates.append((status.WARN, "motor is not enabled"))
 
-        miss = self._read_cached("miss", maxage=maxage)
+        miss = self._read_channel_cached("miss", maxage=maxage)
         if miss != 0:
             status_candidates.append(
                 (status.NOTREACHED, message or "did not reach target position.")
             )
 
-        high_limitswitch = self._read_cached("highlimitswitch", maxage=maxage)
+        high_limitswitch = self._read_channel_cached("highlimitswitch", maxage=maxage)
         if high_limitswitch != 0:
             status_candidates.append((status.WARN, message or "at high limit switch."))
 
-        low_limitswitch = self._read_cached("lowlimitswitch", maxage=maxage)
+        low_limitswitch = self._read_channel_cached("lowlimitswitch", maxage=maxage)
         if low_limitswitch != 0:
             status_candidates.append((status.WARN, message or "at low limit switch."))
 
-        limit_violation = self._read_cached("softlimit", maxage=maxage)
+        limit_violation = self._read_channel_cached("softlimit", maxage=maxage)
         if limit_violation != 0:
             status_candidates.append((status.WARN, message or "soft limit violation."))
         return self._select_highest_status(status_candidates)
 
     def _get_valid_speed(self, value):
-        max_speed = self._read_cached("maxspeed")
-        min_speed = self._read_cached("minspeed")
+        max_speed = self._read_channel_cached("maxspeed")
+        min_speed = self._read_channel_cached("minspeed")
 
         # Cannot be less than min speed
         valid_speed = max(min_speed, value)
@@ -520,10 +530,12 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
             self._cache.put(self._name, "status", candidate_status, time.time())
 
     def _get_msgtxt(self, maxage=0):
-        msg_txt = self._read_cached("msgtxt", as_string=True, maxage=maxage).strip()
+        msg_txt = self._read_channel_cached(
+            "msgtxt", as_string=True, maxage=maxage
+        ).strip()
 
-        if "msgtxt_severity" in self._record_fields:
-            msg_severity = self._read_cached("msgtxt_severity", maxage=maxage)
+        if "msgtxt_severity" in self._epics_channels:
+            msg_severity = self._read_channel_cached("msgtxt_severity", maxage=maxage)
         else:
             msg_severity = 0
         msg_stat = SEVERITY_TO_STATUS.get(msg_severity, status.UNKNOWN)
@@ -557,7 +569,7 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
 
     def _get_alarm_status_and_msg(self, maxage=0):
         def _get_value_status():
-            return self._epics.get_alarm_status("value")
+            return self._epics.get_channel_alarm("value")
 
         motor_stat, motor_msg = get_from_cache_or(
             self, "value_status", _get_value_status, maxage=maxage
@@ -581,7 +593,9 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
             self.log.error("%s (%s)", error_msg, epics_msg)
 
     def _get_dir_sign(self):
-        return 1 if self._epics.get_pv("dir", as_string=True) == "Pos" else -1
+        return (
+            1 if self._epics.get_channel_value("dir", as_string=True) == "Pos" else -1
+        )
 
     def _limit_margin(self, boundary_value):
         return abs(boundary_value) * self.limit_rel_tolerance
@@ -694,24 +708,26 @@ class EpicsJogMotor(EpicsMotor):
 
     parameter_overrides = {"speed": Override(userparam=False)}
 
-    def _build_record_fields(self):
-        record_fields = super()._build_record_fields()
-        record_fields.update(
+    def _build_epics_channels(self):
+        epics_channels = super()._build_epics_channels()
+        epics_channels.update(
             {
-                "target": RecordInfo("", ".JVEL", RecordType.VALUE),
-                "jog_velocity": RecordInfo("jog_velocity", ".JVEL", RecordType.VALUE),
-                "value": RecordInfo("value", ".JVEL", RecordType.STATUS),
-                "jogforward": RecordInfo("", ".JOGF", RecordType.VALUE),
-                "jogreverse": RecordInfo("", ".JOGR", RecordType.VALUE),
+                "target": EpicsChannelInfo("", ".JVEL", EpicsChannelRole.VALUE),
+                "jog_velocity": EpicsChannelInfo(
+                    "jog_velocity", ".JVEL", EpicsChannelRole.VALUE
+                ),
+                "value": EpicsChannelInfo("value", ".JVEL", EpicsChannelRole.STATUS),
+                "jogforward": EpicsChannelInfo("", ".JOGF", EpicsChannelRole.VALUE),
+                "jogreverse": EpicsChannelInfo("", ".JOGR", EpicsChannelRole.VALUE),
             }
         )
-        return record_fields
+        return epics_channels
 
     def doReadSpeed(self):
-        return self._epics.get_pv("jog_velocity")
+        return self._epics.get_channel_value("jog_velocity")
 
     def _read_jog_with_sign(self, maxage=0):
-        jvel = abs(self._read_cached("jog_velocity", maxage=maxage))
+        jvel = abs(self._read_channel_cached("jog_velocity", maxage=maxage))
         if self.jog_dir < 0:
             return -jvel
         if self.jog_dir > 0:
@@ -725,7 +741,7 @@ class EpicsJogMotor(EpicsMotor):
         return self._read_jog_with_sign()
 
     def doReadAbslimits(self):
-        max_speed = self._epics.get_pv("maxspeed")
+        max_speed = self._epics.get_channel_value("maxspeed")
         return -max_speed, max_speed
 
     def doWriteUserlimits(self, value):
@@ -736,7 +752,7 @@ class EpicsJogMotor(EpicsMotor):
         return self.userlimits
 
     def doReadUserlimits(self):
-        max_speed = self._epics.get_pv("maxspeed")
+        max_speed = self._epics.get_channel_value("maxspeed")
         return -max_speed, max_speed
 
     def doWriteSpeed(self, value):
@@ -746,8 +762,8 @@ class EpicsJogMotor(EpicsMotor):
         return self.speed
 
     def _get_valid_speed(self, value):
-        max_speed = self._read_cached("maxspeed")
-        min_speed = self._read_cached("minspeed")
+        max_speed = self._read_channel_cached("maxspeed")
+        min_speed = self._read_channel_cached("minspeed")
 
         # Cannot be less than min speed
         valid_speed = max(min_speed, value)
@@ -779,34 +795,36 @@ class EpicsJogMotor(EpicsMotor):
         self.stop()
         self._epics.wait_for("donemoving", 1)
 
-        self._epics.put_pv("jog_velocity", jog_speed)
+        self._epics.put_channel_value("jog_velocity", jog_speed)
 
-        jf = self._read_cached("jogforward")
-        jr = self._read_cached("jogreverse")
+        jf = self._read_channel_cached("jogforward")
+        jr = self._read_channel_cached("jogreverse")
         if not (jf or jr):
-            self._epics.put_pv("jogforward" if value > 0 else "jogreverse", 1)
+            self._epics.put_channel_value(
+                "jogforward" if value > 0 else "jogreverse", 1
+            )
         elif value > 0 and jr:
-            self._epics.put_pv("jogreverse", 0)
+            self._epics.put_channel_value("jogreverse", 0)
             self._epics.wait_for("donemoving", 1)
-            self._epics.put_pv("jogforward", 1)
+            self._epics.put_channel_value("jogforward", 1)
         elif value < 0 and jf:
-            self._epics.put_pv("jogforward", 0)
+            self._epics.put_channel_value("jogforward", 0)
             self._epics.wait_for("donemoving", 1)
-            self._epics.put_pv("jogreverse", 1)
+            self._epics.put_channel_value("jogreverse", 1)
 
         self._cache.put(self._name, "status", (status.BUSY, "moving"), time.time())
 
     def doStop(self):
         self.jog_dir = 0
-        self._epics.put_pv("jogforward", 0)
-        self._epics.put_pv("jogreverse", 0)
-        self._epics.put_pv("stop", 1)
+        self._epics.put_channel_value("jogforward", 0)
+        self._epics.put_channel_value("jogreverse", 0)
+        self._epics.put_channel_value("stop", 1)
         self._cache.put(self._name, "value", 0.0, time.time())
 
     def doIsCompleted(self):
         if self._sim_intercept:
             return True
-        moving = self._read_cached("moving")
+        moving = self._read_channel_cached("moving")
         return moving == 0
 
     def _compute_status(self, maxage=0):
@@ -818,68 +836,70 @@ class EpicsJogMotor(EpicsMotor):
         elif epics_status == status.WARN:
             return status.WARN, message
 
-        done_moving = self._read_cached("donemoving", maxage=maxage)
-        moving = self._read_cached("moving", maxage=maxage)
+        done_moving = self._read_channel_cached("donemoving", maxage=maxage)
+        moving = self._read_channel_cached("moving", maxage=maxage)
         if done_moving == 0 or moving != 0:
             return status.BUSY, message or "moving"
 
         if self.has_powerauto:
-            powerauto_enabled = self._read_cached("powerauto", maxage=maxage)
+            powerauto_enabled = self._read_channel_cached("powerauto", maxage=maxage)
         else:
             powerauto_enabled = 0
 
-        if not powerauto_enabled and not self._read_cached("enable", maxage=maxage):
+        if not powerauto_enabled and not self._read_channel_cached(
+            "enable", maxage=maxage
+        ):
             return status.WARN, "motor is not enabled"
 
-        high_limitswitch = self._read_cached("highlimitswitch", maxage=maxage)
+        high_limitswitch = self._read_channel_cached("highlimitswitch", maxage=maxage)
         if high_limitswitch != 0:
             return status.WARN, message or "at high limit switch."
 
-        low_limitswitch = self._read_cached("lowlimitswitch", maxage=maxage)
+        low_limitswitch = self._read_channel_cached("lowlimitswitch", maxage=maxage)
         if low_limitswitch != 0:
             return status.WARN, message or "at low limit switch."
-        limit_violation = self._read_cached("softlimit", maxage=maxage)
+        limit_violation = self._read_channel_cached("softlimit", maxage=maxage)
         if limit_violation != 0:
             return status.WARN, message or "soft limit violation."
 
         return status.OK, message
 
     def doReadUnit(self):
-        raw_unit = self._epics.get_units("value")
+        raw_unit = self._epics.get_channel_units("value")
         return f"{raw_unit}/s" if raw_unit else "units/s"
 
     def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
+        self, pv_name, channel, value, units, limits, severity, message, **kwargs
     ):
         ts = time.time()
 
-        if param == "jog_velocity":
+        if channel == "jog_velocity":
             self._cache.put(self._name, "jog_velocity", value, ts)
             signed = -abs(value) if self.jog_dir < 0 else abs(value)
             self._cache.put(self._name, "value", signed, ts)
             return
 
         # Update the signed "value" when direction or moving state changes.
-        if param in ("jogforward", "jogreverse"):
-            cur_jvel = abs(self._read_cached("jog_velocity"))
-            other = "jogreverse" if param == "jogforward" else "jogforward"
-            sign = 1 if param == "jogforward" else -1
+        if channel in ("jogforward", "jogreverse"):
+            cur_jvel = abs(self._read_channel_cached("jog_velocity"))
+            other = "jogreverse" if channel == "jogforward" else "jogforward"
+            sign = 1 if channel == "jogforward" else -1
             if value == 1:
                 self._cache.put(self._name, "jog_dir", sign, ts)
                 self._cache.put(self._name, "value", sign * cur_jvel, ts)
-            elif not self._read_cached(other):
+            elif not self._read_channel_cached(other):
                 self._cache.put(self._name, "jog_dir", 0, ts)
                 self._cache.put(self._name, "value", 0.0, ts)
-            self._cache.put(self._name, param, value, ts)
+            self._cache.put(self._name, channel, value, ts)
             return
 
-        if param == "value":
+        if channel == "value":
             self._cache.put(self._name, "value_status", (severity, message), ts)
             self._refresh_status(ts)
             return
 
         super()._value_change_callback(
-            name, param, value, units, limits, severity, message, **kwargs
+            pv_name, channel, value, units, limits, severity, message, **kwargs
         )
 
 
@@ -926,76 +946,86 @@ class SmaractPiezoMotor(EpicsMotor):
         "has_powerauto": Override(default=False),
     }
 
-    def _build_record_fields(self):
-        record_fields = {
-            "value": RecordInfo("value", ".RBV", RecordType.BOTH),
-            "dialvalue": RecordInfo("", ".DRBV", RecordType.VALUE),
-            "target": RecordInfo("target", ".VAL", RecordType.VALUE),
-            "stop": RecordInfo("", ".STOP", RecordType.VALUE),
-            "speed": RecordInfo("", ".VELO", RecordType.VALUE),
-            "offset": RecordInfo("", ".OFF", RecordType.VALUE),
-            "highlimit": RecordInfo("", ".HLM", RecordType.VALUE),
-            "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
-            "dialhighlimit": RecordInfo("", ".DHLM", RecordType.VALUE),
-            "diallowlimit": RecordInfo("", ".DLLM", RecordType.VALUE),
-            "enable": RecordInfo("", ".CNEN", RecordType.VALUE),
-            "set": RecordInfo("", ".SET", RecordType.VALUE),
-            "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
-            "dir": RecordInfo("", ".DIR", RecordType.VALUE),
-            "homeforward": RecordInfo("", ".HOMF", RecordType.VALUE),
-            "homereverse": RecordInfo("", ".HOMR", RecordType.VALUE),
-            "position_deadband": RecordInfo("", ".RDBD", RecordType.VALUE),
-            "description": RecordInfo("", ".DESC", RecordType.VALUE),
-            "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
-            "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
-            "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
-            "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
-            "miss": RecordInfo("", ".MISS", RecordType.STATUS),
-            "alarm_status": RecordInfo("", ".STAT", RecordType.STATUS),
-            "alarm_severity": RecordInfo("", ".SEVR", RecordType.STATUS),
-            "softlimit": RecordInfo("", ".LVIO", RecordType.STATUS),
-            "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
-            "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
-            "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "stepfrequency": RecordInfo("", "StepFreq", RecordType.VALUE),
-            "stepsizeforward": RecordInfo("", "StepSizeFwd", RecordType.VALUE),
-            "stepsizereverse": RecordInfo("", "StepSizeRev", RecordType.VALUE),
-            "mclfrequency": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
-            "mclfrequency_rb": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
+    def _build_epics_channels(self):
+        epics_channels = {
+            "value": EpicsChannelInfo(
+                "value", ".RBV", EpicsChannelRole.VALUE_AND_STATUS
+            ),
+            "dialvalue": EpicsChannelInfo("", ".DRBV", EpicsChannelRole.VALUE),
+            "target": EpicsChannelInfo("target", ".VAL", EpicsChannelRole.VALUE),
+            "stop": EpicsChannelInfo("", ".STOP", EpicsChannelRole.VALUE),
+            "speed": EpicsChannelInfo("", ".VELO", EpicsChannelRole.VALUE),
+            "offset": EpicsChannelInfo("", ".OFF", EpicsChannelRole.VALUE),
+            "highlimit": EpicsChannelInfo("", ".HLM", EpicsChannelRole.VALUE),
+            "lowlimit": EpicsChannelInfo("", ".LLM", EpicsChannelRole.VALUE),
+            "dialhighlimit": EpicsChannelInfo("", ".DHLM", EpicsChannelRole.VALUE),
+            "diallowlimit": EpicsChannelInfo("", ".DLLM", EpicsChannelRole.VALUE),
+            "enable": EpicsChannelInfo("", ".CNEN", EpicsChannelRole.VALUE),
+            "set": EpicsChannelInfo("", ".SET", EpicsChannelRole.VALUE),
+            "foff": EpicsChannelInfo("", ".FOFF", EpicsChannelRole.VALUE),
+            "dir": EpicsChannelInfo("", ".DIR", EpicsChannelRole.VALUE),
+            "homeforward": EpicsChannelInfo("", ".HOMF", EpicsChannelRole.VALUE),
+            "homereverse": EpicsChannelInfo("", ".HOMR", EpicsChannelRole.VALUE),
+            "position_deadband": EpicsChannelInfo("", ".RDBD", EpicsChannelRole.VALUE),
+            "description": EpicsChannelInfo("", ".DESC", EpicsChannelRole.VALUE),
+            "monitor_deadband": EpicsChannelInfo("", ".MDEL", EpicsChannelRole.VALUE),
+            "maxspeed": EpicsChannelInfo("", ".VMAX", EpicsChannelRole.VALUE),
+            "donemoving": EpicsChannelInfo("", ".DMOV", EpicsChannelRole.STATUS),
+            "moving": EpicsChannelInfo("", ".MOVN", EpicsChannelRole.STATUS),
+            "miss": EpicsChannelInfo("", ".MISS", EpicsChannelRole.STATUS),
+            "alarm_status": EpicsChannelInfo("", ".STAT", EpicsChannelRole.STATUS),
+            "alarm_severity": EpicsChannelInfo("", ".SEVR", EpicsChannelRole.STATUS),
+            "softlimit": EpicsChannelInfo("", ".LVIO", EpicsChannelRole.STATUS),
+            "lowlimitswitch": EpicsChannelInfo("", ".LLS", EpicsChannelRole.STATUS),
+            "highlimitswitch": EpicsChannelInfo("", ".HLS", EpicsChannelRole.STATUS),
+            "msgtxt": EpicsChannelInfo("", "-MsgTxt", EpicsChannelRole.STATUS),
+            "stepfrequency": EpicsChannelInfo("", "StepFreq", EpicsChannelRole.VALUE),
+            "stepsizeforward": EpicsChannelInfo(
+                "", "StepSizeFwd", EpicsChannelRole.VALUE
+            ),
+            "stepsizereverse": EpicsChannelInfo(
+                "", "StepSizeRev", EpicsChannelRole.VALUE
+            ),
+            "mclfrequency": EpicsChannelInfo(
+                "", "MaxCtrlLFreq", EpicsChannelRole.VALUE
+            ),
+            "mclfrequency_rb": EpicsChannelInfo(
+                "", "MaxCtrlLFreq", EpicsChannelRole.VALUE
+            ),
         }
 
         if not self.has_msgtxt:
-            del record_fields["msgtxt"]
-        return record_fields
+            del epics_channels["msgtxt"]
+        return epics_channels
 
     def doReadStepfrequency(self):
-        return self._epics.get_pv("stepfrequency")
+        return self._epics.get_channel_value("stepfrequency")
 
     def doWriteStepfrequency(self, value):
         if value < 0:
             raise ValueError("Step frequency must be non-negative.")
-        self._epics.put_pv("stepfrequency", value)
+        self._epics.put_channel_value("stepfrequency", value)
 
     def doReadStepsizeforward(self):
-        return self._epics.get_pv("stepsizeforward")
+        return self._epics.get_channel_value("stepsizeforward")
 
     def doWriteStepsizeforward(self, value):
         if value < 0:
             raise ValueError("Step size forward must be non-negative.")
-        self._epics.put_pv("stepsizeforward", value)
+        self._epics.put_channel_value("stepsizeforward", value)
 
     def doReadStepsizereverse(self):
-        return self._epics.get_pv("stepsizereverse")
+        return self._epics.get_channel_value("stepsizereverse")
 
     def doWriteStepsizereverse(self, value):
         if value < 0:
             raise ValueError("Step size reverse must be non-negative.")
-        self._epics.put_pv("stepsizereverse", value)
+        self._epics.put_channel_value("stepsizereverse", value)
 
     def doReadMclfrequency(self):
-        return self._epics.get_pv("mclfrequency_rb")
+        return self._epics.get_channel_value("mclfrequency_rb")
 
     def doWriteMclfrequency(self, value):
         if value < 0:
             raise ValueError("MCL frequency must be non-negative.")
-        self._epics.put_pv("mclfrequency", value)
+        self._epics.put_channel_value("mclfrequency", value)

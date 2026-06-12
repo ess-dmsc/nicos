@@ -40,13 +40,13 @@ from nicos.core import (
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable
 from nicos_ess.devices.epics.pva.epics_common import (
+    EpicsChannelInfo,
+    EpicsChannelRole,
     EpicsDeviceBase,
     EpicsMappedChoiceSupport,
     EpicsParameters,  # noqa: F401  (re-export for existing importers)
     EpicsReadWriteBase,
-    PvReadOrWrite,  # noqa: F401  (re-export for existing importers)
-    RecordInfo,
-    RecordType,
+    MappedChoiceSource,  # noqa: F401  (re-export for existing importers)
     _update_mapped_choices,
     create_wrapper,  # noqa: F401  (re-export for existing importers)
     get_from_cache_or,  # noqa: F401  (re-export for existing importers)
@@ -65,13 +65,18 @@ class EpicsReadable(EpicsDeviceBase, Readable):
         "unit": Override(mandatory=False, settable=False, volatile=True),
     }
 
-    _primary_field = "readpv"
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH),
+    _primary_channel = "read"
+    _epics_channels = {
+        "read": EpicsChannelInfo(
+            "value",
+            "",
+            EpicsChannelRole.VALUE_AND_STATUS,
+            pv_attr="readpv",
+        ),
     }
 
     def doRead(self, maxage=0):
-        return self._read_cached("readpv", maxage=maxage)
+        return self._read_channel_cached("read", maxage=maxage)
 
 
 class EpicsStringReadable(EpicsReadable):
@@ -82,8 +87,14 @@ class EpicsStringReadable(EpicsReadable):
 
     valuetype = str
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+    _epics_channels = {
+        "read": EpicsChannelInfo(
+            "value",
+            "",
+            EpicsChannelRole.VALUE_AND_STATUS,
+            as_string=True,
+            pv_attr="readpv",
+        ),
     }
 
 
@@ -99,14 +110,30 @@ class EpicsAnalogMoveable(EpicsReadWriteBase, HasPrecision, HasLimits, Moveable)
         "unit": Override(mandatory=False, settable=False, volatile=True),
     }
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH),
-        "writepv": RecordInfo("target", "", RecordType.STATUS),
-        "targetpv": RecordInfo("target", "", RecordType.STATUS),
+    _epics_channels = {
+        "read": EpicsChannelInfo(
+            "value",
+            "",
+            EpicsChannelRole.VALUE_AND_STATUS,
+            pv_attr="readpv",
+        ),
+        "write": EpicsChannelInfo(
+            "target",
+            "",
+            EpicsChannelRole.STATUS,
+            pv_attr="writepv",
+        ),
+        "target": EpicsChannelInfo(
+            "target",
+            "",
+            EpicsChannelRole.STATUS,
+            pv_attr="targetpv",
+            optional=True,
+        ),
     }
 
     def doRead(self, maxage=0):
-        return self._read_cached("readpv", maxage=maxage)
+        return self._read_channel_cached("read", maxage=maxage)
 
     def _compute_status(self, maxage=0):
         candidates = []
@@ -121,7 +148,7 @@ class EpicsAnalogMoveable(EpicsReadWriteBase, HasPrecision, HasLimits, Moveable)
         return self._cached_raw_target()
 
     def doStart(self, value):
-        self._epics.put_pv("writepv", value)
+        self._epics.put_channel_value("write", value)
 
 
 class EpicsDigitalMoveable(EpicsAnalogMoveable):
@@ -148,17 +175,36 @@ class EpicsStringMoveable(EpicsReadWriteBase, Moveable):
         "unit": Override(mandatory=False, settable=False, volatile=False),
     }
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
-        "writepv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
-        "targetpv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
+    _epics_channels = {
+        "read": EpicsChannelInfo(
+            "value",
+            "",
+            EpicsChannelRole.VALUE_AND_STATUS,
+            as_string=True,
+            pv_attr="readpv",
+        ),
+        "write": EpicsChannelInfo(
+            "target",
+            "",
+            EpicsChannelRole.VALUE,
+            as_string=True,
+            pv_attr="writepv",
+        ),
+        "target": EpicsChannelInfo(
+            "target",
+            "",
+            EpicsChannelRole.VALUE,
+            as_string=True,
+            pv_attr="targetpv",
+            optional=True,
+        ),
     }
 
     def doRead(self, maxage=0):
-        return self._read_cached("readpv", maxage=maxage)
+        return self._read_channel_cached("read", maxage=maxage)
 
     def doStart(self, value):
-        self._epics.put_pv("writepv", value)
+        self._epics.put_channel_value("write", value)
 
 
 class EpicsMappedReadable(EpicsMappedChoiceSupport, EpicsReadable, MappedReadable):
@@ -171,8 +217,14 @@ class EpicsMappedReadable(EpicsMappedChoiceSupport, EpicsReadable, MappedReadabl
         "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
+    _epics_channels = {
+        "read": EpicsChannelInfo(
+            "value",
+            "",
+            EpicsChannelRole.VALUE_AND_STATUS,
+            as_string=True,
+            pv_attr="readpv",
+        ),
     }
 
     def _after_subscribe(self, mode):
@@ -199,10 +251,29 @@ class EpicsMappedMoveable(EpicsMappedChoiceSupport, EpicsReadWriteBase, MappedMo
         "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH, as_string=True),
-        "writepv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
-        "targetpv": RecordInfo("target", "", RecordType.VALUE, as_string=True),
+    _epics_channels = {
+        "read": EpicsChannelInfo(
+            "value",
+            "",
+            EpicsChannelRole.VALUE_AND_STATUS,
+            as_string=True,
+            pv_attr="readpv",
+        ),
+        "write": EpicsChannelInfo(
+            "target",
+            "",
+            EpicsChannelRole.VALUE,
+            as_string=True,
+            pv_attr="writepv",
+        ),
+        "target": EpicsChannelInfo(
+            "target",
+            "",
+            EpicsChannelRole.VALUE,
+            as_string=True,
+            pv_attr="targetpv",
+            optional=True,
+        ),
     }
 
     def _after_subscribe(self, mode):
@@ -214,7 +285,7 @@ class EpicsMappedMoveable(EpicsMappedChoiceSupport, EpicsReadWriteBase, MappedMo
         return self._read_mapped_choice(maxage=maxage)
 
     def _startRaw(self, value):
-        self._epics.put_pv("writepv", value)
+        self._epics.put_channel_value("write", value)
 
 
 class EpicsManualMappedAnalogMoveable(
@@ -234,20 +305,36 @@ class EpicsManualMappedAnalogMoveable(
 
     valuetype = anytype
 
-    _record_fields = {
-        "readpv": RecordInfo("value", "", RecordType.BOTH),
-        "writepv": RecordInfo("target", "", RecordType.STATUS),
-        "targetpv": RecordInfo("target", "", RecordType.STATUS),
+    _epics_channels = {
+        "read": EpicsChannelInfo(
+            "value",
+            "",
+            EpicsChannelRole.VALUE_AND_STATUS,
+            pv_attr="readpv",
+        ),
+        "write": EpicsChannelInfo(
+            "target",
+            "",
+            EpicsChannelRole.STATUS,
+            pv_attr="writepv",
+        ),
+        "target": EpicsChannelInfo(
+            "target",
+            "",
+            EpicsChannelRole.STATUS,
+            pv_attr="targetpv",
+            optional=True,
+        ),
     }
 
     def _after_subscribe(self, mode):
         MappedMoveable.doInit(self, mode)
 
     def _readRaw(self, maxage=0):
-        return self._read_cached("readpv", maxage=maxage)
+        return self._read_channel_cached("read", maxage=maxage)
 
     def _startRaw(self, raw_value):
-        self._epics.put_pv("writepv", raw_value)
+        self._epics.put_channel_value("write", raw_value)
 
     def doStart(self, value):
         self._cache.put(

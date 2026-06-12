@@ -1,29 +1,17 @@
-import copy
-import time
-
-from nicos import session
 from nicos.core import (
-    POLLER,
-    SIMULATION,
-    Attach,
     Override,
     Param,
     Readable,
-    Waitable,
-    listof,
     status,
 )
-from nicos.devices.abstract import MappedMoveable, Moveable
 from nicos_ess.devices.epics.pva.epics_common import (
-    EpicsParameters,
-    RecordInfo,
-    RecordType,
-    create_wrapper,
-    get_from_cache_or,
+    EpicsChannelInfo,
+    EpicsChannelRole,
+    EpicsDeviceBase,
 )
 
 
-class MBBIDirectStatus(EpicsParameters, Readable):
+class MBBIDirectStatus(EpicsDeviceBase, Readable):
     """
     This device automatically handles EPICS MBBI direct records with named bits.
     """
@@ -50,101 +38,53 @@ class MBBIDirectStatus(EpicsParameters, Readable):
         "unit": Override(mandatory=False, settable=False, volatile=False),
     }
 
-    def doPreinit(self, mode):
-        self._bit_map = {}
-        self._alarm_state = {}
-        self._record_fields = {}
-        self._record_fields["communication"] = RecordInfo(
-            "value",
-            "",
-            RecordType.STATUS,
-        )
+    _default_pv_root_attr = "pv_root"
+    _primary_channel = "communication"
+
+    def _build_epics_channels(self):
+        channels = {
+            "communication": EpicsChannelInfo("", "", EpicsChannelRole.STATUS),
+        }
         for i in range(self.number_of_bits):
-            hex = f"{i:x}".upper()
-            self._record_fields[f"bit_value_{i}"] = RecordInfo(
-                "", f".B{hex}", RecordType.VALUE
+            hex_digit = f"{i:x}".upper()
+            channels[f"bit_value_{i}"] = EpicsChannelInfo(
+                "", f".B{hex_digit}", EpicsChannelRole.VALUE_AND_STATUS
             )
-            self._record_fields[f"bit_name_{i}"] = RecordInfo(
-                "", f"{self.bitname_prefix}{i}", RecordType.VALUE
+            channels[f"bit_name_{i}"] = EpicsChannelInfo(
+                "",
+                f"{self.bitname_prefix}{i}",
+                EpicsChannelRole.VALUE_AND_STATUS,
+                as_string=True,
             )
-            self._bit_map[f"bit_value_{i}"] = f"bit_name_{i}"
+        return channels
 
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode != SIMULATION:
-            # Check one of the PVs exists
-            self._epics_wrapper.connect_pv(self.pv_root)
+    def doPreinit(self, mode):
+        self._alarm_state = {}
+        EpicsDeviceBase.doPreinit(self, mode)
 
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            for k, v in self._record_fields.items():
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        f"{self.pv_root}{v.pv_suffix}",
-                        k,
-                        self._value_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
+    def _pvs_to_connect(self):
+        # Checking one PV is enough to see that the IOC is there.
+        return [self._epics.pv_name_for("communication")]
 
     def doRead(self, maxage=0):
         return ""
 
-    def doStatus(self, maxage=0):
-        return get_from_cache_or(self, "status", self._do_status)
-
-    def _do_status(self):
+    def _compute_status(self, maxage=0):
         in_alarm = []
         highest_severity = status.OK
-        for name in self._record_fields:
-            if name not in self._bit_map.keys():
-                continue
-
-            value = self._get_cached_value_or_ask(name)
+        for i in range(self.number_of_bits):
+            value = self._read_channel_cached(f"bit_value_{i}", maxage=maxage)
             if value == 0:
                 continue
 
-            bit_name = self._bit_map.get(name, None)
-            message = self._get_cached_value_or_ask(bit_name)
+            message = self._read_channel_cached(f"bit_name_{i}", maxage=maxage)
             highest_severity = severity = status.WARN
 
-            if self._alarm_state.get(name) != (severity, message):
-                self._write_alarm_to_log(name, severity, message)
+            if self._alarm_state.get(f"bit_value_{i}") != (severity, message):
+                self._write_alarm_to_log(f"bit_value_{i}", severity, message)
             in_alarm.append(f"{message} Alarm")
-            self._alarm_state[name] = (severity, message)
+            self._alarm_state[f"bit_value_{i}"] = (severity, message)
         return highest_severity, ", ".join(in_alarm)
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        time_stamp = time.time()
-        cache_key = param
-        self._cache.put(self._name, cache_key, value, time_stamp)
-        self._cache.put(self._name, "status", self._do_status(), time_stamp)
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        # Only check for one PV
-        if param != self._record_fields["communication"].cache_key:
-            return
-
-        if is_connected:
-            self.log.debug("%s connected!", name)
-            self._cache.put(self._name, "status", self._do_status(), time.time())
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
-
-    def _get_cached_value_or_ask(self, name):
-        def _get_pv_value(pv):
-            return self._epics_wrapper.get_pv_value(pv)
-
-        pv = f"{self.pv_root}{self._record_fields[name].pv_suffix}"
-        return get_from_cache_or(self, name, lambda: _get_pv_value(pv))
 
     def _write_alarm_to_log(self, name, severity, message):
         if severity in [status.ERROR, status.UNKNOWN]:

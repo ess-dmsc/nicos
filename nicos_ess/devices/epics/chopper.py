@@ -1,10 +1,6 @@
-import copy
 import time
 
-from nicos import session
 from nicos.core import (
-    POLLER,
-    SIMULATION,
     Attach,
     Override,
     Param,
@@ -16,10 +12,9 @@ from nicos.core import (
 )
 from nicos.devices.abstract import MappedMoveable, Moveable
 from nicos_ess.devices.epics.pva.epics_common import (
-    EpicsParameters,
-    RecordInfo,
-    RecordType,
-    create_wrapper,
+    EpicsChannelInfo,
+    EpicsChannelRole,
+    EpicsDeviceBase,
     get_from_cache_or,
 )
 from nicos_ess.devices.epics.pva.epics_devices import (
@@ -27,9 +22,13 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 )
 
 
-class ChopperAlarms(EpicsParameters, Readable):
+class ChopperAlarms(EpicsDeviceBase, Readable):
     """
     This device handles chopper alarms.
+
+    Every channel carries its information in the EPICS alarm fields, so the
+    value callback caches the (severity, message) pair per channel and the
+    combined status is the worst alarm across all channels.
     """
 
     parameters = {
@@ -41,60 +40,49 @@ class ChopperAlarms(EpicsParameters, Readable):
         "unit": Override(mandatory=False, settable=False),
     }
 
-    _alarm_state = {}
-    _record_fields = {
-        "communication": RecordInfo("value", "Comm_Alrm", RecordType.STATUS),
-        "hardware": RecordInfo("", "HW_Alrm", RecordType.STATUS),
-        "interlock": RecordInfo("", "IntLock_Alrm", RecordType.STATUS),
-        "level": RecordInfo("", "Lvl_Alrm", RecordType.STATUS),
-        "position": RecordInfo("", "Pos_Alrm", RecordType.STATUS),
-        "power": RecordInfo("", "Pwr_Alrm", RecordType.STATUS),
-        "reference": RecordInfo("", "Ref_Alrm", RecordType.STATUS),
-        "software": RecordInfo("", "SW_Alrm", RecordType.STATUS),
-        "voltage": RecordInfo("", "Volt_Alrm", RecordType.STATUS),
+    _default_pv_root_attr = "pv_root"
+    _primary_channel = "communication"
+    _epics_channels = {
+        "communication": EpicsChannelInfo("", "Comm_Alrm", EpicsChannelRole.STATUS),
+        "hardware": EpicsChannelInfo("", "HW_Alrm", EpicsChannelRole.STATUS),
+        "interlock": EpicsChannelInfo("", "IntLock_Alrm", EpicsChannelRole.STATUS),
+        "level": EpicsChannelInfo("", "Lvl_Alrm", EpicsChannelRole.STATUS),
+        "position": EpicsChannelInfo("", "Pos_Alrm", EpicsChannelRole.STATUS),
+        "power": EpicsChannelInfo("", "Pwr_Alrm", EpicsChannelRole.STATUS),
+        "reference": EpicsChannelInfo("", "Ref_Alrm", EpicsChannelRole.STATUS),
+        "software": EpicsChannelInfo("", "SW_Alrm", EpicsChannelRole.STATUS),
+        "voltage": EpicsChannelInfo("", "Volt_Alrm", EpicsChannelRole.STATUS),
     }
 
-    _epics_wrapper = None
-    _epics_subscriptions = []
-
     def doPreinit(self, mode):
-        self._record_fields = copy.deepcopy(self._record_fields)
-        self._alarm_state = {name: (status.OK, "") for name in self._record_fields}
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode == SIMULATION:
-            return
-        # Check one of the PVs exists
-        pv = f"{self.pv_root}{self._record_fields['communication'].pv_suffix}"
-        self._epics_wrapper.connect_pv(pv)
+        self._alarm_state = {name: (status.OK, "") for name in self._epics_channels}
+        EpicsDeviceBase.doPreinit(self, mode)
 
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            for k, v in self._record_fields.items():
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        f"{self.pv_root}{v.pv_suffix}",
-                        k,
-                        self._status_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
+    def _pvs_to_connect(self):
+        # Checking one PV is enough to see that the IOC is there.
+        return [self._epics.pv_name_for("communication")]
 
     def doRead(self, maxage=0):
         return ""
 
-    def doStatus(self, maxage=0):
-        return get_from_cache_or(self, "status", self._do_status)
+    def _value_change_callback(
+        self, pv_name, channel, value, units, limits, severity, message, **kwargs
+    ):
+        ts = time.time()
+        self._cache.put(
+            self._name, self._epics.cache_key_for(channel), (severity, message), ts
+        )
+        self._refresh_status(ts)
 
-    def _do_status(self):
+    def _compute_status(self, maxage=0):
         """
         Goes through all alarms in the chopper and returns the alarm encountered
         with the highest severity. All alarms are printed in the session log.
         """
         in_alarm = []
         highest_severity = status.OK
-        for name in self._record_fields:
-            severity, message = self._get_cached_status_or_ask(name)
+        for name in self._epics_channels:
+            severity, message = self._read_channel_alarm_cached(name, maxage)
             if severity != status.OK:
                 if self._alarm_state[name] != (severity, message):
                     # Only log once
@@ -107,36 +95,13 @@ class ChopperAlarms(EpicsParameters, Readable):
             self._alarm_state[name] = (severity, message)
         return highest_severity, ", ".join(in_alarm)
 
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        time_stamp = time.time()
-        cache_key = param
-        self._cache.put(self._name, cache_key, (severity, message), time_stamp)
-        self._cache.put(self._name, "status", self._do_status(), time_stamp)
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        # Only check for one PV
-        if param != self._record_fields["communication"].cache_key:
-            return
-
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
-
-    def _get_cached_status_or_ask(self, name):
-        def _get_status_values(pv):
-            return self._epics_wrapper.get_alarm_status(pv)
-
-        pv = f"{self.pv_root}{self._record_fields[name].pv_suffix}"
-        return get_from_cache_or(self, name, lambda: _get_status_values(pv))
+    def _read_channel_alarm_cached(self, channel, maxage=None):
+        return get_from_cache_or(
+            self,
+            self._epics.cache_key_for(channel),
+            lambda: self._epics.get_channel_alarm(channel),
+            maxage=maxage,
+        )
 
     def _write_alarm_to_log(self, name, severity, message):
         if severity in [status.ERROR, status.UNKNOWN]:
@@ -228,7 +193,7 @@ class EssChopperController(MappedMoveable):
         return self._attached_command.mapping
 
 
-class OdinChopperController(EpicsParameters, MappedMoveable):
+class OdinChopperController(EpicsDeviceBase, MappedMoveable):
     """Handles the status and hardware control for an ESS ODIN chopper system"""
 
     parameters = {
@@ -266,127 +231,44 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         "speed": Attach("Speed PV of the chopper", EpicsManualMappedAnalogMoveable),
     }
 
-    hardware_access = True
     valuetype = str
 
-    def doPreinit(self, mode):
-        self._record_fields = {
-            "state": RecordInfo("value", "ChopState_R", RecordType.STATUS),
-            "stop": RecordInfo("", "C_Brake", RecordType.VALUE),
-            "start": RecordInfo("", "C_RotateSync", RecordType.VALUE),
-            "a_start": RecordInfo("", "C_RotateAsync", RecordType.VALUE),
-            "park": RecordInfo("", "C_Park", RecordType.VALUE),
-        }
+    _default_pv_root_attr = "pv_root"
+    _primary_channel = "state"
+    _epics_channels = {
+        "state": EpicsChannelInfo(
+            "value", "ChopState_R", EpicsChannelRole.VALUE_AND_STATUS, as_string=True
+        ),
+        "stop": EpicsChannelInfo(
+            "", "C_Brake", EpicsChannelRole.VALUE, subscribe=False
+        ),
+        "start": EpicsChannelInfo(
+            "", "C_RotateSync", EpicsChannelRole.VALUE, subscribe=False
+        ),
+        "a_start": EpicsChannelInfo(
+            "", "C_RotateAsync", EpicsChannelRole.VALUE, subscribe=False
+        ),
+        "park": EpicsChannelInfo("", "C_Park", EpicsChannelRole.VALUE, subscribe=False),
+    }
 
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode != SIMULATION:
-            self._epics_wrapper.connect_pv(f"{self.pv_root}ChopState_R")
-
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            for k, v in self._record_fields.items():
-                if v.record_type in [RecordType.VALUE, RecordType.BOTH]:
-                    self._epics_subscriptions.append(
-                        self._epics_wrapper.subscribe(
-                            f"{self.pv_root}{v.pv_suffix}",
-                            k,
-                            self._value_change_callback,
-                            self._connection_change_callback,
-                        )
-                    )
-                if v.record_type in [RecordType.STATUS, RecordType.BOTH]:
-                    self._epics_subscriptions.append(
-                        self._epics_wrapper.subscribe(
-                            f"{self.pv_root}{v.pv_suffix}",
-                            k,
-                            self._status_change_callback,
-                            self._connection_change_callback,
-                        )
-                    )
+    def _after_subscribe(self, mode):
         MappedMoveable.doInit(self, mode)
 
     def doRead(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["state"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(
-                f"{self.pv_root}ChopState_R", as_string=True
-            ),
-        )
+        return self._read_channel_cached("state", maxage=maxage)
 
     def doStart(self, target):
         target = target.lower()
         if target == "stop":
-            pv = f"{self.pv_root}{self._record_fields['stop'].pv_suffix}"
-            self._epics_wrapper.put_pv_value(pv, 1)
+            self._epics.put_channel_value("stop", 1)
             # Set the speed to zero to keep EPICS behaviour consistent.
             speed_key = self._attached_speed._inverse_mapping.get(0, None)
             if speed_key is not None:
                 self._attached_speed.move(speed_key)
-        elif target == "start":
-            pv = f"{self.pv_root}{self._record_fields['start'].pv_suffix}"
-            self._epics_wrapper.put_pv_value(pv, 1)
-        elif target == "a_start":
-            pv = f"{self.pv_root}{self._record_fields['a_start'].pv_suffix}"
-            self._epics_wrapper.put_pv_value(pv, 1)
-        elif target == "park":
-            pv = f"{self.pv_root}{self._record_fields['park'].pv_suffix}"
-            self._epics_wrapper.put_pv_value(pv, 1)
+        elif target in ("start", "a_start", "park"):
+            self._epics.put_channel_value(target, 1)
         else:
             raise ValueError(f"Unknown command '{target}' for ODIN chopper")
-
-    def doStatus(self, maxage=0):
-        def _func():
-            try:
-                severity, msg = self._epics_wrapper.get_alarm_status(
-                    f"{self.pv_root}ChopState_R"
-                )
-            except TimeoutError:
-                return status.ERROR, "timeout reading status"
-            if severity in [status.ERROR, status.WARN]:
-                return severity, msg
-            return status.OK, msg
-
-        return get_from_cache_or(self, "status", _func)
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != f"{self.pv_root}{self._record_fields['state'].pv_suffix}":
-            # Unexpected updates ignored
-            return
-
-        time_stamp = time.time()
-        self._cache.put(
-            self._name,
-            param,
-            self._inverse_mapping.get(value, value),
-            time_stamp,
-        )
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != f"{self.pv_root}{self._record_fields['state'].pv_suffix}":
-            # Unexpected updates ignored
-            return
-        self._cache.put(self._name, "status", (severity, message), time.time())
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if param != self._record_fields["state"].cache_key:
-            return
-
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
 
     def doStop(self):
         # Ignore - stopping the chopper is done via the move command.
@@ -398,122 +280,20 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         pass
 
 
-class NmxChopperAlarms(EpicsParameters, Readable):
-    """
-    This device handles chopper alarms.
-    """
+class NmxChopperAlarms(ChopperAlarms):
+    """Chopper alarms for NMX, which uses different alarm PV suffixes."""
 
-    parameters = {
-        "pv_root": Param(
-            "PV root for device", type=str, mandatory=True, userparam=False
-        ),
+    _epics_channels = {
+        "communication": EpicsChannelInfo("", "Comm_Alrms", EpicsChannelRole.STATUS),
+        "hardware": EpicsChannelInfo("", "HW_Alrms", EpicsChannelRole.STATUS),
+        "interlock": EpicsChannelInfo("", "IntLock_Alrms", EpicsChannelRole.STATUS),
+        "level": EpicsChannelInfo("", "Lvl_Alrm", EpicsChannelRole.STATUS),
+        "position": EpicsChannelInfo("", "Pos_Alrms", EpicsChannelRole.STATUS),
+        "power": EpicsChannelInfo("", "Pwr_Alrms", EpicsChannelRole.STATUS),
+        "reference": EpicsChannelInfo("", "Comm_Ref_Warn", EpicsChannelRole.STATUS),
+        "software": EpicsChannelInfo("", "SW_Alrms", EpicsChannelRole.STATUS),
+        "voltage": EpicsChannelInfo("", "Volt_Alrms", EpicsChannelRole.STATUS),
     }
-    parameter_overrides = {
-        "unit": Override(mandatory=False, settable=False, volatile=False),
-    }
-
-    _alarm_state = {}
-    _record_fields = {
-        "communication": RecordInfo("value", "Comm_Alrms", RecordType.STATUS),
-        "hardware": RecordInfo("", "HW_Alrms", RecordType.STATUS),
-        "interlock": RecordInfo("", "IntLock_Alrms", RecordType.STATUS),
-        "level": RecordInfo("", "Lvl_Alrm", RecordType.STATUS),
-        "position": RecordInfo("", "Pos_Alrms", RecordType.STATUS),
-        "power": RecordInfo("", "Pwr_Alrms", RecordType.STATUS),
-        "reference": RecordInfo("", "Comm_Ref_Warn", RecordType.STATUS),
-        "software": RecordInfo("", "SW_Alrms", RecordType.STATUS),
-        "voltage": RecordInfo("", "Volt_Alrms", RecordType.STATUS),
-    }
-
-    _epics_wrapper = None
-    _epics_subscriptions = []
-
-    def doPreinit(self, mode):
-        self._record_fields = copy.deepcopy(self._record_fields)
-        self._alarm_state = {name: (status.OK, "") for name in self._record_fields}
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        if mode == SIMULATION:
-            return
-        # Check one of the PVs exists
-        pv = f"{self.pv_root}{self._record_fields['communication'].pv_suffix}"
-        self._epics_wrapper.connect_pv(pv)
-
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            for k, v in self._record_fields.items():
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        f"{self.pv_root}{v.pv_suffix}",
-                        k,
-                        self._status_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
-
-    def doRead(self, maxage=0):
-        return ""
-
-    def doStatus(self, maxage=0):
-        return get_from_cache_or(self, "status", self._do_status)
-
-    def _do_status(self):
-        """
-        Goes through all alarms in the chopper and returns the alarm encountered
-        with the highest severity. All alarms are printed in the session log.
-        """
-        in_alarm = []
-        highest_severity = status.OK
-        for name in self._record_fields:
-            severity, message = self._get_cached_status_or_ask(name)
-            if severity != status.OK:
-                if self._alarm_state[name] != (severity, message):
-                    # Only log once
-                    self._write_alarm_to_log(name, severity, message)
-                if severity > highest_severity:
-                    highest_severity = severity
-                    in_alarm = [f"{name} alarm"]
-                elif severity == highest_severity:
-                    in_alarm.append(f"{name} alarm")
-            self._alarm_state[name] = (severity, message)
-        return highest_severity, ", ".join(in_alarm)
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        time_stamp = time.time()
-        cache_key = param
-        self._cache.put(self._name, cache_key, (severity, message), time_stamp)
-        self._cache.put(self._name, "status", self._do_status(), time_stamp)
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        # Only check for one PV
-        if param != self._record_fields["communication"].cache_key:
-            return
-
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
-
-    def _get_cached_status_or_ask(self, name):
-        def _get_status_values(pv):
-            return self._epics_wrapper.get_alarm_status(pv)
-
-        pv = f"{self.pv_root}{self._record_fields[name].pv_suffix}"
-        return get_from_cache_or(self, name, lambda: _get_status_values(pv))
-
-    def _write_alarm_to_log(self, name, severity, message):
-        if severity in [status.ERROR, status.UNKNOWN]:
-            self.log.error("%s (%s)", name, message)
-        elif severity == status.WARN:
-            self.log.warning("%s (%s)", name, message)
 
 
 class NmxChopperController(MappedMoveable):

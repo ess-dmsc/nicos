@@ -25,7 +25,7 @@
 """Unit tests for the EPICS component and the device glue, without a NICOS
 session or harness.
 
-``EpicsRecordComponent`` is pure mechanism and is tested with just a fake
+``EpicsChannelComponent`` is pure mechanism and is tested with just a fake
 wrapper. The ``EpicsDeviceBase`` cache/status glue is tested by borrowing
 its methods onto a duck-typed probe object. Neither covers the daemon/poller
 cache-key contract -- that stays with the harness tests.
@@ -33,13 +33,15 @@ cache-key contract -- that stays with the harness tests.
 
 from dataclasses import FrozenInstanceError
 
-from nicos.core import status
+import pytest
+
+from nicos.core import ConfigurationError, status
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsDeviceBase,
-    EpicsRecordComponent,
-    RecordInfo,
-    RecordType,
-    resolve_pv_names,
+    EpicsChannelComponent,
+    EpicsChannelInfo,
+    EpicsChannelRole,
+    resolve_channel_pv_names,
 )
 from nicos_ess.devices.epics.pva.epics_multisource import (
     EpicsMultiSourceBase,
@@ -70,12 +72,12 @@ class StubLog:
         self._record("error", msg, *args)
 
 
-RECORD_FIELDS = {
-    "value": RecordInfo("value", ".RBV", RecordType.BOTH),
-    "target": RecordInfo("target", ".VAL", RecordType.VALUE),
-    "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
-    "speed": RecordInfo("", ".VELO", RecordType.VALUE),
-    "label": RecordInfo("", ".DESC", RecordType.VALUE, as_string=True),
+EPICS_CHANNELS = {
+    "value": EpicsChannelInfo("value", ".RBV", EpicsChannelRole.VALUE_AND_STATUS),
+    "target": EpicsChannelInfo("target", ".VAL", EpicsChannelRole.VALUE),
+    "moving": EpicsChannelInfo("", ".MOVN", EpicsChannelRole.STATUS),
+    "speed": EpicsChannelInfo("", ".VELO", EpicsChannelRole.VALUE),
+    "label": EpicsChannelInfo("", ".DESC", EpicsChannelRole.VALUE, as_string=True),
 }
 
 PV_NAMES = {
@@ -87,67 +89,89 @@ PV_NAMES = {
 }
 
 
-class TestRecordInfo:
+class TestEpicsChannelInfo:
     def test_defaults_and_frozen_fields(self):
-        info = RecordInfo("value", ".RBV", RecordType.BOTH)
+        info = EpicsChannelInfo("value", ".RBV", EpicsChannelRole.VALUE_AND_STATUS)
         assert info.as_string is False
-        assert info.root_attr is None
-        assert info.monitor is True
+        assert info.pv_root_attr is None
+        assert info.pv_attr is None
+        assert info.subscribe is True
 
         try:
             info.cache_key = "other"
         except FrozenInstanceError:
             pass
         else:
-            raise AssertionError("RecordInfo must be immutable")
+            raise AssertionError("EpicsChannelInfo must be immutable")
 
 
-def make_component(record_fields=None, pv_names=None):
+def make_component(epics_channels=None, pv_names_by_channel=None):
     backend = FakeEpicsBackend()
-    component = EpicsRecordComponent(
-        RECORD_FIELDS if record_fields is None else record_fields,
-        PV_NAMES if pv_names is None else pv_names,
+    component = EpicsChannelComponent(
+        EPICS_CHANNELS if epics_channels is None else epics_channels,
+        PV_NAMES if pv_names_by_channel is None else pv_names_by_channel,
         wrapper=backend,
     )
     return component, backend
 
 
 class TestPvResolution:
-    def test_pv_name_is_a_lookup(self):
+    def test_pv_name_for_is_a_lookup(self):
         component, _ = make_component()
-        assert component.pv_name("value") == "SIM:M1.RBV"
-        assert component.pv_name("unknown_field") is None
+        assert component.pv_name_for("value") == "SIM:M1.RBV"
+        assert component.pv_name_for("unknown_channel") is None
 
-    def test_resolve_pv_names_supports_mixed_roots(self):
+    def test_resolve_channel_pv_names_supports_mixed_roots(self):
         class Device:
             detectorpv = "DET:"
             imagepv = "IMG:"
             vacpv = "VAC:PRESS"
-            direct = "DIRECT:PV"
+            directpv = "DIRECT:PV"
 
-        fields = {
-            "state": RecordInfo("", "State", RecordType.STATUS),
-            "image": RecordInfo("", "ArrayData", RecordType.VALUE, root_attr="imagepv"),
-            "vacuum": RecordInfo("", "", RecordType.STATUS, root_attr="vacpv"),
-            "direct": RecordInfo("", "", RecordType.VALUE, root_attr=""),
+        channels = {
+            "state": EpicsChannelInfo("", "State", EpicsChannelRole.STATUS),
+            "image": EpicsChannelInfo(
+                "", "ArrayData", EpicsChannelRole.VALUE, pv_root_attr="imagepv"
+            ),
+            "vacuum": EpicsChannelInfo(
+                "", "", EpicsChannelRole.STATUS, pv_root_attr="vacpv"
+            ),
+            "direct": EpicsChannelInfo(
+                "", "", EpicsChannelRole.VALUE, pv_attr="directpv"
+            ),
+            "unset_optional": EpicsChannelInfo(
+                "", "", EpicsChannelRole.VALUE, pv_attr="missingpv", optional=True
+            ),
         }
 
-        assert resolve_pv_names(Device(), fields, "detectorpv") == {
+        assert resolve_channel_pv_names(Device(), channels, "detectorpv") == {
             "state": "DET:State",
             "image": "IMG:ArrayData",
             "vacuum": "VAC:PRESS",
             "direct": "DIRECT:PV",
+            "unset_optional": None,
         }
 
-    def test_resolve_cache_key_prefers_record_info(self):
+    def test_resolve_channel_pv_names_rejects_unresolved_required_channel(self):
+        class Device:
+            name = "probe"
+
+        channels = {
+            "value": EpicsChannelInfo("", ".RBV", EpicsChannelRole.VALUE),
+        }
+
+        with pytest.raises(ConfigurationError):
+            resolve_channel_pv_names(Device(), channels, "motorpv")
+
+    def test_cache_key_for_prefers_channel_info(self):
         component, _ = make_component()
-        assert component.resolve_cache_key("value") == "value"
-        assert component.resolve_cache_key("moving") == "moving"
-        assert component.resolve_cache_key("not_a_field") == "not_a_field"
+        assert component.cache_key_for("value") == "value"
+        assert component.cache_key_for("moving") == "moving"
+        assert component.cache_key_for("not_a_channel") == "not_a_channel"
 
     def test_pvs_to_connect_skips_missing_and_deduplicates(self):
-        pv_names = dict(PV_NAMES, label=None, speed="SIM:M1.RBV")
-        component, _ = make_component(pv_names=pv_names)
+        pv_names_by_channel = dict(PV_NAMES, label=None, speed="SIM:M1.RBV")
+        component, _ = make_component(pv_names_by_channel=pv_names_by_channel)
         pvs = component.pvs_to_connect()
         assert pvs.count("SIM:M1.RBV") == 1
         assert None not in pvs
@@ -173,57 +197,63 @@ class TestSubscriptions:
     def callback(self, *args, **kwargs):
         pass
 
-    def test_subscribe_fields_subscribes_each_field(self):
+    def test_subscribe_channels_subscribes_each_channel(self):
         component, backend = make_component()
         component.connect()
-        component.subscribe_fields(self.callback)
+        component.subscribe_channels(self.callback)
         subscribed = {pv for pv, *_ in backend.subscriptions}
         assert subscribed == set(PV_NAMES.values())
 
-    def test_subscribe_fields_skips_unmonitored_fields(self):
-        fields = dict(
-            RECORD_FIELDS,
-            speed=RecordInfo("", ".VELO", RecordType.VALUE, monitor=False),
+    def test_subscribe_channels_skips_unsubscribed_channels(self):
+        channels = dict(
+            EPICS_CHANNELS,
+            speed=EpicsChannelInfo(
+                "", ".VELO", EpicsChannelRole.VALUE, subscribe=False
+            ),
         )
-        component, backend = make_component(record_fields=fields)
+        component, backend = make_component(epics_channels=channels)
         component.connect()
-        component.subscribe_fields(self.callback)
+        component.subscribe_channels(self.callback)
         subscribed = {pv for pv, *_ in backend.subscriptions}
         assert "SIM:M1.VELO" not in subscribed
 
-    def test_unmonitored_field_still_connects_and_reads_on_demand(self):
-        fields = dict(
-            RECORD_FIELDS,
-            speed=RecordInfo("", ".VELO", RecordType.VALUE, monitor=False),
+    def test_unsubscribed_channel_still_connects_and_reads_on_demand(self):
+        channels = dict(
+            EPICS_CHANNELS,
+            speed=EpicsChannelInfo(
+                "", ".VELO", EpicsChannelRole.VALUE, subscribe=False
+            ),
         )
-        component, backend = make_component(record_fields=fields)
+        component, backend = make_component(epics_channels=channels)
         backend.values["SIM:M1.VELO"] = 7.5
 
         component.connect()
-        component.subscribe_fields(self.callback)
+        component.subscribe_channels(self.callback)
 
         subscribed = {pv for pv, *_ in backend.subscriptions}
         assert "SIM:M1.VELO" in backend.connect_calls
         assert "SIM:M1.VELO" not in subscribed
-        assert component.get_pv("speed") == 7.5
+        assert component.get_channel_value("speed") == 7.5
 
-    def test_subscribe_field_honours_as_string_from_record_info(self):
+    def test_subscribe_channel_honours_as_string_from_channel_info(self):
         component, backend = make_component()
         component.connect()
-        component.subscribe_field("label", self.callback)
+        component.subscribe_channel("label", self.callback)
         ((_, _, _, _, as_string),) = backend.subscriptions
         assert as_string is True
 
-    def test_subscribe_field_without_pv_is_a_noop(self):
-        component, backend = make_component(pv_names=dict(PV_NAMES, label=None))
+    def test_subscribe_channel_without_pv_is_a_noop(self):
+        component, backend = make_component(
+            pv_names_by_channel=dict(PV_NAMES, label=None)
+        )
         component.connect()
-        assert component.subscribe_field("label", self.callback) is None
+        assert component.subscribe_channel("label", self.callback) is None
         assert backend.subscriptions == []
 
     def test_shutdown_closes_every_subscription(self):
         component, backend = make_component()
         component.connect()
-        component.subscribe_fields(self.callback)
+        component.subscribe_channels(self.callback)
         assert len(backend.subscriptions) == len(PV_NAMES)
         component.shutdown()
         assert backend.subscriptions == []
@@ -231,16 +261,16 @@ class TestSubscriptions:
 
 
 class TestReadsAndWrites:
-    def test_get_pv_uses_as_string_from_record_info(self):
+    def test_get_channel_value_uses_as_string_from_channel_info(self):
         component, backend = make_component()
         component.connect()
         backend.values["SIM:M1.DESC"] = b"motor"
-        assert component.get_pv("label") == "motor"
+        assert component.get_channel_value("label") == "motor"
 
-    def test_put_pv_writes_the_resolved_pv(self):
+    def test_put_channel_value_writes_the_resolved_pv(self):
         component, backend = make_component()
         component.connect()
-        component.put_pv("target", 42.0)
+        component.put_channel_value("target", 42.0)
         assert backend.values["SIM:M1.VAL"] == 42.0
 
 
@@ -312,17 +342,17 @@ class GlueProbe:
     _value_change_callback = EpicsDeviceBase._value_change_callback
     _connection_change_callback = EpicsDeviceBase._connection_change_callback
     _refresh_status = EpicsDeviceBase._refresh_status
-    _read_cached = EpicsDeviceBase._read_cached
+    _read_channel_cached = EpicsDeviceBase._read_channel_cached
     _read_primary_alarm = EpicsDeviceBase._read_primary_alarm
     doStatus = EpicsDeviceBase.doStatus
 
-    _primary_field = "value"
+    _primary_channel = "value"
     monitor = True
 
     def __init__(self, compute_status=None):
         self._epics, self.backend = make_component()
         self._epics.connect()
-        self._record_fields = self._epics.record_fields
+        self._epics_channels = self._epics.epics_channels
         self._name = "probe"
         self._cache = CacheStub()
         self.log = StubLog()
@@ -340,7 +370,7 @@ class TestDeviceGlue:
         )
         assert probe._cache.data["target"] == 42.0
 
-    def test_primary_field_also_caches_unit_and_alarm(self):
+    def test_primary_channel_also_caches_unit_and_alarm(self):
         probe = GlueProbe()
         probe._value_change_callback(
             "SIM:M1.RBV", "value", 1.0, "mm", None, status.WARN, "hot"
@@ -349,7 +379,7 @@ class TestDeviceGlue:
         assert probe._cache.data["unit"] == "mm"
         assert probe._cache.data["value_status"] == (status.WARN, "hot")
 
-    def test_status_field_triggers_status_recompute(self):
+    def test_status_channel_triggers_status_recompute(self):
         calls = []
 
         def compute(maxage=0):
@@ -363,9 +393,9 @@ class TestDeviceGlue:
         assert calls == [None]
         assert probe._cache.data["status"] == (status.BUSY, "moving")
 
-    def test_value_only_field_does_not_recompute_status(self):
+    def test_value_only_channel_does_not_recompute_status(self):
         def compute(maxage=0):
-            raise AssertionError("status must not be recomputed for VALUE fields")
+            raise AssertionError("status must not be recomputed for VALUE channels")
 
         probe = GlueProbe(compute_status=compute)
         probe._value_change_callback(
@@ -391,20 +421,20 @@ class TestDeviceGlue:
     def test_read_cached_prefers_cache(self):
         probe = GlueProbe()
         probe._cache.data["value"] = 5.5
-        assert probe._read_cached("value") == 5.5
+        assert probe._read_channel_cached("value") == 5.5
         assert probe.backend.get_calls == []
 
     def test_read_cached_falls_back_to_epics(self):
         probe = GlueProbe()
         probe.backend.values["SIM:M1.RBV"] = 3.25
-        assert probe._read_cached("value") == 3.25
+        assert probe._read_channel_cached("value") == 3.25
         assert probe.backend.get_calls
 
     def test_read_cached_maxage_zero_always_asks(self):
         probe = GlueProbe()
         probe._cache.data["value"] = 5.5
         probe.backend.values["SIM:M1.RBV"] = 3.25
-        assert probe._read_cached("value", maxage=0) == 3.25
+        assert probe._read_channel_cached("value", maxage=0) == 3.25
 
     def test_status_reads_cache_unless_freshness_is_forced(self):
         probe = GlueProbe()
@@ -422,10 +452,10 @@ class TestDeviceGlue:
         )
 
 
-MULTI_FIELDS = {
-    "voltage": RecordInfo("vmon", "-VMon", RecordType.VALUE),
-    "power": RecordInfo("power", "-Pw", RecordType.VALUE),
-    "status_on": RecordInfo("", "-Status-ON", RecordType.STATUS),
+MULTI_CHANNELS = {
+    "voltage": EpicsChannelInfo("vmon", "-VMon", EpicsChannelRole.VALUE),
+    "power": EpicsChannelInfo("power", "-Pw", EpicsChannelRole.VALUE),
+    "status_on": EpicsChannelInfo("", "-Status-ON", EpicsChannelRole.STATUS),
 }
 
 SOURCES = {
@@ -436,7 +466,7 @@ SOURCES = {
 
 def make_multi_component():
     backend = FakeEpicsBackend()
-    component = EpicsMultiSourceComponent(MULTI_FIELDS, SOURCES, wrapper=backend)
+    component = EpicsMultiSourceComponent(MULTI_CHANNELS, SOURCES, wrapper=backend)
     return component, backend
 
 
@@ -451,7 +481,7 @@ class MultiGlueProbe:
 
     monitor = True
     sources = SOURCES
-    _record_fields = MULTI_FIELDS
+    _epics_channels = MULTI_CHANNELS
     _source_connection_cache_key = EpicsMultiSourceBase._source_connection_cache_key
 
     def __init__(self):
@@ -470,36 +500,36 @@ class TestMultiSource:
         assert component.source_key("ch0", "voltage") == "ch0/vmon"
         assert component.source_key("ch1", "status_on") == "ch1/status_on"
 
-    def test_field_keys_are_visible_for_device_stale_guard(self):
+    def test_channel_keys_are_visible_for_device_stale_guard(self):
         component, _ = make_multi_component()
-        assert set(component.pv_names) == set(MULTI_FIELDS)
+        assert set(component.pv_names_by_channel) == set(MULTI_CHANNELS)
 
     def test_pvs_to_connect_is_the_cross_product(self):
         component, _ = make_multi_component()
         pvs = component.pvs_to_connect()
-        assert len(pvs) == len(SOURCES) * len(MULTI_FIELDS)
+        assert len(pvs) == len(SOURCES) * len(MULTI_CHANNELS)
         assert "SIM:HVM-0:Ch0-Pw" in pvs
         assert "SIM:HVM-0:Ch1-Status-ON" in pvs
 
-    def test_subscribe_fields_passes_source_and_field_as_param(self):
+    def test_subscribe_channels_passes_source_and_channel_as_param(self):
         component, backend = make_multi_component()
         component.connect()
-        component.subscribe_fields(lambda *a, **k: None)
+        component.subscribe_channels(lambda *a, **k: None)
         params = {param for _, param, *_ in backend.subscriptions}
         assert ("ch0", "voltage") in params
         assert ("ch1", "status_on") in params
-        assert len(params) == len(SOURCES) * len(MULTI_FIELDS)
+        assert len(params) == len(SOURCES) * len(MULTI_CHANNELS)
 
-    def test_get_source_pv_reads_the_source_pv(self):
+    def test_get_source_value_reads_the_source_pv(self):
         component, backend = make_multi_component()
         component.connect()
         backend.values["SIM:HVM-0:Ch1-VMon"] = 999.0
-        assert component.get_source_pv("ch1", "voltage") == 999.0
+        assert component.get_source_value("ch1", "voltage") == 999.0
 
-    def test_put_source_writes_the_source_pv(self):
+    def test_put_source_value_writes_the_source_pv(self):
         component, backend = make_multi_component()
         component.connect()
-        component.put_source("ch1", "power", 1)
+        component.put_source_value("ch1", "power", 1)
         assert backend.values["SIM:HVM-0:Ch1-Pw"] == 1
 
     def test_connection_loss_is_part_of_worst_case_status(self):

@@ -31,8 +31,8 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 )
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsParameters,
-    PvReadOrWrite,
-    RecordType,
+    MappedChoiceSource,
+    EpicsChannelRole,
     _update_mapped_choices,
     get_from_cache_or,
 )
@@ -50,10 +50,10 @@ class TestHelpers:
                 return default
             return self.value
 
-    def test_record_type_enum_values_are_stable(self):
-        assert RecordType.VALUE.value == 1
-        assert RecordType.STATUS.value == 2
-        assert RecordType.BOTH.value == 3
+    def test_channel_role_enum_values_are_stable(self):
+        assert EpicsChannelRole.VALUE.value == 1
+        assert EpicsChannelRole.STATUS.value == 2
+        assert EpicsChannelRole.VALUE_AND_STATUS.value == 3
 
     def test_get_from_cache_or_prefers_cache_when_monitor_enabled(self):
         called = {"count": 0}
@@ -153,7 +153,7 @@ class TestHelpers:
 
     @pytest.mark.parametrize(
         "selector,expected_pv",
-        [(PvReadOrWrite.readpv, "PV:READ"), (PvReadOrWrite.writepv, "PV:WRITE")],
+        [(MappedChoiceSource.READ, "PV:READ"), (MappedChoiceSource.WRITE, "PV:WRITE")],
     )
     def test_update_mapped_choices_builds_mapping_and_inverse(
         self, fake_backend, selector, expected_pv
@@ -167,10 +167,13 @@ class TestHelpers:
             fallback=None,
         )
 
-        def get_value_choices(field):
-            return fake_backend.get_value_choices(getattr(mapped_device, field))
+        def get_channel_value_choices(channel):
+            pv = {"read": mapped_device.readpv, "write": mapped_device.writepv}
+            return fake_backend.get_value_choices(pv[channel])
 
-        mapped_device._epics = SimpleNamespace(get_value_choices=get_value_choices)
+        mapped_device._epics = SimpleNamespace(
+            get_channel_value_choices=get_channel_value_choices
+        )
 
         def set_ro_param(name, value):
             setattr(mapped_device, name, value)

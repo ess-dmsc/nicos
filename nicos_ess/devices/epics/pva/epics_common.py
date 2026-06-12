@@ -26,25 +26,29 @@ from nicos_ess.devices.mixins import HasNexusConfig
 DEFAULT_EPICS_PROTOCOL = os.environ.get("DEFAULT_EPICS_PROTOCOL", "pva")
 
 
-class RecordType(Enum):
-    """Whether a field feeds the device value, its status, or both.
+class EpicsChannelRole(Enum):
+    """Whether a channel feeds the device value, its status, or both.
 
-    STATUS/BOTH fields trigger a status recompute when their monitor fires.
+    STATUS/VALUE_AND_STATUS channels trigger a status recompute on updates.
     """
 
     VALUE = 1
     STATUS = 2
-    BOTH = 3
+    VALUE_AND_STATUS = 3
 
 
 @dataclass(frozen=True)
-class RecordInfo:
+class EpicsChannelInfo:
     cache_key: str
     pv_suffix: str
-    record_type: RecordType
+    role: EpicsChannelRole
     as_string: bool = False
-    root_attr: Optional[str] = None
-    monitor: bool = True
+    pv_root_attr: Optional[str] = None
+    pv_attr: Optional[str] = None
+    subscribe: bool = True
+    # Optional channels may resolve to no PV (e.g. a none_or(pvname)
+    # parameter left unset); they are skipped by connect/subscribe.
+    optional: bool = False
 
 
 class EpicsParameters(HasNexusConfig):
@@ -92,16 +96,28 @@ def get_from_cache_or(device, cache_key, func, maxage=None):
     return func()
 
 
-def resolve_pv_names(device, record_fields, root_attr=None):
-    """Resolve each field to a full PV name."""
+def resolve_channel_pv_names(device, epics_channels, default_pv_root_attr=None):
+    """Resolve each logical channel to a full PV name.
+
+    A channel that resolves to no PV is a configuration error unless it is
+    marked ``optional``; optional channels resolve to None.
+    """
     names = {}
-    for field, info in record_fields.items():
-        field_root_attr = root_attr if info.root_attr is None else info.root_attr
-        if field_root_attr:
-            root = getattr(device, field_root_attr, None)
-            names[field] = None if root is None else f"{root}{info.pv_suffix}"
+    for channel, info in epics_channels.items():
+        if info.pv_attr:
+            names[channel] = getattr(device, info.pv_attr, None)
         else:
-            names[field] = getattr(device, field, None)
+            pv_root_attr = (
+                default_pv_root_attr if info.pv_root_attr is None else info.pv_root_attr
+            )
+            root = getattr(device, pv_root_attr, None) if pv_root_attr else None
+            names[channel] = None if root is None else f"{root}{info.pv_suffix}"
+        if names[channel] is None and not info.optional:
+            raise ConfigurationError(
+                device,
+                f"EPICS channel {channel!r} resolved to no PV; set its "
+                "pv_attr/pv_root_attr or mark it optional=True",
+            )
     return names
 
 
@@ -120,24 +136,26 @@ def status_from_candidates(base_alarm, candidates):
     return status.OK, msg
 
 
-class PvReadOrWrite(str, Enum):
-    readpv = "readpv"
-    writepv = "writepv"
+class MappedChoiceSource(str, Enum):
+    READ = "read"
+    WRITE = "write"
 
 
-def _update_mapped_choices(mapped_device, pv=PvReadOrWrite.readpv, *, publish=True):
-    if pv == PvReadOrWrite.writepv:
-        selected_field = "writepv"
+def _update_mapped_choices(
+    mapped_device, source=MappedChoiceSource.READ, *, publish=True
+):
+    if source == MappedChoiceSource.WRITE:
+        selected_channel = "write"
         selected_pv = mapped_device.writepv
         mapping_attr = "_write_mapping"
         inverse_attr = "_write_inverse_mapping"
     else:
-        selected_field = "readpv"
+        selected_channel = "read"
         selected_pv = mapped_device.readpv
         mapping_attr = "_read_mapping"
         inverse_attr = "_read_inverse_mapping"
 
-    choices = mapped_device._epics.get_value_choices(selected_field)
+    choices = mapped_device._epics.get_channel_value_choices(selected_channel)
     if not choices:
         raise ConfigurationError(
             mapped_device, f"PV {selected_pv} has no value choices"
@@ -152,39 +170,39 @@ def _update_mapped_choices(mapped_device, pv=PvReadOrWrite.readpv, *, publish=Tr
     mapped_device._inverse_mapping = {v: k for k, v in new_mapping.items()}
 
 
-class EpicsRecordComponent:
+class EpicsChannelComponent:
     def __init__(
         self,
-        record_fields,
-        pv_names,
+        epics_channels,
+        pv_names_by_channel,
         *,
         timeout=3.0,
         use_pva=True,
         wrapper=None,
     ):
-        self.record_fields = record_fields
-        self.pv_names = pv_names
+        self.epics_channels = epics_channels
+        self.pv_names_by_channel = pv_names_by_channel
         self.timeout = timeout
         self.use_pva = use_pva
         self.wrapper = wrapper
         self._wrapper_injected = wrapper is not None
         self.subscriptions = []
 
-    def pv_name(self, field):
-        return self.pv_names.get(field)
+    def pv_name_for(self, channel):
+        return self.pv_names_by_channel.get(channel)
 
-    def resolve_cache_key(self, field):
-        info = self.record_fields.get(field)
+    def cache_key_for(self, channel):
+        info = self.epics_channels.get(channel)
         if info is not None and info.cache_key:
             return info.cache_key
-        return field
+        return channel
 
     def pvs_to_connect(self):
         names = []
-        for field in self.record_fields:
-            name = self.pv_name(field)
-            if name and name not in names:
-                names.append(name)
+        for channel in self.epics_channels:
+            pv_name = self.pv_name_for(channel)
+            if pv_name and pv_name not in names:
+                names.append(pv_name)
         return names
 
     def connect(self, pvs_to_connect=None, simulation=False):
@@ -198,29 +216,31 @@ class EpicsRecordComponent:
         for pv in pvs_to_connect:
             self.wrapper.connect_pv(pv)
 
-    def subscribe_fields(self, change_callback, connection_callback=None):
-        for field in self.monitor_fields():
-            self.subscribe_field(field, change_callback, connection_callback)
+    def subscribe_channels(self, change_callback, connection_callback=None):
+        for channel in self.subscribed_channels():
+            self.subscribe_channel(channel, change_callback, connection_callback)
 
-    def monitor_fields(self):
-        return [field for field, info in self.record_fields.items() if info.monitor]
+    def subscribed_channels(self):
+        return [
+            channel for channel, info in self.epics_channels.items() if info.subscribe
+        ]
 
-    def subscribe_field(
+    def subscribe_channel(
         self,
-        field,
+        channel,
         change_callback,
         connection_callback=None,
-        param=None,
+        subscription_param=None,
         as_string=None,
     ):
-        pv = self.pv_name(field)
+        pv = self.pv_name_for(channel)
         if not pv:
             return None
         if as_string is None:
-            as_string = self.record_fields[field].as_string
+            as_string = self.epics_channels[channel].as_string
         sub = self.wrapper.subscribe(
             pv,
-            field if param is None else param,
+            channel if subscription_param is None else subscription_param,
             change_callback,
             connection_callback,
             as_string=as_string,
@@ -242,32 +262,34 @@ class EpicsRecordComponent:
         for sub in list(self.subscriptions):
             self.close_subscription(sub)
 
-    def get_pv(self, field, as_string=None):
+    def get_channel_value(self, channel, as_string=None):
         if as_string is None:
-            info = self.record_fields.get(field)
+            info = self.epics_channels.get(channel)
             as_string = info.as_string if info is not None else False
-        return self.wrapper.get_pv_value(self.pv_name(field), as_string)
+        return self.wrapper.get_pv_value(self.pv_name_for(channel), as_string)
 
-    def get_pv_value(self, pv, as_string=False):
-        return self.wrapper.get_pv_value(pv, as_string)
+    def get_pv_value(self, pv_name, as_string=False):
+        return self.wrapper.get_pv_value(pv_name, as_string)
 
-    def get_alarm_status(self, field):
-        return self.wrapper.get_alarm_status(self.pv_name(field))
+    def get_channel_alarm(self, channel):
+        return self.wrapper.get_alarm_status(self.pv_name_for(channel))
 
-    def get_limits(self, field, default_low=-1e308, default_high=1e308):
-        return self.wrapper.get_limits(self.pv_name(field), default_low, default_high)
+    def get_channel_limits(self, channel, default_low=-1e308, default_high=1e308):
+        return self.wrapper.get_limits(
+            self.pv_name_for(channel), default_low, default_high
+        )
 
-    def get_units(self, field, default=""):
-        return self.wrapper.get_units(self.pv_name(field), default)
+    def get_channel_units(self, channel, default=""):
+        return self.wrapper.get_units(self.pv_name_for(channel), default)
 
-    def get_value_choices(self, field):
-        return self.wrapper.get_value_choices(self.pv_name(field))
+    def get_channel_value_choices(self, channel):
+        return self.wrapper.get_value_choices(self.pv_name_for(channel))
 
-    def put_pv(self, field, value):
-        self.wrapper.put_pv_value(self.pv_name(field), value)
+    def put_channel_value(self, channel, value):
+        self.wrapper.put_pv_value(self.pv_name_for(channel), value)
 
-    def wait_for(self, field, expected, timeout=5.0, precision=None):
-        """Block until *field* reaches *expected* (within *precision*)."""
+    def wait_for(self, channel, expected, timeout=5.0, precision=None):
+        """Block until *channel* reaches *expected* within *precision*."""
         event = threading.Event()
 
         def matches(value):
@@ -275,76 +297,80 @@ class EpicsRecordComponent:
                 return abs(value - expected) <= precision
             return value == expected
 
-        def callback(name, param, value, units, limits, severity, message, **kw):
+        def callback(pv_name, channel, value, units, limits, severity, message, **kw):
             if matches(value):
                 event.set()
 
-        sub = self.subscribe_field(field, callback)
+        sub = self.subscribe_channel(channel, callback)
         try:
-            if matches(self.get_pv(field)):
+            if matches(self.get_channel_value(channel)):
                 return
             if not event.wait(timeout):
-                raise TimeoutError(f"timeout waiting for {field} to become {expected}")
+                raise TimeoutError(
+                    f"timeout waiting for {channel} to become {expected}"
+                )
         finally:
             self.close_subscription(sub)
 
 
 class EpicsDeviceBase(EpicsParameters):
-    """NICOS glue for an ``EpicsRecordComponent``.
+    """NICOS glue for an ``EpicsChannelComponent``.
 
     Owns the lifecycle (component creation/connect at preinit, poller-side
     subscription at init, teardown at shutdown) and the cache/status policy:
     monitor callbacks fill the device cache, reads prefer the cache, status
-    is recomputed on STATUS/BOTH field changes.
+    is recomputed on STATUS/VALUE_AND_STATUS channel changes.
 
-    Declare the field table as a class-level ``_record_fields`` dict or by
-    overriding ``_build_record_fields()`` (required when fields depend on
+    Declare the channel table as a class-level ``_epics_channels`` dict or by
+    overriding ``_build_epics_channels()`` (required when channels depend on
     parameters). The table must be complete before preinit finishes -- the
-    component resolves field->PV names exactly once.
+    component resolves channel->PV names exactly once.
 
-    ``_compute_status`` must read fields/alarms only; calling
+    ``_compute_status`` must read channels/alarms only; calling
     ``self.doStatus()`` from it would recurse.
     """
 
-    _primary_field = "readpv"
-    _record_fields = None
-    _default_root_attr = None
+    _primary_channel = "read"
+    _epics_channels = None
+    _default_pv_root_attr = None
 
     def doPreinit(self, mode):
-        record_fields = self._build_record_fields()
-        if record_fields is None:
-            record_fields = self._record_fields
-        if not record_fields:
+        epics_channels = self._build_epics_channels()
+        if epics_channels is None:
+            epics_channels = self._epics_channels
+        if not epics_channels:
             raise ProgrammingError(
                 self,
-                "define _record_fields (class attribute) or override "
-                "_build_record_fields()",
+                "define _epics_channels (class attribute) or override "
+                "_build_epics_channels()",
             )
-        self._record_fields = dict(record_fields)
+        self._epics_channels = dict(epics_channels)
         self._epics = self._create_epics_component()
         self._epics.connect(self._pvs_to_connect(), simulation=mode == SIMULATION)
 
-    def _build_record_fields(self):
+    def _build_epics_channels(self):
         return None
 
     def _create_epics_component(self):
-        return EpicsRecordComponent(
-            self._record_fields,
-            resolve_pv_names(self, self._record_fields, self._default_root_attr),
+        return EpicsChannelComponent(
+            self._epics_channels,
+            resolve_channel_pv_names(
+                self, self._epics_channels, self._default_pv_root_attr
+            ),
             timeout=self.epicstimeout,
             use_pva=self.pva,
         )
 
     def doInit(self, mode):
-        stale = set(self._record_fields) - set(self._epics.pv_names)
+        stale = set(self._epics_channels) - set(self._epics.pv_names_by_channel)
         if stale:
             raise ProgrammingError(
                 self,
-                f"record fields {sorted(stale)} were added after the EPICS "
-                "component was created; extend _build_record_fields() instead",
+                f"EPICS channels {sorted(stale)} were added after the EPICS "
+                "component was created; extend _build_epics_channels() instead",
             )
         if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            self._epics.subscribe_fields(
+            self._epics.subscribe_channels(
                 self._value_change_callback, self._connection_change_callback
             )
         self._after_subscribe(mode)
@@ -361,24 +387,27 @@ class EpicsDeviceBase(EpicsParameters):
         pass
 
     def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
+        self, pv_name, channel, value, units, limits, severity, message, **kwargs
     ):
         ts = time.time()
-        self._cache.put(self._name, self._epics.resolve_cache_key(param), value, ts)
-        if name == self._epics.pv_name(self._primary_field):
+        self._cache.put(self._name, self._epics.cache_key_for(channel), value, ts)
+        if pv_name == self._epics.pv_name_for(self._primary_channel):
             self._cache.put(self._name, "unit", units, ts)
             self._cache.put(self._name, "value_status", (severity, message), ts)
-        info = self._record_fields.get(param)
-        if info and info.record_type in (RecordType.STATUS, RecordType.BOTH):
+        info = self._epics_channels.get(channel)
+        if info and info.role in (
+            EpicsChannelRole.STATUS,
+            EpicsChannelRole.VALUE_AND_STATUS,
+        ):
             self._refresh_status(ts)
 
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if name != self._epics.pv_name(self._primary_field):
+    def _connection_change_callback(self, pv_name, channel, is_connected, **kwargs):
+        if pv_name != self._epics.pv_name_for(self._primary_channel):
             return
         if is_connected:
-            self.log.debug("%s connected!", name)
+            self.log.debug("%s connected!", pv_name)
         else:
-            self.log.warning("%s disconnected!", name)
+            self.log.warning("%s disconnected!", pv_name)
             self._cache.put(
                 self._name,
                 "status",
@@ -389,18 +418,18 @@ class EpicsDeviceBase(EpicsParameters):
     def _refresh_status(self, ts):
         self._cache.put(self._name, "status", self._compute_status(maxage=None), ts)
 
-    def _read_cached(self, field, as_string=None, maxage=None):
+    def _read_channel_cached(self, channel, as_string=None, maxage=None):
         return get_from_cache_or(
             self,
-            self._epics.resolve_cache_key(field),
-            lambda: self._epics.get_pv(field, as_string),
+            self._epics.cache_key_for(channel),
+            lambda: self._epics.get_channel_value(channel, as_string),
             maxage=maxage,
         )
 
     def _read_primary_alarm(self, maxage=0):
         def _read_alarm():
             try:
-                return self._epics.get_alarm_status(self._primary_field)
+                return self._epics.get_channel_alarm(self._primary_channel)
             except TimeoutError:
                 return status.UNKNOWN, "lost connection to EPICS"
 
@@ -415,7 +444,7 @@ class EpicsDeviceBase(EpicsParameters):
         )
 
     def doReadUnit(self):
-        return self._epics.get_units(self._primary_field)
+        return self._epics.get_channel_units(self._primary_channel)
 
 
 class EpicsReadWriteBase(EpicsDeviceBase):
@@ -435,33 +464,36 @@ class EpicsReadWriteBase(EpicsDeviceBase):
     }
 
     def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
+        self, pv_name, channel, value, units, limits, severity, message, **kwargs
     ):
         ts = time.time()
-        # Separate ifs: readpv and writepv may be the same PV.
-        if name == self.readpv:
+        # Separate ifs: read and write may subscribe to the same PV.
+        if channel == "read":
             self._cache.put(self._name, "value", value, ts)
             self._cache.put(self._name, "unit", units, ts)
             self._cache.put(self._name, "value_status", (severity, message), ts)
-        if name == self.writepv:
+        if channel == "write":
             if limits:
                 self._cache.put(self._name, "abslimits", limits, ts)
             if not self.target:
                 self._cache.put(self._name, "target", value, ts)
-        if name == self.targetpv:
+        if channel == "target":
             self._cache.put(self._name, "target", value, ts)
-        info = self._record_fields.get(param)
-        if info and info.record_type in (RecordType.STATUS, RecordType.BOTH):
+        info = self._epics_channels.get(channel)
+        if info and info.role in (
+            EpicsChannelRole.STATUS,
+            EpicsChannelRole.VALUE_AND_STATUS,
+        ):
             self._refresh_status(ts)
 
     def _cached_raw_target(self, maxage=None):
         def _read():
-            return self._epics.get_pv("targetpv" if self.targetpv else "writepv")
+            return self._epics.get_channel_value("target" if self.targetpv else "write")
 
         return get_from_cache_or(self, "target", _read, maxage=maxage)
 
     def doReadAbslimits(self):
-        low, high = self._epics.get_limits("writepv")
+        low, high = self._epics.get_channel_limits("write")
         if low == 0 and high == 0:
             return -1e308, 1e308
         return low, high
@@ -499,27 +531,27 @@ class EpicsMappedChoiceSupport:
     def _read_mapped_choice(self, maxage=0):
         def _read_epics_choice():
             try:
-                return self._epics.get_pv("readpv")
+                return self._epics.get_channel_value("read")
             except (IndexError, KeyError):
                 _update_mapped_choices(self, publish=self._publish_read_choices)
                 try:
-                    return self._epics.get_pv("readpv")
+                    return self._epics.get_channel_value("read")
                 except (IndexError, KeyError):
-                    return self._epics.get_pv("readpv", as_string=False)
+                    return self._epics.get_channel_value("read", as_string=False)
 
         value = get_from_cache_or(
             self,
-            self._record_fields["readpv"].cache_key,
+            self._epics_channels["read"].cache_key,
             _read_epics_choice,
             maxage=maxage,
         )
         return self._validate_mapped_choice(value)
 
     def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
+        self, pv_name, channel, value, units, limits, severity, message, **kwargs
     ):
-        if self._epics.resolve_cache_key(param) == "value":
+        if self._epics.cache_key_for(channel) == "value":
             value = self._validate_mapped_choice(value)
         super()._value_change_callback(
-            name, param, value, units, limits, severity, message, **kwargs
+            pv_name, channel, value, units, limits, severity, message, **kwargs
         )

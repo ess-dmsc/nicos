@@ -25,7 +25,7 @@
 import pytest
 
 from nicos.core.errors import ConfigurationError
-from nicos_ess.devices.epics.pva.epics_common import RecordInfo, RecordType
+from nicos_ess.devices.epics.pva.epics_common import EpicsChannelInfo, EpicsChannelRole
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from test.nicos_ess.test_devices.epics_motor.helpers import (
     ASYMM_DIAL_LIMITS,
@@ -45,10 +45,10 @@ from test.nicos_ess.test_devices.epics_motor.helpers import (
 
 
 class DerivedRecordFieldEpicsMotor(EpicsMotor):
-    def _build_record_fields(self):
-        record_fields = super()._build_record_fields()
-        record_fields["extra_field"] = RecordInfo("", ".XTR", RecordType.VALUE)
-        return record_fields
+    def _build_epics_channels(self):
+        epics_channels = super()._build_epics_channels()
+        epics_channels["extra_field"] = EpicsChannelInfo("", ".XTR", EpicsChannelRole.VALUE)
+        return epics_channels
 
 
 class TestEpicsMotorLegacyParity:
@@ -73,9 +73,9 @@ class TestEpicsMotorLegacyParity:
             name="motor",
             **build_motor_cfg(),
         )
-        assert "extra_field" in dev._record_fields
-        assert dev._record_fields["extra_field"].pv_suffix == ".XTR"
-        assert dev._epics.pv_name("extra_field") == pv(".XTR")
+        assert "extra_field" in dev._epics_channels
+        assert dev._epics_channels["extra_field"].pv_suffix == ".XTR"
+        assert dev._epics.pv_name_for("extra_field") == pv(".XTR")
 
 
 class TestEpicsMotorLimits:

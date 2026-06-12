@@ -168,30 +168,30 @@ class FakeEpicsBackend:
 
 
 class FakeEpicsComponent:
-    """Value-dict backed stand-in for the EpicsRecordComponent surface that
+    """Value-dict backed stand-in for the EpicsChannelComponent surface that
     device classes touch, for harness tests that fake out EPICS entirely.
 
-    Pair it with a device-side ``_read_cached`` override returning the same
+    Pair it with a device-side ``_read_channel_cached`` override returning the same
     values dict, so cached reads bypass the session cache too.
     """
 
     def __init__(self, values):
         self.values = values
 
-    def get_pv(self, field, as_string=False):
-        return self.values[field]
+    def get_channel_value(self, channel, as_string=False):
+        return self.values[channel]
 
-    def put_pv(self, field, value):
-        self.values[field] = value
+    def put_channel_value(self, channel, value):
+        self.values[channel] = value
         # In SET mode, writing VAL redefines OFF (EPICS motor record).
-        if field == "target" and self.values.get("set") == 1:
+        if channel == "target" and self.values.get("set") == 1:
             dir_sign = 1 if self.values["dir"] == "Pos" else -1
             self.values["offset"] = value - self.values["dialvalue"] * dir_sign
 
-    def get_alarm_status(self, field):
+    def get_channel_alarm(self, channel):
         return status.OK, ""
 
-    def get_units(self, field, default=""):
+    def get_channel_units(self, channel, default=""):
         return self.values.get("unit", default)
 
     def shutdown(self):

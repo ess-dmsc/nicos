@@ -70,26 +70,26 @@ class FakeEpicsMotor(EpicsMotor):
 
     def doPreinit(self, mode):
         self._values = self._initial_values()
-        self._record_fields = {}
+        self._epics_channels = {}
         self._epics = FakeEpicsComponent(self._values)
 
     def doInit(self, mode):
         pass
 
     def doRead(self, maxage=None):
-        return self._epics.get_pv("position")
+        return self._epics.get_channel_value("position")
 
     def doReadUnit(self, maxage=None):
         return self.values["unit"]
 
-    def _read_cached(self, field, as_string=None, maxage=None):
+    def _read_channel_cached(self, field, as_string=None, maxage=None):
         return self.values[field]
 
 
 class DerivedEpicsMotor(FakeEpicsMotor):
     def doPreinit(self, mode):
         FakeEpicsMotor.doPreinit(self, mode)
-        self._record_fields = {"extra_field": "XTR"}
+        self._epics_channels = {"extra_field": "XTR"}
 
 
 class TestEpicsMotor:
@@ -196,7 +196,7 @@ class TestDerivedEpicsMotor:
         self.motor2 = self.session.getDevice("motor2")
 
     def test_record_fields(self):
-        motor1_fields = self.motor1._record_fields
-        motor2_fields = self.motor2._record_fields
+        motor1_fields = self.motor1._epics_channels
+        motor2_fields = self.motor2._epics_channels
         difference = set(motor2_fields) ^ set(motor1_fields)
         assert difference
