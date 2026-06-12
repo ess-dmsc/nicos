@@ -366,7 +366,7 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
         self._epics.put_channel_value("monitor_deadband", max(deadband, 0))
 
     def doWriteOffset(self, new_off):
-        """Shift the user ↔ dial offset via SET/FOFF; limits follow automatically."""
+        """Shift the user/dial offset via SET/FOFF."""
         if self.offset == new_off:
             return
 
@@ -623,7 +623,7 @@ class EpicsMotor(EpicsDeviceBase, CanDisable, CanReference, HasOffset, Motor):
         """
         Convert a user-coordinate value to dial (hardware) units.
 
-        user = dial * DIR + OFF      ⇒     dial = (user - OFF) / DIR
+        user = dial * DIR + OFF; dial = (user - OFF) / DIR
         """
         if offset is None:
             offset = self.offset

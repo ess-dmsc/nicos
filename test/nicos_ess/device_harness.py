@@ -22,8 +22,6 @@
 #
 # *****************************************************************************
 
-"""Helpers for fast, isolated unit tests of NICOS devices."""
-
 from collections import defaultdict
 from contextlib import contextmanager
 from logging import DEBUG, NullHandler, getLogger
@@ -32,8 +30,8 @@ from types import SimpleNamespace
 
 from nicos import session as nicos_session
 from nicos.core import (
-    MASTER,
     MAIN,
+    MASTER,
     POLLER,
     SIMULATION,
     AccessError,
@@ -55,8 +53,6 @@ class _UnitClock:
 
 
 class InMemoryCache:
-    """In-memory subset of the CacheClient API."""
-
     def __init__(self):
         self._data = {}
         self._history = defaultdict(list)
@@ -147,15 +143,12 @@ class InMemoryCache:
     def put_aged(
         self, dev, key, value, age_seconds, *, now=None, ttl=None, flag=""
     ):
-        """Convenience helper for maxage tests that need stale cache entries."""
         reference_time = monotonic() if now is None else float(now)
         stale_time = reference_time - max(0.0, float(age_seconds))
         self.put(dev, key, value, time=stale_time, ttl=ttl, flag=flag)
 
 
 class UnitTestSession:
-    """Minimal session implementation for direct device unit tests."""
-
     sessiontype = MAIN
 
     def __init__(self):
@@ -235,7 +228,6 @@ class UnitTestSession:
         user = user or self.getExecutingUser()
         return user.level >= level
 
-    # Device hooks with Session-compatible signatures.
     def elogEvent(self, eventtype, data):
         del eventtype, data
 
@@ -292,11 +284,6 @@ def _auto_value(param_name, param_info):
 
 
 def _capture_current_state():
-    """Snapshot the current ``nicos.session`` object state.
-
-    We capture both ``__class__`` and ``__dict__`` because the harness swaps the
-    concrete session class (``Session`` vs ``UnitTestSession``), not just fields.
-    """
     return {
         "class": nicos_session.__class__,
         "dict": dict(nicos_session.__dict__),
@@ -304,15 +291,12 @@ def _capture_current_state():
 
 
 def _restore_state(state):
-    """Restore ``nicos.session`` from a snapshot created by ``_capture_current_state``."""
     nicos_session.__class__ = state["class"]
     nicos_session.__dict__.clear()
     nicos_session.__dict__.update(state["dict"])
 
 
 class DaemonDeviceHarness:
-    """Factory for building devices in an isolated daemon-like unit-test session."""
-
     def __init__(self, session):
         self.session = session
         self._counter = 0
@@ -365,7 +349,6 @@ class DaemonDeviceHarness:
             return devcls(name, **merged)
 
     def create_master(self, devcls, name=None, **config):
-        """Create a device in master mode (daemon-like single-session tests)."""
         mode = config.pop("mode", MASTER)
         sessiontype = config.pop("sessiontype", MAIN)
         return self.create(
@@ -377,7 +360,6 @@ class DaemonDeviceHarness:
         )
 
     def create_sim(self, devcls, name=None, **config):
-        """Create a device in simulation mode."""
         mode = config.pop("mode", SIMULATION)
         return self.create(devcls, name, mode=mode, **config)
 
@@ -394,10 +376,8 @@ class DaemonDeviceHarness:
 
 @contextmanager
 def isolated_daemon_device_harness():
-    """Yield a daemon-style harness backed by a temporary ``UnitTestSession``."""
     old_class = nicos_session.__class__
     old_dict = dict(nicos_session.__dict__)
-    # Swap the singleton to a unit-test session object without changing import sites.
     nicos_session.__class__ = UnitTestSession
     UnitTestSession.__init__(nicos_session)
     harness = DaemonDeviceHarness(nicos_session)
@@ -411,8 +391,6 @@ def isolated_daemon_device_harness():
 
 
 class DeviceHarness:
-    """Two-session harness with explicit daemon/poller role activation."""
-
     DAEMON_ROLE = "daemon"
     POLLER_ROLE = "poller"
     ROLE_SESSIONTYPES = {
@@ -426,16 +404,13 @@ class DeviceHarness:
 
     @contextmanager
     def activate(self, role):
-        """Temporarily expose one role state as the active ``nicos.session``."""
         if role not in self._role_states:
             raise KeyError(f"unknown role {role!r}")
-        # Preserve whatever session state is currently active for nested usage.
         old = _capture_current_state()
         _restore_state(self._role_states[role])
         try:
             yield nicos_session
         finally:
-            # Persist role-side mutations, then restore the previously active state.
             self._role_states[role] = _capture_current_state()
             _restore_state(old)
 
@@ -460,12 +435,6 @@ class DeviceHarness:
         sessiontype=None,
         **config,
     ):
-        """Create a device under a specific role context.
-
-        ``mode`` and ``sessiontype`` are temporary constructor-time overrides:
-        they are applied while the device is instantiated and then reset on the
-        active role session to avoid leaking settings into later calls.
-        """
         if auto_params:
             merged = self.mandatory_config(devcls)
             merged.update(config)
@@ -490,7 +459,6 @@ class DeviceHarness:
                 active_session.sessiontype = old_sessiontype
 
     def run(self, role, func, *args, **kwargs):
-        """Run ``func`` while a specific role snapshot is active."""
         with self.activate(role):
             return func(*args, **kwargs)
 
@@ -505,7 +473,6 @@ class DeviceHarness:
             return nicos_session.getDevice(name)
 
     def create_master(self, role, devcls, name=None, **config):
-        """Create a role-specific device in master mode with matching sessiontype."""
         mode = config.pop("mode", MASTER)
         sessiontype = config.pop("sessiontype", self.ROLE_SESSIONTYPES[role])
         return self.create(
@@ -524,7 +491,6 @@ class DeviceHarness:
         return self.create_master(self.POLLER_ROLE, devcls, name=name, **config)
 
     def create_pair(self, devcls, name=None, *, shared=None, daemon=None, poller=None):
-        """Create daemon+poller copies with shared defaults and per-role overrides."""
         daemon_kwargs = dict(shared or {})
         daemon_kwargs.update(daemon or {})
         poller_kwargs = dict(shared or {})
@@ -548,7 +514,6 @@ class DeviceHarness:
 
 @contextmanager
 def isolated_device_harness():
-    """Yield a daemon+poller harness that shares one in-memory cache."""
     old = _capture_current_state()
     shared_cache = InMemoryCache()
 

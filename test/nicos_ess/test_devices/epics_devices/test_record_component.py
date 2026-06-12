@@ -22,15 +22,6 @@
 #
 # *****************************************************************************
 
-"""Unit tests for the EPICS component and the device glue, without a NICOS
-session or harness.
-
-``EpicsChannelComponent`` is pure mechanism and is tested with just a fake
-wrapper. The ``EpicsDeviceBase`` cache/status glue is tested by borrowing
-its methods onto a duck-typed probe object. Neither covers the daemon/poller
-cache-key contract -- that stays with the harness tests.
-"""
-
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -290,7 +281,6 @@ class TestWaitFor:
         component.connect()
         backend.values["SIM:M1.MOVN"] = 0
         component.wait_for("moving", 0, timeout=0.1)
-        # The temporary subscription is cleaned up again.
         assert component.subscriptions == []
         assert backend.subscriptions == []
 
@@ -302,7 +292,6 @@ class TestWaitFor:
         original_get = backend.get_pv_value
 
         def get_and_update(pvname, as_string=False):
-            # Simulate the value changing right after the initial check.
             result = original_get(pvname, as_string)
             backend.emit_update(pvname, value=0)
             return result
@@ -331,8 +320,6 @@ class TestWaitFor:
 
 
 class CacheStub:
-    """NICOS-cache shaped recorder."""
-
     def __init__(self):
         self.data = {}
         self.puts = []
@@ -346,9 +333,6 @@ class CacheStub:
 
 
 class GlueProbe:
-    """Duck-typed device exercising the real EpicsDeviceBase glue methods
-    without the NICOS device machinery."""
-
     _on_channel_update = EpicsDeviceBase._on_channel_update
     _on_connection_change = EpicsDeviceBase._on_connection_change
     _refresh_status = EpicsDeviceBase._refresh_status
@@ -494,8 +478,6 @@ class TestDeviceGlue:
     def test_status_reads_cache_unless_freshness_is_forced(self):
         probe = GlueProbe()
         probe._cache.data["status"] = (status.BUSY, "moving")
-        # maxage=None serves the cached (monitor-maintained) status;
-        # maxage=0 would force a recompute.
         assert probe.doStatus(maxage=None) == (status.BUSY, "moving")
 
     def test_primary_alarm_timeout_reports_unknown_connection_loss(self):

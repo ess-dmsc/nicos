@@ -27,11 +27,6 @@ DEFAULT_EPICS_PROTOCOL = os.environ.get("DEFAULT_EPICS_PROTOCOL", "pva")
 
 
 class EpicsChannelRole(Enum):
-    """Whether a channel feeds the device value, its status, or both.
-
-    STATUS/VALUE_AND_STATUS channels trigger a status recompute on updates.
-    """
-
     VALUE = 1
     STATUS = 2
     VALUE_AND_STATUS = 3
@@ -57,8 +52,6 @@ class EpicsChannelInfo:
 
 @dataclass(frozen=True)
 class ChannelUpdate:
-    """A monitor update, delivered to ``_on_channel_update``."""
-
     channel: str
     value: object
     units: str = ""
@@ -71,8 +64,6 @@ class ChannelUpdate:
 
 @dataclass(frozen=True)
 class ConnectionChange:
-    """A connection state change, delivered to ``_on_connection_change``."""
-
     channel: str
     is_connected: bool
     pv_name: str = ""
@@ -110,8 +101,6 @@ def create_wrapper(timeout, use_pva):
 
 
 def get_from_cache_or(device, cache_key, func, maxage=None):
-    # Deliberately gates on ``monitor`` and never writes back: the poller's
-    # monitor callbacks fill the cache, every other session only reads it.
     if not getattr(device, "monitor", False) or not getattr(device, "_cache", None):
         return func()
     if maxage == 0:
@@ -125,11 +114,7 @@ def get_from_cache_or(device, cache_key, func, maxage=None):
 
 
 def resolve_channel_pv_names(device, epics_channels, default_pv_root_attr=None):
-    """Resolve each logical channel to a full PV name.
-
-    A channel that resolves to no PV is a configuration error unless it is
-    marked ``optional``; optional channels resolve to None.
-    """
+    """Resolve logical channel names to PV names."""
     names = {}
     for channel, info in epics_channels.items():
         if info.pv_attr:
@@ -150,11 +135,7 @@ def resolve_channel_pv_names(device, epics_channels, default_pv_root_attr=None):
 
 
 def status_from_candidates(base_alarm, candidates):
-    """Combine an EPICS alarm with extra status candidates; highest wins.
-
-    Note BUSY outranks WARN in NICOS, deliberately: reporting WARN while
-    moving would complete waits prematurely.
-    """
+    """Return the highest-status candidate."""
     severity, msg = base_alarm
     options = list(candidates)
     if severity != status.OK:
@@ -164,15 +145,8 @@ def status_from_candidates(base_alarm, candidates):
     return status.OK, msg
 
 
-class MappedChoiceSource(str, Enum):
-    READ = "read"
-    WRITE = "write"
-
-
-def _update_mapped_choices(
-    mapped_device, source=MappedChoiceSource.READ, *, publish=True
-):
-    channel = source.value
+def _update_mapped_choices(mapped_device):
+    channel = mapped_device._mapping_channel
     choices = mapped_device._epics.get_channel_value_choices(channel)
     if not choices:
         raise ConfigurationError(
@@ -181,14 +155,6 @@ def _update_mapped_choices(
         )
 
     new_mapping = {choice: i for i, choice in enumerate(choices)}
-    setattr(mapped_device, f"_{channel}_mapping", new_mapping)
-    setattr(
-        mapped_device,
-        f"_{channel}_inverse_mapping",
-        {v: k for k, v in new_mapping.items()},
-    )
-    if not publish:
-        return
     mapped_device._setROParam("mapping", new_mapping)
     mapped_device._inverse_mapping = {v: k for k, v in new_mapping.items()}
 
@@ -276,8 +242,6 @@ class EpicsChannelComponent:
         as_string,
         source_id=None,
     ):
-        # Adapt the wrapper-shaped callbacks to single event objects here, so
-        # devices never see the wrapper signature.
         def _on_change(pv_name, param, value, units, limits, severity, message, **kw):
             update_callback(
                 ChannelUpdate(
@@ -352,7 +316,6 @@ class EpicsChannelComponent:
         self.wrapper.put_pv_value(self.pv_name_for(channel), value)
 
     def wait_for(self, channel, expected, timeout=5.0, precision=None):
-        """Block until *channel* reaches *expected* within *precision*."""
         event = threading.Event()
 
         def matches(value):
@@ -377,22 +340,6 @@ class EpicsChannelComponent:
 
 
 class EpicsDeviceBase(EpicsParameters):
-    """NICOS glue for an ``EpicsChannelComponent``.
-
-    Owns the lifecycle (component creation/connect at preinit, poller-side
-    subscription at init, teardown at shutdown) and the cache/status policy:
-    monitor callbacks fill the device cache, reads prefer the cache, status
-    is recomputed on STATUS/VALUE_AND_STATUS channel changes.
-
-    Declare the channel table as a class-level ``_epics_channels`` dict or by
-    overriding ``_build_epics_channels()`` (required when channels depend on
-    parameters). The table must be complete before preinit finishes -- the
-    component resolves channel->PV names exactly once.
-
-    ``_compute_status`` must read channels/alarms only; calling
-    ``self.doStatus()`` from it would recurse.
-    """
-
     _primary_channel = "read"
     _epics_channels = None
     _default_pv_root_attr = None
@@ -533,8 +480,6 @@ class EpicsReadWriteBase(EpicsDeviceBase):
     def _build_epics_channels(self):
         epics_channels = dict(self._epics_channels)
         if self.targetpv and "write" in epics_channels:
-            # A real target readback exists, so the write echo must not double
-            # as the cached target.
             epics_channels["write"] = replace(epics_channels["write"], cache_key=None)
         return epics_channels
 
@@ -552,54 +497,57 @@ class EpicsReadWriteBase(EpicsDeviceBase):
 
 
 class EpicsMappedChoiceSupport:
-    """Choice validation + mapping refresh for enum (mbbi/bi) PVs."""
+    _mapping_channel = "read"
 
-    _publish_read_choices = True
+    def doRead(self, maxage=0):
+        return self._mapReadValue(self._readRaw(maxage))
 
-    def _read_choice_mapping(self):
-        return getattr(self, "_read_mapping", self.mapping)
+    def _readRaw(self, maxage=0):
+        value = get_from_cache_or(
+            self,
+            self._epics.cache_key_for("read"),
+            lambda: self._epics.get_channel_value("read"),
+            maxage=maxage,
+        )
+        return self._normalize_readback(value)
 
-    def _write_choice_mapping(self):
-        return getattr(self, "_write_mapping", self.mapping)
-
-    def _validate_mapped_choice(self, value):
-        if value not in self._read_choice_mapping():
-            _update_mapped_choices(self, publish=self._publish_read_choices)
-        if value not in self._read_choice_mapping():
-            raise PositionError(self, f"unknown unmapped position {value!r}")
+    def _mapReadValue(self, value):
         return value
 
     def _mapTargetValue(self, target):
-        mapping = self._write_choice_mapping()
-        if not self.relax_mapping and target not in mapping:
-            positions = ", ".join(repr(pos) for pos in mapping)
+        if not self.relax_mapping and target not in self.mapping:
+            positions = ", ".join(repr(pos) for pos in self.mapping)
             raise InvalidValueError(
                 self,
                 f"{target!r} is an invalid position for this device; valid "
                 f"positions are {positions}",
             )
-        return mapping.get(target, target)
+        return self.mapping.get(target, target)
 
-    def _read_mapped_choice(self, maxage=0):
-        def _read_epics_choice():
+    def _normalize_readback(self, value):
+        if isinstance(value, str):
+            if self._mapping_channel != "read" or value in self.mapping:
+                return value
+            _update_mapped_choices(self)
+            if value in self.mapping:
+                return value
+            raise PositionError(self, f"unknown unmapped position {value!r}")
+
+        if value in self._inverse_mapping:
+            return self._inverse_mapping[value]
+        if self._mapping_channel == "read":
+            _update_mapped_choices(self)
+            if value in self._inverse_mapping:
+                return self._inverse_mapping[value]
+        else:
+            choices = self._epics.get_channel_value_choices("read")
             try:
-                return self._epics.get_channel_value("read")
-            except (IndexError, KeyError):
-                _update_mapped_choices(self, publish=self._publish_read_choices)
-                try:
-                    return self._epics.get_channel_value("read")
-                except (IndexError, KeyError):
-                    return self._epics.get_channel_value("read", as_string=False)
-
-        value = get_from_cache_or(
-            self,
-            self._epics_channels["read"].cache_key,
-            _read_epics_choice,
-            maxage=maxage,
-        )
-        return self._validate_mapped_choice(value)
+                return choices[value]
+            except (IndexError, TypeError):
+                pass
+        raise PositionError(self, f"unknown unmapped position {value!r}")
 
     def _on_channel_update(self, update):
         if self._epics.cache_key_for(update.channel) == "value":
-            update = replace(update, value=self._validate_mapped_choice(update.value))
+            update = replace(update, value=self._normalize_readback(update.value))
         super()._on_channel_update(update)

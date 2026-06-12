@@ -22,16 +22,12 @@
 #
 # *****************************************************************************
 
-"""EPICS backend doubles for PVA device tests."""
-
 from functools import wraps
 
 from nicos.core import status
 
 
 def _requires_connected_backend(func):
-    """Raise an EPICS-style timeout while the fake backend is disconnected."""
-
     @wraps(func)
     def wrapper(self, pvname, *args, **kwargs):
         if not self._is_connected:
@@ -42,8 +38,6 @@ def _requires_connected_backend(func):
 
 
 class FakeEpicsBackend:
-    """In-memory EPICS backend for device tests."""
-
     def __init__(self):
         self.values = {}
         self.units = {}
@@ -168,13 +162,6 @@ class FakeEpicsBackend:
 
 
 class FakeEpicsComponent:
-    """Value-dict backed stand-in for the EpicsChannelComponent surface that
-    device classes touch, for harness tests that fake out EPICS entirely.
-
-    Pair it with a device-side ``_read_channel_cached`` override returning the same
-    values dict, so cached reads bypass the session cache too.
-    """
-
     def __init__(self, values):
         self.values = values
 
@@ -199,7 +186,6 @@ class FakeEpicsComponent:
 
 
 def patch_create_wrapper(monkeypatch, module):
-    """Patch ``create_wrapper`` to return a shared fake backend."""
     backend = FakeEpicsBackend()
 
     def make_backend(timeout, use_pva):

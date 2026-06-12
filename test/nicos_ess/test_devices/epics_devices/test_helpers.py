@@ -26,15 +26,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from nicos_ess.devices.epics.pva.epics_devices import (
-    EpicsReadable,
-)
 from nicos_ess.devices.epics.pva.epics_common import (
-    EpicsParameters,
-    MappedChoiceSource,
     EpicsChannelRole,
+    EpicsParameters,
     _update_mapped_choices,
     get_from_cache_or,
+)
+from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsReadable,
 )
 
 
@@ -151,19 +150,18 @@ class TestHelpers:
         assert len(device._cache.calls) == 1
         assert isinstance(device._cache.calls[0][3], float)
 
-    @pytest.mark.parametrize(
-        "selector,expected_pv",
-        [(MappedChoiceSource.READ, "PV:READ"), (MappedChoiceSource.WRITE, "PV:WRITE")],
-    )
+    @pytest.mark.parametrize("mapping_channel", ["read", "write"])
     def test_update_mapped_choices_builds_mapping_and_inverse(
-        self, fake_backend, selector, expected_pv
+        self, fake_backend, mapping_channel
     ):
+        expected_pv = {"read": "PV:READ", "write": "PV:WRITE"}[mapping_channel]
         fake_backend.value_choices[expected_pv] = ["OFF", "ON", "ERROR"]
         mapped_device = SimpleNamespace(
             readpv="PV:READ",
             writepv="PV:WRITE",
             mapping={},
             _inverse_mapping={},
+            _mapping_channel=mapping_channel,
             fallback=None,
         )
 
@@ -171,8 +169,14 @@ class TestHelpers:
             pv = {"read": mapped_device.readpv, "write": mapped_device.writepv}
             return fake_backend.get_value_choices(pv[channel])
 
+        def pv_name_for(channel):
+            return {"read": mapped_device.readpv, "write": mapped_device.writepv}[
+                channel
+            ]
+
         mapped_device._epics = SimpleNamespace(
-            get_channel_value_choices=get_channel_value_choices
+            get_channel_value_choices=get_channel_value_choices,
+            pv_name_for=pv_name_for,
         )
 
         def set_ro_param(name, value):
@@ -180,7 +184,7 @@ class TestHelpers:
 
         mapped_device._setROParam = set_ro_param
 
-        _update_mapped_choices(mapped_device, selector)
+        _update_mapped_choices(mapped_device)
 
         assert mapped_device.mapping == {"OFF": 0, "ON": 1, "ERROR": 2}
         assert mapped_device._inverse_mapping == {0: "OFF", 1: "ON", 2: "ERROR"}

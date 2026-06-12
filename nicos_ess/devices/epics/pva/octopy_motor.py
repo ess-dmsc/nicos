@@ -12,25 +12,7 @@ from nicos_ess.devices.epics.pva.epics_common import (
 
 
 class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
-    """Motor device for controllers exposing *Octopy*‑style PVs.
-
-    Unlike the standard *EPICS motor record*, an Octopy axis only provides a
-    minimal set of process variables (PVs):
-
-    ===== =====================================
-    readback  ``<base>-position-r``
-    setpoint  ``<base>-s``
-    velocity  ``<base>-velocity-s``
-    enable    ``<base>-enable-s``
-    halt      ``<base>-halt-s``
-    home      ``<base>-home-s``
-    reset     ``<base>-reset-s``
-    ===== =====================================
-
-    The :pyattr:`motorpv` parameter must therefore contain the *base* part of
-    the PV name (e.g. ``SE:SE-HTP-003:axis-x``).  All other PVs are derived at
-    run‑time by appending the suffixes listed above.
-    """
+    """Motor device for Octopy-style axis PVs."""
 
     valuetype = float
 
@@ -115,9 +97,6 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
         self._epics.put_channel_value("reset", 1)
 
     def doIsAtTarget(self, pos=None, target=None):
-        """
-        A final check at the end of a move to ensure we are at the target.
-        """
         if pos is None:
             pos = self.read(0)
         if target is None:
@@ -128,9 +107,6 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
         return within_target and self._read_channel_cached("move_done", maxage=0) == 1
 
     def doIsCompleted(self):
-        """
-        Continuously check if a movement is completed.
-        """
         return self._is_completed(maxage=0)
 
     def _is_completed(self, maxage=0):
@@ -144,7 +120,6 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
                 target = self._read_channel_cached("target", maxage=maxage)
                 return status.BUSY, f"moving to {target}"
 
-            # Check if the motor is enabled
             is_enabled = self._read_channel_cached("enable", maxage=maxage) == 1
             if not is_enabled:
                 return status.WARN, "Motor is not enabled"
@@ -154,7 +129,6 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
         return status.OK, "ready"
 
     def _on_connection_change(self, change):
-        # Any of the few octopy PVs dropping means the axis is unusable.
         if change.is_connected:
             self.log.debug("%s connected!", change.pv_name)
         else:

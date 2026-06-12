@@ -46,7 +46,6 @@ from nicos_ess.devices.epics.pva.epics_common import (
     EpicsMappedChoiceSupport,
     EpicsParameters,  # noqa: F401  (re-export for existing importers)
     EpicsReadWriteBase,
-    MappedChoiceSource,  # noqa: F401  (re-export for existing importers)
     _update_mapped_choices,
     create_wrapper,  # noqa: F401  (re-export for existing importers)
     get_from_cache_or,  # noqa: F401  (re-export for existing importers)
@@ -233,9 +232,6 @@ class EpicsMappedReadable(EpicsMappedChoiceSupport, EpicsReadable, MappedReadabl
             _update_mapped_choices(self)
         MappedReadable.doInit(self, mode)
 
-    def doRead(self, maxage=0):
-        return self._read_mapped_choice(maxage=maxage)
-
 
 class EpicsMappedMoveable(EpicsMappedChoiceSupport, EpicsReadWriteBase, MappedMoveable):
     """
@@ -281,9 +277,6 @@ class EpicsMappedMoveable(EpicsMappedChoiceSupport, EpicsReadWriteBase, MappedMo
         if mode != SIMULATION:
             _update_mapped_choices(self)
         MappedMoveable.doInit(self, mode)
-
-    def doRead(self, maxage=0):
-        return self._read_mapped_choice(maxage=maxage)
 
     def _startRaw(self, value):
         self._epics.put_channel_value("write", value)

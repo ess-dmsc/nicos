@@ -19,14 +19,7 @@ from nicos_ess.devices.epics.pva.epics_common import (
 
 
 class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
-    """
-    HPLC pump controller (EPICS PVA).
-
-    - Commands via MappedMoveable values: start / volume_start / time_start / stop.
-    - `run_started` tracks the transitional 'starting' phase until IOC leaves "Off".
-    - No attached status device: derive state from EPICS PVs directly.
-    - mbbi records (Status-R, Error-R) are cached as **strings** via as_string.
-    """
+    """HPLC pump controller for the ESS EPICS PVA pump PVs."""
 
     parameters = {
         "pv_root": Param("HPLC pump EPICS prefix", type=pvname, mandatory=True),
@@ -56,8 +49,6 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
     _default_pv_root_attr = "pv_root"
     _primary_channel = "run_status"
     _epics_channels = {
-        # Use VALUE_AND_STATUS for Error-R so we can read its enum value
-        # (not only alarm)
         "error": EpicsChannelInfo(
             "error", "Error-R", EpicsChannelRole.VALUE_AND_STATUS, as_string=True
         ),
@@ -67,7 +58,6 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
         "reset_error": EpicsChannelInfo(
             "", "ErrorReset-S", EpicsChannelRole.VALUE, subscribe=False
         ),
-        # mbbi with human-readable choices
         "run_status": EpicsChannelInfo(
             "run_status", "Status-R", EpicsChannelRole.VALUE_AND_STATUS, as_string=True
         ),
@@ -123,17 +113,14 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
         if self._mode == SIMULATION:
             return status.OK, ""
 
-        # Use Error-R (enum) as authoritative error indicator
         try:
             err = self._read_channel_cached("error", maxage=maxage) or ""
         except TimeoutError:
             return status.UNKNOWN, "timeout reading error state"
 
         if err and err != "No error":
-            # Don't block on ErrorText-R, it might lag/never clear
             return status.ERROR, err
 
-        # No current error → derive state from Status-R
         try:
             run_state = self._read_channel_cached("run_status", maxage=maxage)
         except TimeoutError:
@@ -159,7 +146,6 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
             return False
 
         if target in ("start", "volume_start", "time_start", "stop"):
-            # finish when pump is Off
             return current == self._STATE_OFF
         return False
 
@@ -168,10 +154,6 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
             self._commands[target]()
 
             if target in ("start", "volume_start", "time_start"):
-                # It takes a few seconds before the pump actually starts pumping.
-                # Start a monitor thread to clear the 'run_started' flag when that
-                # happens. 'run_started' indicates the transitional starting phase.
-
                 def monitor_run_start():
                     try:
                         self._epics.wait_for(
@@ -183,7 +165,6 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
                             self._STATE_PUMPING,
                         )
                     finally:
-                        # ensure the flag cannot stick
                         self._setROParam("run_started", False)
 
                 createThread(
@@ -198,8 +179,6 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
         self._setROParam("run_started", False)
 
     def doReset(self):
-        # Acknowledge/reset; ErrorText-R may still show old text, but the
-        # status computation uses Error-R.
         self._epics.put_channel_value("reset_error", 1)
 
     def doRead(self, maxage=0):
@@ -251,7 +230,6 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
         self._epics.put_channel_value("pump_for_time", 1)
 
     def _on_channel_update(self, update):
-        # Fast-path: clear transitional flag as soon as IOC leaves Off
         if (
             update.channel == "run_status"
             and self.run_started

@@ -1,16 +1,12 @@
 from nicos.core import (
-    SIMULATION,
     Param,
     none_or,
     pvname,
     status,
 )
-from nicos.devices.abstract import MappedMoveable
 from nicos_ess.devices.epics.pva.epics_common import (
-    MappedChoiceSource,
     EpicsChannelInfo,
     EpicsChannelRole,
-    _update_mapped_choices,
 )
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsMappedMoveable,
@@ -24,7 +20,7 @@ class EpicsShutter(EpicsMappedMoveable):
     choices from the writepv instead of readpv for the mapping.
     """
 
-    _publish_read_choices = False
+    _mapping_channel = "write"
 
     parameters = {
         "resetpv": Param(
@@ -41,20 +37,11 @@ class EpicsShutter(EpicsMappedMoveable):
         ),
     }
 
-    def _after_subscribe(self, mode):
-        # Hardware quirk: the readpv and writepv expose different enums
-        # (read includes transient states like Opening/Closing). Keep separate
-        # internal maps and publish the write map as the accepted target set.
-        if mode != SIMULATION:
-            _update_mapped_choices(self, MappedChoiceSource.READ, publish=False)
-            _update_mapped_choices(self, MappedChoiceSource.WRITE)
-        MappedMoveable.doInit(self, mode)
-
     def _read_msgtxt(self):
         return self._epics.get_pv_value(self.msgtxt, as_string=True)
 
     def _is_moving(self, maxage=0):
-        return self._read_mapped_choice(maxage=maxage) in ("Closing", "Opening")
+        return self.read(maxage) in ("Closing", "Opening")
 
     def _compute_status(self, maxage=0):
         severity, msg = self._read_primary_alarm(maxage=maxage)

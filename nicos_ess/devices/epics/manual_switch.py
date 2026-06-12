@@ -34,7 +34,7 @@ class ManualSwitch(EpicsDeviceBase, Moveable):
             mandatory=True,
         ),
         "mapping": Param(
-            "Dict mapping logical *states* → raw PV values",
+            "Dict mapping logical states to raw PV values",
             type=dict,
             mandatory=False,
             settable=False,

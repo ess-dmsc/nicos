@@ -10,8 +10,6 @@ from nicos_ess.devices.epics.pva.epics_common import (
 
 
 class EpicsMultiSourceComponent(EpicsChannelComponent):
-    """Prefix matrix helper for sources sharing one suffix table."""
-
     def __init__(self, epics_channels, sources, **kwargs):
         super().__init__(epics_channels, dict.fromkeys(epics_channels), **kwargs)
         self.sources = sources
@@ -57,14 +55,6 @@ class EpicsMultiSourceComponent(EpicsChannelComponent):
 
 
 class EpicsMultiSourceBase(EpicsDeviceBase):
-    """NICOS glue for prefix-matrix devices.
-
-    Multi-source devices should report the worst status across their sources.
-    The base class maintains per-source connection state and includes that in
-    the default status. Concrete subclasses that add hardware state should merge
-    their candidates with ``_source_connection_status(maxage)``.
-    """
-
     _source_connection_cache_key = "_source_connection_status"
 
     parameters = {
@@ -115,8 +105,6 @@ class EpicsMultiSourceBase(EpicsDeviceBase):
         return f"{source_id}/{channel}/{self._source_connection_cache_key}"
 
     def _source_connection_status(self, maxage=0):
-        # Connection state is callback-maintained; a fresh status read must not
-        # discard a known disconnect just because there is no synchronous read.
         del maxage
         candidates = []
         for source_id in self.sources:
