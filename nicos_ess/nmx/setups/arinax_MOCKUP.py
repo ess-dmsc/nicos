@@ -2,7 +2,7 @@ description = "ARINAX controls (from the mockup software)"
 
 group = "optional"
 
-pv_root = "NMX-mockup:"
+pv_root = "NMX:"
 
 SAMPLE_STORAGE = {
     f'Sample Storage {s} - SS{i}': (f"Sample_Storage_{s}", f"SS{i}")  
