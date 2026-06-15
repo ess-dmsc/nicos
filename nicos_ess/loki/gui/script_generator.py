@@ -40,7 +40,7 @@ class Script:
         return script
 
     def _start_nexus(self, row_values):
-        return f'with open_nexusfile("run_{row_values["sample"]["name"]}"):\n'
+        return f'with nexusfile_open("run_{row_values["sample"]["name"]}"):\n'
 
     def _finish_sample(self, row_values):
         return self._get_command(row_values.get("post-command")) + "\n"
