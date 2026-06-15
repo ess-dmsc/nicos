@@ -4,24 +4,6 @@ pv_root_1 = "NMX-ChpSy1:Chop-WLS-201:"
 chic_root = "NMX-ChpSy1:Chop-CHIC-001:"
 
 devices = dict(
-    wls2a_chopper_log=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="The logs from chopper controller",
-        readpv="{}Log_R".format(pv_root_1),
-        visibility=(),
-    ),
-    wls2a_chopper_levitation_status=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="The chopper status.",
-        readpv="{}LeviStatus_R".format(pv_root_1),
-        visibility=(),
-    ),
-    wls2a_chopper_motor_temperature=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="The temperature of the motor of the chopper",
-        readpv="{}MtrTemp_R".format(pv_root_1),
-        visibility=(),
-    ),
     wls2a_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
@@ -106,13 +88,13 @@ devices = dict(
         pva=True,
     ),
     wls2a_chopper_alarms=device(
-        "nicos_ess.devices.epics.chopper.NmxChopperAlarms",
+        "nicos_ess.devices.epics.chopper.NewChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_1,
         visibility=(),
     ),
     wls2a_chopper=device(
-        "nicos_ess.devices.epics.chopper.NmxChopperController",
+        "nicos_ess.devices.epics.chopper.NewEssChopperController",
         description="The chopper controller",
         pollinterval=0.5,
         maxage=None,
