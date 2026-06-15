@@ -27,7 +27,7 @@ devices = dict(
     ),
     sample_changer=device(
         "nicos_ess.loki.devices.thermostated_cellholder.ThermoStatedCellHolder",
-        description="The thermostated cell-holder for LoKI",
+        description="The thermostated sample changer for LoKI",
         xmotor="cellholder_x_motor",
         ymotor="cellholder_y_motor",
         moveables=["cellholder_x_motor", "cellholder_y_motor"],

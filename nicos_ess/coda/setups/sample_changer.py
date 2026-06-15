@@ -1,4 +1,4 @@
-description = "LoKI sample holder"
+description = "LoKI sample changer"
 
 group = "optional"
 
@@ -17,7 +17,7 @@ devices = dict(
     ),
     sample_changer=device(
         "nicos_ess.loki.devices.thermostated_cellholder.ThermoStatedCellHolder",
-        description="The thermostated sample-holder for LoKI",
+        description="The thermostated sample changer for LoKI",
         xmotor="linear_sample_changer",
         ymotor="sample_stack_z",
         precision=[0.05, 0.05],
