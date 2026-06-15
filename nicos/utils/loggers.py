@@ -38,6 +38,7 @@ from logging import (
     LogRecord,
     addLevelName,
     CRITICAL,
+    StreamHandler,
 )
 from logging.handlers import SysLogHandler
 from os import path
@@ -292,30 +293,6 @@ class NicosLogfileFormatter(Formatter):
         return res
 
 
-class StreamHandler(Handler):
-    """Reimplemented from logging: remove cruft, remove bare excepts."""
-
-    def __init__(self, stream=None):
-        Handler.__init__(self)
-        if stream is None:
-            stream = sys.stderr
-        self.stream = stream
-
-    def flush(self):
-        self.acquire()
-        try:
-            if self.stream and hasattr(self.stream, "flush"):
-                self.stream.flush()
-        finally:
-            self.release()
-
-    def emit(self, record, fs="%s\n"):
-        try:
-            msg = self.format(record)
-            self.stream.write(fs % msg)
-            self.flush()
-        except Exception:
-            self.handleError(record)
 
 
 class NicosLogfileHandler(StreamHandler):
