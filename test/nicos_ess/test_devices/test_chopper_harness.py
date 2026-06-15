@@ -38,9 +38,7 @@ from test.nicos_ess.test_devices.doubles import (
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
 
-    monkeypatch.setattr(
-        chopper_mod, "create_wrapper", lambda timeout, use_pva: backend
-    )
+    monkeypatch.setattr(chopper_mod, "create_wrapper", lambda timeout, use_pva: backend)
     monkeypatch.setattr(
         epics_devices, "create_wrapper", lambda timeout, use_pva: backend
     )
@@ -111,6 +109,23 @@ class TestChopperAlarmsHarness:
         assert poller_device is not None
 
 
+class TestNewChopperAlarmsHarness:
+    def test_initializes(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, poller_device = device_harness.create_pair(
+            chopper_mod.NewChopperAlarms,
+            name="chopper_alarms",
+            shared={
+                "pv_root": "SIM:CHOP:",
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
+
+
 class TestEssChopperControllerHarness:
     def test_initializes(self, device_harness, fake_backend, attached_chopper_devices):
         del fake_backend, attached_chopper_devices
@@ -130,23 +145,18 @@ class TestEssChopperControllerHarness:
         assert poller_device is not None
 
 
-class TestOdinChopperControllerHarness:
+class TestNewEssChopperControllerHarness:
     def test_initializes(self, device_harness, fake_backend, attached_chopper_devices):
         del fake_backend, attached_chopper_devices
         daemon_device, poller_device = device_harness.create_pair(
-            chopper_mod.OdinChopperController,
-            name="odin_chopper",
+            chopper_mod.NewEssChopperController,
+            name="ess_chopper",
             shared={
-                "pv_root": "SIM:CHOP:",
-                "speed": "odin_speed",
-                "mapping": {
-                    "stop": "stop",
-                    "start": "start",
-                    "a_start": "a_start",
-                    "park": "park",
-                },
-                "monitor": True,
-                "pva": True,
+                "state": "ess_state",
+                "command": "ess_command",
+                "speed": "ess_speed",
+                "chic_conn": "ess_chic_conn",
+                "mapping": {"stop": "stop", "start": "start"},
             },
         )
 
