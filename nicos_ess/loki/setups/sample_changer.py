@@ -19,6 +19,7 @@ devices = dict(
     ),
     sample_rotation_rpm=device(
         "nicos_ess.devices.transformer_devices.DegreesPerSecondToRPM",
+        description="Rotation sample cell - transformed to rpm",
         motor="sample_rotation",
     ),
     sample_changer=device(
