@@ -279,7 +279,7 @@ class TestDynamicNexusBuilding(TestCase):
         samplename = ""
         counter = 5
 
-        self.session.loadSetup("ess_loki_cellholder", {})
+        self.session.loadSetup("ess_loki_sample_changer", {})
         self.cellholder: ThermoStatedCellHolder = self.session.getDevice(
             "sample_changer"
         )
@@ -332,7 +332,7 @@ class TestDynamicNexusBuilding(TestCase):
         metainfo = _minimal_metainfo(counter)
         metainfo[("Sample", "samples")] = (samples, str(samples), "", "sample")
         metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
-        self.session.loadSetup("ess_loki_cellholder", {})
+        self.session.loadSetup("ess_loki_sample_changer", {})
         self.cellholder: ThermoStatedCellHolder = self.session.getDevice(
             "sample_changer"
         )
