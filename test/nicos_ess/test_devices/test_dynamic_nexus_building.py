@@ -317,7 +317,7 @@ class TestDynamicNexusBuilding(TestCase):
         assert sample_name_ds["config"]["values"] == "SampleE"
 
         cellholder_ds = get_by_named_path(
-            doc, path_map, "/entry/instrument/sample_changer"
+            doc, path_map, "/entry/sample/sample_changer"
         )
         assert cellholder_ds is not None
         assert cellholder_ds["children"][0]["config"]["values"] == "T5"
