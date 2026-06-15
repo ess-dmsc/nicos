@@ -40,7 +40,7 @@ from logging import (
     CRITICAL,
     StreamHandler,
 )
-from logging.handlers import SysLogHandler
+from logging.handlers import SysLogHandler, TimedRotatingFileHandler
 from os import path
 
 from nicos import session
@@ -48,8 +48,6 @@ from nicos.utils import colorize, formatExtendedTraceback
 
 LOGFMT = "%(asctime)s : %(levelname)-7s : %(name)s: %(message)s"
 DATEFMT = "%H:%M:%S"
-DATESTAMP_FMT = "%Y-%m-%d"
-SECONDS_PER_DAY = 60 * 60 * 24
 
 ACTION = INFO + 1
 INPUT = INFO + 6
@@ -293,52 +291,68 @@ class NicosLogfileFormatter(Formatter):
         return res
 
 
+class NicosLogfileHandler(TimedRotatingFileHandler):
+    """Logs to log files with a date stamp appended, and rollover on midnight.
 
+    Extends baseclass to set a symlink named "current" to the most recent log
+    file created and create every file with date suffix (instead of appending it
+    on rollover).
 
-class NicosLogfileHandler(StreamHandler):
-    """
-    Logs to log files with a date stamp appended, and rollover on midnight.
     """
 
     def __init__(
         self,
         directory,
         filenameprefix="nicos",
-        filenamesuffix=None,
-        dayfmt=DATESTAMP_FMT,
+        filenamesuffix="log",
         use_subdir=True,
+        backupCount=0,
     ):
         if use_subdir:
             directory = path.join(directory, filenameprefix)
         if not path.isdir(directory):
             os.makedirs(directory)
         self._currentsymlink = path.join(directory, "current")
-        self._filenameprefix = filenameprefix
-        self._filenamesuffix = filenamesuffix
-        self._pathnameprefix = path.join(directory, filenameprefix)
-        self._dayfmt = dayfmt
-        # today's logfile name
-        if filenamesuffix:
-            basefn = (
-                self._pathnameprefix
-                + "-"
-                + time.strftime(dayfmt)
-                + "-"
-                + filenamesuffix
-                + ".log"
-            )
-        else:
-            basefn = self._pathnameprefix + "-" + time.strftime(dayfmt) + ".log"
-        self.baseFilename = path.abspath(basefn)
-        self.mode = "a"
-        StreamHandler.__init__(self, self._open())
-        # determine time of first midnight from now on
-        t = time.localtime()
-        self.rollover_at = time.mktime((t[0], t[1], t[2] + 1, 0, 0, 0, 0, 0, -1))
         self.setFormatter(NicosLogfileFormatter(LOGFMT, DATEFMT))
         self.disabled = False
+        self._filenamesuffix: str = filenamesuffix
+        # filename suffix will be added via a callable in the `namer` attr:
+        self.namer = self._add_fn_suffix
+        # set the suffix for "midnight" in advance as _open will be called
+        # before the base class sets a value for it
+        self.suffix = "%Y-%m-%d"
+        super().__init__(
+            filename=path.join(directory, filenameprefix),
+            when="midnight",
+            backupCount=backupCount,
+        )
+
+    def _add_fn_suffix(self, default: str) -> str:
+        """Extend the file name with the suffix."""
+        if self._filenamesuffix:
+            return default + "." + self._filenamesuffix
+        return default
+
+    def doRollover(self):
+        """Perform rollover of log.
+
+        Simplified version of base class method as the file name of current log
+        already contains date string. No call to `rotate` needed.
+
+        """
+        if self.stream:
+            self.stream.close()
+            self.stream = None
+        if self.backupCount > 0:
+            for s in self.getFilesToDelete():
+                os.remove(s)
+        if not self.delay:
+            self.stream = self._open()
+        currentTime = int(time.time())
+        self.rolloverAt = self.computeRollover(currentTime)
 
     def _open(self):
+        """Open a new log file and set a symlink to it."""
         # update 'current' symlink upon open
         try:
             os.remove(self._currentsymlink)
@@ -346,14 +360,22 @@ class NicosLogfileHandler(StreamHandler):
             # if the symlink does not (yet) exist, OSError is raised.
             # should happen at most once per installation....
             pass
+        timeTuple = time.localtime(int(time.time()))
+        # default fn pattern used by base class:
+        thisFile = self.baseFilename + "." + time.strftime(self.suffix, timeTuple)
+        if self.namer:
+            thisFile = self.namer(thisFile)
         if hasattr(os, "symlink"):
             try:
-                os.symlink(path.basename(self.baseFilename), self._currentsymlink)
+                os.symlink(thisFile, self._currentsymlink)
             except Exception:
                 if os.name != "nt":
                     raise
         # finally open the new logfile....
-        return open(self.baseFilename, self.mode, encoding="utf-8")
+        open_func = self._builtin_open
+        return open_func(
+            thisFile, self.mode, encoding=self.encoding, errors=self.errors
+        )
 
     def filter(self, record):
         return not self.disabled
@@ -362,15 +384,7 @@ class NicosLogfileHandler(StreamHandler):
         if record.levelno == ACTION:
             # do not write ACTIONs to logfiles, they're only informative
             return
-        try:
-            t = int(time.time())
-            if t >= self.rollover_at:
-                self.doRollover()
-            if self.stream is None:
-                self.stream = self._open()
-            StreamHandler.emit(self, record)
-        except Exception:
-            self.handleError(record)
+        super().emit(record)
 
     def enable(self, enabled):
         if enabled:
@@ -379,34 +393,6 @@ class NicosLogfileHandler(StreamHandler):
             self.stream = self._open()
         else:
             self.disabled = True
-
-    def close(self):
-        self.acquire()
-        try:
-            if self.stream:
-                self.flush()
-                if hasattr(self.stream, "close"):
-                    self.stream.close()
-                StreamHandler.close(self)
-                self.stream = None
-        finally:
-            self.release()
-
-    def doRollover(self):
-        self.stream.close()
-        if self._filenamesuffix:
-            self.baseFilename = "%s-%s-%s.log" % (
-                self._pathnameprefix,
-                time.strftime(self._dayfmt),
-                self._filenamesuffix,
-            )
-        else:
-            self.baseFilename = (
-                self._pathnameprefix + "-" + time.strftime(self._dayfmt) + ".log"
-            )
-        self.stream = self._open()
-        t = time.localtime()
-        self.rollover_at = time.mktime((t[0], t[1], t[2] + 1, 0, 0, 0, 0, 0, -1))
 
 
 class ColoredConsoleHandler(StreamHandler):

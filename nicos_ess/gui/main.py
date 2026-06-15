@@ -95,7 +95,9 @@ def main(_argv):
     log.setLevel(logging.INFO)
     log.addHandler(ColoredConsoleHandler())
     log.addHandler(
-        NicosLogfileHandler(path.join(userpath, "log"), "gui", use_subdir=False)
+        NicosLogfileHandler(
+            path.join(userpath, "log"), "gui", use_subdir=False, backupCount=5
+        )
     )
 
     # set up logging for unhandled exceptions in Qt callbacks
@@ -105,6 +107,7 @@ def main(_argv):
 
     sys.excepthook = log_unhandled
 
+    log.info("Starting ESS NICOS GUI")
     app = QApplication(sys.argv, organizationName="nicos", applicationName="gui")
 
     opts = parseargs()
