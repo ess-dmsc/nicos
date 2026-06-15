@@ -34,6 +34,7 @@ devices = dict(
         precision=[0.05, 0.05],
         nexus_config=[
             {
+                "nexus_path": "/entry/sample",
                 "group_name": "sample_changer",
                 "nx_class": "NXcollection",
                 "suffix": "position_readback",
