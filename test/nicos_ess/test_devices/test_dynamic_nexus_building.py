@@ -274,7 +274,7 @@ class TestDynamicNexusBuilding(TestCase):
 
         self.session.loadSetup("ess_loki_cellholder", {})
         self.cellholder: ThermoStatedCellHolder = self.session.getDevice(
-            "thermostated_sample_holder"
+            "sample_changer"
         )
         self.cellholder.cartridges = [
             {
@@ -300,7 +300,7 @@ class TestDynamicNexusBuilding(TestCase):
         metainfo = _minimal_metainfo(counter)
         metainfo[("Sample", "samples")] = (samples, str(samples), "", "sample")
         metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
-        metainfo[("thermostated_sample_holder", "value")] = ('T5', 'T5', '', 'general')
+        metainfo[("sample_changer", "value")] = ('T5', 'T5', '', 'general')
         self.cellholder.move("T5")
         structure = self.nexus.get_structure(metainfo, counter)
         doc = json.loads(structure)
@@ -309,7 +309,7 @@ class TestDynamicNexusBuilding(TestCase):
         assert sample_name_ds is not None
         assert sample_name_ds["config"]["values"] == "SampleE"
 
-        cellholder_ds = get_by_named_path(doc, path_map, "/entry/instrument/thermostated_sample_holder")
+        cellholder_ds = get_by_named_path(doc, path_map, "/entry/instrument/sample_changer")
         assert cellholder_ds is not None
         assert cellholder_ds["children"][0]["config"]["values"] == "T5"
 
@@ -324,7 +324,7 @@ class TestDynamicNexusBuilding(TestCase):
         metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
         self.session.loadSetup("ess_loki_cellholder", {})
         self.cellholder: ThermoStatedCellHolder = self.session.getDevice(
-            "thermostated_sample_holder"
+            "sample_changer"
         )
         self.cellholder.cartridges = [
             {
@@ -350,4 +350,3 @@ class TestDynamicNexusBuilding(TestCase):
 
         with pytest.raises(Exception):
             structure = self.nexus.get_structure(metainfo, counter)
-

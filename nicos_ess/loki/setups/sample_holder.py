@@ -21,7 +21,7 @@ devices = dict(
         "nicos_ess.devices.transformer_devices.DegreesPerSecondToRPM",
         motor="sample_rotation",
     ),
-    thermostated_sample_holder=device(
+    sample_changer=device(
         "nicos_ess.loki.devices.thermostated_cellholder.ThermoStatedCellHolder",
         description="The thermostated sample-holder for LoKI",
         xmotor="linear_sample_changer",
@@ -29,9 +29,9 @@ devices = dict(
         precision=[0.05, 0.05],
         nexus_config=[
             {
-                "group_name": "thermostated_sample_holder",
+                "group_name": "sample_changer",
                 "nx_class": "NXcollection",
-                "suffix": "readback",
+                "suffix": "position_readback",
                 "dataset_type": "static_read",
             }
         ],

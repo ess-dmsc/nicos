@@ -46,7 +46,7 @@ class Script:
         return self._get_command(row_values.get("post-command")) + "\n"
 
     def _define_var_for_positioner(self):
-        return f"positioner = thermostated_sample_holder"
+        return f"positioner = sample_changer"
 
 
 class TransFirst(Script):
