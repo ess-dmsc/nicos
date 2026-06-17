@@ -24,8 +24,8 @@ devices = dict(
     bpc2_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_Execute".format(bpc2_pv_root),
-        writepv="{}C_Execute".format(bpc2_pv_root),
+        readpv="{}C_ExecuteUser".format(bpc2_pv_root),
+        writepv="{}C_ExecuteUser".format(bpc2_pv_root),
         requires={"level": "admin"},
         visibility=(),
     ),
@@ -127,8 +127,8 @@ devices = dict(
     foc2_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_Execute".format(foc2_pv_root),
-        writepv="{}C_Execute".format(foc2_pv_root),
+        readpv="{}C_ExecuteUser".format(foc2_pv_root),
+        writepv="{}C_ExecuteUser".format(foc2_pv_root),
         requires={"level": "admin"},
         visibility=(),
     ),
@@ -234,8 +234,8 @@ devices = dict(
     foc3_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_Execute".format(foc3_pv_root),
-        writepv="{}C_Execute".format(foc3_pv_root),
+        readpv="{}C_ExecuteUser".format(foc3_pv_root),
+        writepv="{}C_ExecuteUser".format(foc3_pv_root),
         requires={"level": "admin"},
         visibility=(),
     ),
@@ -341,8 +341,8 @@ devices = dict(
     foc4_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_Execute".format(foc4_pv_root),
-        writepv="{}C_Execute".format(foc4_pv_root),
+        readpv="{}C_ExecuteUser".format(foc4_pv_root),
+        writepv="{}C_ExecuteUser".format(foc4_pv_root),
         requires={"level": "admin"},
         visibility=(),
     ),
