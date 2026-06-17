@@ -592,10 +592,10 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
 
     def doInit(self, mode):
         EpicsReadable.doInit(self, mode)
+        MappedReadable.doInit(self, mode)
 
         if mode != SIMULATION:
             _update_mapped_choices(self)
-        MappedReadable.doInit(self, mode)
 
     def doRead(self, maxage=0):
         return get_from_cache_or(
