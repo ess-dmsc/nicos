@@ -22,8 +22,8 @@ devices = dict(
     foc5_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_Execute".format(foc5_pv_root),
-        writepv="{}C_Execute".format(foc5_pv_root),
+        readpv="{}C_ExecuteUser".format(foc5_pv_root),
+        writepv="{}C_ExecuteUser".format(foc5_pv_root),
         requires={"level": "admin"},
         visibility=(),
     ),
