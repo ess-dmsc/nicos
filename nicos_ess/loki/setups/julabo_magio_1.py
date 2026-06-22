@@ -75,7 +75,7 @@ devices = dict(
             },
         ],
     ),
-    julabo_1_external_enabled=device(
+    julabo_1_external_mode=device(
         # The system actuates to make the selected sensor equals to the setpoint.
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Use external sensor for regulation instead of internal sensor",
