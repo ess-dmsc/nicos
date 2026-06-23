@@ -229,6 +229,10 @@ class EpicsNumericReadable(EpicsReadable):
         if mode == SIMULATION:
             return
 
+        if session.sessiontype != POLLER and self.use_prec:
+            # If setting the fmtstr using PREC field then disable changing it.
+            self.parameters["fmtstr"].settable = False
+
         if session.sessiontype == POLLER and self.monitor:
             EpicsReadable.doInit(self, mode)
 
@@ -299,6 +303,12 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
             mandatory=False,
             userparam=False,
         ),
+        "use_prec": Param(
+            "Format string for the readback value is based on the EPICS PREC field",
+            type=bool,
+            default=True,
+            userparam=False,
+        ),
     }
 
     parameter_overrides = {
@@ -326,7 +336,14 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
             self._epics_wrapper.connect_pv(self.targetpv)
 
     def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
+        if mode == SIMULATION:
+            return
+
+        if session.sessiontype != POLLER and self.use_prec:
+            # If setting the fmtstr using PREC field then disable changing it.
+            self.parameters["fmtstr"].settable = False
+
+        if session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
@@ -356,6 +373,15 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
                     self._epics_wrapper.subscribe(
                         self.targetpv,
                         self._record_fields["targetpv"].cache_key,
+                        self._value_change_callback,
+                        self._connection_change_callback,
+                    )
+                )
+            if self.use_prec:
+                self._epics_subscriptions.append(
+                    self._epics_wrapper.subscribe(
+                        f"{self.readpv}.PREC",
+                        "prec",
                         self._value_change_callback,
                         self._connection_change_callback,
                     )
@@ -413,19 +439,19 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        if name not in {self.readpv, self.writepv, self.targetpv}:
-            # Unexpected updates ignored
-            return
         time_stamp = time.time()
         if name == self.readpv:
             self._cache.put(self._name, param, value, time_stamp)
             self._cache.put(self._name, "unit", units, time_stamp)
-        if name == self.writepv and limits:
-            self._cache.put(self._name, "abslimits", limits, time_stamp)
-        if name == self.writepv and not self.target:
+        elif name == self.writepv:
+            if limits:
+                self._cache.put(self._name, "abslimits", limits, time_stamp)
+            if not self.target:
+                self._cache.put(self._name, param, value, time_stamp)
+        elif name == self.targetpv:
             self._cache.put(self._name, param, value, time_stamp)
-        if name == self.targetpv:
-            self._cache.put(self._name, param, value, time_stamp)
+        elif param == "prec":
+            self._cache.put(self._name, "fmtstr", f"%.{value}f", time_stamp)
 
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -459,7 +485,8 @@ class EpicsDigitalMoveable(EpicsAnalogMoveable):
     valuetype = int
 
     parameter_overrides = {
-        "fmtstr": Override(default="%d"),
+        "fmtstr": Override(default="%d", settable=False),
+        "use_prec": Override(default=False),
     }
 
 
