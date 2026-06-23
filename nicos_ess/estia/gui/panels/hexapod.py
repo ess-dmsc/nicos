@@ -98,8 +98,6 @@ class HexapodPanel(Panel):
     def update_position_info(self, values, valtype="curVal"):
         curval = 0
         for axis in self.qtObj:
-            # curVal is a user-immutable label while newVal is a user-mutable spinbox
-            # the label is more frequently updated, so it is the default
             if valtype != "curVal":
                 self.qtObj[axis][valtype].setValue(round(values[curval], 3))
             else:
@@ -274,6 +272,42 @@ class HexapodPanel(Panel):
         self.test = self.client.getDeviceList(needs_class=class_typ)
         self.showError(f"{self.test}")
         # data = self.mainwindow.expertmode
+
+    # absolute motion using move in GUI
+    @pyqtSlot()
+    def on_abs_tx_pressed(self):
+        target = self.newTx.value()
+        self.exec_command(f"move('{self.adevs['tx']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_ty_pressed(self):
+        target = self.newTy.value()
+        self.exec_command(f"move('{self.adevs['ty']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_tz_pressed(self):
+        target = self.newTz.value()
+        self.exec_command(f"move('{self.adevs['tz']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_rx_pressed(self):
+        target = self.newRx.value()
+        self.exec_command(f"move('{self.adevs['rx']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_ry_pressed(self):
+        target = self.newRy.value()
+        self.exec_command(f"move('{self.adevs['ry']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_rz_pressed(self):
+        target = self.newRz.value()
+        self.exec_command(f"move('{self.adevs['rz']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_gmt_pressed(self):
+        target = self.newTab.value()
+        self.exec_command(f"move('{self.adevs['gmt']['devname']}', {target})")
 
     # relative motion using rmove in GUI
 
