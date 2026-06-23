@@ -63,12 +63,10 @@ class HexapodPanel(Panel):
 
         if devname == self.devname and pname == "value":
             self.update_current_pos(cache_load(value))
-
-        # can't seem to find it in cache
-        # but is popagated into 'value' param just fine...
-        # so grabbing it from there while updating on cache check
-        self.update_status_window(self.client.getDeviceParam(self.status, "value"))
-        self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
+            # can't seem to find it in cache
+            # but is popagated into 'value' param just fine...
+            self.update_status_window(self.client.getDeviceParam(self.status, "value"))
+            self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
 
     def on_client_message(self, message):
         if message[5] != self._exec_reqid or message[2] < WARNING:
@@ -236,7 +234,7 @@ class HexapodPanel(Panel):
                 "newLabel": self.newRzLabel,
                 "newUnit": self.newRzUnit,
             },
-            "table": {
+            "gmt": {
                 "curVal": self.curTab,
                 "newVal": self.newTab,
                 "curLabel": self.curTabLabel,
@@ -256,6 +254,16 @@ class HexapodPanel(Panel):
     @pyqtSlot()
     def on_butStop_pressed(self):
         self.exec_command(f"stop({self.devname})")
+
+    @pyqtSlot()
+    def on_refresh_pressed(self):
+        # Sets the spin boxes to the current axis positions for easier absolute motion control
+        values = self.client.getDeviceParam(self.devname, "value")
+        curval = 0
+        for axis in self.qtObj:
+            self.qtObj[axis]["newVal"].setValue(round(values[curval], 3))
+            curval = curval + 1
+        return
 
     @pyqtSlot()
     def on_butTest_pressed(self):
@@ -329,9 +337,9 @@ class HexapodPanel(Panel):
     @pyqtSlot()
     def on_relNeg_gmt_pressed(self):
         target = -1 * self.relTab.value()
-        self.exec_command(f"rmove('{self.adevs['table']['devname']}', {target})")
+        self.exec_command(f"rmove('{self.adevs['gmt']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_gmt_pressed(self):
         target = self.relTab.value()
-        self.exec_command(f"rmove('{self.adevs['table']['devname']}', {target})")
+        self.exec_command(f"rmove('{self.adevs['gmt']['devname']}', {target})")
