@@ -580,6 +580,18 @@ def _update_mapped_choices(mapped_device, pv=PvReadOrWrite.readpv):
         mapped_device._inverse_mapping[v] = k
 
 
+def _mapReadValue(mapped_device, value):
+    if not hasattr(mapped_device, "_inverse_mapping"):
+        mapped_device._inverse_mapping = {}
+    mapped_value = mapped_device._inverse_mapping.get(value)
+    if mapped_value is None:
+        _update_mapped_choices(mapped_device)
+        mapped_value = mapped_device._inverse_mapping.get(value)
+    if mapped_value is None:
+        raise PositionError(mapped_device, "unknown unmapped position %r" % value)
+    return mapped_value
+
+
 class EpicsMappedReadable(EpicsReadable, MappedReadable):
     valuetype = str
 
@@ -601,17 +613,8 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
         return get_from_cache_or(
             self,
             self._record_fields["readpv"].cache_key,
-            lambda: self._mapReadValue(self._epics_wrapper.get_pv_value(self.readpv)),
+            lambda: _mapReadValue(self, self._epics_wrapper.get_pv_value(self.readpv)),
         )
-
-    def _mapReadValue(self, value):
-        mapped_value = self._inverse_mapping.get(value)
-        if mapped_value is None:
-            _update_mapped_choices(self)
-            mapped_value = self._inverse_mapping.get(value)
-        if mapped_value is None:
-            raise PositionError(self, "unknown unmapped position %r" % value)
-        return mapped_value
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -623,7 +626,7 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
         self._cache.put(
             self._name,
             param,
-            self._mapReadValue(value),
+            _mapReadValue(self, value),
             time_stamp,
         )
 
@@ -721,17 +724,8 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
         return get_from_cache_or(
             self,
             self._record_fields["readpv"].cache_key,
-            lambda: self._mapReadValue(self._epics_wrapper.get_pv_value(self.readpv)),
+            lambda: _mapReadValue(self, self._epics_wrapper.get_pv_value(self.readpv)),
         )
-
-    def _mapReadValue(self, value):
-        mapped_value = self._inverse_mapping.get(value)
-        if mapped_value is None:
-            _update_mapped_choices(self)
-            mapped_value = self._inverse_mapping.get(value)
-        if mapped_value is None:
-            raise PositionError(self, "unknown unmapped position %r" % value)
-        return mapped_value
 
     def doStatus(self, maxage=0):
         def _func():
@@ -756,14 +750,14 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             self._cache.put(
                 self._name,
                 param,
-                self._mapReadValue(value),
+                _mapReadValue(self, value),
                 time_stamp,
             )
             self._cache.put(self._name, "unit", units, time_stamp)
         elif name == self.writepv and not self.target:
-            self._cache.put(self._name, param, self._mapReadValue(value), time_stamp)
+            self._cache.put(self._name, param, _mapReadValue(self, value), time_stamp)
         elif name == self.targetpv:
-            self._cache.put(self._name, param, self._mapReadValue(value), time_stamp)
+            self._cache.put(self._name, param, _mapReadValue(self, value), time_stamp)
 
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
