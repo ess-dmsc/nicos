@@ -62,13 +62,11 @@ class HexapodPanel(Panel):
         devname, pname = key.split("/")
 
         if devname == self.devname and pname == "value":
-            self.update_current_pos(cache_load(value))
-
-        # can't seem to find it in cache
-        # but is popagated into 'value' param just fine...
-        # so grabbing it from there while updating on cache check
-        self.update_status_window(self.client.getDeviceParam(self.status, "value"))
-        self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
+            self.update_position_info(cache_load(value))
+            # can't seem to find it in cache
+            # but is popagated into 'value' param just fine...
+            self.update_status_window(self.client.getDeviceParam(self.status, "value"))
+            self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
 
     def on_client_message(self, message):
         if message[5] != self._exec_reqid or message[2] < WARNING:
@@ -97,10 +95,15 @@ class HexapodPanel(Panel):
         self.qtObj.clear()
         self.show_controls(False)
 
-    def update_current_pos(self, values):
+    def update_position_info(self, values, valtype="curVal"):
         curval = 0
         for axis in self.qtObj:
-            self.qtObj[axis]["curVal"].setText(f"{round(values[curval], 3):.3f}")
+            if valtype == "newVal":
+                self.qtObj[axis][valtype].setValue(round(values[curval], 3))
+            elif valtype == "curVal":
+                self.qtObj[axis][valtype].setText(f"{round(values[curval], 3):.3f}")
+            else:
+                raise NotImplementedError(f"valtype {valtype} is not a valid option")
             curval = curval + 1
 
     def show_controls(self, visibility):
@@ -112,6 +115,7 @@ class HexapodPanel(Panel):
             self.statusBox.show()
             self.coordBox.show()
             self.userModes.setTabVisible(1, 0)
+            self.userModes.setTabVisible(2, 0)
         # better way to hide all this using another group box....but will do it later
         else:
             self.panelLabel.clear()
@@ -121,6 +125,7 @@ class HexapodPanel(Panel):
             self.statusBox.hide()
             self.coordBox.hide()
             self.userModes.setTabVisible(1, 0)
+            self.userModes.setTabVisible(2, 0)
 
     def _is_hexapod_live(self):
         # Annoying way to check if the setup is live or not
@@ -236,7 +241,7 @@ class HexapodPanel(Panel):
                 "newLabel": self.newRzLabel,
                 "newUnit": self.newRzUnit,
             },
-            "table": {
+            "gmt": {
                 "curVal": self.curTab,
                 "newVal": self.newTab,
                 "curLabel": self.curTabLabel,
@@ -258,11 +263,53 @@ class HexapodPanel(Panel):
         self.exec_command(f"stop({self.devname})")
 
     @pyqtSlot()
+    def on_refresh_pressed(self):
+        # Sets the spin boxes to the current axis positions for easier absolute motion control
+        values = self.client.getDeviceParam(self.devname, "value")
+        self.update_position_info(values, "newVal")
+
+    @pyqtSlot()
     def on_butTest_pressed(self):
         class_typ = "nicos_ess.devices.virtual.hexapod.TableHexapod"
         self.test = self.client.getDeviceList(needs_class=class_typ)
         self.showError(f"{self.test}")
         # data = self.mainwindow.expertmode
+
+    # absolute motion using move in GUI
+    @pyqtSlot()
+    def on_abs_tx_pressed(self):
+        target = self.newTx.value()
+        self.exec_command(f"move('{self.adevs['tx']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_ty_pressed(self):
+        target = self.newTy.value()
+        self.exec_command(f"move('{self.adevs['ty']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_tz_pressed(self):
+        target = self.newTz.value()
+        self.exec_command(f"move('{self.adevs['tz']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_rx_pressed(self):
+        target = self.newRx.value()
+        self.exec_command(f"move('{self.adevs['rx']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_ry_pressed(self):
+        target = self.newRy.value()
+        self.exec_command(f"move('{self.adevs['ry']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_rz_pressed(self):
+        target = self.newRz.value()
+        self.exec_command(f"move('{self.adevs['rz']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_abs_gmt_pressed(self):
+        target = self.newTab.value()
+        self.exec_command(f"move('{self.adevs['gmt']['devname']}', {target})")
 
     # relative motion using rmove in GUI
 
@@ -329,9 +376,9 @@ class HexapodPanel(Panel):
     @pyqtSlot()
     def on_relNeg_gmt_pressed(self):
         target = -1 * self.relTab.value()
-        self.exec_command(f"rmove('{self.adevs['table']['devname']}', {target})")
+        self.exec_command(f"rmove('{self.adevs['gmt']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_gmt_pressed(self):
         target = self.relTab.value()
-        self.exec_command(f"rmove('{self.adevs['table']['devname']}', {target})")
+        self.exec_command(f"rmove('{self.adevs['gmt']['devname']}', {target})")
