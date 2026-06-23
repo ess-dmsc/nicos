@@ -1,47 +1,100 @@
-"""NICOS Rheometer setup panel."""
+"""NICOS Rheometer setup panel.
 
-import numpy as np
+All interval/measurement-string building now lives in the EPICS IOC. This panel
+only wires the existing widgets to the rheometer device's cache keys: it reads
+live values via ``client.register`` + ``on_keyChange`` and writes by calling the
+device's ``set_pv`` / command usermethods through ``client.tell("exec", ...)``.
+
+The device name is supplied through the panel ``options`` dict
+(``options={'rheometer': '<device name>'}``); no device or PV names are
+hardcoded here.
+"""
+
+import csv
+import io
 
 from nicos.clients.gui.panels import Panel
 from nicos.guisupport.qt import (
+    QComboBox,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
     QSplitter,
-    Qt,
-    QVBoxLayout,
-    QComboBox,
-    QGridLayout,
-    QTableView,
-    QStandardItemModel,
     QStandardItem,
+    QStandardItemModel,
+    Qt,
+    QTableView,
     QTimer,
+    QVBoxLayout,
 )
 
+_FUNCTION_GROUPS = ("duration", "stress", "rate", "strain", "frequency")
 
-#########################################################
-#  Some refactoring to be done, but this works for now  #
-#########################################################
-
-VISCOSITY_BASE_STRING = "PART[($NUMB$$DTIM$),(),(),(),($MEAS_MODE$[1,$SRAT_FUNC$$STRE_FUNC$]),(),(),,(DAPT[TEMP[2,??T]],DAPT[TORQ[1,??T]],DAPT[SPEE[1,??T]],DAPT[EXCU[1,??T]],DAPT[FORC[1,??T]],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],DAPT[EXCE[1,??T]],DAPT[ETRQ[1,??T]]),(GENP[0,($END_SEQ$)],SETV[0,(IFST[IN,(16)])]),($EXCU$)]"
-OSCILLATION_BASE_STRING = "PART[($NUMB$$DTIM$),(),(),(),($MEAS_MODE$[1,OSCI[$STRE_FUNC$$STRA_FUNC$$FREQ_FUNC$,SIN]]),(),(),VALF[$MEAS_MODE$[1,?&]],(VALF[$MEAS_MODE$[1,?&]],DAPT[TEMP[2,??T]],COMP[MODU[1,??F],1,PHAS],COMP[TORQ[1,??F],0,CABS],COMP[TORQ[1,??F],1,CABS],DAPT[KFAC[1,??T]],COMP[SPEE[1,??F],0,CABS],COMP[EXCU[1,??F],0,CABS],COMP[EXCU[1,??F],1,CABS],COMP[FORC[1,??F],0,REAL],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],COMP[EXCE[1,??F],0,CABS],COMP[EXCE[1,??F],1,CABS],COMP[ETRQ[1,??F],0,CABS],COMP[ETRQ[1,??F],1,CABS]),(GENP[0,(IFDT[EX])],SETV[0,(IFST[IN,(16)])]),($EXCU$)]"
-
-VISC_MODES = ["STRESS", "RATE"]
-OSCI_MODES = ["STRESS", "STRAIN"]
-
-TRANSLATE_DICT = {
-    "RATE": "SRAT",
-    "STRAIN": "STRA",
-    "STRESS": "STRE",
-    # 'TORQUE': 'TORQ',
-    "CONSTANT": "CONST",
-    "LINEAR": "LIN",
-    "LOGARITHMIC": "LOG",
-    "OSCILLATION": "OSCI",
-    "VISCOMETRY": "VISC",
+# Panel group name -> device key prefix ("frequency" group uses "freq" keys).
+_GROUP_KEY_PREFIX = {
+    "duration": "duration",
+    "stress": "stress",
+    "rate": "rate",
+    "strain": "strain",
+    "frequency": "freq",
 }
+
+# enable_* cache key -> function groups it gates.
+_ENABLE_GROUPS = {
+    "enable_stress": ("stress",),
+    "enable_rate": ("rate",),
+    "enable_strain": ("strain",),
+    "enable_freq": ("frequency",),
+}
+
+# enum config cache key -> combo widget attribute.
+_COMBO_CONFIG_KEYS = {
+    "interv_mode": "mode_combo",
+    "duration_func": "duration_combo",
+    "stress_func": "stress_combo",
+    "rate_func": "rate_combo",
+    "strain_func": "strain_combo",
+    "freq_func": "frequency_combo",
+}
+
+_READBACK_LABELS = [
+    ("meas_state", "State"),
+    ("meas_numb", "Measurement #"),
+    ("meas_interval", "Interval"),
+    ("meas_pt_elapsed_time", "Point elapsed [s]"),
+    ("meas_syst", "Measuring system"),
+    ("device_temp", "Device temp"),
+    ("temp_mon", "Temperature"),
+    ("gap", "Gap"),
+    ("torque", "Torque"),
+    ("force", "Force"),
+    ("rot_speed", "Rotational speed"),
+    ("phase_ang", "Phase angle"),
+    ("strain", "Strain"),
+    ("freq", "Frequency"),
+    ("shear_stress", "Shear stress"),
+    ("shear_rate", "Shear rate"),
+    ("shear_strain", "Shear strain"),
+    ("viscosity", "Viscosity"),
+    ("tot_modulus", "|G*|"),
+    ("loss_modulus", "G''"),
+    ("storage_modulus", "G'"),
+]
+
+_TABLE_HEADERS = [
+    "Interval",
+    "Mode",
+    "Measure Mode",
+    "Number of Points",
+    "Duration",
+    "Stress",
+    "Rate",
+    "Strain",
+    "Frequency",
+]
 
 
 class RheometerPanel(Panel):
@@ -49,634 +102,367 @@ class RheometerPanel(Panel):
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        self._prepared_intervals = []
+        self._dev = options.get("rheometer")
+
+        # lowercased "<dev>/<key>" -> updater(value, expired)
+        self._key_updaters = {}
+        # which measure-mode PV the shared combo writes; set from the enable flags
+        self._measure_key = "visc_meas_mode"
+        # set True while populating widgets to suppress write-backs
+        self._loading = False
+        self._action_widgets = []
 
         self.build_ui()
         self.setup_connections()
-        self.update_ui_state()
+        self.register_keys()
+        if self.client.isconnected:
+            self.on_client_connected()
 
     def build_ui(self):
         main_layout = QHBoxLayout()
-        splitter = self.build_splitter()
-        main_layout.addWidget(splitter)
+        main_layout.addWidget(self.build_splitter())
         self.setLayout(main_layout)
 
     def build_splitter(self):
-        edit_frame = self.build_edit_layout()
-        display_frame = self.build_display_layout()
-
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(edit_frame)
-        splitter.addWidget(display_frame)
+        splitter.addWidget(self.build_edit_layout())
+        splitter.addWidget(self.build_display_layout())
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
-
         return splitter
 
     def build_edit_layout(self):
         layout = QVBoxLayout()
         frame = QFrame()
 
-        # Mode selection
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["VISCOMETRY", "OSCILLATION"])
         layout.addWidget(QLabel("Mode:"))
         layout.addWidget(self.mode_combo)
 
-        # Measure Mode selection
         self.measure_mode_combo = QComboBox()
-        self.measure_mode_combo.addItems(["STRESS", "RATE", "STRAIN"])
         layout.addWidget(QLabel("Measure Mode:"))
         layout.addWidget(self.measure_mode_combo)
 
-        # Number of points
         num_points_layout = QHBoxLayout()
         self.num_points_le = QLineEdit()
         num_points_layout.addWidget(QLabel("Number of measurement points:"))
         num_points_layout.addWidget(self.num_points_le)
         layout.addLayout(num_points_layout)
 
-        # duration function
-        duration_layout = QGridLayout()
-        self.duration_label = QLabel("Duration function [s]")
-        self.duration_combo = QComboBox()
-        self.duration_combo.addItems(["CONSTANT", "LINEAR", "LOGARITHMIC"])
-        self.duration_initial_le = QLineEdit()
-        self.duration_final_le = QLineEdit()
-        duration_layout.addWidget(self.duration_label, 0, 0)
-        duration_layout.addWidget(self.duration_combo, 1, 0)
-        duration_layout.addWidget(QLabel("Initial"), 0, 1)
-        duration_layout.addWidget(self.duration_initial_le, 1, 1)
-        duration_layout.addWidget(QLabel("Final"), 0, 2)
-        duration_layout.addWidget(self.duration_final_le, 1, 2)
-        layout.addLayout(duration_layout)
+        temp_layout = QHBoxLayout()
+        self.temp_setpoint_le = QLineEdit()
+        temp_layout.addWidget(QLabel("Temperature setpoint:"))
+        temp_layout.addWidget(self.temp_setpoint_le)
+        layout.addLayout(temp_layout)
 
-        # stress function
-        stress_layout = QGridLayout()
-        self.stress_label = QLabel("Stress function [Pa]")
-        self.stress_combo = QComboBox()
-        self.stress_combo.addItems(["CONSTANT", "LINEAR", "LOGARITHMIC"])
-        self.stress_initial_le = QLineEdit()
-        self.stress_final_le = QLineEdit()
-        stress_layout.addWidget(self.stress_label, 0, 0)
-        stress_layout.addWidget(self.stress_combo, 1, 0)
-        stress_layout.addWidget(QLabel("Initial"), 0, 1)
-        stress_layout.addWidget(self.stress_initial_le, 1, 1)
-        stress_layout.addWidget(QLabel("Final"), 0, 2)
-        stress_layout.addWidget(self.stress_final_le, 1, 2)
-        layout.addLayout(stress_layout)
-
-        # rate function
-        rate_layout = QGridLayout()
-        self.rate_label = QLabel("Rate function [1/s]")
-        self.rate_combo = QComboBox()
-        self.rate_combo.addItems(["CONSTANT", "LINEAR", "LOGARITHMIC"])
-        self.rate_initial_le = QLineEdit()
-        self.rate_final_le = QLineEdit()
-        rate_layout.addWidget(self.rate_label, 0, 0)
-        rate_layout.addWidget(self.rate_combo, 1, 0)
-        rate_layout.addWidget(QLabel("Initial"), 0, 1)
-        rate_layout.addWidget(self.rate_initial_le, 1, 1)
-        rate_layout.addWidget(QLabel("Final"), 0, 2)
-        rate_layout.addWidget(self.rate_final_le, 1, 2)
-        layout.addLayout(rate_layout)
-
-        # Strain function
-        strain_layout = QGridLayout()
-        self.strain_label = QLabel("Strain function [%]")
-        self.strain_combo = QComboBox()
-        self.strain_combo.addItems(["CONSTANT", "LINEAR", "LOGARITHMIC"])
-        self.strain_initial_le = QLineEdit()
-        self.strain_final_le = QLineEdit()
-        strain_layout.addWidget(self.strain_label, 0, 0)
-        strain_layout.addWidget(self.strain_combo, 1, 0)
-        strain_layout.addWidget(QLabel("Initial"), 0, 1)
-        strain_layout.addWidget(self.strain_initial_le, 1, 1)
-        strain_layout.addWidget(QLabel("Final"), 0, 2)
-        strain_layout.addWidget(self.strain_final_le, 1, 2)
-        layout.addLayout(strain_layout)
-
-        # Frequency function
-        frequency_layout = QGridLayout()
-        self.frequency_label = QLabel("Frequency function [rad/s]")
-        self.frequency_combo = QComboBox()
-        self.frequency_combo.addItems(["CONSTANT", "LINEAR", "LOGARITHMIC"])
-        self.frequency_initial_le = QLineEdit()
-        self.frequency_final_le = QLineEdit()
-        frequency_layout.addWidget(self.frequency_label, 0, 0)
-        frequency_layout.addWidget(self.frequency_combo, 1, 0)
-        frequency_layout.addWidget(QLabel("Initial"), 0, 1)
-        frequency_layout.addWidget(self.frequency_initial_le, 1, 1)
-        frequency_layout.addWidget(QLabel("Final"), 0, 2)
-        frequency_layout.addWidget(self.frequency_final_le, 1, 2)
-        layout.addLayout(frequency_layout)
+        for group, label_text in [
+            ("duration", "Duration function [s]"),
+            ("stress", "Stress function [Pa]"),
+            ("rate", "Rate function [1/s]"),
+            ("strain", "Strain function [%]"),
+            ("frequency", "Frequency function [rad/s]"),
+        ]:
+            layout.addLayout(self._build_function_group(group, label_text))
 
         layout.addStretch()
 
-        # Add interval button
         self.add_interval_button = QPushButton("Add interval")
-        layout.addWidget(self.add_interval_button)
-
-        # Clear intervals button
         self.clear_intervals_button = QPushButton("Clear intervals")
-        layout.addWidget(self.clear_intervals_button)
-
-        # Send intervals button
-        self.send_intervals_button = QPushButton("Send intervals")
-        layout.addWidget(self.send_intervals_button)
+        self.send_intervals_button = QPushButton("Load intervals")
+        self.start_button = QPushButton("Start")
+        self.stop_button = QPushButton("Stop")
+        self.init_button = QPushButton("Init device")
+        for button in (
+            self.add_interval_button,
+            self.clear_intervals_button,
+            self.send_intervals_button,
+            self.start_button,
+            self.stop_button,
+            self.init_button,
+        ):
+            layout.addWidget(button)
+            self._action_widgets.append(button)
 
         frame.setLayout(layout)
-
         return frame
+
+    def _build_function_group(self, group, label_text):
+        grid = QGridLayout()
+        combo = QComboBox()
+        initial_le = QLineEdit()
+        final_le = QLineEdit()
+        setattr(self, f"{group}_label", QLabel(label_text))
+        setattr(self, f"{group}_combo", combo)
+        setattr(self, f"{group}_initial_le", initial_le)
+        setattr(self, f"{group}_final_le", final_le)
+
+        grid.addWidget(getattr(self, f"{group}_label"), 0, 0)
+        grid.addWidget(combo, 1, 0)
+        grid.addWidget(QLabel("Initial"), 0, 1)
+        grid.addWidget(initial_le, 1, 1)
+        grid.addWidget(QLabel("Final"), 0, 2)
+        grid.addWidget(final_le, 1, 2)
+        return grid
 
     def build_display_layout(self):
         layout = QVBoxLayout()
         frame = QFrame()
 
+        self.connection_label = QLabel("Disconnected")
+        self.device_model_label = QLabel("-")
+        self.manufacturer_label = QLabel("-")
+        header = QHBoxLayout()
+        header.addWidget(QLabel("Device:"))
+        header.addWidget(self.manufacturer_label)
+        header.addWidget(self.device_model_label)
+        header.addStretch()
+        header.addWidget(self.connection_label)
+        layout.addLayout(header)
+
+        error_layout = QHBoxLayout()
+        self.error_label = QLabel("")
+        self.clear_error_button = QPushButton("Clear error")
+        self._action_widgets.append(self.clear_error_button)
+        error_layout.addWidget(QLabel("Error:"))
+        error_layout.addWidget(self.error_label, 1)
+        error_layout.addWidget(self.clear_error_button)
+        layout.addLayout(error_layout)
+
         self.tableView = QTableView()
         self.tableModel = QStandardItemModel()
         self.tableView.setModel(self.tableModel)
-
         self.tableView.setWordWrap(True)
         self.tableView.setTextElideMode(Qt.TextElideMode.ElideNone)
-
-        self.tableModel.setHorizontalHeaderLabels(
-            [
-                "Interval",
-                "Mode",
-                "Measure Mode",
-                "Number of Points",
-                "Duration",
-                "Stress",
-                "Rate",
-                "Strain",
-                "Frequency",
-            ]
-        )
-
+        self.tableModel.setHorizontalHeaderLabels(_TABLE_HEADERS)
         layout.addWidget(self.tableView)
 
-        frame.setLayout(layout)
+        readback_grid = QGridLayout()
+        self._readback_value_labels = {}
+        for row, (key, label_text) in enumerate(_READBACK_LABELS):
+            value_label = QLabel("----")
+            self._readback_value_labels[key] = value_label
+            readback_grid.addWidget(QLabel(f"{label_text}:"), row // 2, (row % 2) * 2)
+            readback_grid.addWidget(value_label, row // 2, (row % 2) * 2 + 1)
+        layout.addLayout(readback_grid)
 
+        frame.setLayout(layout)
         return frame
 
-    def get_interval(self):
-        interval = {}
-        interval["mode"] = self.mode_combo.currentText()
-        interval["measure_mode"] = self.measure_mode_combo.currentText()
-        interval["num_points"] = self.num_points_le.text()
-
-        duration_function = self.duration_combo.currentText()
-        if duration_function == "CONSTANT":
-            interval["duration"] = (
-                TRANSLATE_DICT[duration_function],
-                self.duration_initial_le.text(),
-                self.duration_initial_le.text(),
-            )
-        else:
-            # The rheometer expects the format as ((initial, second_last), final)
-            if duration_function == "LINEAR":
-                points = np.linspace(
-                    float(self.duration_initial_le.text()),
-                    float(self.duration_final_le.text()),
-                    int(self.num_points_le.text()),
-                )
-                second_last_point = points[-2]
-            elif duration_function == "LOGARITHMIC":
-                points = np.logspace(
-                    np.log10(float(self.duration_initial_le.text())),
-                    np.log10(float(self.duration_final_le.text())),
-                    int(self.num_points_le.text()),
-                )
-                second_last_point = points[-2]
-            else:
-                raise ValueError(f"Invalid duration function: {duration_function}")
-
-            interval["duration"] = (
-                TRANSLATE_DICT[duration_function],
-                (self.duration_initial_le.text(), str(second_last_point)),
-                self.duration_final_le.text(),
-            )
-
-        interval["funcs"] = {}
-
-        if self.rate_combo.isEnabled():
-            interval["funcs"]["srat"] = (
-                TRANSLATE_DICT[self.rate_combo.currentText()],
-                self.rate_initial_le.text(),
-                self.rate_final_le.text(),
-            )
-
-        if self.strain_combo.isEnabled():
-            interval["funcs"]["stra"] = (
-                TRANSLATE_DICT[self.strain_combo.currentText()],
-                self._convert_to_percent(self.strain_initial_le.text()),
-                self._convert_to_percent(self.strain_final_le.text()),
-            )
-
-        if self.stress_combo.isEnabled():
-            interval["funcs"]["stre"] = (
-                TRANSLATE_DICT[self.stress_combo.currentText()],
-                self.stress_initial_le.text(),
-                self.stress_final_le.text(),
-            )
-
-        if self.frequency_combo.isEnabled():
-            interval["funcs"]["freq"] = (
-                TRANSLATE_DICT[self.frequency_combo.currentText()],
-                self._convert_to_rad_per_sec(self.frequency_initial_le.text()),
-                self._convert_to_rad_per_sec(self.frequency_final_le.text()),
-            )
-
-        if not self.valid_function(interval["funcs"]):
-            return {}
-
-        return interval
-
-    def _convert_to_rad_per_sec(self, value):
-        if value == "":
-            return ""
-        return str(float(value) / (2 * np.pi))
-
-    def _convert_to_percent(self, value):
-        if value == "":
-            return ""
-        return str(float(value) / 100.0)
-
-    def valid_function(self, function):
-        for key, value in function.items():
-            function_type = value[0]
-            ignore_final = True if function_type == "CONST" else False
-            for i, val in enumerate(value):
-                if ignore_final and i == 2:
-                    continue
-                if val == "":
-                    return False
-        return True
-
-    def add_interval_to_table(self):
-        # Create QStandardItems from the interval data
-
-        interval = self.get_interval()
-
-        if not interval:
-            return
-
-        items = []
-
-        current_num_intervals = self.tableModel.rowCount()
-        items.append(QStandardItem(str(current_num_intervals + 1)))
-
-        for key in ["mode", "measure_mode", "num_points"]:
-            content = str(interval.get(key, ""))
-            item = QStandardItem(content)
-            items.append(item)
-
-        content = self._display_format_duration(interval["duration"])
-        item = QStandardItem(content)
-        items.append(item)
-
-        for func in ["stre", "srat", "stra", "freq"]:
-            if func not in interval["funcs"]:
-                items.append(QStandardItem(""))
-                continue
-            content = self._display_format_function(interval["funcs"][func])
-            item = QStandardItem(content)
-            items.append(item)
-
-        # self.tableView.resizeRowsToContents()
-        QTimer.singleShot(0, self.tableView.resizeRowsToContents)
-        QTimer.singleShot(0, self.resize_columns)
-
-        self.tableModel.appendRow(items)
-
-        self._prepared_intervals.append(interval)
-
-    def _display_format_function(self, function):
-        if function[0] == "CONST":
-            return f"Function: {function[0]}({function[1]})"
-        return f"Function: {function[0]}({function[1]}, {function[2]}))"
-
-    def _display_format_duration(self, duration):
-        if duration[0] == "CONST":
-            return f"Function: {duration[0]}({duration[1]})"
-        return f"Function: {duration[0]}({duration[1][0]}, {duration[2]}))"
-
-    def send_intervals(self):
-        if not self._prepared_intervals:
-            return
-        command_string = self._build_command(self._prepared_intervals)
-        print("\n")
-        print("\n")
-        print(command_string)
-        print("\n")
-        print("\n")
-
-        self.client.tell("exec", f"rheo_control.set_command_string('{command_string}')")
-
-    def resize_columns(self):
-        table_width = self.tableView.width()
-        num_columns = self.tableModel.columnCount()
-        current_width = table_width / num_columns
-
-        self.tableView.resizeColumnsToContents()
-
-        function_columns = [4, 5, 6, 7, 8]
-        for col in function_columns:
-            self.tableView.setColumnWidth(col, int(current_width * 1.2))
-
-    def clear_table(self):
-        self.tableModel.clear()
-        self._prepared_intervals = []
-        self.tableModel.setHorizontalHeaderLabels(
-            [
-                "Interval",
-                "Mode",
-                "Measure Mode",
-                "Number of Points",
-                "Duration",
-                "Stress",
-                "Rate",
-                "Strain",
-                "Frequency",
-            ]
-        )
-
     def setup_connections(self):
-        self.mode_combo.currentIndexChanged.connect(self.update_ui_state)
-        self.measure_mode_combo.currentIndexChanged.connect(self.update_ui_state)
-        self.duration_combo.currentIndexChanged.connect(self.update_ui_state)
-        self.stress_combo.currentIndexChanged.connect(self.update_ui_state)
-        self.rate_combo.currentIndexChanged.connect(self.update_ui_state)
-        self.strain_combo.currentIndexChanged.connect(self.update_ui_state)
-        self.frequency_combo.currentIndexChanged.connect(self.update_ui_state)
-        self.add_interval_button.clicked.connect(self.add_interval_to_table)
-        self.clear_intervals_button.clicked.connect(self.clear_table)
-        self.send_intervals_button.clicked.connect(self.send_intervals)
+        self.client.connected.connect(self.on_client_connected)
+        self.client.disconnected.connect(self.on_client_disconnect)
 
-    def update_ui_state(self):
-        # Get current selections
-        mode = self.mode_combo.currentText()
-        measure_mode = self.measure_mode_combo.currentText()
-
-        illegal_state = False
-
-        self.disable_all()
-
-        # Logic for VISC mode
-        if mode == "VISCOMETRY":
-            # if measure_mode == 'stress':
-            #     self.measure_mode_combo.setCurrentIndex(0)
-            if measure_mode == "RATE":
-                self.set_enabled_state(
-                    True, [self.rate_combo, self.rate_initial_le, self.rate_final_le]
-                )
-            elif measure_mode == "STRESS":
-                self.set_enabled_state(
-                    True,
-                    [self.stress_combo, self.stress_initial_le, self.stress_final_le],
-                )
-
-            self.measure_mode_combo.blockSignals(True)
-            self.measure_mode_combo.clear()
-            self.measure_mode_combo.addItems(VISC_MODES)
-            if measure_mode not in VISC_MODES:
-                illegal_state = True
-                self.measure_mode_combo.setCurrentIndex(0)
-                measure_mode = self.measure_mode_combo.currentText()
-            self.measure_mode_combo.setCurrentIndex(VISC_MODES.index(measure_mode))
-            self.measure_mode_combo.blockSignals(False)
-
-        # Logic for OSCI mode
-        elif mode == "OSCILLATION":
-            if measure_mode == "STRESS":
-                self.set_enabled_state(
-                    True,
-                    [
-                        self.stress_combo,
-                        self.stress_initial_le,
-                        self.stress_final_le,
-                        self.frequency_combo,
-                        self.frequency_initial_le,
-                        self.frequency_final_le,
-                    ],
-                )
-            else:
-                self.set_enabled_state(
-                    True,
-                    [
-                        self.strain_combo,
-                        self.strain_initial_le,
-                        self.strain_final_le,
-                        self.frequency_combo,
-                        self.frequency_initial_le,
-                        self.frequency_final_le,
-                    ],
-                )
-
-            self.measure_mode_combo.blockSignals(True)
-            self.measure_mode_combo.clear()
-            self.measure_mode_combo.addItems(OSCI_MODES)
-            if measure_mode not in OSCI_MODES:
-                illegal_state = True
-                self.measure_mode_combo.setCurrentIndex(1)
-                measure_mode = self.measure_mode_combo.currentText()
-            self.measure_mode_combo.setCurrentIndex(OSCI_MODES.index(measure_mode))
-            self.measure_mode_combo.blockSignals(False)
-
-        for func, final_le in [
-            ("duration", self.duration_final_le),
-            ("stress", self.stress_final_le),
-            ("rate", self.rate_final_le),
-            ("strain", self.strain_final_le),
-            ("frequency", self.frequency_final_le),
-        ]:
-            if getattr(self, f"{func}_combo").currentText() == "CONSTANT":
-                self.set_enabled_state(False, [final_le])
-            elif not getattr(self, f"{func}_combo").isEnabled():
-                self.set_enabled_state(False, [final_le])
-            else:
-                self.set_enabled_state(True, [final_le])
-
-        #  If we swapped state to an illegal state, we need to update the UI again to reflect the new state
-        #  Because we block some signals during the update. This is a bit of a hack, but it works for now.
-        if illegal_state:
-            self.update_ui_state()
-
-    def set_enabled_state(self, enabled, widgets):
-        for widget in widgets:
-            widget.setEnabled(enabled)
-            if not enabled:
-                widget.setStyleSheet("color: gray; background-color: lightgray;")
-            else:
-                widget.setStyleSheet("")
-
-    def disable_all(self):
-        self.set_enabled_state(
-            False,
-            [
-                self.rate_combo,
-                self.rate_initial_le,
-                self.rate_final_le,
-                self.strain_combo,
-                self.strain_initial_le,
-                self.strain_final_le,
-                self.frequency_combo,
-                self.frequency_initial_le,
-                self.frequency_final_le,
-                self.stress_combo,
-                self.stress_initial_le,
-                self.stress_final_le,
-            ],
+        self.mode_combo.currentTextChanged.connect(
+            lambda value: self._write_config("interv_mode", value)
+        )
+        self.measure_mode_combo.currentTextChanged.connect(
+            lambda value: self._write_config(self._measure_key, value)
+        )
+        self.num_points_le.editingFinished.connect(
+            lambda: self._write_config("num_meas_pts", self.num_points_le.text())
+        )
+        self.temp_setpoint_le.editingFinished.connect(
+            lambda: self._write_config("temp_setpoint", self.temp_setpoint_le.text())
         )
 
-    def _build_command(self, intervals):
-        if not intervals:
-            raise ValueError("No intervals provided for the measurement.")
-
-        parts_string = ",".join(
-            [
-                self._construct_interval_command(interval, index == 0)
-                for index, interval in enumerate(intervals)
-            ]
-        )
-
-        return f':PROG["Test",TEST[({parts_string})],EXIT[()],CANC[()]]'
-
-    def _construct_interval_command(self, interval, is_first_interval):
-        mode = interval.get("mode", None)
-        if mode == "VISCOMETRY":
-            return self._construct_viscosity_interval(interval, is_first_interval)
-        elif mode == "OSCILLATION":
-            return self._construct_oscillation_interval(interval, is_first_interval)
-        else:
-            raise ValueError(f"Invalid mode: {mode}")
-
-    def _construct_viscosity_interval(self, interval, is_first_interval):
-        meas_mode = interval.get("measure_mode", None)
-        if meas_mode is None:
-            raise ValueError("No measure mode provided for the interval.")
-
-        required_params = ["num_points", "measure_mode", "duration", "funcs", "end_seq"]
-
-        num_points, measure_mode, duration, funcs, end_seq = self._get_required_params(
-            interval, required_params
-        )
-        measure_mode = TRANSLATE_DICT[measure_mode]
-        duration_str = self._format_duration(duration)
-        func_strings = {}
-        for func in funcs:
-            func_strings[func] = self._format_func(funcs[func])
-
-        excu_str = "EXCU[1,!?]" if is_first_interval else ""
-
-        temp_string = (
-            VISCOSITY_BASE_STRING.replace("$NUMB$", f"NUMB[{num_points},LAST]")
-            .replace("$DTIM$", duration_str)
-            .replace("$MEAS_MODE$", measure_mode)
-            .replace("$END_SEQ$", end_seq)
-            .replace("$EXCU$", excu_str)
-        )
-
-        for i, (func_type, func_string) in enumerate(func_strings.items()):
-            print(
-                f"iteration {i} with func type {func_type} and func string {func_string}"
+        for group in _FUNCTION_GROUPS:
+            prefix = _GROUP_KEY_PREFIX[group]
+            combo = getattr(self, f"{group}_combo")
+            initial_le = getattr(self, f"{group}_initial_le")
+            final_le = getattr(self, f"{group}_final_le")
+            combo.currentTextChanged.connect(
+                lambda value, p=prefix: self._write_config(f"{p}_func", value)
             )
-            if i != 0:
-                func_string = "," + func_string
-            temp_string = temp_string.replace(
-                f"${func_type.upper()}_FUNC$", func_string
+            initial_le.editingFinished.connect(
+                lambda p=prefix, le=initial_le: self._write_config(
+                    f"{p}_init", le.text()
+                )
+            )
+            final_le.editingFinished.connect(
+                lambda p=prefix, le=final_le: self._write_config(
+                    f"{p}_final", le.text()
+                )
             )
 
-        return self._remove_all_remaining_placeholders(temp_string)
-
-    def _construct_oscillation_interval(self, interval, is_first_interval):
-        meas_mode = interval.get("measure_mode", None)
-        if meas_mode is None:
-            raise ValueError("No measure mode provided for the interval.")
-
-        required_params = ["num_points", "measure_mode", "duration", "funcs", "end_seq"]
-
-        num_points, measure_mode, duration, funcs, end_seq = self._get_required_params(
-            interval, required_params
+        self.add_interval_button.clicked.connect(
+            lambda: self._call_method("add_interval")
         )
-        measure_mode = TRANSLATE_DICT[measure_mode]
-        duration_str = self._format_duration(duration)
-        func_strings = {}
-        for func in funcs:
-            func_strings[func] = self._format_func(funcs[func])
-
-        excu_str = "EXCU[1,!?]" if is_first_interval else ""
-
-        temp_string = (
-            OSCILLATION_BASE_STRING.replace("$NUMB$", f"NUMB[{num_points},LAST]")
-            .replace("$DTIM$", duration_str)
-            .replace("$MEAS_MODE$", measure_mode)
-            .replace("$END_SEQ$", end_seq)
-            .replace("$EXCU$", excu_str)
+        self.clear_intervals_button.clicked.connect(
+            lambda: self._call_method("clear_intervals")
         )
+        self.send_intervals_button.clicked.connect(
+            lambda: self._call_method("send_intervals")
+        )
+        self.start_button.clicked.connect(lambda: self._call_method("start"))
+        self.stop_button.clicked.connect(lambda: self._call_method("stop"))
+        self.init_button.clicked.connect(lambda: self._call_method("init_device"))
+        self.clear_error_button.clicked.connect(lambda: self._call_method("clear_err"))
 
-        for i, (func_type, func_string) in enumerate(func_strings.items()):
-            if i != 0:
-                func_string = "," + func_string
-            temp_string = temp_string.replace(
-                f"${func_type.upper()}_FUNC$", func_string
+    def register_keys(self):
+        """Subscribe to exactly the rheometer keys the panel displays."""
+        if not self._dev:
+            return
+        self._key_updaters = {}
+        readback_keys = (
+            [key for key, _ in _READBACK_LABELS]
+            + list(_ENABLE_GROUPS)
+            + list(_COMBO_CONFIG_KEYS)
+            + ["enable_osc_mode", "enable_visc_mode", "interv_raw_table"]
+            + ["device_connected", "manufacturer", "device_model", "err_msg"]
+        )
+        for cache_key in readback_keys:
+            full_key = f"{self._dev}/{cache_key}".lower()
+            self._key_updaters[full_key] = self._make_updater(cache_key)
+            self.client.register(self, full_key)
+
+    def _make_updater(self, cache_key):
+        if cache_key == "interv_raw_table":
+            return self._update_interval_table
+        if cache_key in _COMBO_CONFIG_KEYS:
+            combo = getattr(self, _COMBO_CONFIG_KEYS[cache_key])
+            return lambda value, expired: self._update_combo(
+                combo, cache_key, value, expired
             )
+        if cache_key in _ENABLE_GROUPS:
+            return lambda value, expired: self._update_group_enabled(cache_key, value)
+        if cache_key in ("enable_osc_mode", "enable_visc_mode"):
+            return lambda value, expired: self._update_measure_binding(cache_key, value)
+        if cache_key == "device_connected":
+            return self._update_connection
+        if cache_key == "err_msg":
+            return self._update_error
+        if cache_key == "manufacturer":
+            return lambda value, expired: self.manufacturer_label.setText(str(value))
+        if cache_key == "device_model":
+            return lambda value, expired: self.device_model_label.setText(str(value))
+        return lambda value, expired: self._update_readback(cache_key, value, expired)
 
-        return self._remove_all_remaining_placeholders(temp_string)
+    def on_keyChange(self, key, value, time, expired):
+        updater = self._key_updaters.get(key.lower())
+        if updater is not None:
+            updater(value, expired)
 
-    def _remove_all_remaining_placeholders(self, string):
-        return (
-            string.replace("$NUMB$", "")
-            .replace("$DTIM$", "")
-            .replace("$MEAS_MODE$", "")
-            .replace("$END_SEQ$", "")
-            .replace("$EXCU$", "")
-            .replace("$SRAT_FUNC$", "")
-            .replace("$STRA_FUNC$", "")
-            .replace("$FREQ_FUNC$", "")
-            .replace("$STRE_FUNC$", "")
+    def _update_readback(self, cache_key, value, expired):
+        label = self._readback_value_labels.get(cache_key)
+        if label is None:
+            return
+        label.setText("----" if expired or value is None else str(value))
+
+    def _update_group_enabled(self, enable_key, value):
+        enabled = bool(value)
+        for group in _ENABLE_GROUPS[enable_key]:
+            self._set_group_enabled(group, enabled)
+
+    def _set_group_enabled(self, group, enabled):
+        for suffix in ("combo", "initial_le", "final_le"):
+            getattr(self, f"{group}_{suffix}").setEnabled(enabled)
+
+    def _update_measure_binding(self, enable_key, value):
+        if not value:
+            return
+        self._measure_key = (
+            "osc_meas_mode" if enable_key == "enable_osc_mode" else "visc_meas_mode"
         )
+        self._populate_combo(self.measure_mode_combo, self._measure_key)
 
-    def _get_required_params(self, interval, keys):
-        missing_params = [key for key in keys if key not in interval]
-        for param in missing_params:
-            if param == "duration":
-                interval[param] = (None, None, None)
-            elif param == "end_seq":
-                interval[param] = "IFDT[EX]"
-            else:
-                raise ValueError(f"Missing parameter: {param}")
-        return [interval[key] for key in keys]
+    def _update_connection(self, value, expired):
+        connected = bool(value) and not expired
+        self.connection_label.setText("Connected" if connected else "Disconnected")
 
-    def _format_duration(self, duration):
-        if duration is None or all(v is None for v in duration[0:2]):
-            return ""
-        duration_type, point_info, duration_final = duration
-        duration_second_last = None
-        if isinstance(point_info, tuple):
-            duration_initial, duration_second_last = point_info
+    def _update_error(self, value, expired):
+        self.error_label.setText("" if expired or value is None else str(value))
+
+    def _update_interval_table(self, value, expired):
+        # #IntervRawTable is CSV with an "idx,..." header row; fields may be
+        # quoted and contain commas (e.g. "LIN(0.1,5)"). Columns match
+        # _TABLE_HEADERS.
+        self.tableModel.clear()
+        self.tableModel.setHorizontalHeaderLabels(_TABLE_HEADERS)
+        if expired or not value:
+            return
+        for cells in csv.reader(io.StringIO(str(value))):
+            if not any(cell.strip() for cell in cells):
+                continue
+            if cells[0].strip().lower() == "idx":  # IOC header row
+                continue
+            cells = (cells + [""] * len(_TABLE_HEADERS))[: len(_TABLE_HEADERS)]
+            self.tableModel.appendRow([QStandardItem(cell.strip()) for cell in cells])
+        QTimer.singleShot(0, self.tableView.resizeRowsToContents)
+        QTimer.singleShot(0, self.tableView.resizeColumnsToContents)
+
+    def _write_config(self, key, value):
+        if self._loading or not self._dev:
+            return
+        self.client.tell("exec", f"{self._dev}.set_pv({key!r}, {value!r})")
+
+    def _call_method(self, method):
+        if not self._dev:
+            return
+        self.client.tell("exec", f"{self._dev}.{method}()")
+
+    def on_client_connected(self):
+        self.connection_label.setText("Connected")
+        self._populate_combos()
+
+    def on_client_disconnect(self):
+        self.connection_label.setText("Disconnected")
+        for label in self._readback_value_labels.values():
+            label.setText("----")
+        self.error_label.setText("")
+
+    def _populate_combos(self):
+        if not self._dev:
+            return
+        self._populate_combo(self.mode_combo, "interv_mode")
+        self._populate_combo(self.measure_mode_combo, self._measure_key)
+        for group in _FUNCTION_GROUPS:
+            prefix = _GROUP_KEY_PREFIX[group]
+            self._populate_combo(getattr(self, f"{group}_combo"), f"{prefix}_func")
+
+    def _populate_combo(self, combo, config_key):
+        choices = self.client.eval(f"{self._dev}.get_choices({config_key!r})", [])
+        if not choices:
+            # leave empty so a later cache event retries (channels may be cold)
+            return
+        self._loading = True
+        try:
+            combo.blockSignals(True)
+            current = combo.currentText()
+            combo.clear()
+            combo.addItems([str(choice) for choice in choices])
+            if current:
+                index = combo.findText(current)
+                if index >= 0:
+                    combo.setCurrentIndex(index)
+        finally:
+            combo.blockSignals(False)
+            self._loading = False
+
+    def _update_combo(self, combo, config_key, value, expired):
+        if combo.count() == 0:
+            self._populate_combo(combo, config_key)
+        if not expired and value is not None:
+            self._apply_combo_value(combo, value)
+
+    def _apply_combo_value(self, combo, value):
+        index = -1
+        if isinstance(value, str) and not value.isdigit():
+            index = combo.findText(value)
         else:
-            duration_initial = point_info
-        if duration_type == "CONST":
-            return f",DTIM[{duration_initial},{duration_initial},REL]"
-        elif duration_type in ["LIN", "LOG"]:
-            if duration_second_last is None or duration_final is None:
-                return ""
-            return f",DTIM[FUNC[{duration_type},({duration_initial},{duration_second_last})],{duration_final},REL]"
-        else:
-            raise ValueError(f"Invalid duration type: {duration_type}")
+            try:
+                index = int(value)
+            except (TypeError, ValueError):
+                index = -1
+        if not 0 <= index < combo.count():
+            return
+        self._loading = True
+        try:
+            combo.blockSignals(True)
+            combo.setCurrentIndex(index)
+        finally:
+            combo.blockSignals(False)
+            self._loading = False
 
-    def _format_func(self, func):
-        if func is None or all(v is None for v in func[0:2]):
-            return ""
-        func_type, func_initial, func_final = func
-        if func_type == "CONST":
-            return f"{func_initial}"
-
-        if func_final is None:
-            return ""
-
-        temp_string = f"FUNC[{func_type},({func_initial},{func_final})]"
-
-        return temp_string
+    def setViewOnly(self, viewonly):
+        for widget in self._action_widgets:
+            widget.setEnabled(not viewonly)

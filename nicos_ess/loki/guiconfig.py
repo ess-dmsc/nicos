@@ -42,7 +42,10 @@ main_window = docked(
                         # ),
                         (
                             "Rheometer Setup",
-                            panel("nicos_ess.gui.panels.rheometer.RheometerPanel"),
+                            panel(
+                                "nicos_ess.gui.panels.rheometer.RheometerPanel",
+                                rheometer="rheometer",
+                            ),
                         ),
                         (
                             "Script Status",
