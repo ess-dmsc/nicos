@@ -7,25 +7,25 @@ gate_root = "ODIN-DtCmn:Ctrl-EVR-001:"
 
 devices = dict(
     hama_pmt_value=device(
-        "nicos.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The current value of the intensifier",
         readpv=f"{hama_root}IntensifierValue-R",
     ),
     hama_pmt_status=device(
-        "nicos.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The status of the intensifier",
         readpv=f"{hama_root}Status-R",
         visibility=(),
     ),
     hama_pmt_gain=device(
-        "nicos.devices.epics.pva.EpicsDigitalMoveable",
+        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
         description="The gain of the intensifier",
         readpv=f"{hama_root}IntensifierGain-R",
         writepv=f"{hama_root}IntensifierGain-S",
         visibility=(),
     ),
     hama_pmt_connection=device(
-        "nicos.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The connection status of the intensifier",
         readpv=f"{hama_root}DeviceConnected-R",
         visibility=(),
@@ -42,7 +42,7 @@ devices = dict(
         mode="hama_pmt_mode",
     ),
     hama_pmt_mode=device(
-        "nicos.devices.epics.pva.EpicsMappedMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The operation mode of the intensifier",
         readpv=f"{hama_root}OperationMode-R",
         writepv=f"{hama_root}OperationMode-S",
