@@ -216,6 +216,10 @@
   </layout>
  </widget>
  <tabstops>
+  <tabstop>txtServer</tabstop>
+  <tabstop>userName</tabstop>
+  <tabstop>txtPassword</tabstop>
+  <tabstop>viewonly</tabstop>
   <tabstop>expertmode</tabstop>
   <tabstop>buttonBox</tabstop>
  </tabstops>
