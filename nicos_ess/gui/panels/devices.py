@@ -120,32 +120,20 @@ class DevInfo(AttrDict):
             fmted = str(self.target)
         return fmted + " " + self.unit
 
-    def fmtParam(self, param, value):
-        if isinstance(value, list):
-            value = tuple(value)
+    def fmtParam(self, param, value, unit=True):
         info = self.params.get(param)
-        if not info or value is None:
-            return str(value)
-
-        fmtstr = info["fmtstr"]
-        if fmtstr == "main":
-            if isinstance(value, tuple):
-                fmtstr = "(" + ", ".join((self.fmtstr,) * len(value)) + ")"
-            else:
-                fmtstr = self.fmtstr
-        else:
-            if isinstance(value, str) and fmtstr == "%r":
+        if info:
+            fmtstr = info["fmtstr"]
+            if fmtstr == "%r":
                 fmtstr = "%s"
-            if isinstance(value, tuple):
-                fmtstr = "(" + ", ".join((fmtstr,) * len(value)) + ")"
-
-        try:
-            fmtval = fmtstr % value
-        except (TypeError, ValueError):
-            fmtval = str(value)
-
-        unit = (info["unit"] or "").replace("main", self.unit)
-        return f"{fmtval} {unit}"
+            try:
+                fmtvalue = fmtstr % value
+            except Exception:
+                fmtvalue = str(value)
+            if not unit:
+                return fmtvalue
+            return f"{fmtvalue} {(info['unit'] or '').replace('main', self.unit)}"
+        return str(value)
 
 
 class DevicesPanel(Panel):
@@ -932,9 +920,9 @@ class ControlDialog(QDialog):
         # now get all cache keys pertaining to the device and set the
         # properties we want
         params = self.client.getDeviceParams(self.devname)
-        self.paraminfo = self.client.getDeviceParamInfo(self.devname)
+        self.devinfo.params = self.client.getDeviceParamInfo(self.devname)
+        mainunit = params.get("unit", "main")
         self.paramvalues = dict(params)
-        self.devinfo.params = self.paraminfo
         # Cache updates for "classes" may lag behind the dialog opening.
         # Use cache value if present, otherwise query the live device classes
         # so Moveable/Readable controls are initialized reliably.
@@ -954,13 +942,13 @@ class ControlDialog(QDialog):
         self.paramItems.clear()
         self.paramList.clear()
         for key, value in sorted(params.items()):
-            if self.paraminfo.get(key):
+            if self.devinfo.params.get(key):
                 # normally, show only userparams, except in expert mode
-                is_userparam = self.paraminfo[key]["userparam"]
+                is_userparam = self.devinfo.params[key]["userparam"]
                 if is_userparam or self.device_panel._show_lowlevel:
-                    formatted_value = self.devinfo.fmtParam(key, value)
                     self.paramItems[key] = item = QTreeWidgetItem(
-                        self.paramList, [key, formatted_value]
+                        self.paramList,
+                        [key, self.devinfo.fmtParam(key, value, unit=False)],
                     )
                     # display non-userparams in grey italics, like lowlevel
                     # devices in the device list
@@ -1393,18 +1381,19 @@ class ControlDialog(QDialog):
             return
         value = cache_load(value)
         self.paramvalues[subkey] = value
-        formatted_value = self.devinfo.fmtParam(subkey, value)
-        self.paramItems[subkey].setText(self.col_index["VALUE"], formatted_value)
+        self.paramItems[subkey].setText(
+            self.col_index["VALUE"], self.devinfo.fmtParam(subkey, value, unit=False)
+        )
 
     def on_paramList_itemClicked(self, item):
         pname = item.text(self.col_index["NAME"])
         self.editParam(pname)
 
     def editParam(self, pname):
-        if not self.paraminfo[pname]["settable"] or self.client.viewonly:
+        if not self.devinfo.params[pname]["settable"] or self.client.viewonly:
             return
         mainunit = self.paramvalues.get("unit", "main")
-        punit = (self.paraminfo[pname]["unit"] or "").replace("main", mainunit)
+        punit = (self.devinfo.params[pname]["unit"] or "").replace("main", mainunit)
 
         dlg = dialogFromUi(self, "panels/devices_param.ui")
         if pname in ("temperature", "electric_field", "magnetic_field"):
@@ -1427,7 +1416,7 @@ class ControlDialog(QDialog):
             dlg.target = DeviceParamEdit(self, dev=self.devname, param=pname)
             dlg.target.setClient(self.client)
         dlg.paramName.setText("Parameter: %s.%s" % (self.devname, pname))
-        dlg.paramDesc.setText(self.paraminfo[pname]["description"])
+        dlg.paramDesc.setText(self.devinfo.params[pname]["description"])
         dlg.paramValue.setText(str(self.paramvalues[pname]) + " " + punit)
         dlg.targetLayout.addWidget(dlg.target)
         dlg.resize(dlg.sizeHint())
