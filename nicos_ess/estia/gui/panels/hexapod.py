@@ -62,7 +62,7 @@ class HexapodPanel(Panel):
         devname, pname = key.split("/")
 
         if devname == self.devname and pname == "value":
-            self.update_current_pos(cache_load(value))
+            self.update_position_info(cache_load(value))
             # can't seem to find it in cache
             # but is popagated into 'value' param just fine...
             self.update_status_window(self.client.getDeviceParam(self.status, "value"))
@@ -95,10 +95,15 @@ class HexapodPanel(Panel):
         self.qtObj.clear()
         self.show_controls(False)
 
-    def update_current_pos(self, values):
+    def update_position_info(self, values, valtype="curVal"):
         curval = 0
         for axis in self.qtObj:
-            self.qtObj[axis]["curVal"].setText(f"{round(values[curval], 3):.3f}")
+            # curVal is a user-immutable label while newVal is a user-mutable spinbox
+            # the label is more frequently updated, so it is the default
+            if valtype != "curVal":
+                self.qtObj[axis][valtype].setValue(round(values[curval], 3))
+            else:
+                self.qtObj[axis][valtype].setText(f"{round(values[curval], 3):.3f}")
             curval = curval + 1
 
     def show_controls(self, visibility):
@@ -110,6 +115,7 @@ class HexapodPanel(Panel):
             self.statusBox.show()
             self.coordBox.show()
             self.userModes.setTabVisible(1, 0)
+            self.userModes.setTabVisible(2, 0)
         # better way to hide all this using another group box....but will do it later
         else:
             self.panelLabel.clear()
@@ -119,6 +125,7 @@ class HexapodPanel(Panel):
             self.statusBox.hide()
             self.coordBox.hide()
             self.userModes.setTabVisible(1, 0)
+            self.userModes.setTabVisible(2, 0)
 
     def _is_hexapod_live(self):
         # Annoying way to check if the setup is live or not
@@ -259,11 +266,7 @@ class HexapodPanel(Panel):
     def on_refresh_pressed(self):
         # Sets the spin boxes to the current axis positions for easier absolute motion control
         values = self.client.getDeviceParam(self.devname, "value")
-        curval = 0
-        for axis in self.qtObj:
-            self.qtObj[axis]["newVal"].setValue(round(values[curval], 3))
-            curval = curval + 1
-        return
+        self.update_position_info(values, "newVal")
 
     @pyqtSlot()
     def on_butTest_pressed(self):
