@@ -118,31 +118,24 @@ class ExpPanel(PanelBase):
         self.hide_samples = options.get("hide_sample", False)
         if self.hide_samples:
             self._hide_sample_info()
-        self._setup_button_box_and_warn_label()
+        self._setup_warning_label()
         self.initialise_connection_status_listeners()
 
-    def _setup_button_box_and_warn_label(self):
-        self.buttonBox.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.buttonBox.addButton(
-            "Discard Changes", QDialogButtonBox.ButtonRole.ResetRole
-        )
-
+    def _setup_warning_label(self):
         self.applyWarningLabel.setStyleSheet("color: red")
         self.applyWarningLabel.setVisible(False)
 
-    def on_buttonBox_clicked(self, button):
-        role = self.buttonBox.buttonRole(button)
-        if role == QDialogButtonBox.ButtonRole.ApplyRole:
-            self.applyChanges()
-        elif role == QDialogButtonBox.ButtonRole.ResetRole:
-            self.discardChanges()
+    @pyqtSlot()
+    def on_btn_apply_clicked(self):
+        self.applyChanges()
+
+    @pyqtSlot()
+    def on_btn_discard_clicked(self):
+        self.discardChanges()
 
     def _set_buttons_and_warning_behaviour(self, value):
-        for button in self.buttonBox.buttons():
-            role = self.buttonBox.buttonRole(button)
-            button.setEnabled(value)
-            if role == QDialogButtonBox.ButtonRole.ResetRole:
-                button.setVisible(value)
+        self.btn_apply.setVisible(value)
+        self.btn_discard.setVisible(value)
         self.applyWarningLabel.setVisible(value)
 
     def _hide_sample_info(self):
