@@ -4,11 +4,10 @@ from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.panels.setup_panel import AliasWidget
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
-    QDialog,
-    QDialogButtonBox,
     QListWidgetItem,
     QPushButton,
     Qt,
+    pyqtSlot,
 )
 from nicos.utils import findResource
 
@@ -31,8 +30,6 @@ class SetupsPanel(Panel):
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/setups.ui"))
         self.errorLabel.hide()
         self.aliasGroup.hide()
-        self._reload_btn = QPushButton("Reload current setup")
-        self.finishUi()
 
         self._aliasWidgets = {}
         self._alias_config = None
@@ -49,13 +46,6 @@ class SetupsPanel(Panel):
         client.connected.connect(self.on_client_connected)
         client.setup.connect(self.on_client_connected)
         client.disconnected.connect(self.on_client_disconnected)
-
-    def finishUi(self):
-        self.buttonBox.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Apply)
-        self.buttonBox.addButton(
-            self._reload_btn, QDialogButtonBox.ButtonRole.ResetRole
-        )
 
     def on_client_connected(self):
         # fill setups
@@ -124,11 +114,11 @@ class SetupsPanel(Panel):
         self.setViewOnly(True)
 
     def setViewOnly(self, viewonly):
-        for button in self.buttonBox.buttons():
-            button.setEnabled(not viewonly)
         self.basicSetup.setEnabled(not viewonly)
         self.optSetups.setEnabled(not viewonly)
         self.pnpSetups.setEnabled(not viewonly)
+        self.btn_apply.setEnabled(not viewonly)
+        self.btn_reload.setEnabled(not viewonly)
 
     def on_basicSetup_currentItemChanged(self, item, old):
         if item and item.text() != "<keep current>":
@@ -148,21 +138,16 @@ class SetupsPanel(Panel):
         self.showSetupInfo(item.text())
         self.updateAliasList()
 
-    def on_buttonBox_clicked(self, button):
-        role = self.buttonBox.buttonRole(button)
-        if role == QDialogButtonBox.ButtonRole.ApplyRole:
-            self.applyChanges()
-        elif role == QDialogButtonBox.ButtonRole.RejectRole:
-            self.closeWindow()
-        elif role == QDialogButtonBox.ButtonRole.ResetRole:
-            if self.client.run("NewSetup()", noqueue=True) is None:
-                self.showError("Could not reload setups, a script is running.")
-            else:
-                self.showInfo("Current setups reloaded.")
-                # Close the window only in case of use in a dialog, not in a
-                # tabbed window or similar
-                if isinstance(self.parent(), QDialog):
-                    self.closeWindow()
+    @pyqtSlot()
+    def on_btn_reload_clicked(self):
+        if self.client.run("NewSetup()", noqueue=True) is None:
+            self.showError("Could not reload setups, a script is running.")
+        else:
+            self.showInfo("Current setups reloaded.")
+
+    @pyqtSlot()
+    def on_btn_apply_clicked(self):
+        self.applyChanges()
 
     def showSetupInfo(self, setup):
         info = self._setupinfo[str(setup)]
@@ -293,5 +278,5 @@ class SetupsPanel(Panel):
         return self._run_setup_command("AddSetup", to_add, noqueue)
 
     def _run_setup_command(self, cmd, setups, noqueue):
-        cmd_str = f'{cmd}({", ".join(map(repr, setups))})'
+        cmd_str = f"{cmd}({', '.join(map(repr, setups))})"
         return self.client.run(cmd_str, noqueue=noqueue) is not None
