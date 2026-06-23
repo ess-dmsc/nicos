@@ -47,6 +47,7 @@ from nicos.core import (
     anytype,
     floatrange,
     none_or,
+    oneof,
     pvname,
     status,
 )
@@ -129,7 +130,10 @@ class EpicsReadable(EpicsParameters, Readable):
         self._epics_wrapper.connect_pv(self.readpv)
 
     def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
+        if mode == SIMULATION:
+            return
+
+        if session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
@@ -203,6 +207,50 @@ class EpicsReadable(EpicsParameters, Readable):
                 (status.ERROR, "communication failure"),
                 time.time(),
             )
+
+
+class EpicsNumericReadable(EpicsReadable):
+    valuetype = oneof(int, float)
+
+    parameters = {
+        "use_prec": Param(
+            "Format string for the readback value is based on the EPICS PREC field",
+            type=bool,
+            default=True,
+            userparam=False,
+        ),
+    }
+    _record_fields = {
+        "readpv": RecordInfo("value", "", RecordType.BOTH),
+        "prec": RecordInfo("", ".PREC", RecordType.BOTH),
+    }
+
+    def doInit(self, mode):
+        if mode == SIMULATION:
+            return
+
+        if session.sessiontype == POLLER and self.monitor:
+            EpicsReadable.doInit(self, mode)
+
+            if self.use_prec:
+                self._epics_subscriptions.append(
+                    self._epics_wrapper.subscribe(
+                        f"{self.readpv}.PREC",
+                        "prec",
+                        self._value_change_callback,
+                        self._connection_change_callback,
+                    )
+                )
+
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name == self.readpv:
+            time_stamp = time.time()
+            self._cache.put(self._name, param, value, time_stamp)
+            self._cache.put(self._name, "unit", units, time_stamp)
+        elif param == "prec":
+            self._cache.put(self._name, "fmtstr", f"%.{value}f", time.time())
 
 
 class EpicsStringReadable(EpicsReadable):
