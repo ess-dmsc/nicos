@@ -75,8 +75,8 @@
     <rect>
      <x>10</x>
      <y>70</y>
-     <width>1201</width>
-     <height>531</height>
+     <width>1191</width>
+     <height>551</height>
     </rect>
    </property>
    <property name="tabPosition">
@@ -94,11 +94,11 @@
       <rect>
        <x>10</x>
        <y>10</y>
-       <width>1002</width>
-       <height>361</height>
+       <width>1114</width>
+       <height>391</height>
       </rect>
      </property>
-     <layout class="QHBoxLayout" name="hexapodControls" stretch="0,1,1">
+     <layout class="QHBoxLayout" name="hexapodControls" stretch="0,2,1">
       <property name="spacing">
        <number>9</number>
       </property>
@@ -440,13 +440,13 @@
           <number>9</number>
          </property>
          <property name="bottomMargin">
-          <number>18</number>
+          <number>0</number>
          </property>
          <property name="spacing">
           <number>6</number>
          </property>
          <item row="0" column="2">
-          <layout class="QGridLayout" name="newPosGrid" rowstretch="0,0,0,0,0,0,0,0">
+          <layout class="QGridLayout" name="newPosGrid" rowstretch="0,0,0,0,0,0,0,0,0">
            <property name="leftMargin">
             <number>9</number>
            </property>
@@ -465,8 +465,8 @@
            <property name="verticalSpacing">
             <number>6</number>
            </property>
-           <item row="2" column="2">
-            <widget class="QDoubleSpinBox" name="newTz">
+           <item row="1" column="2">
+            <widget class="QDoubleSpinBox" name="newTy">
              <property name="locale">
               <locale language="English" country="UnitedStates"/>
              </property>
@@ -477,26 +477,39 @@
               <number>2</number>
              </property>
              <property name="minimum">
-              <double>-500.000000000000000</double>
+              <double>-200.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>500.000000000000000</double>
+              <double>200.000000000000000</double>
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
-            <widget class="QLabel" name="newRyLabel">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
+           <item row="1" column="1">
+            <widget class="QLabel" name="newTyLabel">
              <property name="text">
-              <string>ry</string>
+              <string>ty</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="2">
+            <widget class="QDoubleSpinBox" name="newRy">
+             <property name="locale">
+              <locale language="English" country="UnitedStates"/>
+             </property>
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::NoButtons</enum>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+             <property name="minimum">
+              <double>-200.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>200.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -516,10 +529,39 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
-            <widget class="QLabel" name="newTzLabel">
+           <item row="6" column="1">
+            <widget class="QLabel" name="newTabLabel">
+             <property name="minimumSize">
+              <size>
+               <width>30</width>
+               <height>0</height>
+              </size>
+             </property>
              <property name="text">
-              <string>tz</string>
+              <string>gmt</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QPushButton" name="abs_tz">
+             <property name="text">
+              <string>Move Tz</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLabel" name="newRyLabel">
+             <property name="minimumSize">
+              <size>
+               <width>30</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>ry</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -542,25 +584,55 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
-            <widget class="QLabel" name="newTyLabel">
+           <item row="2" column="3">
+            <widget class="QLabel" name="newTzUnit">
              <property name="text">
-              <string>ty</string>
+              <string>mm</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="0">
+            <widget class="QPushButton" name="butStart">
+             <property name="text">
+              <string>Start All</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="2">
+            <spacer name="verticalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="8" column="4">
+            <widget class="QPushButton" name="butStop">
+             <property name="text">
+              <string>Stop All</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLabel" name="newTzLabel">
+             <property name="text">
+              <string>tz</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
-           <item row="1" column="3">
-            <widget class="QLabel" name="newTyUnit">
-             <property name="text">
-              <string>mm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QDoubleSpinBox" name="newTy">
+           <item row="3" column="2">
+            <widget class="QDoubleSpinBox" name="newRx">
              <property name="locale">
               <locale language="English" country="UnitedStates"/>
              </property>
@@ -578,8 +650,27 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="2">
-            <widget class="QDoubleSpinBox" name="newRx">
+           <item row="6" column="2">
+            <widget class="QDoubleSpinBox" name="newTab">
+             <property name="locale">
+              <locale language="English" country="UnitedStates"/>
+             </property>
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::NoButtons</enum>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+             <property name="minimum">
+              <double>-200.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>200.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="2">
+            <widget class="QDoubleSpinBox" name="newRz">
              <property name="locale">
               <locale language="English" country="UnitedStates"/>
              </property>
@@ -604,22 +695,10 @@
              </property>
             </widget>
            </item>
-           <item row="6" column="2">
-            <widget class="QDoubleSpinBox" name="newTab">
-             <property name="locale">
-              <locale language="English" country="UnitedStates"/>
-             </property>
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
+           <item row="6" column="0">
+            <widget class="QPushButton" name="abs_gmt">
+             <property name="text">
+              <string>Move gmt</string>
              </property>
             </widget>
            </item>
@@ -630,48 +709,53 @@
              </property>
             </widget>
            </item>
-           <item row="7" column="0">
-            <widget class="QPushButton" name="butStart">
+           <item row="2" column="2">
+            <widget class="QDoubleSpinBox" name="newTz">
+             <property name="locale">
+              <locale language="English" country="UnitedStates"/>
+             </property>
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::NoButtons</enum>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+             <property name="minimum">
+              <double>-500.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>500.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="3">
+            <widget class="QLabel" name="newRxUnit">
              <property name="text">
-              <string>Start All</string>
+              <string>deg</string>
              </property>
             </widget>
            </item>
-           <item row="5" column="2">
-            <widget class="QDoubleSpinBox" name="newRz">
-             <property name="locale">
-              <locale language="English" country="UnitedStates"/>
+           <item row="0" column="1">
+            <widget class="QLabel" name="newTxLabel">
+             <property name="text">
+              <string>tx</string>
              </property>
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
-           <item row="4" column="2">
-            <widget class="QDoubleSpinBox" name="newRy">
-             <property name="locale">
-              <locale language="English" country="UnitedStates"/>
+           <item row="6" column="3">
+            <widget class="QLabel" name="newTabUnit">
+             <property name="text">
+              <string>deg</string>
              </property>
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QPushButton" name="abs_rx">
+             <property name="text">
+              <string>Move Rx</string>
              </property>
             </widget>
            </item>
@@ -700,41 +784,31 @@
              </property>
             </widget>
            </item>
-           <item row="6" column="3">
-            <widget class="QLabel" name="newTabUnit">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="abs_tx">
              <property name="text">
-              <string>deg</string>
+              <string>Move Tx</string>
              </property>
             </widget>
            </item>
-           <item row="7" column="4">
-            <widget class="QPushButton" name="butStop">
-             <property name="text">
-              <string>Stop All</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="3">
-            <widget class="QLabel" name="newTzUnit">
+           <item row="1" column="3">
+            <widget class="QLabel" name="newTyUnit">
              <property name="text">
               <string>mm</string>
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
-            <widget class="QLabel" name="newTxLabel">
+           <item row="8" column="2">
+            <widget class="QPushButton" name="refresh">
              <property name="text">
-              <string>tx</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              <string>Refresh All</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="3">
-            <widget class="QLabel" name="newRxUnit">
+           <item row="5" column="0">
+            <widget class="QPushButton" name="abs_rz">
              <property name="text">
-              <string>deg</string>
+              <string>Move Rz</string>
              </property>
             </widget>
            </item>
@@ -745,19 +819,17 @@
              </property>
             </widget>
            </item>
-           <item row="6" column="1">
-            <widget class="QLabel" name="newTabLabel">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
+           <item row="1" column="0">
+            <widget class="QPushButton" name="abs_ty">
              <property name="text">
-              <string>gmt</string>
+              <string>Move Ty</string>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QPushButton" name="abs_ry">
+             <property name="text">
+              <string>Move Ry</string>
              </property>
             </widget>
            </item>
@@ -1216,9 +1288,9 @@
     <widget class="QGroupBox" name="statusBox">
      <property name="geometry">
       <rect>
-       <x>1040</x>
-       <y>30</y>
-       <width>131</width>
+       <x>230</x>
+       <y>410</y>
+       <width>451</width>
        <height>91</height>
       </rect>
      </property>
@@ -1230,7 +1302,7 @@
        <rect>
         <x>0</x>
         <y>20</y>
-        <width>131</width>
+        <width>451</width>
         <height>71</height>
        </rect>
       </property>
@@ -1257,8 +1329,8 @@
     <widget class="QGroupBox" name="coordBox">
      <property name="geometry">
       <rect>
-       <x>1040</x>
-       <y>130</y>
+       <x>20</x>
+       <y>410</y>
        <width>131</width>
        <height>91</height>
       </rect>
@@ -1289,6 +1361,11 @@
       </property>
      </widget>
     </widget>
+   </widget>
+   <widget class="QWidget" name="coordTab">
+    <attribute name="title">
+     <string>Coord System</string>
+    </attribute>
    </widget>
    <widget class="QWidget" name="expTab">
     <attribute name="title">
@@ -1331,7 +1408,7 @@
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="../../../../../../../../resources/nicos-gui.qrc"/>
+  <include location="../../../../../resources/nicos-gui.qrc"/>
  </resources>
  <connections/>
 </ui>
