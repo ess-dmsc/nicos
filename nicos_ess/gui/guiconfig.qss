@@ -454,6 +454,11 @@ QPushButton:disabled {
     border-color:#a9a9a9;
 }
 
+QPushButton:focus {
+    border: 1px solid #e9ebed;
+    background-color: #e9ebed;
+}
+
 QPushButton:!checked:hover {
     border: 1px solid #e9ebed;
     background-color: #e9ebed;
