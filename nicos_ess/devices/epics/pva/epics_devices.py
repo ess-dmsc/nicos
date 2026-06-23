@@ -588,7 +588,7 @@ def _mapReadValue(mapped_device, value):
         _update_mapped_choices(mapped_device)
         mapped_value = mapped_device._inverse_mapping.get(value)
     if mapped_value is None:
-        raise PositionError(mapped_device, "unknown unmapped position %r" % value)
+        raise PositionError(mapped_device, f"value {value} has no mapped position")
     return mapped_value
 
 
