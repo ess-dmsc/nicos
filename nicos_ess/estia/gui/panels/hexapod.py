@@ -98,10 +98,12 @@ class HexapodPanel(Panel):
     def update_position_info(self, values, valtype="curVal"):
         curval = 0
         for axis in self.qtObj:
-            if valtype != "curVal":
+            if valtype == "newVal":
                 self.qtObj[axis][valtype].setValue(round(values[curval], 3))
-            else:
+            elif valtype == "curVal":
                 self.qtObj[axis][valtype].setText(f"{round(values[curval], 3):.3f}")
+            else:
+                raise NotImplementedError(f"valtype {valtype} is not a valid option")
             curval = curval + 1
 
     def show_controls(self, visibility):
