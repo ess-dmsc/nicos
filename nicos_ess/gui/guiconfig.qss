@@ -447,6 +447,7 @@ QPushButton {
     border-radius: 5px;
     padding: 5px;
     outline: none;
+    min-width: 75px;
 }
 
 QPushButton:disabled {

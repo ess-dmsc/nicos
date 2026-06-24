@@ -1377,7 +1377,8 @@ class ControlDialog(QDialog):
         mainunit = self.paramvalues.get("unit", "main")
         punit = (self.paraminfo[pname]["unit"] or "").replace("main", mainunit)
 
-        dlg = dialogFromUi(self, "panels/devices_param.ui")
+        dlg = dialogFromUi(self, findResource("nicos_ess/gui/panels/ui_files/devices_param.ui"))
+
         if pname in ("temperature", "electric_field", "magnetic_field"):
             params = self.client.getDeviceParams(self.devname)
             curr_value = params[pname]
