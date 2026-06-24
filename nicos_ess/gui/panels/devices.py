@@ -1223,7 +1223,7 @@ class ControlDialog(QDialog):
 
     def convert_limit_to_string(self, value):
         if abs(value) >= 1e10:
-            # Use exponential format
+            # Use exponential formatting for big numbers
             return f"{value:.2g}"
         return self.devinfo.fmtstr % value
 
