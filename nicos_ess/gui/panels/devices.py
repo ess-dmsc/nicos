@@ -1060,14 +1060,12 @@ class ControlDialog(QDialog):
             if "nicos.core.mixins.HasLimits" not in classes:
                 self.limitFrame.setVisible(False)
             else:
-                fmtstr = params["fmtstr"]
-                if (
-                    max(abs(params["userlimits"][0]), abs(params["userlimits"][1]))
-                    >= 1e10
-                ):
-                    fmtstr = "%e"
-                self.limitMin.setText(fmtstr % params["userlimits"][0])
-                self.limitMax.setText(fmtstr % params["userlimits"][1])
+                self.limitMin.setText(
+                    self.convert_limit_to_string(params["userlimits"][0])
+                )
+                self.limitMax.setText(
+                    self.convert_limit_to_string(params["userlimits"][1])
+                )
 
             # insert a widget to enter a new device value
             # allowEnter=False because we catch pressing Enter ourselves
@@ -1220,13 +1218,15 @@ class ControlDialog(QDialog):
 
     def convert_limit_to_string(self, value):
         if abs(value) >= 1e10:
-            # Use exponential format
+            # Use exponential formatting for big numbers
             return f"{value:.2g}"
         return self.devinfo.fmtstr % value
 
     @pyqtSlot()
     def on_actionSetLimits_triggered(self):
-        dlg = dialogFromUi(self, findResource("nicos_ess/gui/panels/ui_files/devices_limits.ui"))
+        dlg = dialogFromUi(
+            self, findResource("nicos_ess/gui/panels/ui_files/devices_limits.ui")
+        )
         dlg.descLabel.setText("Adjust user limits of %s:" % self.devname)
 
         userlimits = self.client.getDeviceParam(self.devname, "userlimits")
