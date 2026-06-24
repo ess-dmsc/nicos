@@ -204,14 +204,35 @@
     </layout>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_cancel">
+       <property name="text">
+        <string>Cancel</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_login">
+       <property name="text">
+        <string>Login</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
@@ -221,24 +242,25 @@
   <tabstop>txtPassword</tabstop>
   <tabstop>viewonly</tabstop>
   <tabstop>expertmode</tabstop>
-  <tabstop>buttonBox</tabstop>
+  <tabstop>btn_cancel</tabstop>
+  <tabstop>btn_cancel</tabstop>
  </tabstops>
  <resources>
   <include location="../../../../resources/nicos-gui.qrc"/>
  </resources>
  <connections>
   <connection>
-   <sender>txtPassword</sender>
+   <sender>txtServer</sender>
    <signal>returnPressed()</signal>
    <receiver>AuthDialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>229</x>
-     <y>183</y>
+     <x>268</x>
+     <y>154</y>
     </hint>
     <hint type="destinationlabel">
-     <x>166</x>
+     <x>72</x>
      <y>76</y>
     </hint>
    </hints>
@@ -260,8 +282,24 @@
    </hints>
   </connection>
   <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
+   <sender>txtPassword</sender>
+   <signal>returnPressed()</signal>
+   <receiver>AuthDialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>229</x>
+     <y>183</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>166</x>
+     <y>76</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btn_login</sender>
+   <signal>clicked()</signal>
    <receiver>AuthDialog</receiver>
    <slot>accept()</slot>
    <hints>
@@ -276,8 +314,8 @@
    </hints>
   </connection>
   <connection>
-   <sender>buttonBox</sender>
-   <signal>rejected()</signal>
+   <sender>btn_cancel</sender>
+   <signal>clicked()</signal>
    <receiver>AuthDialog</receiver>
    <slot>reject()</slot>
    <hints>
