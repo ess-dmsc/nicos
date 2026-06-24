@@ -904,11 +904,6 @@ class ControlDialog(QDialog):
         self.deviceName.setText("Device: %s" % self.devname)
         self.setWindowTitle("Control %s" % self.devname)
 
-        self.settingsBtn = self.buttonBox.button(
-            QDialogButtonBox.StandardButton.RestoreDefaults
-        )
-        self.settingsBtn.clicked.connect(self.on_settingsBtn_clicked)
-
         # trigger parameter poll
         self.client.eval("%s.pollParams()" % self.devname, None)
 
@@ -989,11 +984,10 @@ class ControlDialog(QDialog):
         else:
             self.aliasGroup.setVisible(False)
 
-        historyBtn = self.buttonBox.button(QDialogButtonBox.StandardButton.Reset)
         # show current value/status if it is readable
         if "nicos.core.device.Readable" not in classes:
             self.valueFrame.setVisible(False)
-            self.buttonBox.removeButton(historyBtn)
+            self.btn_history.setVisible(False)
         else:
             self.valuelabel.setText(self.devitem.text(self.col_index["VALUE"]))
             self.statuslabel.setText(self.devitem.text(self.col_index["STATUS"]))
@@ -1005,10 +999,8 @@ class ControlDialog(QDialog):
                 self.statuslabel, self.devitem.background(self.col_index["STATUS"])
             )
 
-            # modify history button: add icon and set text
-            historyBtn.setIcon(QIcon(":/find"))
-            historyBtn.setText("Plot history...")
-            historyBtn.clicked.connect(self.on_historyBtn_clicked)
+            # modify history button: add icon
+            self.btn_history.setIcon(QIcon(":/find"))
 
         if self.client.viewonly:
             self.limitFrame.setVisible(False)
@@ -1214,15 +1206,14 @@ class ControlDialog(QDialog):
             self.client.eval(cmd, None)
 
     @pyqtSlot()
-    def on_settingsBtn_clicked(self):
+    def on_btn_settings_clicked(self):
         self._show_extension(self.extension.isHidden())
 
     def _show_extension(self, show):
         if show:
             # make "settings shown" permanent
-            self.settingsBtn.hide()
+            self.btn_settings.hide()
         self.extension.setVisible(show)
-        self.settingsBtn.setText("Settings %s" % ("<<<" if show else ">>>"))
         sz = self.size()
         sz.setHeight(self.sizeHint().height())
         self.resize(sz)
@@ -1433,5 +1424,6 @@ class ControlDialog(QDialog):
                 "set(%s, %r, %r)" % (self.devrepr, pname, new_value)
             )
 
-    def on_historyBtn_clicked(self):
+    @pyqtSlot()
+    def on_btn_history_clicked(self):
         self.device_panel.plot_history(self.devname)
