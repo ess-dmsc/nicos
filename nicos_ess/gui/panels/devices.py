@@ -1267,7 +1267,7 @@ class ControlDialog(QDialog):
         )
 
     def _get_new_value(self, window_title, desc):
-        dlg = dialogFromUi(self, "panels/devices_newpos.ui")
+        dlg = dialogFromUi(self, findResource("nicos_ess/gui/panels/ui_files/devices_newpos.ui"))
         dlg.setWindowTitle(window_title)
         dlg.descLabel.setText(desc)
         dlg.oldValue.setText(self.valuelabel.text())
