@@ -107,6 +107,45 @@ class RheometerControl(EpicsParameters, Measurable):
             settable=False,
             userparam=False,
         ),
+        "temp_setpoint": Param(
+            "Temperature setpoint", type=float, settable=True, volatile=True
+        ),
+        "meas_numb": Param(
+            "Measurement point number", type=float, settable=False, volatile=True
+        ),
+        "meas_interval": Param(
+            "Active interval number", type=float, settable=False, volatile=True
+        ),
+        "device_temp": Param(
+            "Device temperature", type=float, settable=False, volatile=True
+        ),
+        "temp_mon": Param("Temperature", type=float, settable=False, volatile=True),
+        "gap": Param("Gap", type=float, settable=False, volatile=True),
+        "torque": Param("Torque", type=float, settable=False, volatile=True),
+        "force": Param("Normal force", type=float, settable=False, volatile=True),
+        "rot_speed": Param(
+            "Rotational speed", type=float, settable=False, volatile=True
+        ),
+        "phase_ang": Param("Phase angle", type=float, settable=False, volatile=True),
+        "strain": Param("Strain", type=float, settable=False, volatile=True),
+        "freq": Param("Frequency", type=float, settable=False, volatile=True),
+        "shear_stress": Param(
+            "Shear stress", type=float, settable=False, volatile=True
+        ),
+        "shear_rate": Param("Shear rate", type=float, settable=False, volatile=True),
+        "shear_strain": Param(
+            "Shear strain", type=float, settable=False, volatile=True
+        ),
+        "viscosity": Param("Viscosity", type=float, settable=False, volatile=True),
+        "tot_modulus": Param(
+            "Complex modulus |G*|", type=float, settable=False, volatile=True
+        ),
+        "loss_modulus": Param(
+            "Loss modulus G''", type=float, settable=False, volatile=True
+        ),
+        "storage_modulus": Param(
+            "Storage modulus G'", type=float, settable=False, volatile=True
+        ),
     }
 
     def doPreinit(self, mode):
@@ -253,3 +292,63 @@ class RheometerControl(EpicsParameters, Measurable):
                 (status.ERROR, "communication failure"),
                 time.time(),
             )
+
+    def doReadTemp_Setpoint(self):
+        return self._get_cached_pv_or_ask("temp_setpoint")
+
+    def doWriteTemp_Setpoint(self, value):
+        self._put_pv("temp_setpoint", value)
+
+    def doReadMeas_Numb(self):
+        return self._get_cached_pv_or_ask("meas_numb")
+
+    def doReadMeas_Interval(self):
+        return self._get_cached_pv_or_ask("meas_interval")
+
+    def doReadDevice_Temp(self):
+        return self._get_cached_pv_or_ask("device_temp")
+
+    def doReadTemp_Mon(self):
+        return self._get_cached_pv_or_ask("temp_mon")
+
+    def doReadGap(self):
+        return self._get_cached_pv_or_ask("gap")
+
+    def doReadTorque(self):
+        return self._get_cached_pv_or_ask("torque")
+
+    def doReadForce(self):
+        return self._get_cached_pv_or_ask("force")
+
+    def doReadRot_Speed(self):
+        return self._get_cached_pv_or_ask("rot_speed")
+
+    def doReadPhase_Ang(self):
+        return self._get_cached_pv_or_ask("phase_ang")
+
+    def doReadStrain(self):
+        return self._get_cached_pv_or_ask("strain")
+
+    def doReadFreq(self):
+        return self._get_cached_pv_or_ask("freq")
+
+    def doReadShear_Stress(self):
+        return self._get_cached_pv_or_ask("shear_stress")
+
+    def doReadShear_Rate(self):
+        return self._get_cached_pv_or_ask("shear_rate")
+
+    def doReadShear_Strain(self):
+        return self._get_cached_pv_or_ask("shear_strain")
+
+    def doReadViscosity(self):
+        return self._get_cached_pv_or_ask("viscosity")
+
+    def doReadTot_Modulus(self):
+        return self._get_cached_pv_or_ask("tot_modulus")
+
+    def doReadLoss_Modulus(self):
+        return self._get_cached_pv_or_ask("loss_modulus")
+
+    def doReadStorage_Modulus(self):
+        return self._get_cached_pv_or_ask("storage_modulus")

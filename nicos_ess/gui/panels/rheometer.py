@@ -1,13 +1,7 @@
 """NICOS Rheometer setup panel.
 
-All interval/measurement-string building now lives in the EPICS IOC. This panel
-only wires the existing widgets to the rheometer device's cache keys: it reads
-live values via ``client.register`` + ``on_keyChange`` and writes by calling the
-device's ``set_pv`` / command usermethods through ``client.tell("exec", ...)``.
-
 The device name is supplied through the panel ``options`` dict
-(``options={'rheometer': '<device name>'}``); no device or PV names are
-hardcoded here.
+(``options={'rheometer': '<device name>'}``)
 """
 
 import csv
