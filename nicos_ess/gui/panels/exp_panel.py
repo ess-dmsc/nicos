@@ -7,7 +7,6 @@ from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.core import ADMIN
 from nicos.guisupport.qt import (
     QAbstractItemView,
-    QDialogButtonBox,
     QHeaderView,
     QIntValidator,
     QListWidgetItem,
