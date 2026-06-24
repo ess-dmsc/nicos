@@ -1220,7 +1220,7 @@ class ControlDialog(QDialog):
 
     @pyqtSlot()
     def on_actionSetLimits_triggered(self):
-        dlg = dialogFromUi(self, "panels/devices_limits.ui")
+        dlg = dialogFromUi(self, findResource("nicos_ess/gui/panels/ui_files/devices_limits.ui"))
         dlg.descLabel.setText("Adjust user limits of %s:" % self.devname)
 
         userlimits = self.client.getDeviceParam(self.devname, "userlimits")
@@ -1235,19 +1235,19 @@ class ControlDialog(QDialog):
         offset = self.client.getDeviceParam(self.devname, "offset")
         if offset is not None:
             abslimits = abslimits[0] - offset, abslimits[1] - offset
+        # check if the values are larger than e10, if so, use exponential format for the limits
+        if max(abs(abslimits[0]), abs(abslimits[1])) >= 1e10:
+            fmtstr = "%e"
         dlg.limitMinAbs.setText(fmtstr % abslimits[0])
         dlg.limitMaxAbs.setText(fmtstr % abslimits[1])
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
         target.setClient(self.client)
-        btn = dlg.buttonBox.addButton(
-            "Reset to maximum range", QDialogButtonBox.ButtonRole.ResetRole
-        )
 
         def callback():
             self.device_panel.exec_command("resetlimits(%s)" % self.devrepr)
             dlg.reject()
 
-        btn.clicked.connect(callback)
+        dlg.btn_reset.clicked.connect(callback)
         dlg.targetLayout.addWidget(target)
         res = dlg.exec()
         if res != QDialog.DialogCode.Accepted:
