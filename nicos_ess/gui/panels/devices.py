@@ -1068,14 +1068,8 @@ class ControlDialog(QDialog):
             if "nicos.core.mixins.HasLimits" not in classes:
                 self.limitFrame.setVisible(False)
             else:
-                fmtstr = params["fmtstr"]
-                if (
-                    max(abs(params["userlimits"][0]), abs(params["userlimits"][1]))
-                    >= 1e10
-                ):
-                    fmtstr = "%e"
-                self.limitMin.setText(fmtstr % params["userlimits"][0])
-                self.limitMax.setText(fmtstr % params["userlimits"][1])
+                self.limitMin.setText(self.convert_limit_to_string(params["userlimits"][0]))
+                self.limitMax.setText(self.convert_limit_to_string(params["userlimits"][1]))
 
             # insert a widget to enter a new device value
             # allowEnter=False because we catch pressing Enter ourselves
