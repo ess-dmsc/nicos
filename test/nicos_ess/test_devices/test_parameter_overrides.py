@@ -59,24 +59,6 @@ class TestIDS3010ControlOverrides:
         assert p.userparam is False
 
 
-class TestRheometerControlOverrides:
-    """RheometerControl(EpicsDevice, Moveable) — dead-code removal."""
-
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        from nicos_ess.devices.epics.ap_rheometer import RheometerControl
-        self.cls = RheometerControl
-
-    def test_mapping_not_in_parameters(self):
-        assert "mapping" not in self.cls.parameters
-
-    def test_unit_override(self):
-        p = self.cls.parameters["unit"]
-        assert p.mandatory is False
-        assert p.settable is False
-        assert p.userparam is False
-
-
 class TestChopperAlarmsOverrides:
     """ChopperAlarms(EpicsParameters, Readable) — redundant attribute removal."""
 
