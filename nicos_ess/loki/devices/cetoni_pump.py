@@ -93,57 +93,57 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         return {
             "flowrate": RecordInfo(
                 cache_key="flowrate",
-                pv_suffix="B02-CSLab:SE-Pumps:LnkdFlowRate-SP",
+                pv_suffix="FlowRate-SP",
                 record_type=RecordType.VALUE,
             ),
             "flowrate_max": RecordInfo(
                 cache_key="flowrate_max",
-                pv_suffix="B02-CSLab:SE-Pumps:LnkdMaxFlowRate",
+                pv_suffix="MaxFlowRate",
                 record_type=RecordType.VALUE,
             ),
             "flowrate_unit": RecordInfo(
                 cache_key="flowrate_unit",
-                pv_suffix="B02-CSLab:SE-Pumps:LnkdFlowRate-SP.EGU",
+                pv_suffix="FlowRate-SP.EGU",
                 record_type=RecordType.VALUE,
             ),
             "dosing_time": RecordInfo(
                 cache_key="dosing_time",
-                pv_suffix="B02-CSLab:SE-Pumps:LnkdMaxDosingTime-SP",
+                pv_suffix="MaxDosingTime-SP",
                 record_type=RecordType.VALUE,
             ),
             "total_vol": RecordInfo(
                 cache_key="total_vol",
-                pv_suffix="B02-CSLab:SE-Pumps:LnkdTotalVol",
+                pv_suffix="TotalVol",
                 record_type=RecordType.VALUE,
             ),
             "first_fill_syringe": RecordInfo(
                 cache_key="first_fill_syringe",
-                pv_suffix="B02-CSLab:SE-Pumps:FillingSyringeIdx-S",
+                pv_suffix="FillingSyringeIdx-SP",
                 record_type=RecordType.VALUE,
             ),
             "start": RecordInfo(
                 cache_key="start",
-                pv_suffix="B02-CSLab:SE-Pumps:C_LnkdStart",
+                pv_suffix="Start-Cmd",
                 record_type=RecordType.OTHER,
             ),
             "stop": RecordInfo(
                 cache_key="stop",
-                pv_suffix="B02-CSLab:SE-Pumps:SP1StopAllPumps",
+                pv_suffix="StopAllPumps-Cmd",
                 record_type=RecordType.OTHER,
             ),
             "enable": RecordInfo(
                 cache_key="enable",
-                pv_suffix="B02-CSLab:SE-Pumps:C_LnkdEnable",
+                pv_suffix="Enable-Cmd",
                 record_type=RecordType.STATUS,
             ),
-            "is_enabled": RecordInfo(
-                cache_key="is_enabled",
-                pv_suffix="B02-CSLab:SE-Pumps:LinkedSyringesEnbld",
+            "is_disabled": RecordInfo(
+                cache_key="is_disabled",
+                pv_suffix="Disabled",
                 record_type=RecordType.STATUS,
             ),
             "is_pumping": RecordInfo(
                 cache_key="is_pumping",
-                pv_suffix="B02-CSLab:SE-Pumps:LnkdIsPumping",
+                pv_suffix="IsPumping",
                 record_type=RecordType.STATUS,
             ),
         }
@@ -227,8 +227,8 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         return ""
 
     def doStart(self, target):
-        is_enabled = self._get_cached_pv_or_ask("is_enabled")
-        if not is_enabled:
+        is_disabled = self._get_cached_pv_or_ask("is_disabled")
+        if is_disabled:
             self.log.warning("Please enable before starting")
             return
         if target.lower() == "start":
@@ -268,7 +268,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             self._put_pv_val("enable", 1)
         else:
             self._put_pv_val("enable", 0)
-        self._cache.invalidate(self, "is_enabled")
+        self._cache.invalidate(self, "is_disabled")
 
     def doStop(self):
         self._put_pv_val("stop", 1)
@@ -282,11 +282,11 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         if is_pumping:
             return status.BUSY, f"Pumping in mode: {mode}"
 
-        is_enabled = self._get_cached_pv_or_ask("is_enabled")
-        if is_enabled:
-            return status.OK, "Enabled"
+        is_disabled = self._get_cached_pv_or_ask("is_disabled")
+        if is_disabled:
+            return status.WARN, "Disabled"
         else:
-            return status.WARN, "Not enabled"
+            return status.OK, "Enabled"
 
     def _value_change_callback(
         self,
