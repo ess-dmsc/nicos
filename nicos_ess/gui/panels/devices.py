@@ -1248,7 +1248,6 @@ class ControlDialog(QDialog):
             abslimits = abslimits[0] - offset, abslimits[1] - offset
         dlg.limitMinAbs.setText(self.convert_limit_to_string(abslimits[0]))
         dlg.limitMaxAbs.setText(self.convert_limit_to_string(abslimits[1]))
-
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
         target.setClient(self.client)
         btn = dlg.buttonBox.addButton(
