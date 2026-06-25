@@ -999,9 +999,6 @@ class ControlDialog(QDialog):
                 self.statuslabel, self.devitem.background(self.col_index["STATUS"])
             )
 
-            # modify history button: add icon
-            self.btn_history.setIcon(QIcon(":/find"))
-
         if self.client.viewonly:
             self.limitFrame.setVisible(False)
             self.targetFrame.setVisible(False)

@@ -587,7 +587,7 @@ QPushButton:disabled {
     color: #a0a0a0; /* Muted text */
 }
 
-/* Remove icons from built-in dialogs. */
+/* Remove icons from built-in Qt dialogs. */
 QInputDialog QPushButton {
     qproperty-icon: url("");
 }
