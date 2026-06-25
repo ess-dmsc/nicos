@@ -8,6 +8,7 @@ from nicos.core import (
     multiStatus,
     oneof,
     tupleof,
+    anytype,
 )
 
 
@@ -44,6 +45,20 @@ class VirtualSource(Moveable):
                 "offcentered": "(%.2f, %.2f) %.2f mm x %.2f mm, %.2f deg",
             },
         ),
+        "userlimits": Param(
+            "adjust settings of each motor limit. "
+            "limits should be written in list form [min,max]",
+            type=dictof(str, anytype),
+            settable=True,
+            # [-left, +right, -bottom, +top]
+            default={
+                "left": [],
+                "right": [],
+                "bottom": [],
+                "top": [],
+                "rot": [],
+            },
+        ),
     }
     parameter_overrides = {
         "unit": Override(default="", mandatory=False, settable=True),
@@ -55,6 +70,19 @@ class VirtualSource(Moveable):
         "slit": Attach("the slit blades", Moveable),
         "rot": Attach("the rotation stage", Moveable),
     }
+
+    def doInit(self, mode):
+        adev_limits = {"left": [], "right": [], "bottom": [], "top": [], "rot": []}
+        adevs = ("left", "right", "bottom", "top", "rot")
+
+        for device in adevs:
+            # slit parts are attached-attached devices
+            if device != "rot":
+                adev_limits[device] = self._adevs["slit"]._adevs[device].userlimits
+            else:
+                adev_limits[device] = self._adevs[device].userlimits
+
+        self._setROParam("userlimits", adev_limits)
 
     def _parseTargets(self, target):
         # angle target must be split from slit target since it is an independent attachment
@@ -154,3 +182,9 @@ class VirtualSource(Moveable):
         if slit_mode == vs_mode:
             return
         self._adevs["slit"]._setROParam("opmode", vs_mode)
+
+    def doUpdateUserlimits(self, values):
+        if values["rot"] == []:
+            return
+        self._adevs["rot"]._setROParam("userlimits", values["rot"])
+        return
