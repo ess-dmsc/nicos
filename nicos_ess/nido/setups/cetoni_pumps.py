@@ -15,8 +15,8 @@ devices = dict(
     pump1_syringe_config=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Device to set the configuration of cetoni pump SP1",
-        readpv=f"{pump1_pvroot}SyrType-SP",
-        writepv=f"{pump1_pvroot}SyrType-SP",
+        readpv=f"{pump1_pvroot}SyrType",
+        writepv=f"{pump1_pvroot}SyrType",
     ),
     pump2=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpController",
@@ -28,8 +28,8 @@ devices = dict(
     pump2_syringe_config=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Device to set the configuration of cetoni pump SP2",
-        readpv=f"{pump2_pvroot}SyrType-SP",
-        writepv=f"{pump2_pvroot}SyrType-SP",
+        readpv=f"{pump2_pvroot}SyrType",
+        writepv=f"{pump2_pvroot}SyrType",
     ),
     linked_pumping=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode",
