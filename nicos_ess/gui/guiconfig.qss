@@ -588,6 +588,10 @@ QPushButton:disabled {
 }
 
 /* Remove icons from built-in dialogs. */
-QInputDialog QPushButton{
+QInputDialog QPushButton {
+    qproperty-icon: url("");
+}
+
+QMessageBox QPushButton {
     qproperty-icon: url("");
 }
