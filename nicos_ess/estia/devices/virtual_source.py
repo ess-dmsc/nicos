@@ -1,3 +1,4 @@
+from nicos.core.errors import InvalidValueError
 from nicos.core import (
     Attach,
     Moveable,
@@ -9,13 +10,6 @@ from nicos.core import (
     oneof,
     tupleof,
     anytype,
-)
-from nicos.core.errors import (
-    AccessError,
-    CommunicationError,
-    ConfigurationError,
-    ModeError,
-    InvalidValueError,
 )
 
 
