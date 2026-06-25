@@ -191,14 +191,25 @@ class VirtualSource(Moveable):
         self._adevs["slit"]._setROParam("opmode", vs_mode)
 
     def doUpdateUserlimits(self, values):
-        # validate submission first before attempting to set userlimits
-        # left, right, bottom, top, rot
+        # device order: left, right, bottom, top, rotation (rot)
+        adev_abslimits = {}
         for limits in values:
             if values[limits] == [] or values[limits] == ():
                 raise InvalidValueError(
                     self,
                     f"userlimits for {limits} is empty, please set the limits in the format [min,max] or (min,max)",
                 )
+            # verify that min < max
+            if values[limits][0] > values[limits][1]:
+                raise InvalidValueError(
+                    self, f"min limit is greater than max limit for {limits}!"
+                )
+            if limits != "rot":
+                adev_abslimits[limits] = self._adevs["slit"]._adevs[limits].abslimits
+            else:
+                adev_abslimits[limits] = self._adevs[limits].abslimits
+
+        # compare new limits to abslimits
         for limits in values:
             if limits != "rot":
                 # get the current abslimits and compare to new
