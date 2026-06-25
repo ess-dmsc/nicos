@@ -192,28 +192,40 @@ class VirtualSource(Moveable):
 
     def doUpdateUserlimits(self, values):
         # device order: left, right, bottom, top, rotation (rot)
-        adev_abslimits = {}
+        # checks are done here b/c otherwise there is no error raised
+        adev_abslimits = 0
         for limits in values:
             if values[limits] == [] or values[limits] == ():
                 raise InvalidValueError(
                     self,
-                    f"userlimits for {limits} is empty, please set the limits in the format [min,max] or (min,max)",
+                    f"userlimits for {limits} is empty, please set the limits"
+                    "in the format [min,max] or (min,max)",
                 )
             # verify that min < max
             if values[limits][0] > values[limits][1]:
                 raise InvalidValueError(
                     self, f"min limit is greater than max limit for {limits}!"
                 )
+            # verify that we are not going over the abslimits
             if limits != "rot":
-                adev_abslimits[limits] = self._adevs["slit"]._adevs[limits].abslimits
+                adev_abslimits = self._adevs["slit"]._adevs[limits].abslimits
             else:
-                adev_abslimits[limits] = self._adevs[limits].abslimits
+                adev_abslimits = self._adevs["rot"].abslimits
 
-        # compare new limits to abslimits
+            if values[limits][0] < adev_abslimits[0]:
+                raise InvalidValueError(
+                    self,
+                    f"userlimits for {limits} is lower than abslimits {adev_abslimits}!",
+                )
+            elif values[limits][1] > adev_abslimits[1]:
+                raise InvalidValueError(
+                    self,
+                    f"userlimits for {limits} is greater than abslimits {adev_abslimits}!",
+                )
+
+        # set the new limits
         for limits in values:
             if limits != "rot":
-                # get the current abslimits and compare to new
-                curlimit = self._adevs["slit"]._adevs[limits].abslimits
                 self._adevs["slit"]._adevs[limits]._setROParam(
                     "userlimits", values[limits]
                 )
