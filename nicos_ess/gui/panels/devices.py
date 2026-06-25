@@ -1264,7 +1264,9 @@ class ControlDialog(QDialog):
         )
 
     def _get_new_value(self, window_title, desc):
-        dlg = dialogFromUi(self, findResource("nicos_ess/gui/panels/ui_files/devices_newpos.ui"))
+        dlg = dialogFromUi(
+            self, findResource("nicos_ess/gui/panels/ui_files/devices_newpos.ui")
+        )
         dlg.setWindowTitle(window_title)
         dlg.descLabel.setText(desc)
         dlg.oldValue.setText(self.valuelabel.text())
@@ -1374,7 +1376,9 @@ class ControlDialog(QDialog):
         mainunit = self.paramvalues.get("unit", "main")
         punit = (self.paraminfo[pname]["unit"] or "").replace("main", mainunit)
 
-        dlg = dialogFromUi(self, findResource("nicos_ess/gui/panels/ui_files/devices_param.ui"))
+        dlg = dialogFromUi(
+            self, findResource("nicos_ess/gui/panels/ui_files/devices_param.ui")
+        )
 
         if pname in ("temperature", "electric_field", "magnetic_field"):
             params = self.client.getDeviceParams(self.devname)
