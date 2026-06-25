@@ -606,7 +606,9 @@ class CetoniPumpController(
         return self._get_cached_pv_or_ask("pressure_max")
 
     def doWritePressure_Max(self, target):
+        target = max(0, target)
         self._put_pv_val("pressure_max", target)
+        return target
 
     def doReadPressure_Unit(self):
         return self._get_cached_pv_or_ask("pressure_unit")
