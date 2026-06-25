@@ -45,6 +45,13 @@ DEVICE_TYPE = SETUP_TYPE + 1
 PARAM_TYPE = SETUP_TYPE + 2
 
 
+def convert_limit_to_string(value, fmtstr):
+    if abs(value) >= 1e10:
+        # Use exponential formatting for big numbers
+        return f"{value:.2g}"
+    return fmtstr % value
+
+
 def setBackgroundBrush(widget, color):
     palette = widget.palette()
     palette.setBrush(QPalette.ColorRole.Window, color)
@@ -642,11 +649,8 @@ class DevicesPanel(Panel):
             value = cache_load(value)
             if ldevname in self._control_dialogs:
                 dlg = self._control_dialogs[ldevname]
-                fmtstr = devinfo.fmtstr
-                if max(abs(value[0]), abs(value[1])) >= 1e10:
-                    fmtstr = "%e"
-                dlg.limitMin.setText(fmtstr % value[0])
-                dlg.limitMax.setText(fmtstr % value[1])
+                dlg.limitMin.setText(convert_limit_to_string(value[0], devinfo.fmtstr))
+                dlg.limitMax.setText(convert_limit_to_string(value[1], devinfo.fmtstr))
         elif subkey == "classes":
             if not value:
                 value = "[]"
@@ -1068,11 +1072,12 @@ class ControlDialog(QDialog):
             if "nicos.core.mixins.HasLimits" not in classes:
                 self.limitFrame.setVisible(False)
             else:
+                fmtstr = params["fmtstr"]
                 self.limitMin.setText(
-                    self.convert_limit_to_string(params["userlimits"][0])
+                    convert_limit_to_string(params["userlimits"][0], fmtstr)
                 )
                 self.limitMax.setText(
-                    self.convert_limit_to_string(params["userlimits"][1])
+                    convert_limit_to_string(params["userlimits"][1], fmtstr)
                 )
 
             # insert a widget to enter a new device value
@@ -1225,12 +1230,6 @@ class ControlDialog(QDialog):
         sz.setHeight(self.sizeHint().height())
         self.resize(sz)
 
-    def convert_limit_to_string(self, value):
-        if abs(value) >= 1e10:
-            # Use exponential formatting for big numbers
-            return f"{value:.2g}"
-        return self.devinfo.fmtstr % value
-
     @pyqtSlot()
     def on_actionSetLimits_triggered(self):
         dlg = dialogFromUi(
@@ -1239,15 +1238,23 @@ class ControlDialog(QDialog):
         dlg.descLabel.setText("Adjust user limits of %s:" % self.devname)
 
         userlimits = self.client.getDeviceParam(self.devname, "userlimits")
-        dlg.limitMin.setText(self.convert_limit_to_string(userlimits[0]))
-        dlg.limitMax.setText(self.convert_limit_to_string(userlimits[1]))
+        dlg.limitMin.setText(
+            convert_limit_to_string(userlimits[0], self.devinfo.fmtstr)
+        )
+        dlg.limitMax.setText(
+            convert_limit_to_string(userlimits[1], self.devinfo.fmtstr)
+        )
 
         abslimits = self.client.getDeviceParam(self.devname, "abslimits")
         offset = self.client.getDeviceParam(self.devname, "offset")
         if offset is not None:
             abslimits = abslimits[0] - offset, abslimits[1] - offset
-        dlg.limitMinAbs.setText(self.convert_limit_to_string(abslimits[0]))
-        dlg.limitMaxAbs.setText(self.convert_limit_to_string(abslimits[1]))
+        dlg.limitMinAbs.setText(
+            convert_limit_to_string(abslimits[0], self.devinfo.fmtstr)
+        )
+        dlg.limitMaxAbs.setText(
+            convert_limit_to_string(abslimits[1], self.devinfo.fmtstr)
+        )
 
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
         target.setClient(self.client)
