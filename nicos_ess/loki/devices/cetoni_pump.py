@@ -442,12 +442,12 @@ class CetoniPumpController(
             ),
             "target": RecordInfo(
                 cache_key="target",
-                pv_suffix="C_SetFillVol",
+                pv_suffix="FillVol-SP",
                 record_type=RecordType.VALUE,
             ),
             "flowrate": RecordInfo(
                 cache_key="flowrate",
-                pv_suffix="FlowRate",
+                pv_suffix="FlowRate-SP",
                 record_type=RecordType.VALUE,
             ),
             "flowrate_max": RecordInfo(
@@ -477,7 +477,7 @@ class CetoniPumpController(
             ),
             "home": RecordInfo(
                 cache_key="home",
-                pv_suffix="C_InitPosition",
+                pv_suffix="InitPosition-Cmd",
                 record_type=RecordType.OTHER,
             ),
             "innerdiameter": RecordInfo(
@@ -507,22 +507,22 @@ class CetoniPumpController(
             ),
             "stop": RecordInfo(
                 cache_key="stop",
-                pv_suffix="C_Stop",
+                pv_suffix="Stop-Cmd",
                 record_type=RecordType.OTHER,
             ),
             "fill_syringe": RecordInfo(
                 cache_key="fill_syringe",
-                pv_suffix="C_FillSyringe",
+                pv_suffix="FillSyringe-Cmd",
                 record_type=RecordType.OTHER,
             ),
             "empty_syringe": RecordInfo(
                 cache_key="empty_syringe",
-                pv_suffix="C_EmptySyringe",
+                pv_suffix="EmptySyringe-Cmd",
                 record_type=RecordType.OTHER,
             ),
             "generate_flow": RecordInfo(
                 cache_key="generate_flow",
-                pv_suffix="C_GenerateFlow",
+                pv_suffix="GenerateFlow-Cmd",
                 record_type=RecordType.OTHER,
             ),
             "is_pumping": RecordInfo(
@@ -542,7 +542,7 @@ class CetoniPumpController(
             ),
             "reset_fault": RecordInfo(
                 cache_key="reset_fault",
-                pv_suffix="C_ResetFault",
+                pv_suffix="ResetFault-Cmd",
                 record_type=RecordType.OTHER,
             ),
         }
@@ -643,7 +643,7 @@ class CetoniPumpController(
         self._cache.invalidate(self, "is_fault")
 
     def doStart(self, target):
-        if self._attached_linked_pump_device._get_cached_pv_or_ask("is_enabled"):
+        if not self._attached_linked_pump_device._get_cached_pv_or_ask("is_disabled"):
             self.log.warning(
                 f"Please disable device: {self._attached_linked_pump_device.name} first"
             )
