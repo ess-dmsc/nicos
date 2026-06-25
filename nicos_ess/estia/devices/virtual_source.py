@@ -10,6 +10,13 @@ from nicos.core import (
     tupleof,
     anytype,
 )
+from nicos.core.errors import (
+    AccessError,
+    CommunicationError,
+    ConfigurationError,
+    ModeError,
+    InvalidValueError,
+)
 
 
 class VirtualSource(Moveable):
@@ -71,7 +78,7 @@ class VirtualSource(Moveable):
         "rot": Attach("the rotation stage", Moveable),
     }
 
-    def doInit(self, mode):
+    def doPreinit(self, mode):
         adev_limits = {"left": [], "right": [], "bottom": [], "top": [], "rot": []}
         adevs = ("left", "right", "bottom", "top", "rot")
 
@@ -184,7 +191,20 @@ class VirtualSource(Moveable):
         self._adevs["slit"]._setROParam("opmode", vs_mode)
 
     def doUpdateUserlimits(self, values):
-        if values["rot"] == []:
-            return
-        self._adevs["rot"]._setROParam("userlimits", values["rot"])
-        return
+        # validate submission first before attempting to set userlimits
+        # left, right, bottom, top, rot
+        for limits in values:
+            if values[limits] == [] or values[limits] == ():
+                raise InvalidValueError(
+                    self,
+                    f"userlimits for {limits} is empty, please set the limits in the format [min,max] or (min,max)",
+                )
+        for limits in values:
+            if limits != "rot":
+                # get the current abslimits and compare to new
+                curlimit = self._adevs["slit"]._adevs[limits].abslimits
+                self._adevs["slit"]._adevs[limits]._setROParam(
+                    "userlimits", values[limits]
+                )
+            else:
+                self._adevs["rot"]._setROParam("userlimits", values[limits])
