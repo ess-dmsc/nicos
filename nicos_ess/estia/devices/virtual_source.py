@@ -51,14 +51,8 @@ class VirtualSource(Moveable):
             "limits should be written in list form [min,max]",
             type=dictof(str, anytype),
             settable=True,
-            # [-left, +right, -bottom, +top]
-            default={
-                "left": [],
-                "right": [],
-                "bottom": [],
-                "top": [],
-                "rot": [],
-            },
+            userparam=False,
+            default={},
         ),
     }
     parameter_overrides = {
