@@ -34,7 +34,7 @@ devices = dict(
     linked_pumping=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode",
         description="Device to start the linked pumping flow",
-        pvroot="",
+        pvroot=linked_pvroot,
     ),
     linked_pumping_mode=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
