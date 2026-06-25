@@ -125,7 +125,7 @@ class TestEpicsAnalogMoveable:
         fake_backend.emit_update(config["writepv"], value=3.5, limits=(-10.0, 10.0))
         fake_backend.emit_update(config["targetpv"], value=3.5)
 
-        assert len(fake_backend.subscriptions) == 4
+        assert len(fake_backend.subscriptions) == 5
         assert device_harness.run("poller", poller_device._cache.get, poller_device, "value") == pytest.approx(
             3.0
         )
