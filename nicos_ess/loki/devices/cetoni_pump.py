@@ -52,12 +52,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             description="Flowrate unit",
             type=str,
         ),
-        "dosing_time": Param(
-            description="Number of seconds to run the linked mode in time limited flow",
-            type=int,
-            unit="s",
-            settable=True,
-        ),
         "total_vol": Param(
             description="Total volume",
             volatile=True,
@@ -110,11 +104,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             "flowrate_unit": RecordInfo(
                 cache_key="flowrate_unit",
                 pv_suffix="FlowRate-SP.EGU",
-                record_type=RecordType.VALUE,
-            ),
-            "dosing_time": RecordInfo(
-                cache_key="dosing_time",
-                pv_suffix="MaxDosingTime-SP",
                 record_type=RecordType.VALUE,
             ),
             "total_vol": RecordInfo(
@@ -251,12 +240,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
 
     def doWriteFlowrate(self, target):
         self._put_pv_val("flowrate", target)
-
-    def doReadDosing_Time(self):
-        return self._get_cached_pv_or_ask("dosing_time")
-
-    def doWriteDosing_Time(self, target):
-        self._put_pv_val("dosing_time", target)
 
     def doReadTotal_Vol(self):
         return self._get_cached_pv_or_ask("total_vol")
