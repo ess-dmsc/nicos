@@ -74,6 +74,12 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
+    attached_devices = {
+        "linked_pumping_mode": Attach(
+            "Device to set the linked pumping mode", MappedMoveable
+        )
+    }
+
     def doPreinit(self, mode):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
@@ -278,7 +284,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
 
     def _do_status(self):
         is_pumping = self._get_cached_pv_or_ask("is_pumping")
-        mode = self.read()
+        mode = self._attached_linked_pumping_mode.read()
         if is_pumping:
             return status.BUSY, f"Pumping in mode: {mode}"
 
