@@ -6,6 +6,7 @@ from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsManualMappedAnalogMoveable,
     EpicsMappedMoveable,
     EpicsMappedReadable,
+    EpicsNumericReadable,
     EpicsReadable,
     EpicsStringMoveable,
     EpicsStringReadable,
