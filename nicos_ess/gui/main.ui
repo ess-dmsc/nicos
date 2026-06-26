@@ -81,7 +81,6 @@
     <addaction name="actionExpert"/>
     <addaction name="separator"/>
     <addaction name="actionFont"/>
-    <addaction name="actionColor"/>
     <addaction name="actionPreferences"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>

@@ -1122,15 +1122,6 @@ class MainWindow(DlgUtils, QMainWindow):
         self.user_font = font
 
     @pyqtSlot()
-    def on_actionColor_triggered(self):
-        color = QColorDialog.getColor(self.user_color, self)
-        if not color.isValid():
-            return
-        for panel in self.panels:
-            panel.setCustomStyle(self.user_font, color)
-        self.user_color = color
-
-    @pyqtSlot()
     def on_actionUser_triggered(self):
         w = self.toolBarRight.widgetForAction(self.actionUser)
         self.dropdown.popup(w.mapToGlobal(QPoint(0, w.height())))

@@ -583,16 +583,6 @@ class EditorPanel(Panel):
             self.parent_window.setWindowTitle("%s editor" % self.mainwindow.instrument)
             return
         editor = self.editors[index]
-        fn = self.filenames[editor]
-        if fn:
-            self.parent_window.setWindowTitle(
-                "%s[*] - %s editor" % (fn, self.mainwindow.instrument)
-            )
-        else:
-            self.parent_window.setWindowTitle(
-                "New[*] - %s editor" % self.mainwindow.instrument
-            )
-        self.parent_window.setWindowModified(editor.isModified())
         self.actionSave.setEnabled(editor.isModified())
         self.actionUndo.setEnabled(editor.isModified())
         self.currentEditor = editor
@@ -622,7 +612,6 @@ class EditorPanel(Panel):
         if editor is self.currentEditor:
             self.actionSave.setEnabled(dirty)
             self.actionUndo.setEnabled(dirty)
-            self.parent_window.setWindowModified(dirty)
             index = self.tabber.currentIndex()
             tt = self.tabber.tabText(index).rstrip("*")
             self.tabber.setTabText(index, tt + (dirty and "*" or ""))
