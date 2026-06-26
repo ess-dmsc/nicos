@@ -28,6 +28,7 @@ This module contains some classes for NICOS - EPICS integration.
 import os
 import time
 from collections import namedtuple
+from collections.abc import Iterable
 from enum import Enum
 
 import numpy
@@ -82,6 +83,59 @@ class EpicsParameters(HasNexusConfig):
         "maxage": Override(default=None),
     }
     hardware_access = True
+
+    def _format_float_as_string(self, value, fmtstr):
+        if abs(value) >= 1e10:
+            # Use exponential formatting for big numbers
+            return f"{value:.2g}"
+        return self.fmtstr % value
+
+    def format(self, value, unit=False):
+        if isinstance(value, list):
+            value = tuple(value)
+
+        try:
+            if isinstance(value, float):
+                ret = self._format_float_as_string(value, self.fmtstr)
+            else:
+                ret = self.fmtstr % value
+        except (TypeError, ValueError):
+            ret = str(value)
+
+        if unit and self.unit:
+            return ret + " " + self.unit
+        return ret
+
+    def formatParam(self, param, value, use_repr=True):
+        fmtstr = self._getParamConfig(param).fmtstr
+        if fmtstr == "%r" and not use_repr:
+            fmtstr = "%s"
+        if fmtstr == "main":
+            fmtstr = self.fmtstr
+
+        # Floats
+        if isinstance(value, float):
+            try:
+                ret = self._format_float_as_string(value, fmtstr)
+            except (TypeError, ValueError):
+                ret = repr(value)
+
+        # Lists or Tuples
+        if isinstance(value, Iterable):
+            new_value = []
+            for v in value:
+                try:
+                    new_value.append(self._format_float_as_string(value, fmtstr))
+                except (TypeError, ValueError):
+                    new_value.append(repr(v))
+            return "(" + ", ".join(new_value) + ")"
+
+        # Everything else
+        try:
+            ret = fmtstr % value
+        except (TypeError, ValueError):
+            ret = repr(value)
+        return ret
 
 
 def create_wrapper(timeout, use_pva):
