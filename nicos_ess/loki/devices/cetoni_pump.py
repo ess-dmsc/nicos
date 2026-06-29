@@ -1,31 +1,26 @@
-from faulthandler import is_enabled
-from time import sleep, time
+from time import time
 
-import nicos.commands.basic
 from nicos import session
 from nicos.core import (
+    POLLER,
+    SIMULATION,
+    Attach,
+    CanDisable,
+    ConfigurationError,
     HasLimits,
     Moveable,
-    Param,
     Override,
-    SIMULATION,
+    Param,
     status,
-    POLLER,
     usermethod,
-    CanDisable,
-    oneof,
-    Attach,
-    PositionError,
-    ConfigurationError,
 )
 from nicos.devices.abstract import MappedMoveable
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
-    create_wrapper,
     RecordInfo,
     RecordType,
+    create_wrapper,
     get_from_cache_or,
-    _update_mapped_choices,
 )
 from nicos_ess.devices.mixins import CanReferenceWithWarning
 
@@ -214,7 +209,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
 
     def _target_valid(self, pv_name, value):
         choices = self._get_mapped_choices(pv_name)
-        if not value in choices:
+        if value not in choices:
             raise ConfigurationError(self, f"Invalid choice for {pv_name}: {value}")
         return True
 
