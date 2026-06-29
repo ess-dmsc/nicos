@@ -4,7 +4,7 @@ pv_root = "NMX-ExSht:MC-Pne-01:"
 
 # TODO: Use mapped or epics shutter?  
 devices = dict(
-    experiment_shutter_status=device(
+    experiment_shutter__status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Experiment shutter status",
         readpv=f"{pv_root}ShtAuxBits07",
@@ -13,7 +13,7 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    experiment_shutter=device(
+    experiment_shutter__control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Experiment shutter control",
         readpv=f"{pv_root}ShtOpen",
@@ -23,8 +23,7 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-
-    experiment_shutter__epics_shutter=device(
+    experiment_shutter=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Experiment Shutter",
         writepv=f"{pv_root}ShtOpen",
