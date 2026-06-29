@@ -24,14 +24,18 @@
 
 import pytest
 
+from nicos.core import status
 from nicos_ess.devices.epics import mbbi_direct
+from nicos_ess.devices.epics.pva import epics_common
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 
 @pytest.fixture
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
-    monkeypatch.setattr(mbbi_direct, "create_wrapper", lambda timeout, use_pva: backend)
+    monkeypatch.setattr(
+        epics_common, "create_wrapper", lambda timeout, use_pva: backend
+    )
 
     backend.values["SIM:MBBI"] = 0
     backend.values["SIM:MBBI.B0"] = 0
@@ -42,9 +46,8 @@ def fake_backend(monkeypatch):
 
 
 class TestMBBIDirectStatusHarness:
-    def test_initializes(self, device_harness, fake_backend):
-        del fake_backend
-        daemon_device, poller_device = device_harness.create_pair(
+    def _create_pair(self, device_harness):
+        return device_harness.create_pair(
             mbbi_direct.MBBIDirectStatus,
             name="mbbi_direct",
             shared={
@@ -55,5 +58,18 @@ class TestMBBIDirectStatusHarness:
             },
         )
 
+    def test_initializes(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, poller_device = self._create_pair(device_harness)
+
         assert daemon_device is not None
         assert poller_device is not None
+
+    def test_set_bit_warns_with_bit_name(self, device_harness, fake_backend):
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        assert daemon_device.status()[0] == status.OK
+
+        fake_backend.emit_update("SIM:MBBI.B1", value=1)
+
+        assert daemon_device.status() == (status.WARN, "Bit 1 Alarm")

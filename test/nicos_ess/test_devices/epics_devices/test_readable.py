@@ -24,22 +24,19 @@
 
 """Harness tests for EpicsReadable and EpicsStringReadable."""
 
+import time
+
 import numpy
 import pytest
 
 from nicos.core import status
-
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsReadable,
     EpicsStringReadable,
 )
 
-from .conftest import assert_error_status
-
 
 class TestEpicsReadable:
-    """Behavior tests for `EpicsReadable` in daemon/poller/shared-cache roles."""
-
     def test_daemon_readable_uses_direct_epics_reads_when_monitor_disabled(
         self, device_harness, fake_backend
     ):
@@ -65,7 +62,7 @@ class TestEpicsReadable:
             "minor alarm",
         )
 
-    def test_daemon_readable_status_returns_timeout_error_on_backend_timeout(
+    def test_daemon_readable_status_returns_unknown_on_backend_timeout(
         self, device_harness, fake_backend
     ):
         readpv = "SIM:READ.RBV"
@@ -81,8 +78,8 @@ class TestEpicsReadable:
         )
 
         assert device_harness.run("daemon", device.status, 0) == (
-            status.ERROR,
-            "timeout reading status",
+            status.UNKNOWN,
+            "lost connection to EPICS",
         )
 
     def test_poller_readable_value_and_status_callbacks_write_cache(
@@ -98,6 +95,7 @@ class TestEpicsReadable:
             readpv=readpv,
         )
 
+        fake_backend.get_calls.clear()
         fake_backend.emit_update(
             readpv,
             value=5.5,
@@ -106,17 +104,18 @@ class TestEpicsReadable:
             message="trip",
         )
 
-        assert len(fake_backend.subscriptions) == 2
-        assert device_harness.run("poller", device._cache.get, device, "value") == pytest.approx(
-            5.5
-        )
+        assert len(fake_backend.subscriptions) == 1
+        assert device_harness.run(
+            "poller", device._cache.get, device, "value"
+        ) == pytest.approx(5.5)
         assert device_harness.run("poller", device._cache.get, device, "unit") == "V"
         assert device_harness.run("poller", device._cache.get, device, "status") == (
             status.ERROR,
             "trip",
         )
+        assert fake_backend.get_calls == []
 
-    def test_poller_readable_connection_callback_sets_comm_failure(
+    def test_poller_readable_connection_callback_sets_lost_epics_connection(
         self, device_harness, fake_backend
     ):
         readpv = "SIM:READ.RBV"
@@ -138,9 +137,10 @@ class TestEpicsReadable:
         )
         fake_backend.emit_connection(readpv, False)
 
-        assert len(fake_backend.subscriptions) == 2
-        assert_error_status(
-            device_harness.run("poller", device._cache.get, device, "status")
+        assert len(fake_backend.subscriptions) == 1
+        assert device_harness.run("poller", device._cache.get, device, "status") == (
+            status.UNKNOWN,
+            "lost connection to EPICS",
         )
 
     def test_daemon_readable_can_consume_poller_cached_values(
@@ -167,10 +167,81 @@ class TestEpicsReadable:
 
         assert device_harness.run("daemon", daemon_device.read) == pytest.approx(8.25)
 
+    def test_daemon_readable_positive_maxage_rejects_stale_poller_value(
+        self, device_harness, fake_backend
+    ):
+        readpv = "SIM:READ.RBV"
+        fake_backend.values[readpv] = 0.0
+
+        daemon_device = device_harness.create(
+            "daemon",
+            EpicsReadable,
+            name="readable",
+            readpv=readpv,
+        )
+        device_harness.create(
+            "poller",
+            EpicsReadable,
+            name="readable",
+            readpv=readpv,
+        )
+
+        stale_time = time.time() - 120
+        device_harness.run(
+            "daemon",
+            daemon_device._cache.put,
+            daemon_device._name,
+            "value",
+            8.25,
+            stale_time,
+        )
+        fake_backend.values[readpv] = 99.0
+
+        assert device_harness.run("daemon", daemon_device.read, 60) == pytest.approx(
+            99.0
+        )
+
+    def test_daemon_readable_positive_maxage_recomputes_stale_status(
+        self, device_harness, fake_backend
+    ):
+        readpv = "SIM:READ.RBV"
+        fake_backend.values[readpv] = 0.0
+        fake_backend.alarms[readpv] = (status.OK, "")
+
+        daemon_device = device_harness.create(
+            "daemon",
+            EpicsReadable,
+            name="readable",
+            readpv=readpv,
+        )
+        device_harness.create(
+            "poller",
+            EpicsReadable,
+            name="readable",
+            readpv=readpv,
+        )
+
+        stale_time = time.time() - 120
+        for key, value in (
+            ("status", (status.WARN, "stale")),
+            ("value_status", (status.WARN, "stale")),
+        ):
+            device_harness.run(
+                "daemon",
+                daemon_device._cache.put,
+                daemon_device._name,
+                key,
+                value,
+                stale_time,
+            )
+
+        assert device_harness.run("daemon", daemon_device.status, 60) == (
+            status.OK,
+            "",
+        )
+
 
 class TestEpicsStringReadable:
-    """Behavior tests for string readable EPICS class."""
-
     def test_string_readable_requests_string_mode_from_backend(
         self, device_harness, fake_backend
     ):
@@ -262,7 +333,9 @@ class TestEpicsStringReadable:
             readpv=readpv,
             monitor=False,
         )
-        device_harness.run("daemon", device._cache.put, device._name, "value", "from-cache")
+        device_harness.run(
+            "daemon", device._cache.put, device._name, "value", "from-cache"
+        )
         get_calls_before = len(fake_backend.get_calls)
 
         value = device_harness.run("daemon", device.read, 0)
