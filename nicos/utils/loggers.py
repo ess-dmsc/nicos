@@ -39,7 +39,6 @@ from logging import (
     addLevelName,
     CRITICAL,
 )
-from logging.handlers import SysLogHandler
 from os import path
 
 from nicos import session
@@ -164,48 +163,6 @@ class CustomJournalFormatter(Formatter):
         return (
             f"{record.asctime} : {record.levelname} : {record.name}: {record.message}"
         )
-
-
-class NicosSyslogFormatter(Formatter):
-    """
-    A formatter for syslog that can be understood by rsyslog for filtering by log level.
-    """
-
-    def __init__(self, fmt=None, datefmt=None):
-        super().__init__(fmt, datefmt)
-
-    def formatTime(self, record, datefmt=None):
-        return time.strftime(
-            datefmt or "%b %d %H:%M:%S", self.converter(record.created)
-        )
-
-    def format(self, record):
-        # Define the log level string
-        loglevel = record.levelname
-
-        # Define the syslog priority
-        priority = self._get_syslog_priority(record.levelno)
-        message = record.getMessage()
-
-        # Construct the syslog message
-        syslog_message = f"<{priority}>{record.name}: {loglevel} {message}"
-
-        return syslog_message
-
-    def _get_syslog_priority(self, levelno):
-        # Mapping of log level numbers to syslog priorities
-        if levelno >= CRITICAL:
-            return SysLogHandler.LOG_CRIT
-        elif levelno >= ERROR:
-            return SysLogHandler.LOG_ERR
-        elif levelno >= WARNING:
-            return SysLogHandler.LOG_WARNING
-        elif levelno >= INFO:
-            return SysLogHandler.LOG_INFO
-        elif levelno >= DEBUG:
-            return SysLogHandler.LOG_DEBUG
-        else:
-            return SysLogHandler.LOG_NOTICE
 
 
 class NicosConsoleFormatter(Formatter):
@@ -445,16 +402,6 @@ class ColoredConsoleHandler(StreamHandler):
         msg = self.format(record)
         self.stream.write(msg)
         self.stream.flush()
-
-
-class NicosSysLogHandler(StreamHandler):
-    """
-    A handler class that writes records to standard output in journal format.
-    """
-
-    def __init__(self):
-        StreamHandler.__init__(self, sys.stdout)
-        self.setFormatter(NicosSyslogFormatter())
 
 
 class SimDebugHandler(StreamHandler):
