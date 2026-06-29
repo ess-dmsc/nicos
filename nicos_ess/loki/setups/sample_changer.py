@@ -1,4 +1,4 @@
-description = "LoKI sample holder"
+description = "LoKI sample changer"
 
 group = "optional"
 
@@ -19,19 +19,21 @@ devices = dict(
     ),
     sample_rotation_rpm=device(
         "nicos_ess.devices.transformer_devices.DegreesPerSecondToRPM",
+        description="Rotation sample cell - transformed to rpm",
         motor="sample_rotation",
     ),
-    thermostated_sample_holder=device(
+    sample_changer=device(
         "nicos_ess.loki.devices.thermostated_cellholder.ThermoStatedCellHolder",
-        description="The thermostated sample-holder for LoKI",
+        description="The thermostated sample changer for LoKI",
         xmotor="linear_sample_changer",
         ymotor="sample_stack_z",
         precision=[0.05, 0.05],
         nexus_config=[
             {
-                "group_name": "thermostated_sample_holder",
+                "nexus_path": "/entry/sample",
+                "group_name": "sample_changer",
                 "nx_class": "NXcollection",
-                "suffix": "readback",
+                "suffix": "position_readback",
                 "dataset_type": "static_read",
             }
         ],

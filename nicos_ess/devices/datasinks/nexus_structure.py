@@ -19,7 +19,7 @@ from nicos_ess.utilities.json_utils import (
 )
 
 ALLOWED_INSTRUMENT_NAMES = [
-    "", # Empty string is necessary for non-instrument instances
+    "",  # Empty string is necessary for non-instrument instances
     "beer",
     "bifrost",
     "dream",
@@ -264,26 +264,26 @@ class NexusStructureJsonFile(NexusStructureProvider):
         children = []
         if entities:
             for n, v in entities.items():
-              if skip_keys and n in skip_keys:
-                  continue
-              children.append(
-                  {
-                      "module": "dataset",
-                      "config": {"name": n, "values": v, "dtype": "string"},
-                  }
-              )
+                if skip_keys and n in skip_keys:
+                    continue
+                children.append(
+                    {
+                        "module": "dataset",
+                        "config": {"name": n, "values": v, "dtype": "string"},
+                    }
+                )
         return children
 
     def _generate_samples_link_list(self, entities):
         children = []
         if entities:
-          for n, p in entities.items():
-              children.append(
-                  {
-                      "module": "link",
-                      "config": {"name": n, "type": "NXlink", "source": p},
-                  }
-              )
+            for n, p in entities.items():
+                children.append(
+                    {
+                        "module": "link",
+                        "config": {"name": n, "type": "NXlink", "source": p},
+                    }
+                )
         return children
 
     def _insert_samples(self, structure, metainfo):
@@ -292,8 +292,8 @@ class NexusStructureJsonFile(NexusStructureProvider):
             return structure
 
         instrument = self._get_instrument_name(structure)
-        if instrument == "LOKI" and ("thermostated_sample_holder", "value") in metainfo:
-            sample_name = self._get_sample_name_from_thermostated_sample_holder(
+        if instrument == "LOKI" and ("sample_changer", "value") in metainfo:
+            sample_name = self._get_sample_name_from_sample_changer(
                 all_samples, metainfo
             )
         else:
@@ -361,8 +361,8 @@ class NexusStructureJsonFile(NexusStructureProvider):
         )
         return structure
 
-    def _get_sample_name_from_thermostated_sample_holder(self, samples, metainfo):
-        current_position = metainfo.get(("thermostated_sample_holder", "value"))[0]
+    def _get_sample_name_from_sample_changer(self, samples, metainfo):
+        current_position = metainfo.get(("sample_changer", "value"))[0]
         for i, sample in samples[0].items():
             if sample["position"] == current_position:
                 return sample["name"]

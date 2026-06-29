@@ -30,7 +30,12 @@ def _minimal_metainfo(counter: int = 1) -> dict:
         ("Exp", "run_title"): ("Test run", "Test run", "", "experiment"),
         ("Exp", "proposal"): ("123456", "123456", "", "experiment"),
         ("Exp", "title"): ("Beamtime Title", "Beamtime Title", "", "experiment"),
-        ("Exp", "scripts"): ("import foo\nrun()", "import foo\nrun()", "", "experiment"),
+        ("Exp", "scripts"): (
+            "import foo\nrun()",
+            "import foo\nrun()",
+            "",
+            "experiment",
+        ),
         ("Exp", "job_id"): ("uuid-123", "uuid-123", "", "experiment"),
         ("Exp", "users"): (
             [
@@ -49,9 +54,9 @@ def _minimal_metainfo(counter: int = 1) -> dict:
             {0: {"name": "SampleA", "description": "A test sample"}},
             "{0: {'name': 'SampleA', 'description': 'A test sample'}}",
             "",
-            "sample"
+            "sample",
         ),
-        ("Sample", "samplename"): ("SampleA", "SampleA", "", "sample")
+        ("Sample", "samplename"): ("SampleA", "SampleA", "", "sample"),
     }
 
 
@@ -159,7 +164,7 @@ class TestDynamicNexusBuilding(TestCase):
         ds_instr = datasets_instr[0]
         assert (
             ds_instr["config"]["name"]
-            == f'{nx_conf1["group_name"]}_{nx_conf1["suffix"]}'
+            == f"{nx_conf1['group_name']}_{nx_conf1['suffix']}"
         )
         assert ds_instr["config"]["values"] == position
         assert ds_instr["config"]["dtype"] == "int"
@@ -193,7 +198,7 @@ class TestDynamicNexusBuilding(TestCase):
         ds_sample = datasets_sample[0]
         assert (
             ds_sample["config"]["name"]
-            == f'{nx_conf2["group_name"]}_{nx_conf2["suffix"]}'
+            == f"{nx_conf2['group_name']}_{nx_conf2['suffix']}"
         )
         assert ds_sample["config"]["values"] == nx_conf2["value"]
         assert ds_sample["config"]["dtype"] == "string"
@@ -258,7 +263,9 @@ class TestDynamicNexusBuilding(TestCase):
             structure = self.nexus.get_structure(metainfo, counter)
 
     def test_add_sample_name_from_thermostated_cell_holder(self):
-        self.nexus.nexus_config_path = "test/nicos_ess/json_test/test_structure_loki.json"
+        self.nexus.nexus_config_path = (
+            "test/nicos_ess/json_test/test_structure_loki.json"
+        )
         samples = {
             0: {"name": "SampleA", "position": "T1"},
             1: {"name": "SampleB", "position": "T2"},
@@ -272,9 +279,9 @@ class TestDynamicNexusBuilding(TestCase):
         samplename = ""
         counter = 5
 
-        self.session.loadSetup("ess_loki_cellholder", {})
+        self.session.loadSetup("ess_loki_sample_changer", {})
         self.cellholder: ThermoStatedCellHolder = self.session.getDevice(
-            "thermostated_sample_holder"
+            "sample_changer"
         )
         self.cellholder.cartridges = [
             {
@@ -300,7 +307,7 @@ class TestDynamicNexusBuilding(TestCase):
         metainfo = _minimal_metainfo(counter)
         metainfo[("Sample", "samples")] = (samples, str(samples), "", "sample")
         metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
-        metainfo[("thermostated_sample_holder", "value")] = ('T5', 'T5', '', 'general')
+        metainfo[("sample_changer", "value")] = ("T5", "T5", "", "general")
         self.cellholder.move("T5")
         structure = self.nexus.get_structure(metainfo, counter)
         doc = json.loads(structure)
@@ -309,22 +316,23 @@ class TestDynamicNexusBuilding(TestCase):
         assert sample_name_ds is not None
         assert sample_name_ds["config"]["values"] == "SampleE"
 
-        cellholder_ds = get_by_named_path(doc, path_map, "/entry/instrument/thermostated_sample_holder")
+        cellholder_ds = get_by_named_path(doc, path_map, "/entry/sample/sample_changer")
         assert cellholder_ds is not None
         assert cellholder_ds["children"][0]["config"]["values"] == "T5"
 
-
     def test_thermostated_cell_holder_loaded_but_no_sample(self):
-        self.nexus.nexus_config_path = "test/nicos_ess/json_test/test_structure_loki.json"
+        self.nexus.nexus_config_path = (
+            "test/nicos_ess/json_test/test_structure_loki.json"
+        )
         samples = {}
         samplename = ""
         counter = 5
         metainfo = _minimal_metainfo(counter)
         metainfo[("Sample", "samples")] = (samples, str(samples), "", "sample")
         metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
-        self.session.loadSetup("ess_loki_cellholder", {})
+        self.session.loadSetup("ess_loki_sample_changer", {})
         self.cellholder: ThermoStatedCellHolder = self.session.getDevice(
-            "thermostated_sample_holder"
+            "sample_changer"
         )
         self.cellholder.cartridges = [
             {
@@ -350,4 +358,3 @@ class TestDynamicNexusBuilding(TestCase):
 
         with pytest.raises(Exception):
             structure = self.nexus.get_structure(metainfo, counter)
-
