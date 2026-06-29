@@ -1113,6 +1113,7 @@ dependencies = [
     { name = "redis" },
     { name = "rsa" },
     { name = "scipy" },
+    { name = "systemd-python", marker = "sys_platform != 'darwin' and sys_platform != 'win32'" },
     { name = "toml" },
     { name = "urllib3" },
 ]
@@ -1234,6 +1235,7 @@ requires-dist = [
     { name = "redis", specifier = "==5.0.4" },
     { name = "rsa", specifier = ">=3.1.2" },
     { name = "scipy", specifier = ">=0.9.0" },
+    { name = "systemd-python", marker = "sys_platform != 'darwin' and sys_platform != 'win32'", specifier = ">=230" },
     { name = "toml", specifier = ">=0.10" },
     { name = "toml", marker = "extra == 'gui'", specifier = ">=0.10.2" },
     { name = "toml", marker = "extra == 'gui-qt6'", specifier = ">=0.10.2" },
@@ -2225,6 +2227,12 @@ sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/p
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/04/be/d09147ad1ec7934636ad912901c5fd7667e1c858e19d355237db0d0cd5e4/smmap-5.0.2-py3-none-any.whl", hash = "sha256:b30115f0def7d7531d22a0fb6502488d879e75b260a9db4d0819cfb25403af5e" },
 ]
+
+[[package]]
+name = "systemd-python"
+version = "235"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/10/9e/ab4458e00367223bda2dd7ccf0849a72235ee3e29b36dce732685d9b7ad9/systemd-python-235.tar.gz", hash = "sha256:4e57f39797fd5d9e2d22b8806a252d7c0106c936039d1e71c8c6b8008e695c0a" }
 
 [[package]]
 name = "toml"
