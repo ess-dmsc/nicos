@@ -89,7 +89,7 @@ devices = dict(
     julabo_2_status_message=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The status message",
-        readpv="{}StatusMsg-R".format(pv_root),
+        readpv="{}Status-R".format(pv_root),
         visibility=(),
     ),
     julabo_2_version=device(
