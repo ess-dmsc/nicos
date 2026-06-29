@@ -447,6 +447,7 @@ QPushButton {
     border-radius: 5px;
     padding: 5px;
     outline: none;
+    min-width: 75px;
 }
 
 QPushButton:disabled {
@@ -584,4 +585,13 @@ QCheckBox:disabled {
 QPushButton:disabled {
     background-color: #e0e0e0; /* Light gray */
     color: #a0a0a0; /* Muted text */
+}
+
+/* Remove icons from built-in Qt dialogs. */
+QInputDialog QPushButton {
+    qproperty-icon: url("");
+}
+
+QMessageBox QPushButton {
+    qproperty-icon: url("");
 }
