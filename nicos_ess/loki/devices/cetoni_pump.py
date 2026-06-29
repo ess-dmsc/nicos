@@ -405,6 +405,13 @@ class CetoniPumpController(
         )
     }
 
+    def _getWaiters(self):
+        """
+        Attached device linked_pump_device gets automatically added
+        to the list of waiters, but this device should not be waited up on.
+        """
+        return []
+
     def doPreinit(self, mode):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
