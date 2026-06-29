@@ -156,11 +156,13 @@ class FileWriterDouble:
         self._publish_status()
 
     def _handle_stop(self, value: bytes) -> None:
-        assert self.job is not None
+        job = self.job
+        if job is None:
+            return
         stop = deserialise_6s4t(value)
-        if stop.job_id != self.job.job_id:
+        if stop.job_id != job.job_id:
             self._publish_answer(
-                topic=self.job.control_topic,
+                topic=job.control_topic,
                 job_id=stop.job_id,
                 command_id=stop.command_id,
                 action=ActionType.SetStopTime,
@@ -172,10 +174,10 @@ class FileWriterDouble:
             return
 
         stop_time_ms = stop.stop_time or _now_ms()
-        self.job.stop_time_ms = stop_time_ms
-        self.job.stop_deadline = time.monotonic() + self.stop_leeway_s
+        job.stop_time_ms = stop_time_ms
+        job.stop_deadline = time.monotonic() + self.stop_leeway_s
         self._publish_answer(
-            topic=self.job.control_topic,
+            topic=job.control_topic,
             job_id=stop.job_id,
             command_id=stop.command_id,
             action=ActionType.SetStopTime,

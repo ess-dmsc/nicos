@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-"""Run the NICOS-owned smoke stack.
-
-Stack components:
-- Kafka (docker compose)
-- Filewriter Kafka double
-- Local in-process PVA server
-- nicos-cache
-- nicos-poller
-- nicos-collector
-- nicos-daemon
-"""
+"""Run the NICOS smoke integration stack."""
 
 from __future__ import annotations
 
@@ -24,17 +14,18 @@ import sys
 import tempfile
 import threading
 import time
-from contextlib import contextmanager
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterator, TextIO
+from typing import TextIO
 
 from confluent_kafka import OFFSET_END, Consumer, KafkaException, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic
 from p4p.client.thread import Context as PvaContext
 from streaming_data_types import deserialise_x5f2
 
-from integration_test.smoke.pva_server import SmokePvaServer
+from integration_test.doubles.pva_server import SmokePvaServer
 from nicos.clients.base import ConnectionData, NicosClient
 from nicos.protocols.daemon import STATUS_IDLE, STATUS_IDLEEXC
 from nicos.utils import parseConnectionString
@@ -267,7 +258,7 @@ class SmokeClient(NicosClient):
 SmokeAssertion = Callable[[SmokeClient], None]
 
 
-def _assert_no_root_nicos_conf() -> None:
+def _check_no_root_nicos_conf() -> None:
     """Fail fast when repo-root nicos.conf could override smoke config.
 
     NICOS merges a repo-root nicos.conf over the instrument config. Any
@@ -529,6 +520,17 @@ def _compose(
     )
 
 
+def _require_compose(
+    compose_base: list[str] | None,
+    compose_env: dict[str, str] | None,
+) -> tuple[list[str], dict[str, str]]:
+    if compose_base is None or compose_env is None:
+        raise RuntimeError(
+            "managed Kafka requested but Docker Compose was not initialized"
+        )
+    return compose_base, compose_env
+
+
 def _wait_for_port(host: str, port: int, timeout: float) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -644,7 +646,7 @@ def _wait_for_filewriter_double_ready(
         deadline = time.monotonic() + timeout
         last_error = ""
         while time.monotonic() < deadline:
-            _assert_process_running(proc)
+            _require_process_running(proc)
             msg = consumer.poll(0.5)
             if msg is None:
                 continue
@@ -692,10 +694,8 @@ def _wait_for_pva_ready(pva_server: SmokePvaServer, timeout: float = 15.0) -> No
                 last_error = str(err)
             time.sleep(0.1)
     finally:
-        try:
+        with suppress(Exception):
             ctx.close()
-        except Exception:
-            pass
 
     raise TimeoutError(f"timed out waiting for PVA server readiness: {last_error}")
 
@@ -716,7 +716,7 @@ def _start_service(
     cwd: Path = REPO_ROOT,
 ) -> ManagedProcess:
     log_path = log_root / f"{name}.log"
-    handle = open(log_path, "w", encoding="utf-8")
+    handle = log_path.open("w", encoding="utf-8")  # noqa: SIM115 - closed in _stop_process
     process = subprocess.Popen(
         args,
         cwd=cwd,
@@ -729,7 +729,7 @@ def _start_service(
     return ManagedProcess(name, process, handle, log_path)
 
 
-def _assert_process_running(proc: ManagedProcess) -> None:
+def _require_process_running(proc: ManagedProcess) -> None:
     exit_code = proc.process.poll()
     if exit_code is None:
         return
@@ -744,7 +744,7 @@ def _wait_for_process_port(
 ) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        _assert_process_running(proc)
+        _require_process_running(proc)
         try:
             with socket.create_connection((host, port), timeout=0.5):
                 return
@@ -769,10 +769,8 @@ def _stop_process(proc: ManagedProcess, timeout: float = 8.0) -> None:
                     break
                 time.sleep(0.1)
             else:
-                try:
+                with suppress(ProcessLookupError):
                     os.killpg(proc.process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
     finally:
         proc.logfile_handle.close()
 
@@ -825,7 +823,7 @@ def smoke_client_session(
     clean_runtime: bool = True,
 ) -> Iterator[SmokeClient]:
     """Start the full smoke stack and yield a connected daemon client."""
-    _assert_no_root_nicos_conf()
+    _check_no_root_nicos_conf()
     manage_kafka = _env_flag("NICOS_SMOKE_MANAGE_KAFKA", default=True)
     kafka_default = (
         _endpoint("127.0.0.1", _free_tcp_port())
@@ -873,9 +871,8 @@ def smoke_client_session(
     try:
         print(f"[smoke] runtime root: {runtime.root}", flush=True)
         if manage_kafka:
-            assert compose_base is not None
+            compose_base, compose_env = _require_compose(compose_base, compose_env)
             print("[smoke] starting Kafka (docker compose)", flush=True)
-            assert compose_env is not None
             _compose(compose_base, "up", "-d", "kafka", check=True, env=compose_env)
             _wait_for_kafka_ready(
                 kafka_bootstrap,
@@ -949,7 +946,7 @@ def smoke_client_session(
         )
         managed.append(poller)
         time.sleep(0.5)
-        _assert_process_running(poller)
+        _require_process_running(poller)
 
         print("[smoke] starting nicos-collector", flush=True)
         collector = _start_service(
@@ -961,7 +958,7 @@ def smoke_client_session(
         )
         managed.append(collector)
         time.sleep(0.5)
-        _assert_process_running(collector)
+        _require_process_running(collector)
 
         print("[smoke] starting nicos-daemon", flush=True)
         daemon = _start_service(
@@ -1005,8 +1002,7 @@ def smoke_client_session(
         _copy_runtime_artifacts(runtime)
 
         if manage_kafka and not keep_kafka:
-            assert compose_base is not None
-            assert compose_env is not None
+            compose_base, compose_env = _require_compose(compose_base, compose_env)
             _compose(compose_base, "down", "-v", check=False, env=compose_env)
 
 

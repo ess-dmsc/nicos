@@ -7,7 +7,7 @@ import time
 from textwrap import dedent
 
 
-def _read_counters(smoke_client) -> dict[str, int]:
+def read_counters(smoke_client) -> dict[str, int]:
     counters_file = smoke_client.runtime_root / "data" / "counters"
     counters: dict[str, int] = {}
     if not counters_file.exists():
@@ -21,26 +21,26 @@ def _read_counters(smoke_client) -> dict[str, int]:
     return counters
 
 
-def _wait_for_counter_increment(
+def wait_for_counter_increment(
     smoke_client, scan_before: int, file_before: int, timeout: float = 10.0
 ) -> dict[str, int]:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        counters = _read_counters(smoke_client)
+        counters = read_counters(smoke_client)
         if (
             counters.get("scan", 0) >= scan_before + 1
             and counters.get("file", 0) >= file_before + 1
         ):
             return counters
         time.sleep(0.1)
-    raise AssertionError(
+    raise TimeoutError(
         "counter increments not observed in time: "
         f"before(scan={scan_before}, file={file_before}) "
-        f"after={_read_counters(smoke_client)}"
+        f"after={read_counters(smoke_client)}"
     )
 
 
-def _wait_for_moveable_readback(
+def wait_for_moveable_readback(
     smoke_client, moveable, target: float, timeout: float = 15.0
 ) -> float:
     deadline = time.monotonic() + timeout
@@ -59,13 +59,13 @@ def _wait_for_moveable_readback(
         f"{move_name}._epics_wrapper.get_pv_value('TEST:SMOKE:MOVE.RBV')",
         default=None,
     )
-    raise AssertionError(
+    raise TimeoutError(
         "readback did not reach target in time: "
         f"final={value} target={target} pv_val={pv_val} pv_rbv={pv_rbv}"
     )
 
 
-def _filewriter_jobs(smoke_client):
+def filewriter_jobs(smoke_client):
     return smoke_client.eval(
         "["
         "(job.job_id, job.job_number, job.get_state_string(), "
@@ -76,24 +76,24 @@ def _filewriter_jobs(smoke_client):
     )
 
 
-def _wait_for_filewriter_job_state(
+def wait_for_filewriter_job_state(
     smoke_client, job_id: str, expected_state: str, timeout: float = 20.0
 ):
     deadline = time.monotonic() + timeout
     jobs = []
     while time.monotonic() < deadline:
-        jobs = _filewriter_jobs(smoke_client)
+        jobs = filewriter_jobs(smoke_client)
         for job in jobs:
             if job[0] == job_id and job[2] == expected_state:
                 return job
         time.sleep(0.1)
-    raise AssertionError(
+    raise TimeoutError(
         "filewriter job state not observed in time: "
         f"job_id={job_id!r} expected={expected_state!r} jobs={jobs!r}"
     )
 
 
-def _run_scan_with_filewriter_context(
+def run_scan_with_filewriter_context(
     smoke_client, *, title: str, timeout: float = 180.0
 ):
     smoke_client.execute(

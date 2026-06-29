@@ -21,7 +21,7 @@ HDF/NeXus files.
 2. All smoke Kafka topics.
 3. The Kafka filewriter double.
 4. A readiness check for an idle `x5f2` status from the filewriter double.
-5. A local in-process EPICS PVA server.
+5. A local EPICS PVA server double.
 6. `nicos-cache`.
 7. `nicos-poller`.
 8. `nicos-collector`.
@@ -41,12 +41,12 @@ is used.
   `NICOS_RUN_SMOKE_INTEGRATION=1`.
 - `smoke/docker-compose.yml`: Kafka plus the CI-only test container.
 - `smoke/Dockerfile`: Python 3.13 `uv` image used by the CI-only container.
-- `smoke/pva_server.py`: in-process PVA server for smoke PVs.
 - `smoke/setups/`: smoke-owned NICOS setups copied into the generated runtime
   setup package.
 - `smoke/nexus/smoke_nexus.json`: minimal smoke-owned NeXus structure, copied
   into the generated runtime setup package.
 - `doubles/filewriter.py`: standalone Kafka filewriter double.
+- `doubles/pva_server.py`: in-process PVA server double for smoke PVs.
 
 There is no checked-in `smoke/nicos.conf`. The runner generates one under the
 runtime root for each run and fails fast if a repo-root `nicos.conf` exists,

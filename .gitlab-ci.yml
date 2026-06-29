@@ -58,7 +58,6 @@ tests_py3xx:
 integration-smoke:
   stage: integration
   image: docker:28-cli
-  # This runner exposes a Docker socket; docker:dind needs privileged mode here.
   variables:
     HTTP_PROXY: $ESS_HTTP_PROXY
     HTTPS_PROXY: $ESS_HTTP_PROXY

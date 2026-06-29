@@ -1,12 +1,4 @@
-"""Local PVA server used by the smoke integration stack.
-
-Provides:
-- TEST:SMOKE:READ.RBV (readable scalar)
-- TEST:SMOKE:MOVE.RBV (moveable readback)
-- TEST:SMOKE:MOVE.VAL (moveable setpoint)
-
-Writing MOVE.VAL updates MOVE.RBV after a short delay to simulate motion.
-"""
+"""PVA device double for the smoke integration stack."""
 
 from __future__ import annotations
 
@@ -56,8 +48,6 @@ def _make_float_pv(init: float, *, units: str, low: float, high: float) -> Share
 
 
 class SmokePvaServer:
-    """Small in-process PVA server for smoke runs."""
-
     def __init__(self, *, move_delay_s: float = 0.35):
         self.names = SmokePvNames()
         self.move_delay_s = float(move_delay_s)
@@ -65,7 +55,7 @@ class SmokePvaServer:
         self._readable_pv = _make_float_pv(1.23, units="A", low=-1e3, high=1e3)
         self._move_read_pv = _make_float_pv(0.0, units="Hz", low=0.0, high=100.0)
         self._move_write_pv = _make_float_pv(0.0, units="Hz", low=0.0, high=100.0)
-        # Newer targets must cancel stale delayed readback updates.
+        # Older delayed readback updates must not overwrite newer targets.
         self._move_lock = threading.Lock()
         self._move_generation = 0
 
@@ -77,7 +67,6 @@ class SmokePvaServer:
             except Exception:
                 target = float(raw)
 
-            # Write target immediately, then update readback asynchronously.
             pv_obj.post(target, timestamp=time.time())
             with self._move_lock:
                 self._move_generation += 1
