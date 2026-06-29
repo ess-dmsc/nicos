@@ -46,7 +46,7 @@ class VirtualSource(Moveable):
                 "offcentered": "(%.2f, %.2f) %.2f mm x %.2f mm, %.2f deg",
             },
         ),
-        "userlimits": Param(
+        "motorlimits": Param(
             "adjust settings of each motor limit. "
             "limits should be written in list form [min,max]",
             type=dictof(str, anytype),
@@ -77,7 +77,7 @@ class VirtualSource(Moveable):
             else:
                 adev_limits[device] = self._adevs[device].userlimits
 
-        self._setROParam("userlimits", adev_limits)
+        self._setROParam("motorlimits", adev_limits)
 
     def _parseTargets(self, target):
         # angle target must be split from slit target since it is an independent attachment
@@ -178,7 +178,7 @@ class VirtualSource(Moveable):
             return
         self._adevs["slit"]._setROParam("opmode", vs_mode)
 
-    def doUpdateUserlimits(self, values):
+    def doUpdateMotorlimits(self, values):
         # device order: left, right, bottom, top, rotation (rot)
 
         # Check if limit set is valid
