@@ -1218,12 +1218,6 @@ class ControlDialog(QDialog):
         sz.setHeight(self.sizeHint().height())
         self.resize(sz)
 
-    def convert_limit_to_string(self, value):
-        if abs(value) >= 1e10:
-            # Use exponential formatting for big numbers
-            return f"{value:.2g}"
-        return self.devinfo.fmtstr % value
-
     @pyqtSlot()
     def on_actionSetLimits_triggered(self):
         dlg = dialogFromUi(
