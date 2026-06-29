@@ -908,11 +908,6 @@ class ControlDialog(QDialog):
         self.deviceName.setText("Device: %s" % self.devname)
         self.setWindowTitle("Control %s" % self.devname)
 
-        self.settingsBtn = self.buttonBox.button(
-            QDialogButtonBox.StandardButton.RestoreDefaults
-        )
-        self.settingsBtn.clicked.connect(self.on_settingsBtn_clicked)
-
         # trigger parameter poll
         self.client.eval("%s.pollParams()" % self.devname, None)
 
@@ -993,11 +988,10 @@ class ControlDialog(QDialog):
         else:
             self.aliasGroup.setVisible(False)
 
-        historyBtn = self.buttonBox.button(QDialogButtonBox.StandardButton.Reset)
         # show current value/status if it is readable
         if "nicos.core.device.Readable" not in classes:
             self.valueFrame.setVisible(False)
-            self.buttonBox.removeButton(historyBtn)
+            self.btn_history.setVisible(False)
         else:
             self.valuelabel.setText(self.devitem.text(self.col_index["VALUE"]))
             self.statuslabel.setText(self.devitem.text(self.col_index["STATUS"]))
@@ -1008,11 +1002,6 @@ class ControlDialog(QDialog):
             setBackgroundBrush(
                 self.statuslabel, self.devitem.background(self.col_index["STATUS"])
             )
-
-            # modify history button: add icon and set text
-            historyBtn.setIcon(QIcon(":/find"))
-            historyBtn.setText("Plot history...")
-            historyBtn.clicked.connect(self.on_historyBtn_clicked)
 
         if self.client.viewonly:
             self.limitFrame.setVisible(False)
@@ -1217,15 +1206,14 @@ class ControlDialog(QDialog):
             self.client.eval(cmd, None)
 
     @pyqtSlot()
-    def on_settingsBtn_clicked(self):
+    def on_btn_settings_clicked(self):
         self._show_extension(self.extension.isHidden())
 
     def _show_extension(self, show):
         if show:
             # make "settings shown" permanent
-            self.settingsBtn.hide()
+            self.btn_settings.hide()
         self.extension.setVisible(show)
-        self.settingsBtn.setText("Settings %s" % ("<<<" if show else ">>>"))
         sz = self.size()
         sz.setHeight(self.sizeHint().height())
         self.resize(sz)
@@ -1258,15 +1246,12 @@ class ControlDialog(QDialog):
 
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
         target.setClient(self.client)
-        btn = dlg.buttonBox.addButton(
-            "Reset to maximum range", QDialogButtonBox.ButtonRole.ResetRole
-        )
 
         def callback():
             self.device_panel.exec_command("resetlimits(%s)" % self.devrepr)
             dlg.reject()
 
-        btn.clicked.connect(callback)
+        dlg.btn_reset.clicked.connect(callback)
         dlg.targetLayout.addWidget(target)
         res = dlg.exec()
         if res != QDialog.DialogCode.Accepted:
@@ -1286,7 +1271,9 @@ class ControlDialog(QDialog):
         )
 
     def _get_new_value(self, window_title, desc):
-        dlg = dialogFromUi(self, "panels/devices_newpos.ui")
+        dlg = dialogFromUi(
+            self, findResource("nicos_ess/gui/panels/ui_files/devices_newpos.ui")
+        )
         dlg.setWindowTitle(window_title)
         dlg.descLabel.setText(desc)
         dlg.oldValue.setText(self.valuelabel.text())
@@ -1396,7 +1383,10 @@ class ControlDialog(QDialog):
         mainunit = self.paramvalues.get("unit", "main")
         punit = (self.paraminfo[pname]["unit"] or "").replace("main", mainunit)
 
-        dlg = dialogFromUi(self, "panels/devices_param.ui")
+        dlg = dialogFromUi(
+            self, findResource("nicos_ess/gui/panels/ui_files/devices_param.ui")
+        )
+
         if pname in ("temperature", "electric_field", "magnetic_field"):
             params = self.client.getDeviceParams(self.devname)
             curr_value = params[pname]
@@ -1443,5 +1433,6 @@ class ControlDialog(QDialog):
                 "set(%s, %r, %r)" % (self.devrepr, pname, new_value)
             )
 
-    def on_historyBtn_clicked(self):
+    @pyqtSlot()
+    def on_btn_history_clicked(self):
         self.device_panel.plot_history(self.devname)
