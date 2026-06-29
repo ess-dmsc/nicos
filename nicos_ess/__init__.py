@@ -4,5 +4,6 @@
 def get_log_handlers(config):
     """Return optional ESS-specific log handlers configured for this session."""
     from nicos_ess.telemetry.carbon import create_carbon_log_handlers
+    from nicos_ess.devices.loggers.syslog import create_syslog_log_handlers
 
-    return create_carbon_log_handlers(config)
+    return create_carbon_log_handlers(config) + create_syslog_log_handlers(config)

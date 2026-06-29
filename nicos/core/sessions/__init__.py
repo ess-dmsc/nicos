@@ -74,6 +74,7 @@ from nicos.core.utils import system_user
 from nicos.devices.cacheclient import CacheClient, CacheLockError, SyncCacheClient
 from nicos.devices.instrument import Instrument
 from nicos.devices.notifiers import Notifier
+
 try:
     from nicos_ess.devices.sample import EssSample
 except ImportError:
@@ -85,7 +86,7 @@ from nicos.utils.loggers import (
     NicosLogger,
     get_facility_log_handlers,
     initLoggers,
-    NicosSysLogHandler,
+    ColoredConsoleHandler,
 )
 
 
@@ -1396,7 +1397,7 @@ class Session:
         self.log.setLevel(logging.INFO)
         self.log.parent = None
         if console and sys.stdout:
-            self.log.addHandler(NicosSysLogHandler())
+            self.log.addHandler(ColoredConsoleHandler())
         self._master_handler = None
         if logfile:
             try:
