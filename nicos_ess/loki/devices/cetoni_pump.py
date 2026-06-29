@@ -429,6 +429,11 @@ class CetoniPumpController(
                 pv_suffix="FilledVolume",
                 record_type=RecordType.BOTH,
             ),
+            "unit": RecordInfo(
+                cache_key="value",
+                pv_suffix="FilledVolume.EGU",
+                record_type=RecordType.VALUE,
+            ),
             "target": RecordInfo(
                 cache_key="target",
                 pv_suffix="FillVol-SP",
@@ -580,6 +585,9 @@ class CetoniPumpController(
             cache_key,
             lambda: self._get_pv_val(pv_param, as_string),
         )
+
+    def doReadUnit(self):
+        return self._get_cached_pv_or_ask("unit")
 
     def doReadAbslimits(self):
         high_limit = self._get_cached_pv_or_ask("max_vol")
