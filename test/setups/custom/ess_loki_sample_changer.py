@@ -25,18 +25,19 @@ devices = dict(
         speed=10000,
         visibility=(),
     ),
-    thermostated_sample_holder=device(
+    sample_changer=device(
         "nicos_ess.loki.devices.thermostated_cellholder.ThermoStatedCellHolder",
-        description="The thermostated cell-holder for LoKI",
+        description="The thermostated sample changer for LoKI",
         xmotor="cellholder_x_motor",
         ymotor="cellholder_y_motor",
         moveables=["cellholder_x_motor", "cellholder_y_motor"],
         precision=[0.05, 0.05],
         nexus_config=[
             {
-                "group_name": "thermostated_sample_holder",
+                "nexus_path": "/entry/sample",
+                "group_name": "sample_changer",
                 "nx_class": "NXcollection",
-                "suffix": "readback",
+                "suffix": "position_readback",
                 "dataset_type": "static_read",
             }
         ],
