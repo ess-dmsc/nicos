@@ -24,8 +24,8 @@
 
 import pytest
 
-from nicos_ess.devices.epics.pva import epics_devices
-from nicos_ess.devices.epics.pva import shutter
+from nicos.core import status
+from nicos_ess.devices.epics.pva import epics_common, shutter
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 
@@ -33,7 +33,7 @@ from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
     monkeypatch.setattr(
-        epics_devices, "create_wrapper", lambda timeout, use_pva: backend
+        epics_common, "create_wrapper", lambda timeout, use_pva: backend
     )
     backend.values["SIM:SHUTTER:READ"] = "Closed"
     backend.values["SIM:SHUTTER:WRITE"] = "Close"
@@ -69,3 +69,40 @@ class TestEpicsShutterHarness:
 
         assert daemon_device is not None
         assert poller_device is not None
+
+    def test_publishes_write_choices_but_accepts_readback_states(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, poller_device = device_harness.create_pair(
+            shutter.EpicsShutter,
+            name="epics_shutter",
+            shared={
+                "readpv": "SIM:SHUTTER:READ",
+                "writepv": "SIM:SHUTTER:WRITE",
+                "msgtxt": "SIM:SHUTTER:MSGTXT",
+                "mapping": {"Close": 0, "Open": 1},
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        assert device_harness.run("daemon", lambda: daemon_device.mapping) == {
+            "Close": 0,
+            "Open": 1,
+        }
+        assert device_harness.run("poller", lambda: poller_device.mapping) == {
+            "Close": 0,
+            "Open": 1,
+        }
+
+        fake_backend.emit_update("SIM:SHUTTER:READ", value="Opening", units="")
+
+        assert device_harness.run("daemon", daemon_device.read) == "Opening"
+        assert device_harness.run("daemon", daemon_device.status) == (
+            status.BUSY,
+            "",
+        )
+
+        device_harness.run("daemon", daemon_device.start, "Open")
+
+        assert fake_backend.put_calls[-1] == ("SIM:SHUTTER:WRITE", 1, False)

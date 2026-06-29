@@ -1,4 +1,4 @@
-from nicos.core import Attach, HasLimits, Moveable, Override, Param, multiStatus, status
+from nicos.core import Attach, HasLimits, Moveable, Override, Param, multiStatus
 from nicos.devices.abstract import TransformedMoveable
 from nicos_ess.devices.epics.pva import EpicsManualMappedAnalogMoveable
 from nicos_ess.devices.epics.pva.motor import EpicsJogMotor
@@ -61,11 +61,10 @@ class ChopperPhase(TransformedMoveable):
     def _mapReadValue(self, value):
         return self._nanoseconds_to_degrees(value) - self.offset
 
-    def doReadSpeed(self, maxage=0):
-        target_val = self._attached_mapped_speed_dev.doReadTarget(maxage=maxage)
-        raw_target = self._attached_mapped_speed_dev.mapping.get(
-            target_val, target_val
-        )  # if the target value is not in the mapping, assume it is a raw value and use it directly
+    def doReadSpeed(self):
+        target_val = self._attached_mapped_speed_dev.doReadTarget()
+        # If the target value is not in the mapping, assume it is a raw value.
+        raw_target = self._attached_mapped_speed_dev.mapping.get(target_val, target_val)
         return abs(raw_target)
 
 

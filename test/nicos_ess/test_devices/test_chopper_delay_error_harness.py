@@ -25,7 +25,7 @@
 import pytest
 
 from nicos_ess.devices.epics import chopper_delay_error
-from nicos_ess.devices.epics.pva import epics_devices
+from nicos_ess.devices.epics.pva import epics_common
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 
@@ -33,7 +33,7 @@ from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
     monkeypatch.setattr(
-        epics_devices, "create_wrapper", lambda timeout, use_pva: backend
+        epics_common, "create_wrapper", lambda timeout, use_pva: backend
     )
     backend.values["SIM:CHOP:DELAY"] = [1.0, 2.0, 3.0]
     return backend

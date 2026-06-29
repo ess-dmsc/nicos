@@ -1,21 +1,17 @@
-import time
-
-from nicos import session
 from nicos.core import (
-    POLLER,
-    SIMULATION,
     Param,
     none_or,
     pvname,
     status,
 )
-from nicos.devices.abstract import MappedMoveable
-from nicos.devices.epics.pva import EpicsMappedReadable
+from nicos_ess.devices.epics.pva.epics_common import (
+    command_channel,
+    readback_channel,
+    status_channel,
+)
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsMappedMoveable,
-    PvReadOrWrite,
-    _update_mapped_choices,
-    get_from_cache_or,
+    EpicsMappedReadable,
 )
 
 
@@ -24,6 +20,8 @@ class EpicsShutter(EpicsMappedMoveable):
     May become a general class. Works same as EpicsMappedMoveable, but uses
     choices from the writepv instead of readpv for the mapping.
     """
+
+    _mapping_channel = "write"
 
     parameters = {
         "resetpv": Param(
@@ -34,86 +32,40 @@ class EpicsShutter(EpicsMappedMoveable):
         ),
         "msgtxt": Param(
             "PV of the message text",
-            type=pvname,
+            type=none_or(pvname),
             mandatory=False,
             userparam=False,
         ),
     }
 
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            _update_mapped_choices(self, PvReadOrWrite.readpv)
+    def _build_epics_channels(self):
+        epics_channels = super()._build_epics_channels()
+        # Named 'message' so the cache key does not collide with the
+        # 'msgtxt' parameter (which holds the PV name).
+        epics_channels["message"] = status_channel(
+            "",
+            as_string=True,
+            pv_name_attr="msgtxt",
+            allow_missing_pv=True,
+            affects_status=False,
+        )
+        return epics_channels
 
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._status_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.writepv,
-                    self._record_fields["writepv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            if self.targetpv:
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        self.targetpv,
-                        self._record_fields["targetpv"].cache_key,
-                        self._value_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
+    def _read_msgtxt(self, maxage=None):
+        if not self.msgtxt:
+            return ""
+        return self._read_channel_cached("message", maxage=maxage)
 
-        if mode != SIMULATION and session.sessiontype != POLLER:
-            _update_mapped_choices(self, PvReadOrWrite.writepv)
-        MappedMoveable.doInit(self, mode)
+    def _is_moving(self, maxage=0):
+        return self.read(maxage) in ("Closing", "Opening")
 
-    def _read_msgtxt(self):
-        return self._epics_wrapper.get_pv_value(self.msgtxt, as_string=True)
-
-    def _is_moving(self):
-        choices = self._epics_wrapper.get_value_choices(self.readpv)
-        choice_mapping = {choice: i for i, choice in enumerate(choices)}
-        CLOSINGBIT = 1
-        OPENINGBIT = 2
-        if choice_mapping[self.read()] in (CLOSINGBIT, OPENINGBIT):
-            return True
-
-    def _do_status(self):
-        try:
-            severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
-        except TimeoutError:
-            return status.ERROR, "timeout reading status"
+    def _compute_status(self, maxage=0):
+        severity, msg = self._read_primary_alarm(maxage=maxage)
         if severity in [status.ERROR, status.WARN]:
             return severity, self._read_msgtxt()
-        if self._is_moving():
+        if self._is_moving(maxage=maxage):
             return status.BUSY, self._read_msgtxt()
         return severity, self._read_msgtxt()
-
-    def doStatus(self, maxage=0):
-        return get_from_cache_or(self, "status", self._do_status)
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            # Unexpected updates ignored
-            return
-        self._cache.put(self._name, "status", self._do_status(), time.time())
 
 
 class EpicsHeavyShutter(EpicsMappedReadable):
@@ -130,13 +82,26 @@ class EpicsHeavyShutter(EpicsMappedReadable):
         ),
     }
 
-    def _get_pv_parameters(self):
-        return {"readpv"} | {"resetpv"} if self.resetpv else {"readpv"}
+    def _build_epics_channels(self):
+        epics_channels = {
+            "read": readback_channel(
+                "",
+                cache_key="value",
+                primary=True,
+                as_string=True,
+                pv_name_attr="readpv",
+            ),
+        }
+        if self.resetpv:
+            epics_channels["reset"] = command_channel("", pv_name_attr="resetpv")
+        return epics_channels
 
     def doReset(self):
         """Reset shutter state by writing on the configured 'resetpv' parameter"""
 
         if self.resetpv:
-            self._put_pv("resetpv", True)
+            self._epics.put_channel_value("reset", True)
         else:
-            self.log.warn("Reset isn't available on device or the resetpv is missing")
+            self.log.warning(
+                "Reset isn't available on device or the resetpv is missing"
+            )
