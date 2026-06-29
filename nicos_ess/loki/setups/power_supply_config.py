@@ -137,6 +137,7 @@ lv_detector_channels = {
         {"module": "03", "board": "110", "channel": "02"},
         {"module": "04", "board": "110", "channel": "03"},
         {"module": "05", "board": "110", "channel": "04"},
+        {"module": "06", "board": "110", "channel": "05"},
         {"module": "07", "board": "110", "channel": "06"},
     ],
     "bank6": [
