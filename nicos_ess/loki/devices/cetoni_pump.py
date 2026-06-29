@@ -704,7 +704,8 @@ class CetoniPumpController(
     ):
         time_stamp = time()
         self._cache.put(dev=self._name, key=pv_param, value=value, time=time_stamp)
-        self._cache.put(self._name, "unit", units, time_stamp)
+        if pv_param == "value":
+            self._cache.put(self._name, "unit", units, time_stamp)
 
     def _status_change_callback(
         self,
