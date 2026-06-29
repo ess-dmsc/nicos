@@ -284,7 +284,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         **kwargs,
     ):
         time_stamp = time()
-        if pv_param in ["value", "target"]:
+        if pv_param in ["value", "target", "first_fill_syringe"]:
             self._cache.put(
                 dev=self._name,
                 key=pv_param,
