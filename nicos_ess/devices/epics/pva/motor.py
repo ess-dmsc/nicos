@@ -14,7 +14,7 @@ from nicos.core import (
     pvname,
     status,
 )
-from nicos.core.errors import ConfigurationError, MoveError, PositionError
+from nicos.core.errors import ConfigurationError, MoveError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
@@ -142,6 +142,12 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             fmtstr="main",
             unit="main",
         ),
+        "use_prec": Param(
+            "Format string for the readback value is based on the EPICS PREC field",
+            type=bool,
+            default=True,
+            userparam=False,
+        ),
     }
 
     parameter_overrides = {
@@ -180,6 +186,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "position_deadband": RecordInfo("", ".RDBD", RecordType.VALUE),
             "description": RecordInfo("", ".DESC", RecordType.VALUE),
             "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
+            "prec": RecordInfo("", ".PREC", RecordType.VALUE),
             "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
             "minspeed": RecordInfo("", ".VBAS", RecordType.VALUE),
             "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
@@ -208,8 +215,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if not self.has_powerauto:
             del self._record_fields["powerauto"]
         if not self.has_msgtxt:
-            del self._record_fields["msgtxt"]
             del self._record_fields["msgtxt_severity"]
+        if not self.use_prec:
+            del self._record_fields["prec"]
 
     def doInit(self, mode):
         if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
@@ -523,6 +531,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
         time_stamp = time.time()
+        if param == "prec":
+            self._cache.put(self._name, "fmtstr", f"%.{value}f", time.time())
         cache_key = self._record_fields[param].cache_key
         cache_key = param if not cache_key else cache_key
         self._cache.put(self._name, cache_key, value, time_stamp)

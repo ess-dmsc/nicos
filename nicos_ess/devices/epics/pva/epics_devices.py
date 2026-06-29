@@ -28,6 +28,7 @@ This module contains some classes for NICOS - EPICS integration.
 import os
 import time
 from collections import namedtuple
+from collections.abc import Iterable
 from enum import Enum
 
 import numpy
@@ -47,6 +48,7 @@ from nicos.core import (
     anytype,
     floatrange,
     none_or,
+    oneof,
     pvname,
     status,
 )
@@ -82,6 +84,59 @@ class EpicsParameters(HasNexusConfig):
         "maxage": Override(default=None),
     }
     hardware_access = True
+
+    def _format_float_as_string(self, value, fmtstr):
+        if abs(value) >= 1e10:
+            # Use exponential formatting for big numbers
+            return f"{value:.2g}"
+        return self.fmtstr % value
+
+    def format(self, value, unit=False):
+        if isinstance(value, list):
+            value = tuple(value)
+
+        try:
+            if isinstance(value, float):
+                ret = self._format_float_as_string(value, self.fmtstr)
+            else:
+                ret = self.fmtstr % value
+        except (TypeError, ValueError):
+            ret = str(value)
+
+        if unit and self.unit:
+            return ret + " " + self.unit
+        return ret
+
+    def formatParam(self, param, value, use_repr=True):
+        fmtstr = self._getParamConfig(param).fmtstr
+        if fmtstr == "%r" and not use_repr:
+            fmtstr = "%s"
+        if fmtstr == "main":
+            fmtstr = self.fmtstr
+
+        # Floats
+        if isinstance(value, float):
+            try:
+                ret = self._format_float_as_string(value, fmtstr)
+            except (TypeError, ValueError):
+                ret = repr(value)
+
+        # Lists or Tuples
+        if isinstance(value, Iterable):
+            new_value = []
+            for v in value:
+                try:
+                    new_value.append(self._format_float_as_string(value, fmtstr))
+                except (TypeError, ValueError):
+                    new_value.append(repr(v))
+            return "(" + ", ".join(new_value) + ")"
+
+        # Everything else
+        try:
+            ret = fmtstr % value
+        except (TypeError, ValueError):
+            ret = repr(value)
+        return ret
 
 
 def create_wrapper(timeout, use_pva):
@@ -129,7 +184,10 @@ class EpicsReadable(EpicsParameters, Readable):
         self._epics_wrapper.connect_pv(self.readpv)
 
     def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
+        if mode == SIMULATION:
+            return
+
+        if session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
@@ -205,6 +263,54 @@ class EpicsReadable(EpicsParameters, Readable):
             )
 
 
+class EpicsNumericReadable(EpicsReadable):
+    valuetype = oneof(int, float)
+
+    parameters = {
+        "use_prec": Param(
+            "Format string for the readback value is based on the EPICS PREC field",
+            type=bool,
+            default=True,
+            userparam=False,
+        ),
+    }
+    _record_fields = {
+        "readpv": RecordInfo("value", "", RecordType.BOTH),
+        "prec": RecordInfo("", ".PREC", RecordType.BOTH),
+    }
+
+    def doInit(self, mode):
+        if mode == SIMULATION:
+            return
+
+        if session.sessiontype != POLLER and self.use_prec:
+            # If setting the fmtstr using PREC field then disable changing it.
+            self.parameters["fmtstr"].settable = False
+
+        if session.sessiontype == POLLER and self.monitor:
+            EpicsReadable.doInit(self, mode)
+
+            if self.use_prec:
+                self._epics_subscriptions.append(
+                    self._epics_wrapper.subscribe(
+                        f"{self.readpv}.PREC",
+                        "prec",
+                        self._value_change_callback,
+                        self._connection_change_callback,
+                    )
+                )
+
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name == self.readpv:
+            time_stamp = time.time()
+            self._cache.put(self._name, param, value, time_stamp)
+            self._cache.put(self._name, "unit", units, time_stamp)
+        elif param == "prec":
+            self._cache.put(self._name, "fmtstr", f"%.{value}f", time.time())
+
+
 class EpicsStringReadable(EpicsReadable):
     """
     This device handles string PVs, also when they are implemented as
@@ -251,6 +357,12 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
             mandatory=False,
             userparam=False,
         ),
+        "use_prec": Param(
+            "Format string for the readback value is based on the EPICS PREC field",
+            type=bool,
+            default=True,
+            userparam=False,
+        ),
     }
 
     parameter_overrides = {
@@ -278,7 +390,14 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
             self._epics_wrapper.connect_pv(self.targetpv)
 
     def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
+        if mode == SIMULATION:
+            return
+
+        if session.sessiontype != POLLER and self.use_prec:
+            # If setting the fmtstr using PREC field then disable changing it.
+            self.parameters["fmtstr"].settable = False
+
+        if session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
@@ -308,6 +427,15 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
                     self._epics_wrapper.subscribe(
                         self.targetpv,
                         self._record_fields["targetpv"].cache_key,
+                        self._value_change_callback,
+                        self._connection_change_callback,
+                    )
+                )
+            if self.use_prec:
+                self._epics_subscriptions.append(
+                    self._epics_wrapper.subscribe(
+                        f"{self.readpv}.PREC",
+                        "prec",
                         self._value_change_callback,
                         self._connection_change_callback,
                     )
@@ -365,19 +493,19 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        if name not in {self.readpv, self.writepv, self.targetpv}:
-            # Unexpected updates ignored
-            return
         time_stamp = time.time()
         if name == self.readpv:
             self._cache.put(self._name, param, value, time_stamp)
             self._cache.put(self._name, "unit", units, time_stamp)
-        if name == self.writepv and limits:
-            self._cache.put(self._name, "abslimits", limits, time_stamp)
-        if name == self.writepv and not self.target:
+        elif name == self.writepv:
+            if limits:
+                self._cache.put(self._name, "abslimits", limits, time_stamp)
+            if not self.target:
+                self._cache.put(self._name, param, value, time_stamp)
+        elif name == self.targetpv:
             self._cache.put(self._name, param, value, time_stamp)
-        if name == self.targetpv:
-            self._cache.put(self._name, param, value, time_stamp)
+        elif param == "prec":
+            self._cache.put(self._name, "fmtstr", f"%.{value}f", time_stamp)
 
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -411,7 +539,8 @@ class EpicsDigitalMoveable(EpicsAnalogMoveable):
     valuetype = int
 
     parameter_overrides = {
-        "fmtstr": Override(default="%d"),
+        "fmtstr": Override(default="%d", settable=False),
+        "use_prec": Override(default=False),
     }
 
 
