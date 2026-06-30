@@ -25,10 +25,9 @@
 """Dialog for entering authentication data."""
 
 from collections import OrderedDict
-from os import path
 
 from nicos.clients.base import ConnectionData
-from nicos.clients.gui.utils import loadUi, splitTunnelString
+from nicos.clients.gui.utils import findResource, loadUi, splitTunnelString
 from nicos.guisupport.qt import (
     QDialog,
     QFontMetrics,
@@ -44,8 +43,6 @@ from nicos.protocols.daemon.classic import DEFAULT_PORT
 
 class ConnectionDialog(QDialog):
     """A dialog to request connection parameters."""
-
-    ui = path.join("dialogs", "auth.ui")
 
     @classmethod
     def getConnectionData(cls, parent, connpresets, lastpreset, lastdata, tunnel=""):
@@ -87,7 +84,7 @@ class ConnectionDialog(QDialog):
 
     def __init__(self, parent, connpresets, lastpreset, lastdata, tunnel=""):
         QDialog.__init__(self, parent)
-        loadUi(self, self.ui)
+        loadUi(self, findResource("nicos_ess/gui/dialogs/auth.ui"))
         if hasattr(parent, "facility_logo") and parent.facility_logo:
             self.logoLabel.setPixmap(QPixmap(parent.facility_logo))
         self.connpresets = OrderedDict(sorted(connpresets.items()))

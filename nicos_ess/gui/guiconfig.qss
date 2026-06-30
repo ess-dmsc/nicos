@@ -451,13 +451,19 @@ QPushButton {
 }
 
 QPushButton:disabled {
-    color: #a9a9a9;
+    background-color: #d4d8dc; /* Light gray background */
+    color: #a0a0a9;
     border-color:#a9a9a9;
 }
 
+QPushButton:default {
+    border: 1px solid lightblue;
+    background-color: #f3f8fB;
+}
+
 QPushButton:focus {
-    border: 1px solid #e9ebed;
-    background-color: #e9ebed;
+    border: 1px solid lightblue;
+    background-color: #f3f8fB;
 }
 
 QPushButton:!checked:hover {
@@ -573,7 +579,7 @@ QDialog QComboBox {
     background-color: white;
 }
 
-QLineEdit:disabled, QComboBox:disabled, QPushButton:disabled {
+QLineEdit:disabled, QComboBox:disabled {
     background-color: #d4d8dc; /* Light gray background */
     color: #959ea7; /* Gray text */
 }
@@ -582,26 +588,5 @@ QCheckBox:disabled {
     color: #959ea7;
 }
 
-QPushButton:disabled {
-    background-color: #e0e0e0; /* Light gray */
-    color: #a0a0a0; /* Muted text */
-}
-
-/* Remove icons from built-in Qt input dialogs. */
-QInputDialog QPushButton {
-    qproperty-icon: None;
-}
-
-/* Remove icons from built-in Qt file dialogs. */
-QFileDialog QPushButton {
-    qproperty-icon: None;
-}
-
-/* Remove icons from built-in Qt print dialogs. */
-QPrintDialog QPushButton {
-    qproperty-icon: None;
-}
-
-QMessageBox QPushButton {
-    qproperty-icon: None;
-}
+/* Remove icons from built-in Qt dialogs. */
+QDialogButtonBox { dialogbuttonbox-buttons-have-icons: 0; }
