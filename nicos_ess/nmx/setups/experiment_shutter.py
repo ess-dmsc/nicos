@@ -1,8 +1,9 @@
-description = "NMX experiment shutter"
+description = "NMX shutters"
 
 pv_root = "NMX-ExSht:MC-Pne-01:"
 
-# TODO: Use mapped or epics shutter?  
+# TODO: Mapped devices added just for redundance.
+# They will probably be removed after user tests.
 devices = dict(
     experiment_shutter=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
