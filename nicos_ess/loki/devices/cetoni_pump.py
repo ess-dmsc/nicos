@@ -129,7 +129,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             "is_disabled": RecordInfo(
                 cache_key="is_disabled",
                 pv_suffix="Disabled",
-                record_type=RecordType.STATUS,
+                record_type=RecordType.BOTH,
             ),
             "is_pumping": RecordInfo(
                 cache_key="is_pumping",
@@ -252,7 +252,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             self._put_pv_val("enable", 1)
         else:
             self._put_pv_val("enable", 0)
-        self._cache.invalidate(self, "is_disabled")
 
     def doStop(self):
         self._put_pv_val("stop", 1)
@@ -267,6 +266,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             return status.BUSY, f"Pumping in mode: {mode}"
 
         is_disabled = self._get_cached_pv_or_ask("is_disabled")
+        print(f"from _do_status: is_disabled is {is_disabled}")
         if is_disabled:
             return status.WARN, "Disabled"
         else:
@@ -305,6 +305,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         message,
         **kwargs,
     ):
+        print(f"from _status_callback: pv_param={pv_param}, new_value={value}")
         time_stamp = time()
         if pv_param == "value":
             self._cache.put(
@@ -318,6 +319,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         self._cache.put(
             dev=self._name, key="status", value=self._do_status(), time=time_stamp
         )
+        print(f"from cache: {self._cache.get(self, 'status')}")
 
     def _connection_change_callback(
         self,
