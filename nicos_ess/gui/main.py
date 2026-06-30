@@ -8,6 +8,9 @@ import traceback
 from os import path
 from pathlib import Path
 
+from logging.handlers import RotatingFileHandler
+from platformdirs import user_config_dir
+
 from nicos import config
 from nicos.clients.base import ConnectionData
 from nicos.clients.gui.config import processGuiConfig
@@ -26,7 +29,6 @@ from nicos.protocols.daemon.classic import DEFAULT_PORT
 from nicos.utils import importString, parseConnectionString
 from nicos.utils.loggers import (
     ColoredConsoleHandler,
-    NicosLogfileHandler,
     NicosLogger,
     initLoggers,
 )
@@ -86,7 +88,7 @@ def parseargs():
 def main(_argv):
     global log  # pylint: disable=global-statement
 
-    userpath = path.join(path.expanduser("~"), ".config", "nicos")
+    userpath = user_config_dir(appname="nicos", appauthor="nicos", ensure_exists=True)
 
     # Set up logging for the GUI instance.
     initLoggers()
@@ -94,9 +96,18 @@ def main(_argv):
     log.parent = None
     log.setLevel(logging.INFO)
     log.addHandler(ColoredConsoleHandler())
-    log.addHandler(
-        NicosLogfileHandler(path.join(userpath, "log"), "gui", use_subdir=False)
+    # limit file logging to 100MB in total (10x10MB)
+    f_handler = RotatingFileHandler(
+        filename=path.join(userpath, "log", "gui"), maxBytes=int(10e6), backupCount=10
     )
+    # set custom formatter to show full date and other info
+    f_handler.setFormatter(
+        logging.Formatter(
+            fmt="%(asctime)s [%(levelname)s] (%(name)s) %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+    )
+    log.addHandler(f_handler)
 
     # set up logging for unhandled exceptions in Qt callbacks
     def log_unhandled(*exc_info):
@@ -106,6 +117,8 @@ def main(_argv):
     sys.excepthook = log_unhandled
 
     app = QApplication(sys.argv, organizationName="nicos", applicationName="gui")
+
+    log.info("Starting NICOS GUI for ESS")
 
     opts = parseargs()
 
