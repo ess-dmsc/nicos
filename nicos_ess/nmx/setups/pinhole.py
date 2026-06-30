@@ -23,6 +23,7 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Pinhole current mounted pin",
         readpv=f"{pinhole_pv_root}MC-Pin-01:Mtr.RBV",
+        fmtstr="%d",
     ),
     # Bits: B0..B19
     # TODO: Find a better device for this!
