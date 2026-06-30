@@ -24,13 +24,6 @@ devices = dict(
         description="Pinhole current mounted pin",
         readpv=f"{pinhole_pv_root}MC-Pin-01:Mtr.RBV",
     ),
-    pinhole__motor=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Pinhole exchanger (as a motor)",
-        motorpv=f"{pinhole_pv_root}MC-Pin-01:Mtr",
-        monitor_deadband=0.01,
-        visibility={},
-    ),
     # Bits: B0..B19
     # TODO: Find a better device for this!
     #pinhole__current_pinhole=device(
@@ -52,6 +45,13 @@ devices = dict(
         fmtstr="%d",
     ),
     # Auxiliary motor controls (for calibration)
+    pinhole__motor=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Pinhole exchanger (as a motor)",
+        motorpv=f"{pinhole_pv_root}MC-Pin-01:Mtr",
+        monitor_deadband=0.01,
+        visibility={},
+    ),
     pinhole__carousel_rotation=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole exchanger carousel rotation",
