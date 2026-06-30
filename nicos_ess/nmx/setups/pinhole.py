@@ -6,8 +6,6 @@ aux_pv_root= f"{pv_root}-ApChg:"
 raise_pv_root= f"{aux_pv_root}MC-Pne-01:"
 arm_pv_root= f"{aux_pv_root}MC-Pne-02:"
 
-# TODO: Check descriptions (axis and cabinet numbers)!
-
 devices = dict(
     # Pinhole
     pinhole__mount_pin=device(
