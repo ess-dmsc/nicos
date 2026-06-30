@@ -6,6 +6,9 @@ aux_pv_root= f"{pv_root}-ApChg:"
 raise_pv_root= f"{aux_pv_root}MC-Pne-01:"
 arm_pv_root= f"{aux_pv_root}MC-Pne-02:"
 
+pin_options = {f"Pinhole {i}": i for i in range(11)}
+pin_options['No pinhole (unmount)'] = 11
+
 devices = dict(
     # Pinhole
     pinhole__mount_pin=device(
@@ -13,7 +16,7 @@ devices = dict(
         description="Mount a selected pinhole (or have no pinhole mounted)",
         readpv=f"{pinhole_pv_root}MC-Pin-01:Mtr.RBV",
         writepv=f"{pinhole_pv_root}MC-Pin-01:Mtr.VAL",
-        mapping={"Pinhole 0": 0, "Pinhole 1": 1, "Pinhole 2": 2, "Pinhole 3": 3, "No pinhole (unmount)": 11}, # Value "11" unmounts. TODO: Add all pins.
+        mapping=pin_options, # Value "11" unmounts. TODO: Add all pins.
         fmtstr="%d",
     ),
     pinhole__current_pin=device(
