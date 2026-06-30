@@ -1,9 +1,8 @@
-description = "NMX Collimation System"
+description = "NMX Slits (Collimation System)"
 
 pv_root = "NMX"
 slit_set_1_pv_root = f"{pv_root}-ColSl1:"
 slit_set_2_pv_root = f"{pv_root}-ColSl2:"
-pinhole_exchanger_pv_root= f"{pv_root}-PinChg:"
 
 # TODO: Check descriptions (axis and cabinet numbers)!
 
@@ -115,42 +114,5 @@ devices = dict(
         description="Collimation slit set 2 vertical gap",
         motorpv=f"{slit_set_2_pv_root}MC-SlZg-01:Mtr",
         monitor_deadband=0.01,
-    ),
-    # Pinhole
-    pinhole_exchanger__motor=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Pinhole exchanger (as a motor)",
-        motorpv=f"{pinhole_exchanger_pv_root}MC-Pin-01:Mtr",
-        monitor_deadband=0.01, # TODO: Remove this?
-        visibility={},
-    ),
-    pinhole_exchanger__mount_pinhole=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="Mount a selected pinhole (or have no pinhole mounted)",
-        readpv=f"{pinhole_exchanger_pv_root}MC-Pin-01:Mtr.RBV",
-        writepv=f"{pinhole_exchanger_pv_root}MC-Pin-01:Mtr.VAL",
-        precision=0.0, # TODO: Is it right? Or should we remove this?
-        mapping={"Pinhole 0": 0, "Pinhole 1": 1, "Pinhole 2": 2, "Pinhole 3": 3, "No pinhole (unmount)": 11}, # Value "11" unmounts. TODO: Add all pins.
-        fmtstr="%d",
-    ),
-    # Bits: B0..B19
-    # TODO: Find a better device for this!
-    pinhole_exchanger__current_pinhole=device(
-        "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
-        description="Pinhole exchanger mounted pin",
-        pv_root=f"{pinhole_exchanger_pv_root}MC-Pin-01:Mtr-StatusBits",
-        number_of_bits=11,
-    ),
-    pinhole_exchanger__status_bit0=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Pinhole status bit 0",
-        readpv=f"{pinhole_exchanger_pv_root}MC-Pin-01:Mtr-StatusBits.B0",
-        fmtstr="%d",
-    ),
-    pinhole_exchanger__status_bit1=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Pinhole status bit 1",
-        readpv=f"{pinhole_exchanger_pv_root}MC-Pin-01:Mtr-StatusBits.B1",
-        fmtstr="%d",
     ),
 )
