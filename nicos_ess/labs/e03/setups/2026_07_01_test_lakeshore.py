@@ -15,7 +15,7 @@ devices = dict(
         readpv=f"{pv_root}Flush-State-r",
     ),
     flush_start=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="",
         readpv=f"{pv_root}Flush-start-s",
         writepv=f"{pv_root}Flush-start-s",
@@ -26,7 +26,7 @@ devices = dict(
         readpv=f"{pv_root}LN2-r",
     ),
     ln2f_auto=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="",
         readpv=f"{pv_root}LN2F-Auto-s",
         writepv=f"{pv_root}LN2F-Auto-s",
@@ -47,13 +47,13 @@ devices = dict(
         readpv=f"{pv_root}TempD-r",
     ),
     pump1_state=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="",
         readpv=f"{pv_root}Pump1-state-s",
         writepv=f"{pv_root}Pump1-state-s",
     ),
     pump2_state=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="",
         readpv=f"{pv_root}Pump2-state-s",
         writepv=f"{pv_root}Pump2-state-s",
