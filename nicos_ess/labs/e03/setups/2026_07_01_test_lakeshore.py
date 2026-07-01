@@ -42,7 +42,7 @@ devices = dict(
         readpv=f"{pv_root}TempC-r",
     ),
     temp_d=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsAnalogReadable",
         description="",
         readpv=f"{pv_root}TempD-r",
     ),
