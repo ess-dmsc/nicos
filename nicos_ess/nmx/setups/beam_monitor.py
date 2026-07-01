@@ -2,7 +2,7 @@ description = "NMX beam monitor actuator"
 
 pv_root = "NMX-BM2:MC-Pne-01:"
 
-# TODO: Use mapped or epics shutter?  
+# TODO: Use mapped or epics shutter?
 devices = dict(
     beam_monitor=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
