@@ -584,6 +584,17 @@ class CetoniPumpController(
             lambda: self._get_pv_val(pv_param, as_string),
         )
 
+    def _linked_mode_disabled(self):
+        linked_mode_disabled = self._attached_linked_pump_device._get_cached_pv_or_ask(
+            "is_disabled"
+        )
+        if not linked_mode_disabled:
+            self.log.warning(
+                f"Please disable device: {self._attached_linked_pump_device.name} first"
+            )
+            return False
+        return True
+
     def doReadUnit(self):
         pv_name = self._get_pv_name("value")
         return get_from_cache_or(
@@ -604,6 +615,8 @@ class CetoniPumpController(
         return self._get_cached_pv_or_ask("pressure_max")
 
     def doWritePressure_Max(self, target):
+        if not self._linked_mode_disabled():
+            return
         pv_name = self._get_pv_name("pressure_max")
         limit_low, limit_high = self._epics_wrapper.get_limits(pv_name)
         target = max(limit_low, target)
@@ -624,6 +637,8 @@ class CetoniPumpController(
         return self._get_cached_pv_or_ask("flowrate_unit")
 
     def doWriteFlowrate(self, target):
+        if not self._linked_mode_disabled():
+            return
         self._put_pv_val("flowrate", target)
 
     def doReadInnerdiameter(self):
@@ -639,32 +654,39 @@ class CetoniPumpController(
         return self._get_cached_pv_or_ask("stroke_unit")
 
     def doReference(self):
+        if not self._linked_mode_disabled():
+            return
         self._put_pv_val("home", 1)
 
     def doReset(self):
+        if not self._linked_mode_disabled():
+            return
         self._put_pv_val("reset_fault", 1)
         self._cache.invalidate(self, "is_fault")
 
     def doStart(self, target):
-        if not self._attached_linked_pump_device._get_cached_pv_or_ask("is_disabled"):
-            self.log.warning(
-                f"Please disable device: {self._attached_linked_pump_device.name} first"
-            )
+        if not self._linked_mode_disabled():
             return
         self._put_pv_val("target", target)
 
     def doStop(self):
+        if not self._linked_mode_disabled():
+            return
         self._put_pv_val("stop", 1)
 
     @usermethod
     def fill_syringe(self):
         if self._mode == SIMULATION:
             return
+        if not self._linked_mode_disabled():
+            return
         self._put_pv_val("fill_syringe", 1)
 
     @usermethod
     def empty_syringe(self):
         if self._mode == SIMULATION:
+            return
+        if not self._linked_mode_disabled():
             return
         self._put_pv_val("empty_syringe", 1)
 
@@ -677,6 +699,8 @@ class CetoniPumpController(
         Negative value = aspirate
         """
         if self._mode == SIMULATION:
+            return
+        if not self._linked_mode_disabled():
             return
         self._put_pv_val("generate_flow", target)
 
