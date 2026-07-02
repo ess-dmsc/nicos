@@ -20,11 +20,12 @@ devices = dict(
         fmtstr="%d",
     ),
     pinhole_status=device(
-        "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
+        "nicos_ess.nmx.devices.pinhole_mbbi_direct.PinholeStatus",
         description="Pinhole status",
         pv_root="NMX-PinChg:MC-Pin-01:Mtr",
         number_of_bits=26,
         bitname_prefix="-NamAuxBit",
+        bitvalue_prefix="-StatusBits"
     ),
     # Auxiliary motor controls (for calibration)
     pinhole__motor=device(
