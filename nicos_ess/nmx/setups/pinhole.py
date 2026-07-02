@@ -1,13 +1,13 @@
 description = "NMX Pinhole Exchanger (Collimation System)"
 
 pv_root = "NMX"
-pinhole_pv_root= f"{pv_root}-PinChg:"
-aux_pv_root= f"{pv_root}-ApChg:"
-raise_pv_root= f"{aux_pv_root}MC-Pne-01:"
-arm_pv_root= f"{aux_pv_root}MC-Pne-02:"
+pinhole_pv_root = f"{pv_root}-PinChg:"
+aux_pv_root = f"{pv_root}-ApChg:"
+raise_pv_root = f"{aux_pv_root}MC-Pne-01:"
+arm_pv_root = f"{aux_pv_root}MC-Pne-02:"
 
 pin_options = {f"Pinhole {i}": i for i in range(11)}
-pin_options['No pinhole (unmount)'] = 11
+pin_options["No pinhole (unmount)"] = 11
 
 devices = dict(
     # Pinhole main controls
@@ -16,7 +16,7 @@ devices = dict(
         description="Mount a selected pinhole (or have no pinhole mounted)",
         readpv=f"{pinhole_pv_root}MC-Pin-01:Mtr.RBV",
         writepv=f"{pinhole_pv_root}MC-Pin-01:Mtr.VAL",
-        mapping=pin_options, # Value "11" unmounts. TODO: Add all pins.
+        mapping=pin_options,  # Value "11" unmounts. TODO: Add all pins.
         fmtstr="%d",
     ),
     pinhole_status=device(
@@ -25,7 +25,7 @@ devices = dict(
         pv_root="NMX-PinChg:MC-Pin-01:Mtr",
         number_of_bits=26,
         bitname_prefix="-NamAuxBit",
-        bitvalue_prefix="-StatusBits"
+        bitvalue_prefix="-StatusBits",
     ),
     # Auxiliary motor controls (for calibration)
     pinhole__motor=device(
@@ -67,5 +67,4 @@ devices = dict(
         msgtxt=f"{arm_pv_root}ShtMsgTxt",
         visibility={},
     ),
-
 )

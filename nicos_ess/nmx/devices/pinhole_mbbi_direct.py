@@ -25,6 +25,7 @@ class PinholeStatus(MBBIDirectStatus):
     Handles the NMX pinhole status (which is an EPICS MBBI direct record).
     TODO: Some of the changes here can be moved later to the parent class.
     """
+
     parameters = {
         "bitvalue_prefix": Param(
             "Prefix for bit values",
@@ -47,7 +48,9 @@ class PinholeStatus(MBBIDirectStatus):
         for i in range(self.number_of_bits):
             hex = f"{i:x}".upper()
             self._record_fields[f"bit_value_{i}"] = RecordInfo(
-                "", f"{self.bitvalue_prefix}.B{hex}", RecordType.VALUE # Configurable bit value
+                "",
+                f"{self.bitvalue_prefix}.B{hex}",
+                RecordType.VALUE,  # Configurable bit value
             )
             self._record_fields[f"bit_name_{i}"] = RecordInfo(
                 "", f"{self.bitname_prefix}{i}", RecordType.VALUE
@@ -73,12 +76,11 @@ class PinholeStatus(MBBIDirectStatus):
 
             bit_name = self._bit_map.get(name, None)
             message = self._get_cached_value_or_ask(bit_name)
-            #highest_severity = severity = status.WARN
+            # highest_severity = severity = status.WARN
             severity = highest_severity
 
-            #if self._alarm_state.get(name) != (severity, message):
+            # if self._alarm_state.get(name) != (severity, message):
             #    self._write_alarm_to_log(name, severity, message)
-            in_alarm.append(f"{message}") # Removing "alarm" word
+            in_alarm.append(f"{message}")  # Removing "alarm" word
             self._alarm_state[name] = (severity, message)
         return highest_severity, ", ".join(in_alarm)
-
