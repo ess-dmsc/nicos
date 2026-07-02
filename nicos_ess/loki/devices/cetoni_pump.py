@@ -252,7 +252,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             self._put_pv_val("enable", 1)
         else:
             self._put_pv_val("enable", 0)
-        # self._cache.invalidate(self, "is_disabled")
+        self._cache.invalidate(self, "is_disabled")
         self._cache.invalidate(self, "status")
 
     def doStop(self):
