@@ -260,7 +260,6 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
 
     def doStatus(self, maxage=0):
         return self._do_status()
-        # return get_from_cache_or(self, "status", self._do_status)
 
     def _do_status(self):
         is_pumping = self._get_cached_pv_or_ask("is_pumping")
