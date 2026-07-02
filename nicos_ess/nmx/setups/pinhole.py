@@ -19,12 +19,6 @@ devices = dict(
         mapping=pin_options, # Value "11" unmounts. TODO: Add all pins.
         fmtstr="%d",
     ),
-    pinhole__current_pin=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Pinhole current mounted pin",
-        readpv=f"{pinhole_pv_root}MC-Pin-01:Mtr.RBV",
-        fmtstr="%d",
-    ),
     pinhole_status=device(
         "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
         description="Pinhole status",
