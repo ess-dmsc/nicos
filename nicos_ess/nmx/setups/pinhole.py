@@ -10,7 +10,7 @@ pin_options = {f"Pinhole {i}": i for i in range(11)}
 pin_options['No pinhole (unmount)'] = 11
 
 devices = dict(
-    # Pinhole
+    # Pinhole main controls
     pinhole__mount_pin=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="Mount a selected pinhole (or have no pinhole mounted)",
@@ -25,14 +25,6 @@ devices = dict(
         readpv=f"{pinhole_pv_root}MC-Pin-01:Mtr.RBV",
         fmtstr="%d",
     ),
-    # Bits: B0..B19
-    # TODO: Find a better device for this!
-    #pinhole__current_pinhole=device(
-    #    "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
-    #    description="Pinhole exchanger mounted pin",
-    #    pv_root=f"{pinhole_pv_root}MC-Pin-01:Mtr-StatusBits",
-    #    number_of_bits=11,
-    #),
     pinhole_status=device(
         "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
         description="Pinhole status",
