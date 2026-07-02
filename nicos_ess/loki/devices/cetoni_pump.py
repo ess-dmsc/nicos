@@ -585,8 +585,9 @@ class CetoniPumpController(
         )
 
     def doReadUnit(self):
+        pv_name = self._get_pv_name("value")
         return get_from_cache_or(
-            self, "unit", lambda: self._epics_wrapper.get_units(self.readpv)
+            self, "unit", lambda: self._epics_wrapper.get_units(pv_name)
         )
 
     def doReadAbslimits(self):
