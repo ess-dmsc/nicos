@@ -131,7 +131,7 @@ class SetupTreeWidgetItem(QTreeWidgetItem):
 
 
 class DevInfo(AttrDict):
-    """Collects device infos."""
+    """Collects device info."""
 
     def __init__(
         self,
