@@ -96,9 +96,15 @@ def main(_argv):
     log.parent = None
     log.setLevel(logging.INFO)
     log.addHandler(ColoredConsoleHandler())
+    # add log file handler, storing logs in user config dir
+    log_path = path.join(userpath, "log")
+    try:
+        os.mkdir(log_path)
+    except FileExistsError:
+        pass
     # limit file logging to 100MB in total (10x10MB)
     f_handler = RotatingFileHandler(
-        filename=path.join(userpath, "log", "gui"), maxBytes=int(10e6), backupCount=10
+        filename=path.join(log_path, "gui"), maxBytes=int(10e6), backupCount=10
     )
     # set custom formatter to show full date and other info
     f_handler.setFormatter(
