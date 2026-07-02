@@ -124,7 +124,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             "enable": RecordInfo(
                 cache_key="enable",
                 pv_suffix="Enable-Cmd",
-                record_type=RecordType.STATUS,
+                record_type=RecordType.OTHER,
             ),
             "is_disabled": RecordInfo(
                 cache_key="is_disabled",
