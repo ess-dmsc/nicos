@@ -33,17 +33,12 @@ devices = dict(
     #    pv_root=f"{pinhole_pv_root}MC-Pin-01:Mtr-StatusBits",
     #    number_of_bits=11,
     #),
-    pinhole__status_bit0=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Pinhole status bit 0",
-        readpv=f"{pinhole_pv_root}MC-Pin-01:Mtr-StatusBits.B0",
-        fmtstr="%d",
-    ),
-    pinhole__status_bit1=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Pinhole status bit 1",
-        readpv=f"{pinhole_pv_root}MC-Pin-01:Mtr-StatusBits.B1",
-        fmtstr="%d",
+    pinhole_status=device(
+        "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
+        description="Pinhole status",
+        pv_root="NMX-PinChg:MC-Pin-01:Mtr",
+        number_of_bits=26,
+        bitname_prefix="-NamAuxBit",
     ),
     # Auxiliary motor controls (for calibration)
     pinhole__motor=device(
