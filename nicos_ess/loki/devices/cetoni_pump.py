@@ -635,8 +635,6 @@ class CetoniPumpController(
         return self._get_cached_pv_or_ask("flowrate_unit")
 
     def doWriteFlowrate(self, target):
-        if not self._linked_mode_disabled():
-            return
         self._put_pv_val("flowrate", target)
 
     def doReadInnerdiameter(self):
