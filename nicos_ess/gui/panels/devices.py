@@ -38,6 +38,7 @@ from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
 from nicos_ess.gui.utils import get_icon
 from nicos_ess.gui.dialogs.homing_check import HomingCheckDialog
+from nicos_ess.gui.panels.motor import MotorDialog
 
 # QTreeWidgetItem types
 SETUP_TYPE = QTreeWidgetItem.ItemType.UserType
@@ -784,7 +785,16 @@ class DevicesPanel(Panel):
                 return dlg
         devinfo = self._devinfo[ldevname]
         item = self._devitems[ldevname]
-        dlg = ControlDialog(self, devname, devinfo, item, self.log, self._show_lowlevel)
+
+        classes = self.client.eval(
+            "session.getDevice(%r).classes" % devname, []
+        )
+        print(classes)
+
+        if classes[0] == "nicos_ess.devices.epics.pva.motor.EpicsMotor":
+            dlg = MotorDialog(self, devname, devinfo, item, self.log, self._show_lowlevel)
+        else:
+            dlg = ControlDialog(self, devname, devinfo, item, self.log, self._show_lowlevel)
         dlg.closed.connect(self._control_dialog_closed)
         dlg.rejected.connect(dlg.close)
         self._control_dialogs[ldevname] = dlg

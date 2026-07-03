@@ -617,7 +617,7 @@ class MotorDialog(QDialog):
     def on_btn_history_clicked(self):
         self.device_panel.plot_history(self.devname)
 
-    def on_cache(self, subkey, value):
+    def on_cache_params(self, subkey, value):
         if subkey not in self.paramItems:
             return
         if not value:
@@ -626,7 +626,7 @@ class MotorDialog(QDialog):
         self.paramvalues[subkey] = value
         self.paramItems[subkey].setText(self.col_index["VALUE"], str(value))
 
-    def on_cache_values(self, time, subkey, op, value):
+    def on_cache(self, time, subkey, op, value):
         # print(f"Cache got: {subkey} and {value}")
         if time < self.devinfo.valtime:
             return
