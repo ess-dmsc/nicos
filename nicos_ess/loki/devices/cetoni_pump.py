@@ -615,8 +615,6 @@ class CetoniPumpController(
         return self._get_cached_pv_or_ask("pressure_max")
 
     def doWritePressure_Max(self, target):
-        if not self._linked_mode_disabled():
-            return
         pv_name = self._get_pv_name("pressure_max")
         limit_low, limit_high = self._epics_wrapper.get_limits(pv_name)
         target = max(limit_low, target)
