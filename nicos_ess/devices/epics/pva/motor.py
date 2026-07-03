@@ -16,8 +16,9 @@ from nicos.core import (
 )
 from nicos.core.errors import ConfigurationError, MoveError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
-from nicos.devices.abstract import CanReference, Motor
+from nicos.devices.abstract import Motor
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
+from nicos_ess.devices.mixins import CanReferenceWithWarning
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
     RecordInfo,
@@ -27,7 +28,9 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 )
 
 
-class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
+class EpicsMotor(
+    EpicsParameters, CanDisable, CanReferenceWithWarning, HasOffset, Motor
+):
     """
     This device exposes some of the functionality provided by the EPICS motor
     record. The PV names for the fields of the record (readback, speed, etc.)
@@ -42,6 +45,10 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     Another optional parameter is the has_msgtxt, which contains an error message that
     may originate from the motor controller or the IOC. If it is present,
     doStatus uses it for some of the status messages.
+
+    Devices also have an option to include a pop-up message when homing is used via the
+    home_warning_msg parameter which allows for a custom confirmation message before homing. If the
+    parameter is not set, then no confirmation message will occur before homing starts.
     """
 
     valuetype = float
