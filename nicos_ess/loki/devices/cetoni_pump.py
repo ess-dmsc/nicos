@@ -184,11 +184,19 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         Gets the PV value from the cache if possible, else get it from the device.
         """
         cache_key = self._get_cache_key(pv_param)
-        return get_from_cache_or(
-            self,
-            cache_key,
-            lambda: self._get_pv_val(pv_param, as_string),
-        )
+
+        # return cached result
+        if self.monitor:
+            result = self._cache.get(self._name, cache_key)
+            if result:
+                return result
+
+        # read from hardware and store result in cache
+        value = self._get_pv_val(pv_param, as_string)
+        if self.monitor:
+            self._cache.put(dev=self._name, key=cache_key, value=value, time=time())
+
+        return value
 
     def _get_cached_mappedpv_or_ask(self, pv_param, as_string=False):
         """
@@ -307,15 +315,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         **kwargs,
     ):
         time_stamp = time()
-        if pv_param == "value":
-            self._cache.put(
-                dev=self._name,
-                key="value_status",
-                value=(severity, message),
-                time=time_stamp,
-            )
-        else:
-            self._cache.put(dev=self._name, key=pv_param, value=value, time=time_stamp)
+        self._cache.put(dev=self._name, key=pv_param, value=value, time=time_stamp)
         self._cache.put(
             dev=self._name, key="status", value=self._do_status(), time=time_stamp
         )
