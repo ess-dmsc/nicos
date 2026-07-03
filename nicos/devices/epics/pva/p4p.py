@@ -327,7 +327,12 @@ class P4pWrapper:
             if "alarm.status" in change_set or "alarm.severity" in change_set:
                 self._alarms[pvname] = self._extract_alarm_info(result)
 
-            if "display.limitLow" in change_set:
+            if {
+                "display.limitLow",
+                "display.limitHigh",
+                "control.limitLow",
+                "control.limitHigh",
+            }.intersection(change_set):
                 self._limits[pvname] = self._extract_limits(result)
 
             value = self._values.get(pvname)
