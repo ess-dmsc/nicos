@@ -66,7 +66,7 @@ def setForegroundBrush(widget, color):
     widget.setPalette(palette)
 
 
-def _attach_status_resources(cls):
+def attach_status_resources(cls):
     # hack to make non-Qt usage as in checksetups work
     if hasattr(cls, "statusIcon"):
         return
@@ -225,7 +225,7 @@ class DevicesPanel(Panel):
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        _attach_status_resources(self)
+        attach_status_resources(self)
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/devices.ui"))
         self.useicons = bool(options.get("icons", True))
         self.param_display = {}
@@ -846,7 +846,7 @@ class ControlDialog(QDialog):
     def __init__(self, parent, devname, devinfo, devitem, log, expert):
         QDialog.__init__(self, parent)
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/devices_one.ui"))
-        _attach_status_resources(self)
+        attach_status_resources(self)
         self.log = log
 
         self.col_index = {
