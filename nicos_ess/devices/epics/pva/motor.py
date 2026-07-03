@@ -536,6 +536,11 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         cache_key = self._record_fields[param].cache_key
         cache_key = param if not cache_key else cache_key
         self._cache.put(self._name, cache_key, value, time_stamp)
+        if param in ["lowlimit", "highlimit"]:
+            # Need to update "abslimits" as that is the value NICOS uses.
+            low = self._get_cached_pv_or_ask("lowlimit")
+            high = self._get_cached_pv_or_ask("highlimit")
+            self._cache.put(self.name, "abslimits", (low, high), time_stamp)
 
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
