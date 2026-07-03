@@ -650,13 +650,9 @@ class CetoniPumpController(
         return self._get_cached_pv_or_ask("stroke_unit")
 
     def doReference(self):
-        if not self._linked_mode_disabled():
-            return
         self._put_pv_val("home", 1)
 
     def doReset(self):
-        if not self._linked_mode_disabled():
-            return
         self._put_pv_val("reset_fault", 1)
         self._cache.invalidate(self, "is_fault")
 
