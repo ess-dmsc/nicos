@@ -357,8 +357,9 @@ class MotorDialog(QDialog):
 
     def move(self):
         target = self.txt_target.text()
-        print(f"target = {target}")
-        self.device_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
+        if target:
+            print(f"target = {target}")
+            self.device_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
 
     @pyqtSlot()
     def on_txt_target_returnPressed(self):

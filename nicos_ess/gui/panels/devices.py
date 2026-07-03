@@ -789,8 +789,8 @@ class DevicesPanel(Panel):
         classes = self.client.eval(
             "session.getDevice(%r).classes" % devname, []
         )
-        print(classes)
 
+        # The first class is the "real" class
         if classes[0] == "nicos_ess.devices.epics.pva.motor.EpicsMotor":
             dlg = MotorDialog(self, devname, devinfo, item, self.log, self._show_lowlevel)
         else:
