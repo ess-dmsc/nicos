@@ -10,19 +10,38 @@ default:
 
 variables:
   UV_LINK_MODE: copy
+  ALMALINUX9_IMAGE: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-nicos:0.0.1
+  # do not remove the venv created by the uv setup step:
+  GIT_CLEAN_FLAGS: -ffdx -e .venv/
 
 stages:
   - publish
+  - setup
   - lint
   - test
   - integration
 
-tests_py312_cov:
-  stage: test
-  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
-  before_script:
+
+uv_setup:
+  stage: setup
+  image: $ALMALINUX9_IMAGE
+  script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
     - uv sync --extra gui --all-packages --group gui-test
+  artifacts:
+    paths:
+      - .venv/
+    expire_in: 1 hour
+    when: always
+
+
+tests_py312_cov:
+  stage: test
+  image: $ALMALINUX9_IMAGE
+  dependencies:
+    - uv_setup
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
   script:
     - uv run --group gui-test pytest test/ --cov=nicos --cov=nicos_ess --cov-report term --cov-report xml:coverage.xml --junitxml=test-output.xml
   coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
@@ -37,10 +56,11 @@ tests_py312_cov:
 
 tests_py3xx:
   stage: test
-  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  image: $ALMALINUX9_IMAGE
+  dependencies:
+    - uv_setup
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    - uv sync --extra gui --all-packages --group gui-test
   script:
     - uv run --group gui-test pytest test/ --junitxml=test-output.xml
   parallel:
@@ -125,7 +145,7 @@ integration-smoke:
 
 publish:
   stage: publish
-  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  image: $ALMALINUX9_IMAGE
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
   script:
@@ -140,10 +160,11 @@ publish:
 
 .lint:
   stage: lint
-  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  image: $ALMALINUX9_IMAGE
+  dependencies:
+    - uv_setup
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    - uv sync --extra gui --all-packages
     - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA  # Fetching only up to the closest merge-base to save time
     - export CHANGES=$(git diff-tree --name-only --diff-filter=ACM -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA)  # Diff only changed files within MR
     - export PY_CHANGES=$(git diff-tree --name-only --diff-filter=ACM -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA | grep -e '\.py$')
