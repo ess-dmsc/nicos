@@ -338,22 +338,11 @@ class MotorDialog(QDialog):
         #         if self.target:
         #             self.target.setEnabled(False)
 
-    def rmove_selected_device_unit(self):
-        selected_device_index = self.selectDevice.currentIndex()
-        return self.valueinfo[selected_device_index].unit
-
     def rmove(self, direction):
-        selected_device_index = self.selectDevice.currentIndex()
-        if type(self.devinfo.value) is tuple and len(self.devinfo.value) > 1:
-            target = list(self.devinfo.value)
-            target[selected_device_index] = (
-                self.devinfo.value[selected_device_index]
-                + direction * self.rel_target.getValue()
-            )
-        else:
-            target = self.devinfo.value + direction * self.rel_target.getValue()
-
-        self.device_panel.exec_command("maw(%s, %r)" % (self.devrepr, target))
+        step_size = self.txt_rmove.text()
+        if step_size:
+            target = self.devinfo.value + direction * float(step_size)
+            self.device_panel.exec_command("maw(%s, %r)" % (self.devrepr, target))
 
     def move(self):
         target = self.txt_target.text()
@@ -368,6 +357,14 @@ class MotorDialog(QDialog):
     @pyqtSlot()
     def on_btn_move_pressed(self):
         self.move()
+
+    @pyqtSlot()
+    def on_btn_rmove_minus_pressed(self):
+        self.rmove(-1)
+
+    @pyqtSlot()
+    def on_btn_rmove_plus_pressed(self):
+        self.rmove(1)
 
     def on_paramList_customContextMenuRequested(self, pos):
         item = self.paramList.itemAt(pos)
@@ -530,19 +527,6 @@ class MotorDialog(QDialog):
         self.device_panel.exec_command(
             'set(%s, "alias", %r)' % (self.devrepr, self.aliasTarget.currentText())
         )
-
-    @pyqtSlot()
-    def on_toolButtonMinus_clicked(self):
-        self.rmove(-1)
-
-    @pyqtSlot()
-    def on_toolButtonPlus_clicked(self):
-        self.rmove(1)
-
-    @pyqtSlot()
-    def index_changed(self):
-        selected_device_unit = self.rmove_selected_device_unit()
-        self.step_label.setText(f"Step ({selected_device_unit})")
 
     def closeEvent(self, event):
         event.accept()
