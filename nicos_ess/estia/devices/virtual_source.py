@@ -1,3 +1,4 @@
+from nicos.core.errors import InvalidValueError
 from nicos.core import (
     Attach,
     Moveable,
@@ -8,6 +9,7 @@ from nicos.core import (
     multiStatus,
     oneof,
     tupleof,
+    anytype,
 )
 
 
@@ -44,6 +46,14 @@ class VirtualSource(Moveable):
                 "offcentered": "(%.2f, %.2f) %.2f mm x %.2f mm, %.2f deg",
             },
         ),
+        "motorlimits": Param(
+            "adjust settings of each motor limit. "
+            "limits should be written in list form [min,max]",
+            type=dictof(str, anytype),
+            settable=True,
+            userparam=False,
+            default={},
+        ),
     }
     parameter_overrides = {
         "unit": Override(default="", mandatory=False, settable=True),
@@ -55,6 +65,19 @@ class VirtualSource(Moveable):
         "slit": Attach("the slit blades", Moveable),
         "rot": Attach("the rotation stage", Moveable),
     }
+
+    def doPreinit(self, mode):
+        adev_limits = {"left": [], "right": [], "bottom": [], "top": [], "rot": []}
+        adevs = ("left", "right", "bottom", "top", "rot")
+
+        for device in adevs:
+            # slit parts are attached-attached devices
+            if device != "rot":
+                adev_limits[device] = self._adevs["slit"]._adevs[device].userlimits
+            else:
+                adev_limits[device] = self._adevs[device].userlimits
+
+        self._setROParam("motorlimits", adev_limits)
 
     def _parseTargets(self, target):
         # angle target must be split from slit target since it is an independent attachment
@@ -154,3 +177,46 @@ class VirtualSource(Moveable):
         if slit_mode == vs_mode:
             return
         self._adevs["slit"]._setROParam("opmode", vs_mode)
+
+    def doUpdateMotorlimits(self, values):
+        # device order: left, right, bottom, top, rotation (rot)
+
+        # Check if limit set is valid
+        # Bad limist are not set regardless, but without this no error is raised
+        adev_abslimits = 0
+        for adev_name in values:
+            if values[adev_name] == [] or values[adev_name] == ():
+                raise InvalidValueError(
+                    self,
+                    f"userlimits for {adev_name} is empty, please set the limits"
+                    "in the format [min,max] or (min,max)",
+                )
+            # verify that min < max
+            if values[adev_name][0] > values[adev_name][1]:
+                raise InvalidValueError(
+                    self, f"min limit is greater than max limit for {adev_name}!"
+                )
+            # verify that we are not going over the abslimits
+            if adev_name != "rot":
+                adev_abslimits = self._adevs["slit"]._adevs[adev_name].abslimits
+            else:
+                adev_abslimits = self._adevs["rot"].abslimits
+
+            if values[adev_name][0] < adev_abslimits[0]:
+                raise InvalidValueError(
+                    self,
+                    f"userlimits for {adev_name} is lower than abslimits {adev_abslimits}!",
+                )
+            elif values[adev_name][1] > adev_abslimits[1]:
+                raise InvalidValueError(
+                    self,
+                    f"userlimits for {adev_name} is greater than abslimits {adev_abslimits}!",
+                )
+        # set the new limits
+        for adev_name in values:
+            if adev_name != "rot":
+                self._adevs["slit"]._adevs[adev_name]._setROParam(
+                    "userlimits", values[adev_name]
+                )
+            else:
+                self._adevs["rot"]._setROParam("userlimits", values[adev_name])
