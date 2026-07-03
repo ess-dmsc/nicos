@@ -6,7 +6,9 @@ class HomingCheckDialog(QDialog):
         QDialog.__init__(self)
         self.message = message
 
-        buttons = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        buttons = (
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box = QDialogButtonBox(buttons)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
