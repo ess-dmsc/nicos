@@ -1250,7 +1250,6 @@ class ControlDialog(QDialog):
         dlg.limitMaxAbs.setText(
             convert_limit_to_string(abslimits[1], self.devinfo.fmtstr)
         )
-
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
         target.setClient(self.client)
 

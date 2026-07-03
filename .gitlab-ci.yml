@@ -22,9 +22,9 @@ tests_py312_cov:
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    - uv sync --extra gui --all-packages
+    - uv sync --extra gui --all-packages --group gui-test
   script:
-    - uv run pytest test/ --cov=nicos --cov=nicos_ess --cov-report term --cov-report xml:coverage.xml --junitxml=test-output.xml
+    - uv run --group gui-test pytest test/ --cov=nicos --cov=nicos_ess --cov-report term --cov-report xml:coverage.xml --junitxml=test-output.xml
   coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
   artifacts:
     paths:
@@ -40,9 +40,9 @@ tests_py3xx:
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    - uv sync --extra gui --all-packages
+    - uv sync --extra gui --all-packages --group gui-test
   script:
-    - uv run pytest test/ --junitxml=test-output.xml
+    - uv run --group gui-test pytest test/ --junitxml=test-output.xml
   parallel:
     matrix:
       - PYTHON_VERSION: ["3.13", "3.14"]
@@ -54,6 +54,26 @@ tests_py3xx:
   variables:
     UV_PYTHON: $PYTHON_VERSION
 
+tests_gui_qt6_py313:
+  stage: test
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  tags:
+    - docker
+    - ubuntu_2204
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - uv sync --extra gui_qt6 --all-packages --group gui-test
+  script:
+    - uv run --extra gui_qt6 --group gui-test pytest test/nicos_ess/gui --junitxml=test-output-gui-qt6.xml
+  artifacts:
+    paths:
+      - test-output-gui-qt6.xml
+    reports:
+      junit: test-output-gui-qt6.xml
+  variables:
+    UV_PYTHON: 3.13
+    NICOS_QT: "6"
+    PYTEST_QT_API: pyqt6
 
 integration-smoke:
   stage: integration
