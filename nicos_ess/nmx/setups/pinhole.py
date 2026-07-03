@@ -6,7 +6,7 @@ aux_pv_root = f"{pv_root}-ApChg:"
 raise_pv_root = f"{aux_pv_root}MC-Pne-01:"
 arm_pv_root = f"{aux_pv_root}MC-Pne-02:"
 
-pin_options = {f"Pinhole {i}": i for i in range(11)}
+pin_options = {f"Pinhole {i}": i for i in range(1, 11, 1)} # Pins from 1 to 10.
 pin_options["No pinhole (unmount)"] = 11
 
 devices = dict(
