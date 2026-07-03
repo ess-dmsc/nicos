@@ -173,12 +173,6 @@ class P4pWrapper:
             pass
         return default_low, default_high
 
-    def get_control_values(self, pvname):
-        raw_result = self._context.get(pvname, timeout=self._timeout)
-        if "display" in raw_result:
-            return raw_result["display"]
-        return raw_result["control"] if "control" in raw_result else {}
-
     def get_value_choices(self, pvname):
         value = self._context.get(pvname, timeout=self._timeout)["value"]
         if isinstance(value, bool):
