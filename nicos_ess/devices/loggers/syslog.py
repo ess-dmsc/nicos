@@ -42,7 +42,7 @@ class NicosSyslogFormatter(Formatter):
         return json.dumps(
             {
                 "event": "exception",
-                "traceback": traceback.format_exception(*exc_info),
+                "traceback": " ".join(traceback.format_exception(*exc_info)),
             }
         )
 
