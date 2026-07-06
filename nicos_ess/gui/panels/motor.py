@@ -14,8 +14,13 @@ from nicos.guisupport.qt import (
     pyqtSlot,
     sip,
 )
+from nicos.guisupport.typedvalue import (
+    DeviceParamEdit,
+    DeviceValueEdit,
+)
 from nicos.protocols.cache import cache_load
 from nicos.utils import findResource
+from nicos_ess.gui.dialogs.homing_check import HomingCheckDialog
 
 
 def convert_limit_to_string(value, fmtstr):
@@ -141,8 +146,6 @@ class MotorDialog(QDialog):
                             self.device_panel.lowlevelBrush[True],
                         )
 
-        # set description label
-
         # check how to refer to the device in commands: if it is not in the
         # namespace, we need to use quotes
         self.devrepr = (
@@ -215,127 +218,17 @@ class MotorDialog(QDialog):
 
         # add a menu for the "More" button
         menu = QMenu(self)
-        # if "nicos.core.mixins.HasLimits" in classes:
-        #     menu.addAction(self.actionSetLimits)
-        # if "nicos.core.mixins.HasOffset" in classes:
-        #     menu.addAction(self.actionAdjustOffset)
-        # if "nicos.devices.abstract.CanReference" in classes:
-        #     menu.addAction(self.actionHome)
+        menu.addAction(self.actionHome)
+        # TODO: what does set position do?
         # if "nicos.devices.abstract.Coder" in classes:
         #     menu.addAction(self.actionSetPosition)
-        # if "nicos.core.device.Moveable" in classes:
-        #     if not menu.isEmpty():
-        #         menu.addSeparator()
-        #     menu.addAction(self.actionFix)
-        #     menu.addAction(self.actionRelease)
-        # if "nicos.core.mixins.CanDisable" in classes:
-        #     if not menu.isEmpty():
-        #         menu.addSeparator()
-        #     menu.addAction(self.actionEnable)
-        #     menu.addAction(self.actionDisable)
-
-        if not menu.isEmpty():
-            self.btn_more.setMenu(menu)
-
-        #
-        #     # insert a widget to enter a new device value
-        #     # allowEnter=False because we catch pressing Enter ourselves
-        #     self.target = DeviceValueEdit(
-        #         self, dev=self.devname, useButtons=True, allowEnter=False
-        #     )
-        #     self.target.setClient(self.client)
-        #
-        #     def btn_callback(target):
-        #         self.device_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
-        #
-        #     self.target.valueChosen.connect(btn_callback)
-        #     self.targetFrame.layout().takeAt(1).widget().deleteLater()
-        #     self.targetFrame.layout().insertWidget(1, self.target)
-        #
-        #     ALLOWED_RMOVE_CLASSES = [
-        #         "nicos.devices.generic.slit.Slit",
-        #         "nicos.devices.generic.virtual.VirtualMotor",
-        #         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        #         "nicos_ess.estia.devices.mover.SeleneMover",
-        #         "nicos_ess.estia.devices.virtual_source.VirtualSource",
-        #     ]
-        #
-        #     if not any(
-        #         allowed_class in classes for allowed_class in ALLOWED_RMOVE_CLASSES
-        #     ):
-        #         self.relMoveGroup.setVisible(False)
-        #     else:
-        #         self.valueinfo = self.client.eval(
-        #             "session.getDevice(%r).valueInfo()" % self.devname, None
-        #         )
-        #         if self.valueinfo:
-        #             self.valueinfo_names = tuple(
-        #                 [value.name for value in self.valueinfo]
-        #             )
-        #
-        #             self.selectDevice = QComboBox(self)
-        #             for name_index, valueinfo_name in enumerate(self.valueinfo_names):
-        #                 self.selectDevice.insertItem(name_index, valueinfo_name)
-        #             if len(self.valueinfo) < 2:
-        #                 self.selectDevice.setVisible(False)
-        #             self.selectDevice.currentIndexChanged.connect(self.index_changed)
-        #             select_device_hint = self.selectDevice.sizeHint()
-        #             if select_device_hint.isValid():
-        #                 self.selectDevice.setMinimumSize(select_device_hint)
-        #
-        #             self.rel_target = EditWidget(
-        #                 self.devname,
-        #                 typ=float,
-        #                 curvalue=0,
-        #             )
-        #             rel_target_hint = self.rel_target.sizeHint()
-        #             if rel_target_hint.isValid():
-        #                 self.rel_target.setMinimumSize(rel_target_hint)
-        #
-        #             self.relMovFrame.layout().takeAt(0).widget().deleteLater()
-        #             self.relMovFrame.layout().addWidget(self.selectDevice, 1, 0)
-        #
-        #             minus_button = (
-        #                 self.relMovFrame.layout().itemAtPosition(0, 1).widget()
-        #             )
-        #             self.relMovFrame.layout().addWidget(minus_button, 1, 1)
-        #
-        #             self.relMovFrame.layout().takeAt(0).widget().deleteLater()
-        #             self.relMovFrame.layout().addWidget(self.rel_target, 1, 2)
-        #
-        #             self.step_label = QLabel(
-        #                 f"Step ({self.rmove_selected_device_unit()})", self
-        #             )
-        #             self.relMovFrame.layout().addWidget(self.step_label, 0, 2)
-        #
-        #             plus_button = (
-        #                 self.relMovFrame.layout().itemAtPosition(0, 3).widget()
-        #             )
-        #             self.relMovFrame.layout().addWidget(plus_button, 1, 3)
-        #         else:
-        #             self.relMoveGroup.setVisible(False)
-        #
-        #     def move(checked):
-        #         try:
-        #             target = self.target.getValue()
-        #         except ValueError:
-        #             return
-        #         self.device_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
-        #
-        #     if self.target.getValue() is not Ellipsis:  # (button widget)
-        #         self.moveBtn = self.moveBtns.addButton(
-        #             "Move", QDialogButtonBox.ButtonRole.ResetRole
-        #         )
-        #         self.moveBtn.clicked.connect(move)
-        #     else:
-        #         self.moveBtn = None
-        #
-        #     if params.get("fixed"):
-        #         if self.moveBtn:
-        #             self.moveBtn.setEnabled(False)
-        #             self.moveBtn.setText("(fixed)")
-        #         if self.target:
-        #             self.target.setEnabled(False)
+        menu.addSeparator()
+        menu.addAction(self.actionFix)
+        menu.addAction(self.actionRelease)
+        menu.addSeparator()
+        menu.addAction(self.actionEnable)
+        menu.addAction(self.actionDisable)
+        self.btn_more.setMenu(menu)
 
     def rmove(self, direction):
         step_size = self.txt_rmove.text()
@@ -395,17 +288,8 @@ class MotorDialog(QDialog):
             # poll even non volatile parameter as requested explicitly
             self.client.eval(cmd, None)
 
-    def _show_extension(self, show):
-        if show:
-            # make "settings shown" permanent
-            self.btn_settings.hide()
-        self.extension.setVisible(show)
-        sz = self.size()
-        sz.setHeight(self.sizeHint().height())
-        self.resize(sz)
-
     @pyqtSlot()
-    def on_actionSetLimits_triggered(self):
+    def on_btn_set_limits_clicked(self):
         dlg = dialogFromUi(
             self, findResource("nicos_ess/gui/panels/ui_files/devices_limits.ui")
         )
@@ -617,7 +501,6 @@ class MotorDialog(QDialog):
         self.paramItems[subkey].setText(self.col_index["VALUE"], str(value))
 
     def on_cache(self, time, subkey, op, value):
-        # print(f"Cache got: {subkey} and {value}")
         if time < self.devinfo.valtime:
             return
 

@@ -506,6 +506,45 @@
     </layout>
    </item>
   </layout>
+  <action name="actionFix">
+   <property name="text">
+    <string>Fix against moving...</string>
+   </property>
+  </action>
+  <action name="actionRelease">
+   <property name="text">
+    <string>Release</string>
+   </property>
+  </action>
+  <action name="actionHome">
+   <property name="text">
+    <string>Home device</string>
+   </property>
+  </action>
+  <action name="actionEnable">
+   <property name="text">
+    <string>Enable</string>
+   </property>
+   <property name="toolTip">
+    <string>Enable/switch on the device</string>
+   </property>
+  </action>
+  <action name="actionDisable">
+   <property name="text">
+    <string>Disable</string>
+   </property>
+   <property name="toolTip">
+    <string>Disable/switch off the device</string>
+   </property>
+  </action>
+  <action name="actionSetPosition">
+   <property name="text">
+    <string>Set hardware position...</string>
+   </property>
+   <property name="toolTip">
+    <string>&quot;Rename&quot; the current hardware position to a different value</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
