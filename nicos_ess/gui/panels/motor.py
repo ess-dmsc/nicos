@@ -6,7 +6,6 @@ from nicos.guisupport.qt import (
     QInputDialog,
     QMenu,
     QMessageBox,
-    QPalette,
     QSizePolicy,
     QSpacerItem,
     QTreeWidgetItem,
@@ -15,33 +14,19 @@ from nicos.guisupport.qt import (
     sip,
 )
 from nicos.guisupport.typedvalue import (
+    ComboWidget,
     DeviceParamEdit,
     DeviceValueEdit,
 )
 from nicos.protocols.cache import cache_load
 from nicos.utils import findResource
 from nicos_ess.gui.dialogs.homing_check import HomingCheckDialog
-
-
-def convert_limit_to_string(value, fmtstr):
-    if abs(value) >= 1e10:
-        # Use exponential formatting for big numbers
-        return f"{value:.2g}"
-    return fmtstr % value
-
-
-def setBackgroundBrush(widget, color):
-    palette = widget.palette()
-    palette.setBrush(QPalette.ColorRole.Window, color)
-    widget.setBackgroundRole(QPalette.ColorRole.Window)
-    widget.setPalette(palette)
-
-
-def setForegroundBrush(widget, color):
-    palette = widget.palette()
-    palette.setBrush(QPalette.ColorRole.WindowText, color)
-    widget.setForegroundRole(QPalette.ColorRole.WindowText)
-    widget.setPalette(palette)
+from nicos_ess.gui.panels.utils import (
+    attach_status_resources,
+    convert_limit_to_string,
+    setBackgroundBrush,
+    setForegroundBrush,
+)
 
 
 class MotorDialog(QDialog):
@@ -50,8 +35,6 @@ class MotorDialog(QDialog):
     closed = pyqtSignal(object)
 
     def __init__(self, parent, devname, devinfo, devitem, log, expert):
-        from nicos_ess.gui.panels.devices import attach_status_resources
-
         QDialog.__init__(self, parent)
         attach_status_resources(self)
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/motor.ui"))
@@ -87,8 +70,6 @@ class MotorDialog(QDialog):
         self.resize(sz)
 
     def _reinit(self):
-        classes = set(self.devinfo.classes or ())
-
         if sip.isdeleted(self.devitem):
             # The item we're controlling has been removed from the list (e.g.
             # due to client reconnect), get it again.
@@ -98,61 +79,11 @@ class MotorDialog(QDialog):
                 self.close()
                 return
 
+        self.update_params()
+        params = self.paramvalues
+
         self.deviceName.setText("Device: %s" % self.devname)
         self.setWindowTitle("Control %s" % self.devname)
-
-        # trigger parameter poll
-        self.client.eval("%s.pollParams()" % self.devname, None)
-
-        # now get all cache keys pertaining to the device and set the
-        # properties we want
-        params = self.client.getDeviceParams(self.devname)
-        self.paraminfo = self.client.getDeviceParamInfo(self.devname)
-        self.paramvalues = dict(params)
-        # Cache updates for "classes" may lag behind the dialog opening.
-        # Use cache value if present, otherwise query the live device classes
-        # so Moveable/Readable controls are initialized reliably.
-        param_classes = params.get("classes")
-        if isinstance(param_classes, str):
-            classes = {param_classes}
-        elif param_classes:
-            classes = set(param_classes)
-        elif not classes:
-            live_classes = self.client.eval(
-                "session.getDevice(%r).classes" % self.devname, []
-            )
-            classes = set(live_classes or ())
-        self.devinfo.classes = classes
-
-        # put parameter values in the list widget
-        self.paramItems.clear()
-        self.paramList.clear()
-        for key, value in sorted(params.items()):
-            if self.paraminfo.get(key):
-                # normally, show only userparams, except in expert mode
-                is_userparam = self.paraminfo[key]["userparam"]
-                if is_userparam or self.device_panel._show_lowlevel:
-                    self.paramItems[key] = item = QTreeWidgetItem(
-                        self.paramList, [key, str(value)]
-                    )
-                    # display non-userparams in grey italics, like lowlevel
-                    # devices in the device list
-                    if not is_userparam:
-                        item.setFont(
-                            self.col_index["NAME"], self.device_panel.lowlevelFont[True]
-                        )
-                        item.setForeground(
-                            self.col_index["NAME"],
-                            self.device_panel.lowlevelBrush[True],
-                        )
-
-        # check how to refer to the device in commands: if it is not in the
-        # namespace, we need to use quotes
-        self.devrepr = (
-            repr(self.devname)
-            if "namespace" not in params.get("visibility", ("namespace",))
-            else self.devname
-        )
 
         # show "Set alias" group box if it is an alias device
         # if "alias" in params:
@@ -230,6 +161,65 @@ class MotorDialog(QDialog):
         menu.addAction(self.actionDisable)
         self.btn_more.setMenu(menu)
 
+        fixed = self.devinfo.fixed
+        self.set_fixed(fixed)
+
+    def update_params(self):
+        classes = set(self.devinfo.classes or ())
+
+        # trigger parameter poll
+        self.client.eval("%s.pollParams()" % self.devname, None)
+
+        # now get all cache keys pertaining to the device and set the
+        # properties we want
+        params = self.client.getDeviceParams(self.devname)
+        self.paraminfo = self.client.getDeviceParamInfo(self.devname)
+        self.paramvalues = dict(params)
+        # Cache updates for "classes" may lag behind the dialog opening.
+        # Use cache value if present, otherwise query the live device classes
+        # so Moveable/Readable controls are initialized reliably.
+        param_classes = params.get("classes")
+        if isinstance(param_classes, str):
+            classes = {param_classes}
+        elif param_classes:
+            classes = set(param_classes)
+        elif not classes:
+            live_classes = self.client.eval(
+                "session.getDevice(%r).classes" % self.devname, []
+            )
+            classes = set(live_classes or ())
+        self.devinfo.classes = classes
+
+        # put parameter values in the list widget
+        self.paramItems.clear()
+        self.paramList.clear()
+        for key, value in sorted(params.items()):
+            if self.paraminfo.get(key):
+                # normally, show only userparams, except in expert mode
+                is_userparam = self.paraminfo[key]["userparam"]
+                if is_userparam or self.device_panel._show_lowlevel:
+                    self.paramItems[key] = item = QTreeWidgetItem(
+                        self.paramList, [key, str(value)]
+                    )
+                    # display non-userparams in grey italics, like lowlevel
+                    # devices in the device list
+                    if not is_userparam:
+                        item.setFont(
+                            self.col_index["NAME"], self.device_panel.lowlevelFont[True]
+                        )
+                        item.setForeground(
+                            self.col_index["NAME"],
+                            self.device_panel.lowlevelBrush[True],
+                        )
+
+        # check how to refer to the device in commands: if it is not in the
+        # namespace, we need to use quotes
+        self.devrepr = (
+            repr(self.devname)
+            if "namespace" not in params.get("visibility", ("namespace",))
+            else self.devname
+        )
+
     def rmove(self, direction):
         step_size = self.txt_rmove.text()
         if step_size:
@@ -239,7 +229,6 @@ class MotorDialog(QDialog):
     def move(self):
         target = self.txt_target.text()
         if target:
-            print(f"target = {target}")
             self.device_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
 
     def reset(self):
@@ -417,6 +406,10 @@ class MotorDialog(QDialog):
             'set(%s, "alias", %r)' % (self.devrepr, self.aliasTarget.currentText())
         )
 
+    @pyqtSlot()
+    def on_btn_close_clicked(self):
+        self.closed.emit(self.devname.lower())
+
     def closeEvent(self, event):
         event.accept()
         self.closed.emit(self.devname.lower())
@@ -487,9 +480,20 @@ class MotorDialog(QDialog):
         self.txt_rmove_units.setText(value)
         self.txt_speed_units.setText(f"{value}/s" if value else "")
 
+    def update_current_value(self, value):
+        pass
+
     @pyqtSlot()
     def on_btn_history_clicked(self):
         self.device_panel.plot_history(self.devname)
+
+    def set_fixed(self, fixed):
+        self.btn_move.setEnabled(not fixed)
+        self.btn_move.setText("(fixed)" if fixed else "Move")
+        self.txt_target.setEnabled(not fixed)
+        self.btn_rmove_minus.setEnabled(not fixed)
+        self.btn_rmove_plus.setEnabled(not fixed)
+        self.txt_rmove.setEnabled(not fixed)
 
     def on_cache_params(self, subkey, value):
         if subkey not in self.paramItems:
@@ -515,11 +519,7 @@ class MotorDialog(QDialog):
             setBackgroundBrush(self.txt_status, self.bgBrush[status[0]])
         elif subkey == "fixed":
             fixed = self.devinfo.fixed
-            if self.moveBtn:
-                self.moveBtn.setEnabled(not fixed)
-                self.moveBtn.setText(fixed and "(fixed)" or "Move")
-            if self.target:
-                self.target.setEnabled(not fixed)
+            self.set_fixed(fixed)
         elif subkey == "userlimits":
             if not value:
                 return
