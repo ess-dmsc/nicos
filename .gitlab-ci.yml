@@ -17,7 +17,7 @@ default:
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
     - echo "Running uv with UV_CACHE_DIR=$UV_CACHE_DIR"
-    - uv sync --extra gui --all-packages
+    - uv sync --extra gui --all-packages --group gui-test
   after_script:
     - uv cache prune --ci
 
@@ -30,33 +30,15 @@ variables:
 
 stages:
   - publish
-  - setup
   - lint
   - test
   - integration
 
 
-uv_setup:
-  stage: setup
-  script:
-    - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    - uv sync --extra gui --all-packages --group gui-test
-  artifacts:
-    paths:
-      - .venv/
-      - .uv/
-    expire_in: 1 hour
-    when: always
-  variables:
-    UV_PYTHON_INSTALL_DIR: .uv
-
-
 tests_py312_cov:
   stage: test
-  dependencies:
-    - uv_setup
   script:
-    - uv run --group gui-test pytest test/ --cov=nicos --cov=nicos_ess --cov-report term --cov-report xml:coverage.xml --junitxml=test-output.xml
+    - uv run pytest test/ --cov=nicos --cov=nicos_ess --cov-report term --cov-report xml:coverage.xml --junitxml=test-output.xml
   coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
   artifacts:
     paths:
@@ -70,10 +52,8 @@ tests_py312_cov:
 
 tests_py3xx:
   stage: test
-  dependencies:
-    - uv_setup
   script:
-    - uv run --group gui-test pytest test/ --junitxml=test-output.xml
+    - uv run pytest test/ --junitxml=test-output.xml
   parallel:
     matrix:
       - PYTHON_VERSION: ["3.13", "3.14"]
@@ -87,15 +67,15 @@ tests_py3xx:
 
 tests_gui_qt6_py313:
   stage: test
-  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
   tags:
     - docker
     - ubuntu_2204
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - echo "Running uv with UV_CACHE_DIR=$UV_CACHE_DIR"
     - uv sync --extra gui_qt6 --all-packages --group gui-test
   script:
-    - uv run --extra gui_qt6 --group gui-test pytest test/nicos_ess/gui --junitxml=test-output-gui-qt6.xml
+    - uv run pytest test/nicos_ess/gui --junitxml=test-output-gui-qt6.xml
   artifacts:
     paths:
       - test-output-gui-qt6.xml
@@ -105,6 +85,7 @@ tests_gui_qt6_py313:
     UV_PYTHON: 3.13
     NICOS_QT: "6"
     PYTEST_QT_API: pyqt6
+
 
 integration-smoke:
   stage: integration
@@ -168,8 +149,6 @@ publish:
 
 .lint:
   stage: lint
-  dependencies:
-    - uv_setup
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
     - echo "Running uv with UV_CACHE_DIR=$UV_CACHE_DIR"
