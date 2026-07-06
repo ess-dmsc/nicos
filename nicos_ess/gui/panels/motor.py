@@ -452,13 +452,10 @@ class MotorDialog(QDialog):
             )
 
     def update_units(self, value):
-        self.txt_value.setText(self.devitem.text(self.col_index["VALUE"]))
+        self.update_value()
         self.txt_target_units.setText(value)
         self.txt_rmove_units.setText(value)
         self.txt_speed_units.setText(f"{value}/s" if value else "")
-
-    def update_current_value(self, value):
-        pass
 
     def update_user_limits(self, limits):
         self.txt_user_limits_from.setText(
@@ -483,8 +480,7 @@ class MotorDialog(QDialog):
         setBackgroundBrush(self.txt_status, self.bgBrush[status])
 
     def update_value(self):
-        fmted = self.devinfo.fmtValUnit()
-        self.txt_value.setText(fmted)
+        self.txt_value.setText(self.devinfo.fmtValUnit())
 
     @pyqtSlot()
     def on_btn_history_clicked(self):
