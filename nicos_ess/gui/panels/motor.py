@@ -7,6 +7,8 @@ from nicos.guisupport.qt import (
     QMenu,
     QMessageBox,
     QPalette,
+    QSizePolicy,
+    QSpacerItem,
     QTreeWidgetItem,
     pyqtSignal,
     pyqtSlot,
@@ -63,18 +65,21 @@ class MotorDialog(QDialog):
         self.devinfo = devinfo
         self.devitem = devitem
         self.paramItems = {}
-        # self.moveBtn = None
-        # self.target = None
-        # self.rel_target = None
-        #
         self._reinit()
 
         self.txt_target.setFocus()
 
-        # self._show_extension(expert)
-        #
-        # if self.target:
-        #     self.target.setFocus()
+        if expert:
+            self.paramGroup.setVisible(True)
+        else:
+            self.paramGroup.setVisible(False)
+            spacer = QSpacerItem(
+                0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+            )
+            self.main_layout.insertItem(self.main_layout.count() - 2, spacer)
+        sz = self.size()
+        sz.setHeight(self.sizeHint().height())
+        self.resize(sz)
 
     def _reinit(self):
         classes = set(self.devinfo.classes or ())
@@ -187,7 +192,6 @@ class MotorDialog(QDialog):
             self.txt_status, self.devitem.background(self.col_index["STATUS"])
         )
 
-
         self.txt_user_limits_from.setText(
             convert_limit_to_string(params["userlimits"][0], params["fmtstr"])
         )
@@ -233,11 +237,6 @@ class MotorDialog(QDialog):
         if not menu.isEmpty():
             self.btn_more.setMenu(menu)
 
-        def reset(checked):
-            self.device_panel.exec_command("reset(%s)" % self.devrepr)
-
-        def stop(checked):
-            self.device_panel.exec_command("stop(%s)" % self.devrepr, immediate=True)
         #
         #     # insert a widget to enter a new device value
         #     # allowEnter=False because we catch pressing Enter ourselves
@@ -350,6 +349,12 @@ class MotorDialog(QDialog):
             print(f"target = {target}")
             self.device_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
 
+    def reset(self):
+        self.device_panel.exec_command("reset(%s)" % self.devrepr)
+
+    def stop(self):
+        self.device_panel.exec_command("stop(%s)" % self.devrepr, immediate=True)
+
     @pyqtSlot()
     def on_txt_target_returnPressed(self):
         self.move()
@@ -365,6 +370,10 @@ class MotorDialog(QDialog):
     @pyqtSlot()
     def on_btn_rmove_plus_pressed(self):
         self.rmove(1)
+
+    @pyqtSlot()
+    def on_btn_stop_pressed(self):
+        self.stop()
 
     def on_paramList_customContextMenuRequested(self, pos):
         item = self.paramList.itemAt(pos)
@@ -385,10 +394,6 @@ class MotorDialog(QDialog):
             )
             # poll even non volatile parameter as requested explicitly
             self.client.eval(cmd, None)
-
-    @pyqtSlot()
-    def on_btn_settings_clicked(self):
-        self._show_extension(self.extension.isHidden())
 
     def _show_extension(self, show):
         if show:
@@ -670,4 +675,3 @@ class MotorDialog(QDialog):
             if not value:
                 return
             self.txt_offset.setText(str(cache_load(value)))
-
