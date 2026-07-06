@@ -164,8 +164,8 @@ class P4pWrapper:
 
     def _extract_limits(self, result, default_low=-1e308, default_high=1e308):
         try:
-            default_low = result["display"]["limitLow"]
-            default_high = result["display"]["limitHigh"]
+            default_low = result["display"].get("limitLow", 0)
+            default_high = result["display"].get("limitHigh", 0)
             if default_low == 0 and default_high == 0:
                 default_low = result["control"]["limitLow"]
                 default_high = result["control"]["limitHigh"]
