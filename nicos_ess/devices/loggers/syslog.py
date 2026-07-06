@@ -1,5 +1,6 @@
 """Module for custom facility logger and formatter that logs via the syslog facilities."""
 
+import json
 from logging.handlers import SysLogHandler
 from logging import (
     DEBUG,
@@ -32,6 +33,17 @@ class NicosSyslogFormatter(Formatter):
     def formatTime(self, record, datefmt=None):
         return time.strftime(
             datefmt or "%b %d %H:%M:%S", self.converter(record.created)
+        )
+
+    def formatException(self, exc_info):
+        """Return exception messages with traceback in single-line json format.
+
+        This allows easier ingestion into graylog."""
+        return json.dumps(
+            {
+                "event": "exception",
+                "traceback": traceback.format_exception(*exc_info),
+            }
         )
 
     def format(self, record):
