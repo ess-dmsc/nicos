@@ -12,7 +12,7 @@ variables:
   UV_LINK_MODE: copy
   ALMALINUX9_IMAGE: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-nicos:0.0.1
   # do not remove the venv created by the uv setup step:
-  GIT_CLEAN_FLAGS: -ffdx -e .venv/
+  GIT_CLEAN_FLAGS: -ffdx -e .venv/ -e .uv/
 
 stages:
   - publish
@@ -31,8 +31,11 @@ uv_setup:
   artifacts:
     paths:
       - .venv/
+      - .uv/
     expire_in: 1 hour
     when: always
+  variables:
+    UV_PYTHON_INSTALL_DIR: .uv
 
 
 tests_py312_cov:
@@ -53,6 +56,7 @@ tests_py312_cov:
       junit: test-output.xml
   variables:
     UV_PYTHON: 3.12
+    UV_PYTHON_INSTALL_DIR: .uv
 
 tests_py3xx:
   stage: test
@@ -73,6 +77,7 @@ tests_py3xx:
       junit: test-output.xml
   variables:
     UV_PYTHON: $PYTHON_VERSION
+    UV_PYTHON_INSTALL_DIR: .uv
 
 tests_gui_qt6_py313:
   stage: test
@@ -156,6 +161,7 @@ publish:
   variables:
     UV_PUBLISH_USERNAME: "ecdc"
     UV_PUBLISH_PASSWORD: "$ESS_ARTIFACTORY_ECDC_PYPI_TOKEN"
+    UV_PYTHON_INSTALL_DIR: .uv
 
 
 .lint:
@@ -170,6 +176,7 @@ publish:
     - export PY_CHANGES=$(git diff-tree --name-only --diff-filter=ACM -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA | grep -e '\.py$')
   variables:
     UV_PYTHON: 3.12
+    UV_PYTHON_INSTALL_DIR: .uv
   allow_failure:
     exit_codes: # User defined exit code
       - 100
