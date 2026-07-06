@@ -65,7 +65,7 @@ devices = dict(
     bpc2_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(bpc2_pv_root),
+        readpv="{}InPhaseTS-R".format(bpc2_pv_root),
     ),
     bpc2_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
@@ -165,7 +165,7 @@ devices = dict(
     foc2_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(foc2_pv_root),
+        readpv="{}InPhaseTS-R".format(foc2_pv_root),
     ),
     foc2_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
@@ -272,7 +272,7 @@ devices = dict(
     foc3_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(foc3_pv_root),
+        readpv="{}InPhaseTS-R".format(foc3_pv_root),
     ),
     foc3_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
@@ -379,7 +379,7 @@ devices = dict(
     foc4_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(foc4_pv_root),
+        readpv="{}InPhaseTS-R".format(foc4_pv_root),
     ),
     foc4_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
