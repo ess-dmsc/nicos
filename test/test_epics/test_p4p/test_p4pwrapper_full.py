@@ -13,7 +13,6 @@ from p4p.server.thread import SharedPV
 from nicos.core import status
 from nicos.devices.epics.pva.p4p import P4pWrapper
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
-
 from test.test_epics.test_p4p.utils.p4p_doubles import EventSink
 from test.test_epics.test_p4p.utils.pva_server import (
     PvaServer,
