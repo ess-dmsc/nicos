@@ -66,6 +66,60 @@ def setForegroundBrush(widget, color):
     widget.setPalette(palette)
 
 
+def attach_status_resources(cls):
+    # hack to make non-Qt usage as in checksetups work
+    if hasattr(cls, "statusIcon"):
+        return
+
+    cls.statusIcon = {
+        OK: get_icon("check_circle_green-24px.svg"),
+        WARN: get_icon("warning_orange-24px.svg"),
+        BUSY: get_icon("sync_orange-24px.svg"),
+        NOTREACHED: get_icon("error-24px.svg"),
+        DISABLED: get_icon("not_interested-24px.svg"),
+        ERROR: get_icon("error-24px.svg"),
+        UNKNOWN: get_icon("device_unknown-24px.svg"),
+    }
+
+    cls.fgBrush = {
+        OK: QBrush(colors.dev_fg_ok),
+        WARN: QBrush(colors.text),
+        BUSY: QBrush(colors.text),
+        NOTREACHED: QBrush(colors.text),
+        DISABLED: QBrush(colors.text),
+        ERROR: QBrush(colors.text),
+        UNKNOWN: QBrush(colors.dev_fg_unknown),
+    }
+
+    cls.bgBrush = {
+        OK: QBrush(),
+        WARN: QBrush(colors.dev_bg_warning),
+        BUSY: QBrush(colors.dev_bg_busy),
+        NOTREACHED: QBrush(colors.dev_bg_error),
+        DISABLED: QBrush(colors.dev_bg_disabled),
+        ERROR: QBrush(colors.dev_bg_error),
+        UNKNOWN: QBrush(),
+    }
+
+    # keys: (expired, fixed)
+    cls.valueBrush = {
+        (False, False): QBrush(),
+        (False, True): QBrush(colors.value_fixed),
+        (True, False): QBrush(colors.value_expired),
+        (True, True): QBrush(colors.value_expired),
+    }
+
+    cls.lowlevelBrush = {
+        False: QBrush(colors.text),
+        True: QBrush(colors.lowlevel),
+    }
+
+    cls.lowlevelFont = {
+        False: QFont(),
+        True: QFont(QFont().family(), -1, -1, True),
+    }
+
+
 class SetupTreeWidgetItem(QTreeWidgetItem):
     def __init__(self, setupname, display_order, representative):
         QTreeWidgetItem.__init__(self, [setupname, "", ""], SETUP_TYPE)
@@ -77,7 +131,7 @@ class SetupTreeWidgetItem(QTreeWidgetItem):
 
 
 class DevInfo(AttrDict):
-    """Collects device infos."""
+    """Collects device info."""
 
     def __init__(
         self,
@@ -170,65 +224,13 @@ class DevicesPanel(Panel):
 
     panelName = "Devices"
 
-    @classmethod
-    def _createResources(cls):
-        # hack to make non-Qt usage as in checksetups work
-        if not hasattr(cls, "statusIcon"):
-            cls.statusIcon = {
-                OK: get_icon("check_circle_green-24px.svg"),
-                WARN: get_icon("warning_orange-24px.svg"),
-                BUSY: get_icon("sync_orange-24px.svg"),
-                NOTREACHED: get_icon("error-24px.svg"),
-                DISABLED: get_icon("not_interested-24px.svg"),
-                ERROR: get_icon("error-24px.svg"),
-                UNKNOWN: get_icon("device_unknown-24px.svg"),
-            }
-
-            cls.fgBrush = {
-                OK: QBrush(colors.dev_fg_ok),
-                WARN: QBrush(colors.text),
-                BUSY: QBrush(colors.text),
-                NOTREACHED: QBrush(colors.text),
-                DISABLED: QBrush(colors.text),
-                ERROR: QBrush(colors.text),
-                UNKNOWN: QBrush(colors.dev_fg_unknown),
-            }
-
-            cls.bgBrush = {
-                OK: QBrush(),
-                WARN: QBrush(colors.dev_bg_warning),
-                BUSY: QBrush(colors.dev_bg_busy),
-                NOTREACHED: QBrush(colors.dev_bg_error),
-                DISABLED: QBrush(colors.dev_bg_disabled),
-                ERROR: QBrush(colors.dev_bg_error),
-                UNKNOWN: QBrush(),
-            }
-
-            # keys: (expired, fixed)
-            cls.valueBrush = {
-                (False, False): QBrush(),
-                (False, True): QBrush(colors.value_fixed),
-                (True, False): QBrush(colors.value_expired),
-                (True, True): QBrush(colors.value_expired),
-            }
-
-            cls.lowlevelBrush = {
-                False: QBrush(colors.text),
-                True: QBrush(colors.lowlevel),
-            }
-
-            cls.lowlevelFont = {
-                False: QFont(),
-                True: QFont(QFont().family(), -1, -1, True),
-            }
-
     @property
     def groupIcon(self):
         return get_icon("group_work-24px.svg")
 
     def __init__(self, parent, client, options):
-        DevicesPanel._createResources()
         Panel.__init__(self, parent, client, options)
+        attach_status_resources(self)
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/devices.ui"))
         self.useicons = bool(options.get("icons", True))
         self.param_display = {}
@@ -551,7 +553,7 @@ class DevicesPanel(Panel):
         if ldevname not in self._devinfo:
             return
         if ldevname in self._control_dialogs:
-            self._control_dialogs[ldevname].on_cache(subkey, value)
+            self._control_dialogs[ldevname].on_cache_params(subkey, value)
         devitem = self._devitems[ldevname]
         devinfo = self._devinfo[ldevname]
         if devinfo.failure:
@@ -571,8 +573,6 @@ class DevicesPanel(Panel):
             devinfo.valtime = time
             fmted = devinfo.fmtValUnit()
             devitem.setText(1, fmted)
-            if ldevname in self._control_dialogs:
-                self._control_dialogs[ldevname].valuelabel.setText(fmted)
             devitem.setForeground(
                 self.col_index["VALUE"], self.valueBrush[devinfo.expired, devinfo.fixed]
             )
@@ -616,12 +616,6 @@ class DevicesPanel(Panel):
                 item.setBackground(0, self.bgBrush[self._getHighestStatus(item)])
             else:
                 devitem.parent().setBackground(0, self.bgBrush[OK])
-            if ldevname in self._control_dialogs:
-                dlg = self._control_dialogs[ldevname]
-                dlg.statuslabel.setText(status[1])
-                dlg.statusimage.setPixmap(self.statusIcon[status[0]].pixmap(16, 16))
-                setForegroundBrush(dlg.statuslabel, self.fgBrush[status[0]])
-                setBackgroundBrush(dlg.statuslabel, self.bgBrush[status[0]])
         elif subkey == "fmtstr":
             if not value:
                 return
@@ -641,33 +635,13 @@ class DevicesPanel(Panel):
             devitem.setForeground(
                 self.col_index["VALUE"], self.valueBrush[devinfo.expired, devinfo.fixed]
             )
-            if ldevname in self._control_dialogs:
-                dlg = self._control_dialogs[ldevname]
-                if dlg.moveBtn:
-                    dlg.moveBtn.setEnabled(not devinfo.fixed)
-                    dlg.moveBtn.setText(devinfo.fixed and "(fixed)" or "Move")
-                if dlg.target:
-                    dlg.target.setEnabled(not devinfo.fixed)
-        elif subkey == "userlimits":
-            if not value:
-                return
-            value = cache_load(value)
-            if ldevname in self._control_dialogs:
-                dlg = self._control_dialogs[ldevname]
-                dlg.limitMin.setText(convert_limit_to_string(value[0], devinfo.fmtstr))
-                dlg.limitMax.setText(convert_limit_to_string(value[1], devinfo.fmtstr))
         elif subkey == "classes":
             if not value:
                 value = "[]"
             devinfo.classes = set(cache_load(value))
-        elif subkey == "alias":
-            if not value:
-                return
-            if ldevname in self._control_dialogs:
-                dlg = self._control_dialogs[ldevname]
-                dlg._reinit()
         elif subkey == "description":
             devitem.setToolTip(self.col_index["NAME"], cache_load(value or "''"))
+
         if subkey in self.param_display.get(ldevname, ()):
             if not devinfo.params:
                 devinfo.params = self.client.getDeviceParamInfo(devinfo.name)
@@ -682,6 +656,10 @@ class DevicesPanel(Panel):
                 self._devparamitems[ldevname][subkey].setText(
                     self.col_index["VALUE"], value
                 )
+
+        # If a dialog is open pass the changes to it.
+        if ldevname in self._control_dialogs:
+            self._control_dialogs[ldevname].on_cache(time, subkey, op, value)
 
     def on_tree_itemExpanded(self, item):
         if item.type() == SETUP_TYPE:
@@ -873,6 +851,7 @@ class ControlDialog(QDialog):
     def __init__(self, parent, devname, devinfo, devitem, log, expert):
         QDialog.__init__(self, parent)
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/devices_one.ui"))
+        attach_status_resources(self)
         self.log = log
 
         self.col_index = {
@@ -1370,7 +1349,7 @@ class ControlDialog(QDialog):
         event.accept()
         self.closed.emit(self.devname.lower())
 
-    def on_cache(self, subkey, value):
+    def on_cache_params(self, subkey, value):
         if subkey not in self.paramItems:
             return
         if not value:
@@ -1380,6 +1359,41 @@ class ControlDialog(QDialog):
         self.paramItems[subkey].setText(
             self.col_index["VALUE"], self.devinfo.fmtParam(subkey, value, unit=False)
         )
+
+    def on_cache(self, time, subkey, op, value):
+        if time < self.devinfo.valtime:
+            return
+
+        if subkey == "value":
+            fmted = self.devinfo.fmtValUnit()
+            self.valuelabel.setText(fmted)
+        elif subkey == "status":
+            status = self.devinfo.status
+            self.statuslabel.setText(status[1])
+            self.statusimage.setPixmap(self.statusIcon[status[0]].pixmap(16, 16))
+            setForegroundBrush(self.statuslabel, self.fgBrush[status[0]])
+            setBackgroundBrush(self.statuslabel, self.bgBrush[status[0]])
+        elif subkey == "fixed":
+            fixed = self.devinfo.fixed
+            if self.moveBtn:
+                self.moveBtn.setEnabled(not fixed)
+                self.moveBtn.setText(fixed and "(fixed)" or "Move")
+            if self.target:
+                self.target.setEnabled(not fixed)
+        elif subkey == "userlimits":
+            if not value:
+                return
+            value = cache_load(value)
+            self.limitMin.setText(
+                convert_limit_to_string(value[0], self.devinfo.fmtstr)
+            )
+            self.limitMax.setText(
+                convert_limit_to_string(value[1], self.devinfo.fmtstr)
+            )
+        elif subkey == "alias":
+            if not value:
+                return
+            self._reinit()
 
     def on_paramList_itemClicked(self, item):
         pname = item.text(self.col_index["NAME"])
