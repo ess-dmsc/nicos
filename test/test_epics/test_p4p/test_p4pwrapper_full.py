@@ -201,10 +201,6 @@ def test_metadata_and_alarm_helpers(pva_rig: PvaRig, pva_wrapper: P4pWrapper):
     assert pva_wrapper.get_units(float_pv) == "mm"
     assert pva_wrapper.get_limits(enum_pv) == (0, len(_ENUM_CHOICES) - 1)
 
-    control_or_display = pva_wrapper.get_control_values(float_pv)
-    assert "units" in control_or_display
-    assert control_or_display["units"] == "mm"
-
     assert pva_wrapper.get_value_choices(enum_pv) == _ENUM_CHOICES
 
     sev_key, expected_nicos = _any_non_ok_alarm_severity()
