@@ -421,7 +421,8 @@ def test_two_subscriptions_fast_connection_callback_ends_connected(
         ch1.wait_calls(1, timeout=_TIMEOUT)
         ch2.wait_calls(1, timeout=_TIMEOUT)
 
-        # We should have seen an "up" connection notification (aggregated at pvparam level).
+        # We should have seen an "up" connection notification
+        # (aggregated at pvparam level).
         wait_for(
             has_up,
             timeout=_TIMEOUT,
