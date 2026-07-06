@@ -116,33 +116,11 @@ class MotorDialog(QDialog):
         else:
             self.description.setVisible(False)
 
-        self.txt_value.setText(self.devitem.text(self.col_index["VALUE"]))
-        self.txt_status.setText(self.devitem.text(self.col_index["STATUS"]))
-        self.statusimage.setPixmap(self.devitem.icon(0).pixmap(16, 16))
-        setForegroundBrush(
-            self.txt_status, self.devitem.foreground(self.col_index["STATUS"])
-        )
-        setBackgroundBrush(
-            self.txt_status, self.devitem.background(self.col_index["STATUS"])
-        )
-
-        self.txt_user_limits_from.setText(
-            convert_limit_to_string(params["userlimits"][0], params["fmtstr"])
-        )
-        self.txt_user_limits_to.setText(
-            convert_limit_to_string(params["userlimits"][1], params["fmtstr"])
-        )
-
-        self.txt_hw_limits_from.setText(
-            convert_limit_to_string(params["abslimits"][0], params["fmtstr"])
-        )
-        self.txt_hw_limits_to.setText(
-            convert_limit_to_string(params["abslimits"][1], params["fmtstr"])
-        )
-
+        self.update_value()
+        self.update_status(self.devinfo.status[0], self.devinfo.status[1])
+        self.update_user_limits(params["userlimits"])
+        self.update_abs_limits(params["abslimits"])
         self.update_units(params["unit"])
-
-        # TODO: use helpers from above?
         self.txt_target.setText(str(params["target"]))
         self.txt_speed.setText(str(params["speed"]))
         self.txt_offset.setText(str(params["offset"]))
@@ -150,9 +128,8 @@ class MotorDialog(QDialog):
         # add a menu for the "More" button
         menu = QMenu(self)
         menu.addAction(self.actionHome)
-        # TODO: what does set position do?
-        # if "nicos.devices.abstract.Coder" in classes:
-        #     menu.addAction(self.actionSetPosition)
+        menu.addSeparator()
+        menu.addAction(self.actionSetPosition)
         menu.addSeparator()
         menu.addAction(self.actionFix)
         menu.addAction(self.actionRelease)
@@ -346,7 +323,7 @@ class MotorDialog(QDialog):
         return target.getValue()
 
     @pyqtSlot()
-    def on_actionAdjustOffset_triggered(self):
+    def on_btn_set_offset_clicked(self):
         val = self._get_new_value(
             "Adjust NICOS offset", "Adjust NICOS offset of %s:" % self.devname
         )
@@ -483,6 +460,32 @@ class MotorDialog(QDialog):
     def update_current_value(self, value):
         pass
 
+    def update_user_limits(self, limits):
+        self.txt_user_limits_from.setText(
+            convert_limit_to_string(limits[0], self.devinfo.fmtstr)
+        )
+        self.txt_user_limits_to.setText(
+            convert_limit_to_string(limits[1], self.devinfo.fmtstr)
+        )
+
+    def update_abs_limits(self, limits):
+        self.txt_hw_limits_from.setText(
+            convert_limit_to_string(limits[0], self.devinfo.fmtstr)
+        )
+        self.txt_hw_limits_to.setText(
+            convert_limit_to_string(limits[1], self.devinfo.fmtstr)
+        )
+
+    def update_status(self, status, message):
+        self.txt_status.setText(message)
+        self.statusimage.setPixmap(self.statusIcon[status].pixmap(16, 16))
+        setForegroundBrush(self.txt_status, self.fgBrush[status])
+        setBackgroundBrush(self.txt_status, self.bgBrush[status])
+
+    def update_value(self):
+        fmted = self.devinfo.fmtValUnit()
+        self.txt_value.setText(fmted)
+
     @pyqtSlot()
     def on_btn_history_clicked(self):
         self.device_panel.plot_history(self.devname)
@@ -509,14 +512,10 @@ class MotorDialog(QDialog):
             return
 
         if subkey == "value":
-            fmted = self.devinfo.fmtValUnit()
-            self.txt_value.setText(fmted)
+            self.update_value()
         elif subkey == "status":
-            status = self.devinfo.status
-            self.txt_status.setText(status[1])
-            self.statusimage.setPixmap(self.statusIcon[status[0]].pixmap(16, 16))
-            setForegroundBrush(self.txt_status, self.fgBrush[status[0]])
-            setBackgroundBrush(self.txt_status, self.bgBrush[status[0]])
+            status, message = self.devinfo.status
+            self.update_status(status, message)
         elif subkey == "fixed":
             fixed = self.devinfo.fixed
             self.set_fixed(fixed)
@@ -524,22 +523,12 @@ class MotorDialog(QDialog):
             if not value:
                 return
             value = cache_load(value)
-            self.txt_user_limits_from.setText(
-                convert_limit_to_string(value[0], self.devinfo.fmtstr)
-            )
-            self.txt_user_limits_to.setText(
-                convert_limit_to_string(value[1], self.devinfo.fmtstr)
-            )
+            self.update_user_limits(value)
         elif subkey == "abslimits":
             if not value:
                 return
             value = cache_load(value)
-            self.txt_hw_limits_from.setText(
-                convert_limit_to_string(value[0], self.devinfo.fmtstr)
-            )
-            self.txt_hw_limits_to.setText(
-                convert_limit_to_string(value[1], self.devinfo.fmtstr)
-            )
+            self.update_abs_limits(value)
         elif subkey == "alias":
             if not value:
                 return
