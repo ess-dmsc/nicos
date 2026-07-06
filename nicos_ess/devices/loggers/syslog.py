@@ -16,8 +16,9 @@ from logging import (
 import sys
 import time
 import traceback
+from typing import override
 
-from nicos.utils.loggers import StreamHandler
+from nicos.utils.loggers import ACTION, StreamHandler
 
 
 class NicosSyslogFormatter(Formatter):
@@ -70,6 +71,14 @@ class NicosSysLogHandler(StreamHandler):
     def __init__(self):
         StreamHandler.__init__(self, sys.stdout)
         self.setFormatter(NicosSyslogFormatter())
+
+    @override
+    def emit(self, record, fs="%s\n"):
+        """Emit log record filtering out records with ACTION level."""
+        if record.levelno == ACTION:
+            # do not write ACTIONs to syslog, they're only for the UI
+            return
+        super().emit(record, fs)
 
 
 def create_syslog_log_handlers(config):
