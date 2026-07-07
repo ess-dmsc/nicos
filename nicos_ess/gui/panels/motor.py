@@ -1,6 +1,5 @@
 from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.guisupport.qt import (
-    QCursor,
     QDialog,
     QDoubleValidator,
     QInputDialog,
@@ -8,19 +7,18 @@ from nicos.guisupport.qt import (
     QMessageBox,
     QSizePolicy,
     QSpacerItem,
-    QTreeWidgetItem,
     pyqtSignal,
     pyqtSlot,
     sip,
 )
 from nicos.guisupport.typedvalue import (
-    ComboWidget,
     DeviceParamEdit,
     DeviceValueEdit,
 )
 from nicos.protocols.cache import cache_load
 from nicos.utils import findResource
 from nicos_ess.gui.dialogs.homing_check import HomingCheckDialog
+from nicos_ess.gui.panels.parameters_table import ParametersTable
 from nicos_ess.gui.panels.utils import (
     attach_status_resources,
     convert_limit_to_string,
@@ -47,24 +45,29 @@ class MotorDialog(QDialog):
             "STATUS": 3,
         }
 
-        self.device_panel = parent
+        # All executable commands go via the top-level devices panel
+        self.devices_panel = parent
         self.client = parent.client
         self.devname = devname
         self.devinfo = devinfo
         self.devitem = devitem
-        self.paramItems = {}
+        self.param_table = ParametersTable(
+            parent, self.client, self.devname, self.devices_panel
+        )
+
         self._reinit()
 
         self.txt_target.setFocus()
 
         if expert:
-            self.paramGroup.setVisible(True)
+            self.main_layout.insertWidget(
+                self.main_layout.count() - 1, self.param_table
+            )
         else:
-            self.paramGroup.setVisible(False)
             spacer = QSpacerItem(
                 0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
             )
-            self.main_layout.insertItem(self.main_layout.count() - 2, spacer)
+            self.main_layout.insertItem(self.main_layout.count() - 1, spacer)
         sz = self.size()
         sz.setHeight(self.sizeHint().height())
         self.resize(sz)
@@ -73,7 +76,7 @@ class MotorDialog(QDialog):
         if sip.isdeleted(self.devitem):
             # The item we're controlling has been removed from the list (e.g.
             # due to client reconnect), get it again.
-            self.devitem = self.device_panel._devitems.get(self.devname.lower())
+            self.devitem = self.devices_panel._devitems.get(self.devname.lower())
             # No such device anymore...
             if self.devitem is None:
                 self.close()
@@ -81,6 +84,14 @@ class MotorDialog(QDialog):
 
         self.update_params()
         params = self.paramvalues
+
+        # check how to refer to the device in commands: if it is not in the
+        # namespace, we need to use quotes
+        self.devrepr = (
+            repr(self.devname)
+            if "namespace" not in params.get("visibility", ("namespace",))
+            else self.devname
+        )
 
         self.deviceName.setText("Device: %s" % self.devname)
         self.setWindowTitle("Control %s" % self.devname)
@@ -142,77 +153,35 @@ class MotorDialog(QDialog):
         self.set_fixed(fixed)
 
     def update_params(self):
-        classes = set(self.devinfo.classes or ())
-
-        # trigger parameter poll
+        # Trigger parameter poll
         self.client.eval("%s.pollParams()" % self.devname, None)
 
-        # now get all cache keys pertaining to the device and set the
-        # properties we want
+        # Get parameter information from daemon
+        # paramvalues contains the name and the value.
         params = self.client.getDeviceParams(self.devname)
-        self.paraminfo = self.client.getDeviceParamInfo(self.devname)
         self.paramvalues = dict(params)
-        # Cache updates for "classes" may lag behind the dialog opening.
-        # Use cache value if present, otherwise query the live device classes
-        # so Moveable/Readable controls are initialized reliably.
-        param_classes = params.get("classes")
-        if isinstance(param_classes, str):
-            classes = {param_classes}
-        elif param_classes:
-            classes = set(param_classes)
-        elif not classes:
-            live_classes = self.client.eval(
-                "session.getDevice(%r).classes" % self.devname, []
-            )
-            classes = set(live_classes or ())
-        self.devinfo.classes = classes
+        # paraminfo contains the name and all the metadata about the parameter.
+        # E.g. whether it a user parameter
+        self.paraminfo = self.client.getDeviceParamInfo(self.devname)
 
-        # put parameter values in the list widget
-        self.paramItems.clear()
-        self.paramList.clear()
-        for key, value in sorted(params.items()):
-            if self.paraminfo.get(key):
-                # normally, show only userparams, except in expert mode
-                is_userparam = self.paraminfo[key]["userparam"]
-                if is_userparam or self.device_panel._show_lowlevel:
-                    self.paramItems[key] = item = QTreeWidgetItem(
-                        self.paramList, [key, str(value)]
-                    )
-                    # display non-userparams in grey italics, like lowlevel
-                    # devices in the device list
-                    if not is_userparam:
-                        item.setFont(
-                            self.col_index["NAME"], self.device_panel.lowlevelFont[True]
-                        )
-                        item.setForeground(
-                            self.col_index["NAME"],
-                            self.device_panel.lowlevelBrush[True],
-                        )
-
-        # check how to refer to the device in commands: if it is not in the
-        # namespace, we need to use quotes
-        self.devrepr = (
-            repr(self.devname)
-            if "namespace" not in params.get("visibility", ("namespace",))
-            else self.devname
-        )
+        self.param_table.set_params(self.paramvalues, self.paraminfo)
 
     def rmove(self, direction):
         step_size = self.txt_rmove.text()
         if step_size:
             target = self.devinfo.value + direction * float(step_size)
-            self.device_panel.exec_command("maw(%s, %r)" % (self.devrepr, target))
+            self.devices_panel.exec_command("maw(%s, %r)" % (self.devrepr, target))
 
     def move(self):
         target = self.txt_target.text()
         if target:
-            self.device_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
+            self.devices_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
 
     def reset(self):
-        self.device_panel.exec_command("reset(%s)" % self.devrepr)
+        self.devices_panel.exec_command("reset(%s)" % self.devrepr)
 
     def stop(self):
-        self.device_panel.exec_command("stop(%s)" % self.devrepr, immediate=True)
+        self.devices_panel.exec_command("stop(%s)" % self.devrepr, immediate=True)
 
     @pyqtSlot()
     def on_txt_target_returnPressed(self):
@@ -233,26 +202,6 @@ class MotorDialog(QDialog):
     @pyqtSlot()
     def on_btn_stop_pressed(self):
         self.stop()
-
-    def on_paramList_customContextMenuRequested(self, pos):
-        item = self.paramList.itemAt(pos)
-        if not item:
-            return
-
-        menu = QMenu(self)
-        refreshAction = menu.addAction("Refresh")
-        menu.addAction("Refresh all")
-
-        # QCursor.pos is more reliable then the given pos
-        action = menu.exec(QCursor.pos())
-
-        if action:
-            cmd = "session.getDevice(%r).pollParams(volatile_only=False%s)" % (
-                self.devname,
-                ", param_list=[%r]" % item.text(0) if action == refreshAction else "",
-            )
-            # poll even non volatile parameter as requested explicitly
-            self.client.eval(cmd, None)
 
     @pyqtSlot()
     def on_btn_set_limits_clicked(self):
@@ -284,7 +233,7 @@ class MotorDialog(QDialog):
         target.setClient(self.client)
 
         def callback():
-            self.device_panel.exec_command("resetlimits(%s)" % self.devrepr)
+            self.devices_panel.exec_command("resetlimits(%s)" % self.devrepr)
             dlg.reject()
 
         dlg.btn_reset.clicked.connect(callback)
@@ -302,7 +251,7 @@ class MotorDialog(QDialog):
             # retry
             self.on_actionSetLimits_triggered()
             return
-        self.device_panel.exec_command(
+        self.devices_panel.exec_command(
             'set(%s, "userlimits", %s)' % (self.devrepr, newlimits)
         )
 
@@ -328,7 +277,7 @@ class MotorDialog(QDialog):
             "Adjust NICOS offset", "Adjust NICOS offset of %s:" % self.devname
         )
         if val is not None:
-            self.device_panel.exec_command("adjust(%s, %r)" % (self.devrepr, val))
+            self.devices_panel.exec_command("adjust(%s, %r)" % (self.devrepr, val))
 
     @pyqtSlot()
     def on_actionSetPosition_triggered(self):
@@ -344,7 +293,7 @@ class MotorDialog(QDialog):
                 )
             else:
                 cmd = "%s.setPosition(%r)" % (self.devname, val)
-            self.device_panel.exec_command(cmd)
+            self.devices_panel.exec_command(cmd)
 
     @pyqtSlot()
     def on_actionHome_triggered(self):
@@ -354,7 +303,7 @@ class MotorDialog(QDialog):
             if not qwindow.exec():
                 return
 
-        self.device_panel.exec_command("home(%s)" % self.devrepr)
+        self.devices_panel.exec_command("home(%s)" % self.devrepr)
 
     @pyqtSlot()
     def on_actionFix_triggered(self):
@@ -363,23 +312,23 @@ class MotorDialog(QDialog):
         )
         if not ok:
             return
-        self.device_panel.exec_command("fix(%s, %r)" % (self.devrepr, reason))
+        self.devices_panel.exec_command("fix(%s, %r)" % (self.devrepr, reason))
 
     @pyqtSlot()
     def on_actionRelease_triggered(self):
-        self.device_panel.exec_command("release(%s)" % self.devrepr)
+        self.devices_panel.exec_command("release(%s)" % self.devrepr)
 
     @pyqtSlot()
     def on_actionEnable_triggered(self):
-        self.device_panel.exec_command("enable(%s)" % self.devrepr)
+        self.devices_panel.exec_command("enable(%s)" % self.devrepr)
 
     @pyqtSlot()
     def on_actionDisable_triggered(self):
-        self.device_panel.exec_command("disable(%s)" % self.devrepr)
+        self.devices_panel.exec_command("disable(%s)" % self.devrepr)
 
     @pyqtSlot()
     def on_setAliasBtn_clicked(self):
-        self.device_panel.exec_command(
+        self.devices_panel.exec_command(
             'set(%s, "alias", %r)' % (self.devrepr, self.aliasTarget.currentText())
         )
 
@@ -390,66 +339,6 @@ class MotorDialog(QDialog):
     def closeEvent(self, event):
         event.accept()
         self.closed.emit(self.devname.lower())
-
-    def on_paramList_itemClicked(self, item):
-        pname = item.text(self.col_index["NAME"])
-        self.editParam(pname)
-
-    def editParam(self, pname):
-        if not self.paraminfo[pname]["settable"] or self.client.viewonly:
-            return
-        mainunit = self.paramvalues.get("unit", "main")
-        punit = (self.paraminfo[pname]["unit"] or "").replace("main", mainunit)
-
-        dlg = dialogFromUi(
-            self, findResource("nicos_ess/gui/panels/ui_files/devices_param.ui")
-        )
-
-        if pname in ("temperature", "electric_field", "magnetic_field"):
-            params = self.client.getDeviceParams(self.devname)
-            curr_value = params[pname]
-            catitems = self.device_panel._catitems
-            system_devs = [
-                catitems[c].child(i).text(0)
-                for c in catitems
-                if catitems[c].text(0) == "system"
-                for i in range(catitems[c].childCount())
-            ]
-            non_system_devs = [
-                d for d in self.client.getDeviceList() if d not in system_devs
-            ]
-            if curr_value not in non_system_devs:
-                curr_value = ""
-            dlg.target = ComboWidget(self, non_system_devs, curr_value)
-        else:
-            dlg.target = DeviceParamEdit(self, dev=self.devname, param=pname)
-            dlg.target.setClient(self.client)
-        dlg.paramName.setText("Parameter: %s.%s" % (self.devname, pname))
-        dlg.paramDesc.setText(self.paraminfo[pname]["description"])
-        dlg.paramValue.setText(str(self.paramvalues[pname]) + " " + punit)
-        dlg.targetLayout.addWidget(dlg.target)
-        dlg.resize(dlg.sizeHint())
-        dlg.target.setFocus()
-        if dlg.exec() != QDialog.DialogCode.Accepted:
-            return
-        try:
-            new_value = dlg.target.getValue()
-        except ValueError:
-            self.log.exception("invalid value for typed value")
-            # shouldn't happen, but if it does, at least give an indication that
-            # something went wrong
-            QMessageBox.warning(
-                self, "Error", "The entered value is invalid for this parameter."
-            )
-            return
-        if self.devrepr == self.devname:
-            self.device_panel.exec_command(
-                "%s.%s = %r" % (self.devname, pname, new_value)
-            )
-        else:
-            self.device_panel.exec_command(
-                "set(%s, %r, %r)" % (self.devrepr, pname, new_value)
-            )
 
     def update_units(self, value):
         self.update_value()
@@ -484,7 +373,7 @@ class MotorDialog(QDialog):
 
     @pyqtSlot()
     def on_btn_history_clicked(self):
-        self.device_panel.plot_history(self.devname)
+        self.devices_panel.plot_history(self.devname)
 
     def set_fixed(self, fixed):
         self.btn_move.setEnabled(not fixed)
@@ -495,13 +384,13 @@ class MotorDialog(QDialog):
         self.txt_rmove.setEnabled(not fixed)
 
     def on_cache_params(self, subkey, value):
-        if subkey not in self.paramItems:
+        if subkey not in self.paramvalues:
             return
         if not value:
             return
         value = cache_load(value)
         self.paramvalues[subkey] = value
-        self.paramItems[subkey].setText(self.col_index["VALUE"], str(value))
+        self.param_table.update_param(subkey, str(value))
 
     def on_cache(self, time, subkey, op, value):
         if time < self.devinfo.valtime:
