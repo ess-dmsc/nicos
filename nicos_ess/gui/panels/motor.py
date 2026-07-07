@@ -28,7 +28,7 @@ from nicos_ess.gui.panels.utils import (
 
 
 class MotorDialog(QDialog):
-    """Dialog opened to control and view details for one device."""
+    """Dialog opened to control and view details for an EPIC motor device."""
 
     closed = pyqtSignal(object)
 
