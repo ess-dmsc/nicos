@@ -339,6 +339,7 @@ class RedisStub:
         else:
             return [member for member, score in items]
 
+
 class RedisCacheDatabaseHarness(RedisCacheDatabase):
     """
     A subclass of RedisCacheDatabase that allows us to inject a RedisClientStub
