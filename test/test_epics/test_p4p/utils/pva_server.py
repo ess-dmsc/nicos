@@ -157,6 +157,8 @@ def make_enum_pv(choices: list[str], *, init_index: int = 0) -> SharedPV:
 class PvaServer:
     def __init__(self, providers):
         self._providers = providers
+        self._server_conf = None
+        self.client_conf = None
         self._stop_evt = threading.Event()
         self._ready_evt = threading.Event()
         self._thread = None
@@ -174,7 +176,19 @@ class PvaServer:
 
             def _run():
                 try:
-                    with Server(providers=[self._providers]) as _srv:
+                    server_kw = (
+                        {"isolate": True}
+                        if self._server_conf is None
+                        else {"conf": self._server_conf, "useenv": False}
+                    )
+                    with Server(providers=[self._providers], **server_kw) as srv:
+                        if self._server_conf is None:
+                            self._server_conf = srv.conf()
+                            self.client_conf = {
+                                key: value
+                                for key, value in self._server_conf.items()
+                                if key.startswith("EPICS_PVA_")
+                            }
                         # "server is up" signal; it doesn't guarantee reachability yet,
                         # so tests should still do ctx.get/pv.post to force activity.
                         self._ready_evt.set()
