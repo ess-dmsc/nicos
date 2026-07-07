@@ -170,7 +170,8 @@ class ExpPanel(Panel):
         # fill proposal
         self._update_proposal_info()
         # check for new or finish
-        if self.client.eval("session.experiment.mustFinish", False):
+        self._must_finish = self.client.eval("session.experiment.mustFinish", False)
+        if self._must_finish:
             self.finishBox.setVisible(True)
             self.newBox.setVisible(False)
         else:
@@ -178,7 +179,10 @@ class ExpPanel(Panel):
             self.newBox.setVisible(True)
             self.proposalNum.setText("")  # do not offer "service"
         # check for capability to ask proposal database
-        if self.client.eval("session.experiment._canQueryProposals()", False):
+        self._can_query_proposals = self.client.eval(
+            "session.experiment._canQueryProposals()", False
+        )
+        if self._can_query_proposals:
             self.propdbInfo.setVisible(True)
             self.queryDBButton.setVisible(True)
         else:
@@ -187,7 +191,9 @@ class ExpPanel(Panel):
         self.setViewOnly(self.client.viewonly)
 
     def setViewOnly(self, viewonly):
-        self.finishButton.setVisible(not viewonly)
+        self.finishButton.setVisible(not viewonly and self._must_finish)
+        self.queryDBButton.setVisible(not viewonly and self._can_query_proposals)
+        self.newBox.setVisible(not viewonly and not self._must_finish)
         btns = self.buttonBox.standardButtons()
         if viewonly:
             btns &= ~QDialogButtonBox.StandardButton.Apply
@@ -395,9 +401,8 @@ class ExpPanel(Panel):
             if local != self._orig_propinfo.get("localcontacts"):
                 self.client.run("Exp.update(localcontacts=%r)" % local)
                 done.append("New local contact set.")
-        if sample != self._orig_samplename:
-            self.client.run("NewSample(%r)" % sample)
-            done.append("New sample name set.")
+        if msg := self._sample_hook(sample):
+            done.append(msg)
         if notifEmails != self._orig_propinfo.get("notif_emails", []):
             self.client.run("SetMailReceivers(%s)" % ", ".join(map(repr, notifEmails)))
             done.append("New mail receivers set.")
@@ -417,6 +422,13 @@ class ExpPanel(Panel):
                 )
             self.showInfo("\n".join(done))
         self._update_proposal_info()
+
+    def _sample_hook(self, sample):
+        if sample != self._orig_samplename:
+            if self.client.run(f"NewSample({sample!r})", noqueue=True) is not None:
+                return "New sample name set."
+            return "Couldn't set samples. A script is still running"
+        return None
 
 
 class AliasWidget(QFrame):
