@@ -38,13 +38,6 @@ class MotorDialog(QDialog):
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/motor.ui"))
         self.log = log
 
-        self.col_index = {
-            "NAME": 0,
-            "VALUE": 1,
-            "TARGET": 2,
-            "STATUS": 3,
-        }
-
         # All executable commands go via the top-level devices panel
         self.devices_panel = parent
         self.client = parent.client
