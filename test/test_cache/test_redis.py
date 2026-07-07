@@ -61,6 +61,7 @@ class RedisStub:
         self._scripts = {}
         self._cleaner_sha = None
         self._ts_retention = {}
+        self.hgetall_calls = []
 
     def hset(self, name, key=None, value=None, mapping=None, items=None):
         if mapping is not None:
@@ -100,6 +101,7 @@ class RedisStub:
         return [str(raw.get(f)) if f in raw else None for f in fields]
 
     def hgetall(self, key):
+        self.hgetall_calls.append(key)
         raw = self._fake_db.get(key, {})
         if not isinstance(raw, dict):
             raise RedisError("Corrupted data")
@@ -211,7 +213,9 @@ class RedisStub:
             timeseries = self._fake_db.get(key, {})
             if not isinstance(timeseries, dict):
                 return 0
-            to_remove = [ts for ts in list(timeseries.keys()) if fromtime <= ts <= totime]
+            to_remove = [
+                ts for ts in list(timeseries.keys()) if fromtime <= ts <= totime
+            ]
             for ts in to_remove:
                 timeseries.pop(ts, None)
             return len(to_remove)
@@ -241,7 +245,7 @@ class RedisStub:
                 z.pop(m, None)
             return len(to_remove)
 
-        elif command == "DEL":
+        elif command in ("DEL", "UNLINK"):
             # Delete all given keys and return number of keys actually removed.
             deleted = 0
             for key in args:
@@ -355,7 +359,6 @@ class RedisStub:
 
         cleaned = 0
         for key, mapping in self._fake_db.items():
-
             if key.endswith("_ts") or key.endswith("_snapshot"):
                 continue
             if not isinstance(mapping, dict):
@@ -378,13 +381,13 @@ class RedisStub:
         return cleaned
 
 
-class TestableRedisCacheDatabase(RedisCacheDatabase):
+class RedisCacheDatabaseHarness(RedisCacheDatabase):
     """
     A subclass of RedisCacheDatabase that allows us to inject a RedisClientStub
     """
 
     def __init__(self, *args, **kwargs):
-        name = "TestableRedisCacheDatabase"
+        name = "RedisCacheDatabaseHarness"
         self._name = name
         self._config = {}
         self._params = {"name": name}
@@ -395,7 +398,9 @@ class TestableRedisCacheDatabase(RedisCacheDatabase):
         self._cache = None
         self.log = logging.getLogger(name)
         self.log.setLevel(logging.DEBUG)
-        self.doInit("test", injected_client=RedisClientStub())
+        self.doInit(
+            "test", injected_client=kwargs.get("injected_client") or RedisClientStub()
+        )
 
     def __setattr__(self, name, value):
         object.__setattr__(self, name, value)
@@ -419,7 +424,13 @@ class DummyObject:
 
 
 def _set_historydays(db, days):
-    object.__setattr__(db, "_historydays_override", days)
+    db._params["historydays"] = db.parameters["historydays"].type(days)
+
+
+def _set_arbitraryhistorydays(db, days):
+    db._params["arbitraryhistorydays"] = db.parameters["arbitraryhistorydays"].type(
+        days
+    )
 
 
 @pytest.fixture
@@ -429,7 +440,12 @@ def redis_client():
 
 @pytest.fixture
 def db(redis_client):
-    return TestableRedisCacheDatabase(injected_client=redis_client)
+    return RedisCacheDatabaseHarness(injected_client=redis_client)
+
+
+@pytest.fixture
+def arbitrary_history(db):
+    _set_arbitraryhistorydays(db, 14)
 
 
 @pytest.fixture(autouse=True)
@@ -472,6 +488,20 @@ def test_literal_or_str(db):
     assert db._literal_or_str("{'key': 'value'}") == "{'key': 'value'}"
     assert db._literal_or_str("not_a_number") == "not_a_number"
     assert db._literal_or_str(None) is None
+
+
+def test_native_and_arbitrary_retention_are_independent(db):
+    _set_historydays(db, 2)
+    _set_arbitraryhistorydays(db, 0.5)
+
+    assert db._timeseries_retention_ms() == 2 * 86400 * 1000
+    assert db._hash_series_retention_ms() == 0.5 * 86400 * 1000
+
+
+def test_retention_conversion_preserves_disabled_and_unlimited_semantics(db):
+    assert db._retention_ms(None) is None
+    assert db._retention_ms(0) is None
+    assert db._retention_ms(1e-12) == 1
 
 
 def test_entry_from_hash_results(db):
@@ -592,7 +622,7 @@ def test_set_tuple_generates_hash_and_timeseries(db):
     assert history_query == [CacheEntry(123.0, None, [10, 20]).asDict()]
 
 
-def test_status_tuple_generates_hash_and_timeseries(db):
+def test_status_tuple_generates_hash_and_timeseries(db, arbitrary_history):
     db._set_data("test/key", "value", CacheEntry("123", "456", (200, "idle")))
     assert db._client.keys() == [
         "test/key/value",
@@ -613,7 +643,7 @@ def test_status_tuple_generates_hash_and_timeseries(db):
     ]  # only numeric part stored in TS and plottable return
 
 
-def test_mixed_dict_generates_hash_and_timeseries(db):
+def test_mixed_dict_generates_hash_and_timeseries(db, arbitrary_history):
     db._set_data(
         "test/key", "value", CacheEntry("123", "456", {"a": 1, "b": "idle", "c": 3.5})
     )
@@ -682,7 +712,7 @@ def test_set_dict_still_works_with_interval_aggregation(db):
     ]  # average of {'a':1,'b':2} and {'a':3,'b':4} starting at t=122 + 10
 
 
-def test_set_status_tuple_still_works_with_interval_aggregation(db):
+def test_set_status_tuple_still_works_with_interval_aggregation(db, arbitrary_history):
     db._set_data("test/key", "value", CacheEntry("123", "456", (200, "idle")))
     db._set_data("test/key", "value", CacheEntry("124", "456", (400, "busy")))
     assert db._client.keys() == [
@@ -702,7 +732,7 @@ def test_set_status_tuple_still_works_with_interval_aggregation(db):
     assert decoded_values == [(200, "idle")]  # decimated to first
 
 
-def test_set_mixed_dict_still_works_with_interval_aggregation(db):
+def test_set_mixed_dict_still_works_with_interval_aggregation(db, arbitrary_history):
     db._set_data(
         "test/key", "value", CacheEntry("123", "456", {"a": 1, "b": "idle", "c": 3.5})
     )
@@ -726,7 +756,7 @@ def test_set_mixed_dict_still_works_with_interval_aggregation(db):
     assert decoded_values == [{"a": 1, "b": "idle", "c": 3.5}]  # decimated to first
 
 
-def test_set_string_generates_hash_timeseries(db):
+def test_set_string_generates_hash_timeseries(db, arbitrary_history):
     db._set_data("test/key", "value", CacheEntry("123", "456", "some_value"))
     assert db._client.keys() == [
         "test/key/value",
@@ -748,7 +778,7 @@ def test_set_string_generates_hash_timeseries(db):
     assert history_query == [CacheEntry(123.0, None, "some_value").asDict()]
 
 
-def test_list_of_strings_generates_hash_timeseries(db):
+def test_list_of_strings_generates_hash_timeseries(db, arbitrary_history):
     db._set_data("test/key", "value", CacheEntry("123", "456", ["val1", "val2"]))
     assert db._client.keys() == [
         "test/key/value",
@@ -770,7 +800,7 @@ def test_list_of_strings_generates_hash_timeseries(db):
     assert decoded_values == [["val1", "val2"]]
 
 
-def test_hash_series_mapped_moveable_history_is_cache_loadable(db):
+def test_hash_series_mapped_moveable_history_is_cache_loadable(db, arbitrary_history):
     base = 1763736121.507
 
     samples = [
@@ -796,7 +826,7 @@ def test_hash_series_mapped_moveable_history_is_cache_loadable(db):
     assert decoded == [v for _, v in samples]
 
 
-def test_cache_dumped_custom_object_roundtrip_via_hash_series(db):
+def test_cache_dumped_custom_object_roundtrip_via_hash_series(db, arbitrary_history):
     obj = DummyObject(42)
     dumped = cache_dump(obj)
 
@@ -819,7 +849,7 @@ def test_cache_dumped_custom_object_roundtrip_via_hash_series(db):
     assert decoded.x == 42
 
 
-def test_cache_dump_custom_object_history_without_interval(db):
+def test_cache_dump_custom_object_history_without_interval(db, arbitrary_history):
     obj1 = DummyObject(1)
     obj2 = DummyObject(2)
 
@@ -841,7 +871,7 @@ def test_cache_dump_custom_object_history_without_interval(db):
     assert decoded2.x == 2
 
 
-def test_cache_dump_custom_object_history_with_interval(db):
+def test_cache_dump_custom_object_history_with_interval(db, arbitrary_history):
     obj1 = DummyObject(1)
     obj2 = DummyObject(2)
 
@@ -868,12 +898,14 @@ def test_cache_dump_none_is_not_treated_as_delete(db):
     # We expect a real entry, not a deletion
     entry = db._get_data("test/none/value")
     assert entry is not None
-    assert entry.value is "None"
+    assert entry.value == "None"
     assert entry.time == 123.0
     assert entry.ttl == 456.0
 
 
-def test_cache_dump_list_of_strings_is_cache_loadable_via_hash_series(db):
+def test_cache_dump_list_of_strings_is_cache_loadable_via_hash_series(
+    db, arbitrary_history
+):
     original = ["val1", "val2"]
     dumped = cache_dump(original)  # "['val1', 'val2']" (PyON)
 
@@ -900,7 +932,7 @@ def test_cache_dump_list_of_strings_is_cache_loadable_via_hash_series(db):
     assert decoded == original
 
 
-def test_cache_dump_status_tuple_roundtrip_via_hash_series(db):
+def test_cache_dump_status_tuple_roundtrip_via_hash_series(db, arbitrary_history):
     status = (200, "idle")
     dumped = cache_dump(status)  # "(200, 'idle')"
 
@@ -1040,6 +1072,24 @@ def test_init_database_prefills_recent_from_redis_hashes(db):
     assert text.expired is True
 
 
+def test_init_database_does_not_fetch_arbitrary_history_hashes(db):
+    db._client._redis._fake_db["seed/key/value"] = {
+        "time": "123.0",
+        "ttl": "None",
+        "value": "current",
+        "expired": "False",
+        "ts_encoding": "hash_series",
+    }
+    db._client._redis._fake_db["seed/key/value_hs"] = {
+        "123000": "large historical value"
+    }
+    db._client._redis.hgetall_calls.clear()
+
+    db.initDatabase()
+
+    assert db._client._redis.hgetall_calls == ["seed/key/value"]
+
+
 def test_get_entry_lazy_loads_from_redis_and_caches(db):
     db._client._redis._fake_db["lazy/key/value"] = {
         "time": "123.0",
@@ -1083,6 +1133,68 @@ def test_update_entries_noop_on_same_value_returns_false(db):
 
     assert first is True
     assert second is False
+
+
+def test_update_entries_archives_same_numeric_value_at_each_timestamp(db):
+    first = CacheEntry(100.0, None, 3.5)
+    second = CacheEntry(101.0, None, 3.5)
+
+    assert db.updateEntries(["repeat/key"], "value", False, first) is True
+    assert db.updateEntries(["repeat/key"], "value", False, second) is False
+
+    history = db.queryHistory(("repeat/key", "value"), 99, 102)
+    assert [(entry.time, entry.value) for entry in history] == [
+        (100.0, 3.5),
+        (101.0, 3.5),
+    ]
+
+
+def test_update_entries_archives_same_arbitrary_value_when_enabled(db):
+    _set_arbitraryhistorydays(db, 1)
+    value = cache_dump((200, "all good"))
+
+    assert db.updateEntries(
+        ["repeat/status"], "value", False, CacheEntry(100.0, None, value)
+    )
+    assert not db.updateEntries(
+        ["repeat/status"], "value", False, CacheEntry(101.0, None, value)
+    )
+
+    history = db.queryHistory(("repeat/status", "value"), 99, 102)
+    assert [(entry.time, cache_load(entry.value)) for entry in history] == [
+        (100.0, (200, "all good")),
+        (101.0, (200, "all good")),
+    ]
+
+
+def test_arbitrary_history_is_disabled_by_default(db):
+    value = cache_dump((200, "all good"))
+
+    db.updateEntries(
+        ["disabled/status"], "value", False, CacheEntry(100.0, None, value)
+    )
+    db.updateEntries(
+        ["disabled/status"], "value", False, CacheEntry(101.0, None, value)
+    )
+
+    assert db._client.keys() == ["disabled/status/value"]
+    assert db.queryHistory(("disabled/status", "value"), 99, 102) == []
+
+
+def test_disabling_arbitrary_history_reclaims_existing_series(db):
+    _set_arbitraryhistorydays(db, 1)
+    value = cache_dump((200, "all good"))
+    db._set_data("cleanup/status", "value", CacheEntry(100.0, None, value))
+    assert sorted(db._client.keys()) == [
+        "cleanup/status/value",
+        "cleanup/status/value_hs",
+        "cleanup/status/value_hs_idx",
+    ]
+
+    _set_arbitraryhistorydays(db, None)
+    db._set_data("cleanup/status", "value", CacheEntry(101.0, None, value))
+
+    assert db._client.keys() == ["cleanup/status/value"]
 
 
 def test_update_entries_refreshes_ttl_and_time_even_when_value_unchanged(db):
@@ -1269,7 +1381,7 @@ def test_scalar_timeseries_rollover_trims_old_samples_but_keeps_current_key(db):
 
 
 def test_hash_series_rollover_trims_old_samples_but_keeps_current_key(db):
-    _set_historydays(db, 1)
+    _set_arbitraryhistorydays(db, 1)
     t_old = 200.0
     t_new = t_old + 2 * 86400
     old_dumped = cache_dump({"state": "old"})

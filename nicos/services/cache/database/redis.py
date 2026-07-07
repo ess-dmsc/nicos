@@ -7,10 +7,10 @@ import threading
 import time
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
-from nicos.core import Param
+from nicos.core import Param, floatrange, none_or
 from nicos.protocols.cache import cache_load
 from nicos.services.cache.database.base import CacheDatabase
-from nicos.services.cache.endpoints.redis_client import RedisClient, RedisError
+from nicos.services.cache.endpoints.redis_client import RedisClient
 from nicos.services.cache.entry import CacheEntry
 from nicos.utils import createThread
 
@@ -49,10 +49,11 @@ return cleaned
 class RedisCacheDatabase(CacheDatabase):
     """Cache database that persists to Redis but serves reads from RAM.
 
-    Layout in Redis (unchanged):
+    Layout in Redis:
       - One hash per value: "<category>/<subkey>" (or "<subkey>" if nocat)
         fields: time, ttl, value, expired ("True"/"False" as strings)
       - Optional RedisTimeSeries per numeric value: "<key>_ts"
+      - Optional arbitrary-value history: "<key>_hs" plus "<key>_hs_idx"
     """
 
     parameters = {
@@ -60,10 +61,15 @@ class RedisCacheDatabase(CacheDatabase):
         "port": Param("Redis port", type=int, default=6379),
         "db": Param("Redis DB", type=int, default=0),
         "historydays": Param(
-            "Maximum history retention in days for TS/hash_series "
-            "(0 disables history pruning)",
-            type=float,
+            "Maximum RedisTimeSeries history retention in days (0 disables pruning)",
+            type=floatrange(0),
             default=14.0,
+        ),
+        "arbitraryhistorydays": Param(
+            "Maximum arbitrary-value history retention in days "
+            "(None disables arbitrary history, 0 disables pruning)",
+            type=none_or(floatrange(0)),
+            default=None,
         ),
     }
 
@@ -103,18 +109,6 @@ class RedisCacheDatabase(CacheDatabase):
         except Exception:
             return val
 
-    def _hash_set(self, key, time_value, ttl, value, expired, target=None):
-        t = target or self._client
-        t.hset(
-            key,
-            mapping={
-                "time": str(time_value),
-                "ttl": str(ttl),
-                "value": str(value),
-                "expired": str(expired),
-            },
-        )
-
     def _hash_getall(self, key, target=None):
         t = target or self._client
         return t.hgetall(key)
@@ -126,7 +120,7 @@ class RedisCacheDatabase(CacheDatabase):
 
     def _create_timeseries(self, key, target=None):
         cmd = ["TS.CREATE", key]
-        retention_ms = self._history_retention_ms()
+        retention_ms = self._timeseries_retention_ms()
         if retention_ms is not None:
             cmd.extend(["RETENTION", retention_ms])
         cmd.extend(["DUPLICATE_POLICY", "LAST"])
@@ -143,33 +137,43 @@ class RedisCacheDatabase(CacheDatabase):
     def _redis_keys(self, match="*", count=1024, _type=None) -> Iterable[str]:
         return self._client.scan_iter(match=match, count=count, _type=_type)
 
-    def _delete(self, key, target=None):
-        (target or self._client).execute_command("DEL", key)
+    def _delete(self, *keys, target=None):
+        if keys:
+            # History hashes can be very large. UNLINK removes their names
+            # immediately while reclaiming memory outside Redis' main thread.
+            (target or self._client).execute_command("UNLINK", *keys)
 
-    def _history_retention_ms(self) -> Optional[int]:
+    @staticmethod
+    def _retention_ms(days) -> Optional[int]:
+        if days is None:
+            return None
         try:
-            days = float(
-                getattr(
-                    self,
-                    "_historydays_override",
-                    getattr(self, "historydays", 0.0),
-                )
-            )
+            days = float(days)
         except Exception:
             return None
         if days <= 0:
             return None
-        ms = int(days * 86400 * 1000)
-        return ms if ms > 0 else None
+        return max(1, int(days * 86400 * 1000))
 
-    def _history_cutoff_ms(self, newest_ts_ms: int) -> Optional[int]:
-        retention_ms = self._history_retention_ms()
+    def _timeseries_retention_ms(self) -> Optional[int]:
+        return self._retention_ms(self.historydays)
+
+    def _hash_series_enabled(self) -> bool:
+        return self.arbitraryhistorydays is not None
+
+    def _hash_series_retention_ms(self) -> Optional[int]:
+        return self._retention_ms(self.arbitraryhistorydays)
+
+    @staticmethod
+    def _history_cutoff_ms(
+        newest_ts_ms: int, retention_ms: Optional[int]
+    ) -> Optional[int]:
         if retention_ms is None:
             return None
         return int(newest_ts_ms - retention_ms)
 
     def _prune_timeseries(self, ts_key: str, newest_ts_ms: int, target=None):
-        cutoff = self._history_cutoff_ms(newest_ts_ms)
+        cutoff = self._history_cutoff_ms(newest_ts_ms, self._timeseries_retention_ms())
         if cutoff is None:
             return
         try:
@@ -180,7 +184,7 @@ class RedisCacheDatabase(CacheDatabase):
     def _prune_hash_series(
         self, hs_hash_key: str, hs_idx_key: str, newest_ts_ms: int, target=None
     ):
-        cutoff = self._history_cutoff_ms(newest_ts_ms)
+        cutoff = self._history_cutoff_ms(newest_ts_ms, self._hash_series_retention_ms())
         if cutoff is None:
             return
 
@@ -232,7 +236,7 @@ class RedisCacheDatabase(CacheDatabase):
             return None
 
         ttl = None if h["ttl"] == "None" else self._literal_or_str(h["ttl"])
-        expired = True if h.get("expired", "False") == "True" else False
+        expired = h.get("expired", "False") == "True"
         entry = CacheEntry(self._literal_or_str(h["time"]), ttl, h["value"])
         entry.expired = expired
         return entry
@@ -275,7 +279,9 @@ class RedisCacheDatabase(CacheDatabase):
                     key = key.decode("utf-8")
                 except Exception:
                     continue
-            if not self._check_get_key_format(key):
+            # Arbitrary histories are hashes too, but never current entries.
+            # Fetching them with HGETALL can consume hundreds of MB at startup.
+            if key.endswith("_hs") or not self._check_get_key_format(key):
                 continue
             buf.append(key)
             if pipe is None:
@@ -559,7 +565,6 @@ class RedisCacheDatabase(CacheDatabase):
                         subkey,
                         ne,
                         pipe=pipe,
-                        archive_history=update_needed,
                     )
                     if pipe is not None:
                         try:
@@ -586,10 +591,8 @@ class RedisCacheDatabase(CacheDatabase):
             # Guard against Redis errors / corrupted data
             return None
 
-    def _set_data(
-        self, category, subkey, entry: CacheEntry, pipe=None, archive_history=True
-    ):
-        """Write a single entry to Redis (and update RAM) — signature unchanged for tests."""
+    def _set_data(self, category, subkey, entry: CacheEntry, pipe=None):
+        """Write a single entry to Redis and update RAM."""
         # Type checks (compat with old test expectations)
         if type(entry.value) not in (int, float, str, list, tuple, dict, type(None)):
             self.log.warning("Unsupported value type: %s", type(entry.value))
@@ -609,13 +612,13 @@ class RedisCacheDatabase(CacheDatabase):
         # Deletion
         if entry.value in ("", None):
             try:
-                self._delete(redis_key, target=target)
-                if self._redis_key_exists(base_ts_key):
-                    self._delete(base_ts_key, target=target)
-                if self._redis_key_exists(hs_hash_key):
-                    self._delete(hs_hash_key, target=target)
-                if self._redis_key_exists(hs_idx_key):
-                    self._delete(hs_idx_key, target=target)
+                self._delete(
+                    redis_key,
+                    base_ts_key,
+                    hs_hash_key,
+                    hs_idx_key,
+                    target=target,
+                )
             except Exception:
                 self.log.exception(
                     "Failed to delete keys %s/%s (and hash_series)",
@@ -715,9 +718,6 @@ class RedisCacheDatabase(CacheDatabase):
         # Update RAM to mirror current value immediately (normalized)
         self._set_recent(category, subkey, entry)
 
-        if not archive_history:
-            return
-
         for series_key, sample in zip(ts_keys, ts_values):
             try:
                 if not self._redis_key_exists(series_key):
@@ -730,6 +730,11 @@ class RedisCacheDatabase(CacheDatabase):
                 )
 
         if ts_encoding == "hash_series":
+            if not self._hash_series_enabled():
+                # Reclaim history created before arbitrary archiving was disabled.
+                self._delete(hs_hash_key, hs_idx_key, target=target)
+                return
+
             ts_str = str(ts)
             try:
                 # payload in HASH
@@ -746,10 +751,11 @@ class RedisCacheDatabase(CacheDatabase):
                 )
 
     def _native_archiving(self, value):
-        if isinstance(value, (float, int)) and not isinstance(value, bool):
-            if math.isfinite(value):
-                return True
-        return False
+        return (
+            isinstance(value, (float, int))
+            and not isinstance(value, bool)
+            and math.isfinite(value)
+        )
 
     def _start_cleaner(self):
         lua_sha = self._client.script_load(CLEANER_LUA)

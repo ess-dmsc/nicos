@@ -32,10 +32,10 @@ After this, run:
     - nicos-daemon
     - nicos-demo
     ...
-    
+
     % uv run nicos-gui
-    
-to start any of the scripts directly. Note that you will have to prefix these commands when mentioned in the sections below with `uv run`. 
+
+to start any of the scripts directly. Note that you will have to prefix these commands when mentioned in the sections below with `uv run`.
 
 You can also install NICOS into the uv managed tools to have its commands available inside your `PATH`:
 
@@ -53,7 +53,7 @@ The resulting source tarball and wheel files will be located in the `dist` direc
 
 Place the NICOS configuration file (`nicos.conf`) for your choice of instrument into one of the following locations, searched in order:
 
-- in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf` on GNU/Linux, or 
+- in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf` on GNU/Linux, or
 - the `nicos` directory in your standard user configuration path, i.e. on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`.
 
 Both these paths can be modified by setting the `XDG_CONFIG_DIRS` or `XDG_CONFIG_HOME` environment variable, respectively, to point to a different location.
@@ -176,9 +176,21 @@ For Redis-based caching, `RedisCacheDatabase`, configure as follows:
 ```python
 DB=device(
     "nicos.services.cache.server.RedisCacheDatabase",
+    historydays=14,
+    # Arbitrary values such as status tuples and waveforms are not archived
+    # by default. Set a short retention period here to opt in.
+    arbitraryhistorydays=None,
     loglevel="info",
 )
 ```
+
+`historydays` controls native RedisTimeSeries retention. The separate
+`arbitraryhistorydays` setting controls serialized arbitrary-value history;
+`None` disables it, `0` keeps it indefinitely, and a positive value retains
+that many days. Current values are stored regardless of the history setting.
+When arbitrary history is disabled, its old history keys are removed the next
+time that value is reported. Each report with a new timestamp is archived even
+if its value is unchanged.
 
 In the case of `RedisCacheDatabase`, you need to set up Redis and RedisTimeSeries. See section [Redis Setup](#redis-setup) for instructions.
 
