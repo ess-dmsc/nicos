@@ -16,6 +16,10 @@ from nicos.utils import findResource
 from nicos_ess.gui.panels.utils import (
     attach_status_resources,
 )
+from nicos.guisupport.typedvalue import (
+    DeviceParamEdit,
+    ComboWidget,
+)
 
 
 class ParametersTable(QWidget):
