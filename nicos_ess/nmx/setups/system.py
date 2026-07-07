@@ -13,7 +13,7 @@ sysconfig = dict(
 modules = [
     "nicos.commands.standard",
     "nicos_ess.commands",
-    "nicos_ess.loki.commands.scripting",
+    "nicos_ess.nmx.commands.scripting",
 ]
 
 devices = dict(
