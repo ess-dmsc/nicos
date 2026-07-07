@@ -109,7 +109,7 @@ def pva_rig() -> Generator[PvaRig]:
     srv = PvaServer(providers)
     srv.start()
 
-    ctx = Context("pva", nt=False)
+    ctx = Context("pva", conf=srv.client_conf, useenv=False, nt=False)
     rig = PvaRig(
         prefix=prefix,
         pvs=pvs,
