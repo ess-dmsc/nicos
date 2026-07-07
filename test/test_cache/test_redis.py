@@ -1,6 +1,5 @@
 import fnmatch
 import logging
-import threading
 import time
 from typing import Union
 
@@ -25,26 +24,29 @@ class RedisClientStub(RedisClient):
 class RedisStubPipeline:
     def __init__(self, redis_stub):
         self._redis = redis_stub
-        self._results = []
+        self._commands = []
 
     def hset(self, *args, **kwargs):
-        self._results.append(self._redis.hset(*args, **kwargs))
+        self._commands.append((self._redis.hset, args, kwargs))
         return self
 
     def hgetall(self, key):
-        self._results.append(self._redis.hgetall(key))
+        self._commands.append((self._redis.hgetall, (key,), {}))
         return self
 
     def execute_command(self, command, *args):
-        self._results.append(self._redis.execute_command(command, *args))
+        self._commands.append((self._redis.execute_command, (command, *args), {}))
         return self
 
     def zadd(self, *args, **kwargs):
-        self._results.append(self._redis.zadd(*args, **kwargs))
+        self._commands.append((self._redis.zadd, args, kwargs))
         return self
 
     def execute(self):
-        results, self._results = self._results, []
+        commands, self._commands = self._commands, []
+        results = []
+        for func, args, kwargs in commands:
+            results.append(func(*args, **kwargs))
         return results
 
     def __enter__(self):
@@ -58,8 +60,6 @@ class RedisStubPipeline:
 class RedisStub:
     def __init__(self):
         self._fake_db = {}
-        self._scripts = {}
-        self._cleaner_sha = None
         self._ts_retention = {}
         self.hgetall_calls = []
 
@@ -275,20 +275,6 @@ class RedisStub:
     def pipeline(self, *args, **kwargs):
         return RedisStubPipeline(self)
 
-    def script_load(self, script: str) -> str:
-        sha = f"sha{len(self._scripts) + 1}"
-        self._scripts[sha] = script
-        if self._cleaner_sha is None:
-            self._cleaner_sha = sha
-        return sha
-
-    def evalsha(self, sha: str, numkeys: int, *args):
-        if sha not in self._scripts:
-            raise RedisError("NOSCRIPT No matching script")
-
-        now = float(args[0]) if args else time.time()
-        return self.clean_expired(now)
-
     def zadd(self, name, mapping, *args, **kwargs):
         """
         Very simple ZADD implementation: store as dict member -> score.
@@ -352,34 +338,6 @@ class RedisStub:
             return [(member, score_cast_func(score)) for member, score in items]
         else:
             return [member for member, score in items]
-
-    def clean_expired(self, now: Union[float, None] = None) -> int:
-        if now is None:
-            now = time.time()
-
-        cleaned = 0
-        for key, mapping in self._fake_db.items():
-            if key.endswith("_ts") or key.endswith("_snapshot"):
-                continue
-            if not isinstance(mapping, dict):
-                continue
-
-            ttl_str = mapping.get("ttl")
-            time_str = mapping.get("time")
-            expired = mapping.get("expired", "False")
-
-            if ttl_str and ttl_str != "None" and expired == "False":
-                try:
-                    ttl = float(ttl_str)
-                    t0 = float(time_str)
-                except (TypeError, ValueError):
-                    continue
-                if (t0 + ttl) < now:
-                    mapping["expired"] = "True"
-                    cleaned += 1
-
-        return cleaned
-
 
 class RedisCacheDatabaseHarness(RedisCacheDatabase):
     """
@@ -448,15 +406,6 @@ def arbitrary_history(db):
     _set_arbitraryhistorydays(db, 14)
 
 
-@pytest.fixture(autouse=True)
-def _isolate_redis_snapshot():
-    yield
-    RedisCacheDatabase._snapshot_ready = threading.Event()
-    RedisCacheDatabase._snapshot_data = []
-    RedisCacheDatabase._snapshot_time = 0.0
-    RedisCacheDatabase._snapshot_building = False
-
-
 def test_format_key(db):
     assert db._format_key("category", "subkey") == (
         "category/subkey",
@@ -505,10 +454,10 @@ def test_retention_conversion_preserves_disabled_and_unlimited_semantics(db):
 
 
 def test_entry_from_hash_results(db):
-    data = {"time": "123", "ttl": "456", "value": "some_value", "expired": "False"}
+    data = {"time": "123", "ttl": "None", "value": "some_value", "expired": "False"}
     assert (
         db._entry_from_hash(data).asDict()
-        == CacheEntry(123, 456, "some_value").asDict()
+        == CacheEntry(123, None, "some_value").asDict()
     )
 
 
@@ -562,66 +511,6 @@ def test_set_float_generates_hash_and_timeseries(db):
     assert history_query == [CacheEntry(123.0, None, 3.14).asDict()]
 
 
-def test_set_list_generates_hash_and_timeseries(db):
-    db._set_data("test/key", "value", CacheEntry("123", "456", [10, 20]))
-    assert db._client.keys() == [
-        "test/key/value",
-        "test/key/value_l_0_ts",
-        "test/key/value_l_1_ts",
-    ]
-    assert db._client.hgetall("test/key/value") == {
-        "time": "123",
-        "ttl": "456",
-        "value": "[10, 20]",
-        "expired": "False",
-        "ts_encoding": "list",
-        "ts_children": "0,1",
-    }
-    history_query = db.queryHistory(("test/key", "value"), 122, 124)
-    history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [CacheEntry(123.0, None, [10, 20]).asDict()]
-
-
-def test_set_dict_generates_hash_and_timeseries(db):
-    db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": 2}))
-    assert db._client.keys() == [
-        "test/key/value",
-        "test/key/value_d_a_ts",
-        "test/key/value_d_b_ts",
-    ]
-    assert db._client.hgetall("test/key/value") == {
-        "time": "123",
-        "ttl": "456",
-        "value": "{'a': 1, 'b': 2}",
-        "expired": "False",
-        "ts_encoding": "dict",
-        "ts_children": "a,b",
-    }
-    history_query = db.queryHistory(("test/key", "value"), 122, 124)
-    history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [CacheEntry(123.0, None, {"a": 1, "b": 2}).asDict()]
-
-
-def test_set_tuple_generates_hash_and_timeseries(db):
-    db._set_data("test/key", "value", CacheEntry("123", "456", (10, 20)))
-    assert db._client.keys() == [
-        "test/key/value",
-        "test/key/value_l_0_ts",
-        "test/key/value_l_1_ts",
-    ]
-    assert db._client.hgetall("test/key/value") == {
-        "time": "123",
-        "ttl": "456",
-        "value": "(10, 20)",
-        "expired": "False",
-        "ts_encoding": "list",
-        "ts_children": "0,1",
-    }
-    history_query = db.queryHistory(("test/key", "value"), 122, 124)
-    history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [CacheEntry(123.0, None, [10, 20]).asDict()]
-
-
 def test_status_tuple_generates_hash_and_timeseries(db, arbitrary_history):
     db._set_data("test/key", "value", CacheEntry("123", "456", (200, "idle")))
     assert db._client.keys() == [
@@ -664,52 +553,6 @@ def test_mixed_dict_generates_hash_and_timeseries(db, arbitrary_history):
     assert decoded_values == [
         {"a": 1, "b": "idle", "c": 3.5}
     ]  # only numeric parts stored in TS and plottable return
-
-
-def test_set_list_still_works_with_interval_aggregation(db):
-    db._set_data("test/key", "value", CacheEntry("123", "456", [10, 20]))
-    db._set_data("test/key", "value", CacheEntry("124", "456", [20, 40]))
-    assert db._client.keys() == [
-        "test/key/value",
-        "test/key/value_l_0_ts",
-        "test/key/value_l_1_ts",
-    ]
-    assert db._client.hgetall("test/key/value") == {
-        "time": "124",
-        "ttl": "456",
-        "value": "[20, 40]",
-        "expired": "False",
-        "ts_encoding": "list",
-        "ts_children": "0,1",
-    }
-    history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
-    history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [
-        CacheEntry(122.0, None, [15.0, 30.0]).asDict()
-    ]  # average of [10,20] and [20,40] starting at t=122 + 10
-
-
-def test_set_dict_still_works_with_interval_aggregation(db):
-    db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": 2}))
-    db._set_data("test/key", "value", CacheEntry("124", "456", {"a": 3, "b": 4}))
-    assert db._client.keys() == [
-        "test/key/value",
-        "test/key/value_d_a_ts",
-        "test/key/value_d_b_ts",
-    ]
-    assert db._client.hgetall("test/key/value") == {
-        "time": "124",
-        "ttl": "456",
-        "value": "{'a': 3, 'b': 4}",
-        "expired": "False",
-        "ts_encoding": "dict",
-        "ts_children": "a,b",
-    }
-    history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
-    history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [
-        CacheEntry(122.0, None, {"a": 2.0, "b": 3.0}).asDict()
-    ]  # average of {'a':1,'b':2} and {'a':3,'b':4} starting at t=122 + 10
 
 
 def test_set_status_tuple_still_works_with_interval_aggregation(db, arbitrary_history):
@@ -1198,15 +1041,16 @@ def test_disabling_arbitrary_history_reclaims_existing_series(db):
 
 
 def test_update_entries_refreshes_ttl_and_time_even_when_value_unchanged(db):
-    first = CacheEntry(100.0, 10.0, "same")
-    second = CacheEntry(120.0, 30.0, "same")
+    now = time.time()
+    first = CacheEntry(now, 10.0, "same")
+    second = CacheEntry(now + 1, 30.0, "same")
 
     db.updateEntries(["ttlrefresh/key"], "value", False, first)
     changed = db.updateEntries(["ttlrefresh/key"], "value", False, second)
 
     assert changed is False
     stored_hash = db._client.hgetall("ttlrefresh/key/value")
-    assert stored_hash["time"] == "120.0"
+    assert stored_hash["time"] == str(now + 1)
     assert stored_hash["ttl"] == "30.0"
 
 
