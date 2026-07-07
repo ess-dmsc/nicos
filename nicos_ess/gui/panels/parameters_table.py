@@ -12,13 +12,13 @@ from nicos.guisupport.qt import (
     QVBoxLayout,
     QWidget,
 )
+from nicos.guisupport.typedvalue import (
+    ComboWidget,
+    DeviceParamEdit,
+)
 from nicos.utils import findResource
 from nicos_ess.gui.panels.utils import (
     attach_status_resources,
-)
-from nicos.guisupport.typedvalue import (
-    DeviceParamEdit,
-    ComboWidget,
 )
 
 
@@ -136,7 +136,9 @@ class ParametersTable(QWidget):
             )
             return
 
-        self.devices_panel.exec_command("%s.%s = %r" % (self.devname, pname, new_value))
+        self.devices_panel.exec_command(
+            "set('%s', '%s', %r)" % (self.devname, pname, new_value)
+        )
 
     def on_context_menu(self, pos):
         item = self.tree_widget.itemAt(pos)
