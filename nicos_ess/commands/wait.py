@@ -62,3 +62,29 @@ def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
             break
 
         session.delay(dev._long_loop_delay)
+
+@usercommand
+@helparglist("chopper, frequency")
+def maw_chopper(chopper, frequency):
+    """Move a chopper to a new speed and wait until it reports being in phase.
+
+    Sets the chopper's speed setpoint, starts it if required, and then
+    waits for the chopper's phase status to leave and re-enter the
+    'In phase' state before returning control.
+
+    Example:
+    >>> maw_chopper(mini_chopper, '7 Hz')
+    will set mini_chopper's speed to 7 Hz, start it if it is not already
+    running, and wait until it has phased and settled back into
+    'In phase' before continuing.
+
+    .. note::
+       This command will block until the chopper reports 'In phase',
+       which may take some time depending on the chopper's current speed
+       and the requested target speed.
+    """
+    session.devices[chopper + '_speed'].move(frequency)
+    # if chopper.read() == 2:
+    #     session.devices[chopper + '_speed'],move('Start')
+    # waitfor(chopper + '_phased', '!=\'In phase\'')
+    # waitfor(chopper + '_phased', '==\'In phase\'')

@@ -11,5 +11,5 @@ from nicos_ess.commands.filewriter import (
     start_filewriting,
     stop_filewriting,
 )
-from nicos_ess.commands.wait import waitfor_stable
+from nicos_ess.commands.wait import waitfor_stable, maw_chopper
 from nicos_ess.commands.sample import set_sample_fields, clear_sample_fields
