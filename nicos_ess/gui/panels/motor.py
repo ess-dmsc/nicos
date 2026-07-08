@@ -89,27 +89,6 @@ class MotorDialog(QDialog):
         self.deviceName.setText("Device: %s" % self.devname)
         self.setWindowTitle("Control %s" % self.devname)
 
-        # show "Set alias" group box if it is an alias device
-        # if "alias" in params:
-        #     if params["alias"]:
-        #         self.deviceName.setText(
-        #             self.deviceName.text() + " (alias for %s)" % params["alias"]
-        #         )
-        #     alias_config = self.client.eval("session.alias_config", {})
-        #     self.aliasTarget = QComboBox(self)
-        #     self.aliasTarget.setEditable(True)
-        #     if self.devname in alias_config:
-        #         items = [t[0] for t in alias_config[self.devname]]
-        #         self.aliasTarget.addItems(items)
-        #         if params["alias"] in items:
-        #             self.aliasTarget.setCurrentIndex(items.index(params["alias"]))
-        #     self.targetLayoutAlias.takeAt(1).widget().deleteLater()
-        #     self.targetLayoutAlias.insertWidget(1, self.aliasTarget)
-        #     if self.client.viewonly:
-        #         self.setAliasBtn.setEnabled(False)
-        # else:
-        #     self.aliasGroup.setVisible(False)
-
         double_validator = QDoubleValidator()
         self.txt_target.setValidator(double_validator)
         self.txt_rmove.setValidator(double_validator)
