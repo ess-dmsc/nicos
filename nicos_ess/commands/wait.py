@@ -83,8 +83,9 @@ def maw_chopper(chopper, frequency):
        which may take some time depending on the chopper's current speed
        and the requested target speed.
     """
-    session.devices[chopper + '_speed'].move(frequency)
-    # if chopper.read() == 2:
-    #     session.devices[chopper + '_speed'],move('Start')
-    # waitfor(chopper + '_phased', '!=\'In phase\'')
-    # waitfor(chopper + '_phased', '==\'In phase\'')
+    chopper_name = chopper.name
+    session.devices[chopper_name + '_speed'].move(frequency)
+    if chopper.read() == 2:
+        session.devices[chopper_name + '_speed'].move('Start')
+    session.devices[chopper_name + '_speed'].waitfor('!=\'In phase\'')
+    session.devices[chopper_name + '_speed'].waitfor('==\'In phase\'')
