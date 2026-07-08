@@ -5,22 +5,16 @@ from logging import WARNING
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel, showPanel
 from nicos.clients.gui.utils import ScriptExecQuestion, dialogFromUi, loadUi
-from nicos.core.status import BUSY, DISABLED, ERROR, NOTREACHED, OK, UNKNOWN, WARN
-from nicos.guisupport.colors import colors
+from nicos.core.status import BUSY, ERROR, OK, UNKNOWN
 from nicos.guisupport.qt import (
-    QBrush,
     QByteArray,
     QComboBox,
-    QCursor,
     QDialog,
     QDialogButtonBox,
-    QFont,
-    QIcon,
     QInputDialog,
     QLabel,
     QMenu,
     QMessageBox,
-    QPalette,
     QPushButton,
     QSizePolicy,
     QSpacerItem,
@@ -31,7 +25,6 @@ from nicos.guisupport.qt import (
     sip,
 )
 from nicos.guisupport.typedvalue import (
-    ComboWidget,
     DeviceParamEdit,
     DeviceValueEdit,
     EditWidget,
@@ -40,6 +33,7 @@ from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
 from nicos_ess.gui.dialogs.homing_check import HomingCheckDialog
 from nicos_ess.gui.panels.motor import MotorDialog
+from nicos_ess.gui.panels.parameters_table import ParametersTable
 from nicos_ess.gui.panels.utils import (
     attach_status_resources,
     convert_limit_to_string,
@@ -47,7 +41,6 @@ from nicos_ess.gui.panels.utils import (
     setForegroundBrush,
 )
 from nicos_ess.gui.utils import get_icon
-from nicos_ess.gui.panels.parameters_table import ParametersTable
 
 # QTreeWidgetItem types
 SETUP_TYPE = QTreeWidgetItem.ItemType.UserType
@@ -865,7 +858,7 @@ class ControlDialog(QDialog):
             )
             classes = set(live_classes or ())
         self.devinfo.classes = classes
-        self.param_table.set_params(self.paramvalues, self.paraminfo, self.is_expert)
+        self.param_table.set_params(self.paramvalues, self.devinfo.params, self.is_expert)
 
         # set description label
         if params.get("description"):
