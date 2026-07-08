@@ -79,9 +79,4 @@ devices = dict(
         status="FileWriterStatus",
         nexus="NexusStructure",
     ),
-    SciChat=device(
-        "nicos_ess.devices.scichat.ScichatBot",
-        description="Sends messages to SciChat",
-        brokers=configdata("config.KAFKA_BROKERS"),
-    ),
 )
