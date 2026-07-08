@@ -116,7 +116,7 @@ class P4pWrapper:
         if as_string:
             # waveforms and arrays are already ndarrays
             if isinstance(value, np.ndarray):
-                return value.tostring().decode()
+                return value.tobytes().decode()
             else:
                 return str(value)
         return value
