@@ -842,7 +842,6 @@ class ControlDialog(QDialog):
         # properties we want
         params = self.client.getDeviceParams(self.devname)
         self.devinfo.params = self.client.getDeviceParamInfo(self.devname)
-        mainunit = params.get("unit", "main")
         self.paramvalues = dict(params)
         # Cache updates for "classes" may lag behind the dialog opening.
         # Use cache value if present, otherwise query the live device classes
