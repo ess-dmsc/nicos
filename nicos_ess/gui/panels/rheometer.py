@@ -149,14 +149,16 @@ class RheometerPanel(Panel):
         temp_layout.addWidget(self.temp_setpoint_le)
         layout.addLayout(temp_layout)
 
-        for group, label_text in [
+        grid = QGridLayout()
+        for i, (group, label_text) in enumerate([
             ("duration", "Duration function [s]"),
             ("stress", "Stress function [Pa]"),
             ("rate", "Rate function [1/s]"),
             ("strain", "Strain function [%]"),
             ("frequency", "Frequency function [rad/s]"),
-        ]:
-            layout.addLayout(self._build_function_group(group, label_text))
+        ]):
+            self._build_function_group(grid, i*2, group, label_text)
+        layout.addLayout(grid)
 
         layout.addStretch()
 
@@ -180,8 +182,7 @@ class RheometerPanel(Panel):
         frame.setLayout(layout)
         return frame
 
-    def _build_function_group(self, group, label_text):
-        grid = QGridLayout()
+    def _build_function_group(self, grid, row, group, label_text):
         combo = QComboBox()
         initial_le = QLineEdit()
         final_le = QLineEdit()
@@ -190,13 +191,12 @@ class RheometerPanel(Panel):
         setattr(self, f"{group}_initial_le", initial_le)
         setattr(self, f"{group}_final_le", final_le)
 
-        grid.addWidget(getattr(self, f"{group}_label"), 0, 0)
-        grid.addWidget(combo, 1, 0)
-        grid.addWidget(QLabel("Initial"), 0, 1)
-        grid.addWidget(initial_le, 1, 1)
-        grid.addWidget(QLabel("Final"), 0, 2)
-        grid.addWidget(final_le, 1, 2)
-        return grid
+        grid.addWidget(getattr(self, f"{group}_label"), row, 0)
+        grid.addWidget(combo, row + 1, 0)
+        grid.addWidget(QLabel("Initial"), row, 1)
+        grid.addWidget(initial_le, row + 1, 1)
+        grid.addWidget(QLabel("Final"), row, 2)
+        grid.addWidget(final_le, row + 1, 2)
 
     def build_display_layout(self):
         layout = QVBoxLayout()
