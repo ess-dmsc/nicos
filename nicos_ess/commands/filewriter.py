@@ -51,8 +51,7 @@ def nexusfile_open(run_title=None):
             #  Allow nested calls, but give a warning since it is not
             #  a preferred way of writing scripts
             session.log.warning(
-                "Filewriter already running. "
-                "Will not start a new file with title: %s",
+                "Filewriter already running. Will not start a new file with title: %s",
                 run_title,
             )
             nested_call = True
