@@ -857,7 +857,9 @@ class ControlDialog(QDialog):
             )
             classes = set(live_classes or ())
         self.devinfo.classes = classes
-        self.param_table.set_params(self.paramvalues, self.devinfo.params, self.is_expert)
+        self.param_table.set_params(
+            self.paramvalues, self.devinfo.params, self.is_expert
+        )
 
         # set description label
         if params.get("description"):
