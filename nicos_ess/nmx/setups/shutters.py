@@ -1,14 +1,37 @@
-description = "Instrument shutter"
+description = "NMX shutters"
 
+pv_root = "NMX-ExSht:MC-Pne-01:"
+
+# TODO: Mapped devices added just for redundance.
+# They will probably be removed after user tests.
 devices = dict(
-    fast_shutter=device(
-        "nicos.devices.generic.ManualSwitch",
-        description="Shutter just before the sample",
-        states=["Open", "Closed"],
+    experiment_shutter=device(
+        "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
+        description="Experiment Shutter",
+        writepv=f"{pv_root}ShtOpen",
+        readpv=f"{pv_root}ShtAuxBits07",
+        resetpv=f"{pv_root}ShtErrRst",
+        msgtxt=f"{pv_root}ShtMsgTxt",
     ),
-    heavy_shutter=device(
-        "nicos.devices.generic.ManualSwitch",
-        description="Main shutter",
-        states=["Open", "Closed"],
+    experiment_shutter__control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Experiment shutter control",
+        readpv=f"{pv_root}ShtOpen",
+        writepv=f"{pv_root}ShtOpen",
+        pva=True,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        visibility={},
+    ),
+    experiment_shutter__status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Experiment shutter status",
+        readpv=f"{pv_root}ShtAuxBits07",
+        pva=True,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        visibility={},
     ),
 )

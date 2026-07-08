@@ -32,10 +32,15 @@ devices = dict(
         readpv="ESTIA-SES:Ctrl-IM-100:LaserEnabled",
     ),
     mask_changer_macro=device(
-        "nicos_ess.devices.mapped_controller.MappedController",
-        description="Preset mappings for the mask changer",
-        controlled_device="mask_changer_rot",
-        mapping={"Middle": 176.5},
+        "nicos_ess.devices.mapped_controller.MultiTargetMapping",
+        description="Preset mappings for the mask changer"
+        "\ndevice order: horizontal, vertical, rotation",
+        controlled_devices=[
+            "horizontal_adjust",
+            "vertical_adjust",
+            "mask_changer_rot",
+        ],
+        mapping={"Position 0": (0, 0, 176.5)},
     ),
     # Temperature Readouts
     mask_changer_temp=device(

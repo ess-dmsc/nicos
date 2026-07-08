@@ -116,14 +116,19 @@ class DevInfo(AttrDict):
             fmted = str(self.target)
         return fmted + " " + self.unit
 
-    def fmtParam(self, param, value):
+    def fmtParam(self, param, value, unit=True):
         info = self.params.get(param)
         if info:
+            fmtstr = info["fmtstr"]
+            if fmtstr == "%r":
+                fmtstr = "%s"
             try:
-                fmtvalue = info["fmtstr"] % value
+                fmtvalue = fmtstr % value
             except Exception:
                 fmtvalue = str(value)
-            return fmtvalue + " " + (info["unit"] or "")
+            if not unit:
+                return fmtvalue
+            return f"{fmtvalue} {(info['unit'] or '').replace('main', self.unit)}"
         return str(value)
 
 
@@ -843,7 +848,8 @@ class ControlDialog(QDialog):
         # now get all cache keys pertaining to the device and set the
         # properties we want
         params = self.client.getDeviceParams(self.devname)
-        self.paraminfo = self.client.getDeviceParamInfo(self.devname)
+        self.devinfo.params = self.client.getDeviceParamInfo(self.devname)
+        mainunit = params.get("unit", "main")
         self.paramvalues = dict(params)
         # Cache updates for "classes" may lag behind the dialog opening.
         # Use cache value if present, otherwise query the live device classes
@@ -1138,7 +1144,6 @@ class ControlDialog(QDialog):
         dlg.limitMaxAbs.setText(
             convert_limit_to_string(abslimits[1], self.devinfo.fmtstr)
         )
-
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
         target.setClient(self.client)
 

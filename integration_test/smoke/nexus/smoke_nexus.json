@@ -1,0 +1,50 @@
+{
+  "children": [
+    {
+      "name": "entry",
+      "type": "group",
+      "attributes": [
+        {
+          "name": "NX_class",
+          "dtype": "string",
+          "values": "NXentry"
+        }
+      ],
+      "children": [
+        {
+          "name": "instrument",
+          "type": "group",
+          "attributes": [
+            {
+              "name": "NX_class",
+              "dtype": "string",
+              "values": "NXinstrument"
+            }
+          ],
+          "children": [
+            {
+              "module": "dataset",
+              "config": {
+                "name": "name",
+                "values": "SMOKE",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        {
+          "name": "sample",
+          "type": "group",
+          "attributes": [
+            {
+              "name": "NX_class",
+              "dtype": "string",
+              "values": "NXsample"
+            }
+          ],
+          "children": []
+        }
+      ]
+    }
+  ]
+}
