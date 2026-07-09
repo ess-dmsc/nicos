@@ -1,6 +1,6 @@
 description = "The Vinci high pressure syringe pump"
 
-pv_root = "SE-SEE:SE-VINP-001:"
+pv_root = "SE-PS:SE-VINCIP-001:"
 
 devices = dict(
     vinci_pressure=device(
@@ -19,6 +19,11 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Pump volume",
         readpv="{}Volume-R".format(pv_root),
+    ),
+    transductor_pressure=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Transductor pressure",
+        readpv="SE-PS:SE-PTRANS-001:Pressure-R",
     ),
     vinci_flowrate=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
