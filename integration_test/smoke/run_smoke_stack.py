@@ -49,7 +49,6 @@ SMOKE_TOPICS = [
     SMOKE_FILEWRITER_INSTRUMENT_TOPIC,
     SMOKE_FILEWRITER_STATUS_TOPIC,
     SMOKE_FILEWRITER_POOL_TOPIC,
-    "test_smoke_scichat",
     "test_smoke_nicos_devices",
 ]
 

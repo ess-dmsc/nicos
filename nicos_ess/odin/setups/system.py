@@ -40,11 +40,6 @@ devices = dict(
         config_topic="odin_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
-    SciChat=device(
-        "nicos_ess.devices.scichat.ScichatBot",
-        description="Sends messages to SciChat",
-        brokers=configdata("config.KAFKA_BROKERS"),
-    ),
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
