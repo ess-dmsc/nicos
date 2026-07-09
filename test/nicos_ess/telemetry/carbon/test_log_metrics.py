@@ -268,13 +268,21 @@ def test_build_carbon_log_handlers_uses_explicit_service_name(monkeypatch):
     handler.close()
 
 
-def test_package_get_log_handlers_hook_returns_handlers():
+# for next test, we need a fully initialized Session (for other Handlers
+# returned in the same hook call), but no setup needs to be loaded:
+session_setup = None
+
+
+def test_package_get_log_handlers_hook_returns_handlers(session):
     cfg = SimpleNamespace(
         telemetry_enabled=True,
         telemetry_carbon_host="127.0.0.1",
         instrument="bifrost",
     )
     handlers = nicos_ess.get_log_handlers(cfg)
-    assert len(handlers) == 1
-    assert isinstance(handlers[0], CarbonLogLevelCounterHandler)
-    handlers[0].close()
+    assert len(handlers) >= 1
+    # check that at least one is a carbon log handler:
+    res = map(lambda h: isinstance(h, CarbonLogLevelCounterHandler), handlers)
+    assert any(list(res))
+    for h in handlers:
+        h.close()
