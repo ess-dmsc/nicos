@@ -59,7 +59,7 @@ devices = dict(
         maxage=0,
     ),
     mini_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root),
         writepv="{}Park_S".format(pv_root),
