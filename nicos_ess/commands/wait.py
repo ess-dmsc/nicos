@@ -40,7 +40,7 @@ def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
 
         if curr_time > start_time + timeout:
             session.log.warning(
-                "stablilisation timed out - %s might not be " "stable", device
+                "stablilisation timed out - %s might not be stable", device
             )
             break
 
@@ -49,7 +49,7 @@ def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
                 in_range = True
                 start_in_range = curr_time
                 session.log.warning(
-                    "%s is within range, waiting %s seconds " "for it to stabilise",
+                    "%s is within range, waiting %s seconds for it to stabilise",
                     device,
                     time_stable,
                 )
@@ -63,6 +63,7 @@ def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
             break
 
         session.delay(dev._long_loop_delay)
+
 
 @usercommand
 @helparglist("chopper, frequency")
@@ -85,33 +86,32 @@ def maw_chopper(chopper, frequency):
        and the requested target speed.
     """
     chopper_name = chopper.name
-    speed_dev = session.devices[chopper_name + '_speed']
+    speed_dev = session.devices[chopper_name + "_speed"]
     cmd_dev = session.devices[chopper_name]
-    phased_flag_dev = session.devices[chopper_name + '_phased']
-    
-    speed_dev.move(frequency)
+    phased_flag_dev = session.devices[chopper_name + "_phased"]
 
+    speed_dev.move(frequency)
 
     # $(P)$(R)ChopState_R EPICS PV is a mbbi of chopper IOC compatible
     # with chopper firmware version 1.8 and it enums as follows:
-    #   
+    #
     #   0 = Comms not ok
     #   1 = Initialization
     #   2 = Ready
     #   3 = Rotating
     #   4 = Coasting
     #   5 = Stopping
-    #   6 = E. stopping 
+    #   6 = E. stopping
     #
     # Hence, 2 down there means Ready and it rotates the chopper ('Start')
     # if the command is called and the chopper is ready to run.
     if chopper.read() == 2:
-        cmd_dev.move('Start')
+        cmd_dev.move("Start")
 
-    # The in phase detection in EPICS caclulates the standard deviation
+    # The in phase detection in EPICS calculates the standard deviation
     # when a buffer of timestamps diff is filled in. This has some "inertia"
     # and right after commanding the chopper to move it still report in phase.
     # We need to wait for the next buffer std calculation and flush, and then
     # wait for it to be in phase again.
-    waitfor(phased_flag_dev.name, '!=\'In phase\'')
-    waitfor(phased_flag_dev.name, '==\'In phase\'')
+    waitfor(phased_flag_dev.name, "!='In phase'")
+    waitfor(phased_flag_dev.name, "=='In phase'")
