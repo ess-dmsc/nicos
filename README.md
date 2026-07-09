@@ -2,8 +2,15 @@
 
 ## Installation
 
-Prerequisites: Install `uv` ([see the uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
-)
+Prerequisites:
+
+- Install `uv` ([see the uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/))
+- Install necessary system packages:
+  - on RHEL-based systems: `dnf install pkgconf-pkg-config systemd-devel`
+  - on Debian-based systems: `apt install build-essential python3-dev libsystemd-dev pkg-config`
+- For the GUI, you will need some native libraries installed:
+  - on RHEL-based systems: `dnf install python3-qt5`
+  - on Debian-based systems: `apt install qtbase5-dev qtwebengine5-dev`
 
 Some useful uv commands:
 
@@ -32,10 +39,10 @@ After this, run:
     - nicos-daemon
     - nicos-demo
     ...
-    
+
     % uv run nicos-gui
-    
-to start any of the scripts directly. Note that you will have to prefix these commands when mentioned in the sections below with `uv run`. 
+
+to start any of the scripts directly. Note that you will have to prefix these commands when mentioned in the sections below with `uv run`.
 
 You can also install NICOS into the uv managed tools to have its commands available inside your `PATH`:
 
@@ -53,7 +60,7 @@ The resulting source tarball and wheel files will be located in the `dist` direc
 
 Place the NICOS configuration file (`nicos.conf`) for your choice of instrument into one of the following locations, searched in order:
 
-- in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf` on GNU/Linux, or 
+- in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf` on GNU/Linux, or
 - the `nicos` directory in your standard user configuration path, i.e. on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`.
 
 Both these paths can be modified by setting the `XDG_CONFIG_DIRS` or `XDG_CONFIG_HOME` environment variable, respectively, to point to a different location.

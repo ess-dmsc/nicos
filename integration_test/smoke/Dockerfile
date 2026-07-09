@@ -1,4 +1,4 @@
-ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.9.18
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.11.18
 # Keep smoke on a supported Python line; nicos_ess requires Python >= 3.12.
 ARG PYTHON_BASE_IMAGE=python:3.13-slim-bookworm
 
@@ -23,6 +23,7 @@ WORKDIR /workspace
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
+    build-essential pkg-config libsystemd-dev \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --shell /bin/bash nicos
 
