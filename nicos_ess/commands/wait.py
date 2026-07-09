@@ -2,7 +2,7 @@ import time
 
 from nicos import session
 from nicos.commands import helparglist, usercommand
-from nicos.commands.devices import waitfor
+from nicos.commands.device import waitfor
 from nicos.core import SIMULATION
 
 
@@ -85,8 +85,33 @@ def maw_chopper(chopper, frequency):
        and the requested target speed.
     """
     chopper_name = chopper.name
-    session.devices[chopper_name + '_speed'].move(frequency)
+    speed_dev = session.devices[chopper_name + '_speed']
+    cmd_dev = session.devices[chopper_name]
+    phased_flag_dev = session.devices[chopper_name + '_phased']
+    
+    speed_dev.move(frequency)
+
+
+    # $(P)$(R)ChopState_R EPICS PV is a mbbi of chopper IOC compatible
+    # with chopper firmware version 1.8 and it enums as follows:
+    #   
+    #   0 = Comms not ok
+    #   1 = Initialization
+    #   2 = Ready
+    #   3 = Rotating
+    #   4 = Coasting
+    #   5 = Stopping
+    #   6 = E. stopping 
+    #
+    # Hence, 2 down there means Ready and it rotates the chopper ('Start')
+    # if the command is called and the chopper is ready to run.
     if chopper.read() == 2:
-        session.devices[chopper_name + '_speed'].move('Start')
-    waitfor(chopper_name + '_speed', '!=\'In phase\'')
-    waitfor(chopper_name + '_speed', '==\'In phase\'')
+        cmd_dev.move('Start')
+
+    # The in phase detection in EPICS caclulates the standard deviation
+    # when a buffer of timestamps diff is filled in. This has some "inertia"
+    # and right after commanding the chopper to move it still report in phase.
+    # We need to wait for the next buffer std calculation and flush, and then
+    # wait for it to be in phase again.
+    waitfor(phased_flag_dev.name, '!=\'In phase\'')
+    waitfor(phased_flag_dev.name, '==\'In phase\'')
