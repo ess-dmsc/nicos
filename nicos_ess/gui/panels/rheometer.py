@@ -56,7 +56,7 @@ _COMBO_CONFIG_KEYS = {
 
 _READBACK_LABELS = [
     ("meas_state", "State"),
-    ("meas_numb", "Measurement #"),
+    ("meas_num", "Measurement #"),
     ("meas_interval", "Interval"),
     ("meas_pt_elapsed_time", "Point elapsed [s]"),
     ("meas_syst", "Measuring system"),
@@ -150,14 +150,16 @@ class RheometerPanel(Panel):
         layout.addLayout(temp_layout)
 
         grid = QGridLayout()
-        for i, (group, label_text) in enumerate([
-            ("duration", "Duration function [s]"),
-            ("stress", "Stress function [Pa]"),
-            ("rate", "Rate function [1/s]"),
-            ("strain", "Strain function [%]"),
-            ("frequency", "Frequency function [rad/s]"),
-        ]):
-            self._build_function_group(grid, i*2, group, label_text)
+        for i, (group, label_text) in enumerate(
+            [
+                ("duration", "Duration function [s]"),
+                ("stress", "Stress function [Pa]"),
+                ("rate", "Rate function [1/s]"),
+                ("strain", "Strain function [%]"),
+                ("frequency", "Frequency function [rad/s]"),
+            ]
+        ):
+            self._build_function_group(grid, i * 2, group, label_text)
         layout.addLayout(grid)
 
         layout.addStretch()
@@ -167,7 +169,7 @@ class RheometerPanel(Panel):
         self.send_intervals_button = QPushButton("Load intervals")
         self.start_button = QPushButton("Start")
         self.stop_button = QPushButton("Stop")
-        self.init_button = QPushButton("Init device")
+        self.init_button = QPushButton("Initialise device")
         for button in (
             self.add_interval_button,
             self.clear_intervals_button,
@@ -255,7 +257,7 @@ class RheometerPanel(Panel):
         self.num_points_le.editingFinished.connect(
             lambda: self._write_config("num_meas_pts", self.num_points_le.text())
         )
-        self.temp_setpoint_le.editingFinished.connect(
+        self.temp_setpoint_le.returnPressed.connect(
             lambda: self._write_config("temp_setpoint", self.temp_setpoint_le.text())
         )
 

@@ -68,7 +68,7 @@ _COMMAND_FIELDS = {
 _READBACK_FIELDS = {
     "interv_raw_table": "#IntervRawTable",
     "meas_syst": "MeasSyst",
-    "meas_numb": "MeasNumb-R",
+    "meas_num": "MeasNumb-R",
     "meas_interval": "MeasInterval-R",
     "meas_state": "MeasState",
     "meas_finished": "MeasFinished",
@@ -110,7 +110,7 @@ class RheometerControl(EpicsParameters, Measurable):
         "temp_setpoint": Param(
             "Temperature setpoint", type=float, settable=True, volatile=True
         ),
-        "meas_numb": Param(
+        "meas_num": Param(
             "Measurement point number", type=float, settable=False, volatile=True
         ),
         "meas_interval": Param(
@@ -165,7 +165,7 @@ class RheometerControl(EpicsParameters, Measurable):
     def doInit(self, mode):
         if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             for key, info in self._record_fields.items():
-                if key in _COMMAND_FIELDS:  # write-only, nothing to monitor
+                if key in _COMMAND_FIELDS:
                     continue
                 self._epics_subscriptions.append(
                     self._epics_wrapper.subscribe(
@@ -243,10 +243,10 @@ class RheometerControl(EpicsParameters, Measurable):
         self._put_pv("clear_err", 1)
 
     def valueInfo(self):
-        return (Value(f"{self.name}.meas_numb", unit=""),)
+        return (Value(f"{self.name}.meas_num", unit=""),)
 
     def doRead(self, maxage=0):
-        return self._get_cached_pv_or_ask("meas_numb")
+        return self._get_cached_pv_or_ask("meas_num")
 
     def _is_measuring(self):
         if self.monitor:
@@ -271,11 +271,11 @@ class RheometerControl(EpicsParameters, Measurable):
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        if isinstance(value, numpy.ndarray):  # char waveform -> string
+        if isinstance(value, numpy.ndarray):
             value = "".join(chr(int(x)) for x in value)
         ts = time.time()
         self._cache.put(self._name, param, value, ts)
-        if param == "meas_numb":
+        if param == "meas_num":
             self._cache.put(self._name, "value", value, ts)
         self._cache.put(self._name, "status", self._do_status(), ts)
 
@@ -299,8 +299,8 @@ class RheometerControl(EpicsParameters, Measurable):
     def doWriteTemp_Setpoint(self, value):
         self._put_pv("temp_setpoint", value)
 
-    def doReadMeas_Numb(self):
-        return self._get_cached_pv_or_ask("meas_numb")
+    def doReadMeas_Num(self):
+        return self._get_cached_pv_or_ask("meas_num")
 
     def doReadMeas_Interval(self):
         return self._get_cached_pv_or_ask("meas_interval")
