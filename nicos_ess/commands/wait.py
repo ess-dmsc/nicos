@@ -2,6 +2,7 @@ import time
 
 from nicos import session
 from nicos.commands import helparglist, usercommand
+from nicos.commands.devices import waitfor
 from nicos.core import SIMULATION
 
 
@@ -87,5 +88,5 @@ def maw_chopper(chopper, frequency):
     session.devices[chopper_name + '_speed'].move(frequency)
     if chopper.read() == 2:
         session.devices[chopper_name + '_speed'].move('Start')
-    session.devices[chopper_name + '_speed'].waitfor('!=\'In phase\'')
-    session.devices[chopper_name + '_speed'].waitfor('==\'In phase\'')
+    waitfor(chopper_name + '_speed', '!=\'In phase\'')
+    waitfor(chopper_name + '_speed', '==\'In phase\'')
