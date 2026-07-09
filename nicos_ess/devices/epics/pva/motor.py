@@ -9,6 +9,7 @@ from nicos.core import (
     Moveable,
     Override,
     Param,
+    Readable,
     limits,
     oneof,
     pvname,
@@ -54,7 +55,6 @@ class EpicsMotor(
     valuetype = float
     limit_rel_tolerance = 1e-12
     errorstates = {**Motor.errorstates, status.UNKNOWN: MoveError}
-    _startup_moveable_limits_pending = False
 
     parameters = {
         "motorpv": Param(
@@ -168,6 +168,11 @@ class EpicsMotor(
         "precision": Override(mandatory=False, settable=False, volatile=True),
     }
 
+    def init(self):
+        # Do not call Moveable init as it does some limit checks
+        # which we don't want because the NICOS offset is opposite of the EPICS one.
+        Readable.init(self)
+
     def doPreinit(self, mode):
         self._lock = threading.Lock()
         self._epics_subscriptions = []
@@ -247,9 +252,6 @@ class EpicsMotor(
                             self._connection_change_callback,
                         )
                     )
-        self._startup_moveable_limits_pending = (
-            self._uses_moveable_startup_limit_compat()
-        )
 
     def doRead(self, maxage=0):
         return self._get_cached_pv_or_ask("value")
@@ -306,19 +308,6 @@ class EpicsMotor(
         return hw_user_min, hw_user_max
 
     def doReadUserlimits(self):
-        # Moveable.init() compares userlimits against (abslimits - offset) using
-        # the NICOS HasOffset convention. EPICS uses the opposite sign
-        # convention, so expose the same boundary-form limits once during init
-        # and switch back to the regular EPICS user coordinates afterwards.
-        if self._startup_moveable_limits_pending:
-            # Validate that EPICS record limits are internally consistent even
-            # when we return the NICOS-compatible startup boundary values.
-            self.hwuserlimits
-            self._startup_moveable_limits_pending = False
-            dial_min, dial_max = self.abslimits
-            offset = self.offset
-            return dial_min - offset, dial_max - offset
-
         hw_umin, hw_umax = self.hwuserlimits
         omin, omax = self.limitoffsets
 
@@ -774,13 +763,6 @@ class EpicsMotor(
             return status.OK, ""
 
         return HasLimits._check_in_range(self, curval, userlimits)
-
-    def _uses_moveable_startup_limit_compat(self):
-        return (
-            "userlimits" not in self._config
-            and "limitoffsets" not in self._config
-            and self.limitoffsets in ((0.0, 0.0), (0, 0))
-        )
 
 
 class EpicsJogMotor(EpicsMotor):
