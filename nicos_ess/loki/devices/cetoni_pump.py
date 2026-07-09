@@ -52,7 +52,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             volatile=True,
         ),
         "first_fill_syringe": Param(
-            description="The direction of flow will fill this syringe first, options=[SP1, SP2]",
+            description="First syringe to fill, options=[SP1, SP2]",
             volatile=True,
             settable=True,
             type=str,
