@@ -197,41 +197,6 @@ class TestEpicsMotorLimits:
             assert daemon_device.limitoffsets == pytest.approx((0.0, 0.0))
 
     @pytest.mark.parametrize(
-        "startup_moveable_limits_pending, expected_userlimits",
-        [
-            pytest.param(True, (-110.0, 140.0), id="startup_boundary_path"),
-            pytest.param(False, (-90.0, 160.0), id="normal_userlimits_path"),
-        ],
-    )
-    def test_motor_readuserlimits_startup_and_normal_paths(
-        self,
-        device_harness,
-        fake_backend,
-        startup_moveable_limits_pending,
-        expected_userlimits,
-    ):
-        seed_limits(
-            fake_backend,
-            direction="Pos",
-            offset=10.0,
-            abs_dial_limits=ASYMM_DIAL_LIMITS,
-        )
-        daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
-        device_harness.run_daemon(
-            lambda: setattr(
-                daemon_device,
-                "_startup_moveable_limits_pending",
-                startup_moveable_limits_pending,
-            )
-        )
-
-        assert (
-            device_harness.run_daemon(daemon_device.doReadUserlimits)
-            == expected_userlimits
-        )
-        assert daemon_device._startup_moveable_limits_pending is False
-
-    @pytest.mark.parametrize(
         "pv_updates,error_match",
         [
             pytest.param(
@@ -239,6 +204,20 @@ class TestEpicsMotorLimits:
                 "invalid value for parameter abslimits",
                 id="dial_limits_inverted",
             ),
+        ],
+    )
+    def test_motor_creation_fails_for_invalid_epics_configuration(
+        self, device_harness, fake_backend, pv_updates, error_match
+    ):
+        for suffix, value in pv_updates.items():
+            fake_backend.values[pv(suffix)] = value
+
+        with pytest.raises(ConfigurationError, match=error_match):
+            create_motor_pair(device_harness, monitor=False)
+
+    @pytest.mark.parametrize(
+        "pv_updates,error_match",
+        [
             pytest.param(
                 {".LLM": 10.0, ".HLM": -10.0},
                 "hardware user lowlimit",
@@ -257,8 +236,9 @@ class TestEpicsMotorLimits:
         for suffix, value in pv_updates.items():
             fake_backend.values[pv(suffix)] = value
 
+        daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
         with pytest.raises(ConfigurationError, match=error_match):
-            create_motor_pair(device_harness, monitor=False)
+            daemon_device.userlimits
 
     def test_motor_limits_read_accepts_hardware_limits_within_relative_tolerance(
         self, device_harness, fake_backend
@@ -293,8 +273,9 @@ class TestEpicsMotorLimits:
         fake_backend.values[pv(".LLM")] = dial_min - tol_min * 2.0
         fake_backend.values[pv(".HLM")] = dial_max
 
+        daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
         with pytest.raises(ConfigurationError, match="hardware userlimits"):
-            create_motor_pair(device_harness, monitor=False)
+            daemon_device.userlimits
 
     def test_motor_write_userlimits_accepts_boundaries_within_relative_tolerance(
         self, device_harness, fake_backend
