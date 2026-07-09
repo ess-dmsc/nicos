@@ -166,9 +166,6 @@ class P4pWrapper:
         try:
             default_low = result["display"]["limitLow"]
             default_high = result["display"]["limitHigh"]
-            if default_low == 0 and default_high == 0:
-                default_low = result["control"]["limitLow"]
-                default_high = result["control"]["limitHigh"]
         except KeyError:
             pass
         return default_low, default_high
