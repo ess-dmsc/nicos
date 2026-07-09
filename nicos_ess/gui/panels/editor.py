@@ -955,9 +955,9 @@ class EditorPanel(Panel):
         if not editor.isModified():
             return True
         if self.filenames[editor]:
-            message = "Save changes in %s before continuing?" % self.filenames[editor]
+            message = "Save changes in %s before exiting NICOS?" % self.filenames[editor]
         else:
-            message = "Save new file before continuing?"
+            message = "Save newly created script file before exiting NICOS?"
         buttons = (
             QMessageBox.StandardButton.Save
             | QMessageBox.StandardButton.Discard
