@@ -17,7 +17,7 @@ from logging import (
 import sys
 import time
 import traceback
-from typing_extensions import override
+from typing import override
 
 from nicos.utils.loggers import ACTION, StreamHandler
 
