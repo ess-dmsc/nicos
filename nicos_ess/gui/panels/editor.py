@@ -969,7 +969,7 @@ class EditorPanel(Panel):
                 | QMessageBox.StandardButton.No
                 | QMessageBox.StandardButton.Cancel
             )
-        rc = QMessageBox.question(self, "User Editor", message, buttons)
+        rc = QMessageBox.question(self, "Script Editor", message, buttons)
         if rc in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Yes):
             return self.saveFile(editor)
         if rc in (QMessageBox.StandardButton.Discard, QMessageBox.StandardButton.No):
