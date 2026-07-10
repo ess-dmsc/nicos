@@ -77,7 +77,7 @@ devices = dict(
     t0_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(pv_root_t0_chopper),
+        readpv="{}InPhaseTS-R".format(pv_root_t0_chopper),
     ),
     t0_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -200,7 +200,7 @@ devices = dict(
     band_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(pv_root_band_chopper),
+        readpv="{}InPhaseTS-R".format(pv_root_band_chopper),
     ),
     band_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -267,7 +267,7 @@ devices = dict(
         writepv="{}Spd_S".format(pv_root_overlap_chopper),
         precision=0.1,
         mapping={
-            "-14 Hz": -14, 
+            "-14 Hz": -14,
             "0 Hz": 0,
             "14 Hz": 14,
         },
@@ -309,7 +309,7 @@ devices = dict(
     overlap_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(pv_root_overlap_chopper),
+        readpv="{}InPhaseTS-R".format(pv_root_overlap_chopper),
     ),
     overlap_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -438,7 +438,7 @@ devices = dict(
     pulse_shaping_chopper_1_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(pv_root_pulse_shaping_chopper_1),
+        readpv="{}InPhaseTS-R".format(pv_root_pulse_shaping_chopper_1),
     ),
     pulse_shaping_chopper_1_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -576,7 +576,7 @@ devices = dict(
     pulse_shaping_chopper_2_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(pv_root_pulse_shaping_chopper_2),
+        readpv="{}InPhaseTS-R".format(pv_root_pulse_shaping_chopper_2),
     ),
     pulse_shaping_chopper_2_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
