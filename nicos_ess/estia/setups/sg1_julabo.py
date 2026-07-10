@@ -98,4 +98,10 @@ devices = dict(
         readpv=f"{pv_root}Version-R",
         visibility=(),
     ),
+    julabo_1_pump_pressure=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The pump pressure controller",
+        readpv=f"{pv_root}PumpPressure-R",
+        writepv=f"{pv_root}PumpPressure-S",
+    ),
 )
