@@ -55,7 +55,7 @@ devices = dict(
     bwc1_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(pv_root_1),
+        readpv="{}InPhaseTS-R".format(pv_root_1),
     ),
     bwc1_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
@@ -157,7 +157,7 @@ devices = dict(
     bwc2_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhs_R".format(pv_root_2),
+        readpv="{}InPhaseTS-R".format(pv_root_2),
     ),
     bwc2_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
