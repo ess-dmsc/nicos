@@ -114,17 +114,17 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             "start": RecordInfo(
                 cache_key="start",
                 pv_suffix="Start-Cmd",
-                record_type=RecordType.OTHER,
+                record_type=RecordType.COMMAND,
             ),
             "stop": RecordInfo(
                 cache_key="stop",
                 pv_suffix="StopAllPumps-Cmd",
-                record_type=RecordType.OTHER,
+                record_type=RecordType.COMMAND,
             ),
             "enable": RecordInfo(
                 cache_key="enable",
                 pv_suffix="Enable-Cmd",
-                record_type=RecordType.OTHER,
+                record_type=RecordType.COMMAND,
             ),
             "is_disabled": RecordInfo(
                 cache_key="is_disabled",
@@ -469,7 +469,7 @@ class CetoniPumpController(
             "home": RecordInfo(
                 cache_key="home",
                 pv_suffix="InitPosition-Cmd",
-                record_type=RecordType.OTHER,
+                record_type=RecordType.COMMAND,
             ),
             "innerdiameter": RecordInfo(
                 cache_key="innerdiameter",
@@ -499,22 +499,22 @@ class CetoniPumpController(
             "stop": RecordInfo(
                 cache_key="stop",
                 pv_suffix="Stop-Cmd",
-                record_type=RecordType.OTHER,
+                record_type=RecordType.COMMAND,
             ),
             "fill_syringe": RecordInfo(
                 cache_key="fill_syringe",
                 pv_suffix="FillSyringe-Cmd",
-                record_type=RecordType.OTHER,
+                record_type=RecordType.COMMAND,
             ),
             "empty_syringe": RecordInfo(
                 cache_key="empty_syringe",
                 pv_suffix="EmptySyringe-Cmd",
-                record_type=RecordType.OTHER,
+                record_type=RecordType.COMMAND,
             ),
             "generate_flow": RecordInfo(
                 cache_key="generate_flow",
                 pv_suffix="GenerateFlow-Cmd",
-                record_type=RecordType.OTHER,
+                record_type=RecordType.COMMAND,
             ),
             "is_pumping": RecordInfo(
                 cache_key="is_pumping",
@@ -534,7 +534,7 @@ class CetoniPumpController(
             "reset_fault": RecordInfo(
                 cache_key="reset_fault",
                 pv_suffix="ResetFault-Cmd",
-                record_type=RecordType.OTHER,
+                record_type=RecordType.COMMAND,
             ),
         }
 
