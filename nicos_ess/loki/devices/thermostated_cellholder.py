@@ -13,8 +13,10 @@ from nicos.core import (
     listof,
     oneof,
     tupleof,
+    status,
+    multiStatus,
 )
-from nicos.devices.abstract import MappedMoveable
+from nicos.devices.abstract import MappedMoveable, MappedReadable
 from nicos.devices.generic import MultiSwitcher
 from nicos.utils import num_sort
 from nicos_ess.devices.mixins import HasNexusConfig
@@ -91,6 +93,48 @@ class ThermoStatedCellHolder(HasNexusConfig, MultiSwitcher):
         if session.sessiontype != POLLER:
             self._generate_mapping(self.cartridges)
         self._attached_moveables = [self._attached_xmotor, self._attached_ymotor]
+
+    def _mapReadValue(self, value):
+        """maps a tuple to one of the configured values"""
+        hasprec = bool(self.precision)
+        if hasprec:
+            precisions = self.precision
+            if len(precisions) == 1:
+                precisions = [precisions[0]] * len(self.devices)
+        for name, values in self.mapping.items():
+            if hasprec:
+                for p, v, prec in zip(value, values, precisions):
+                    if prec:
+                        if abs(p - v) > prec:
+                            break
+                    elif p != v:
+                        break
+                else:  # if there was no break we end here...
+                    return name
+            else:
+                if tuple(value) == tuple(values):
+                    return name
+        if self.fallback is not None:
+            return self.fallback
+        return "unknown"
+
+    def doStatus(self, maxage=0):
+        # if the underlying devices are moving or in error state,
+        # reflect their status
+        move_status = multiStatus(self.devices, maxage)
+        if move_status[0] not in (status.OK, status.WARN):
+            return move_status
+
+        value = self._readRaw(maxage)
+        if self._mapReadValue(value) == "unknown":
+            message = (
+                f"no sample defined at positions "
+                f"{', '.join(str(d) for d in self.devices)}: "
+                f"{', '.join(d.format(p) for (p, d) in zip(value, self.devices))}"
+            )
+            return status.WARN, message
+
+        return MappedReadable.doStatus(self, maxage)
 
     def doReadXlimits(self):
         return self._attached_xmotor.userlimits
