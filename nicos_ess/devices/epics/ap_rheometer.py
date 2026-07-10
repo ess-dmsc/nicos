@@ -1,10 +1,6 @@
 import time
 
-import numpy
-
-from nicos import session
 from nicos.core import (
-    POLLER,
     SIMULATION,
     Measurable,
     Param,
@@ -14,12 +10,12 @@ from nicos.core import (
     status,
     usermethod,
 )
-from nicos_ess.devices.epics.pva.epics_devices import (
-    EpicsParameters,
-    RecordInfo,
-    RecordType,
-    create_wrapper,
-    get_from_cache_or,
+from nicos_ess.devices.epics.pva.epics_common import (
+    EpicsDeviceBase,
+    command_channel,
+    readback_channel,
+    setpoint_channel,
+    status_channel,
 )
 
 _CONFIG_FIELDS = {
@@ -95,8 +91,34 @@ _READBACK_FIELDS = {
     "err_msg": "ErrMsg",
 }
 
+# Readbacks delivered as text (char waveforms / string records).
+_STRING_CHANNELS = {"interv_raw_table", "meas_syst", "manufacturer", "device_model"}
 
-class RheometerControl(EpicsParameters, Measurable):
+
+def _rheometer_channel_table():
+    channels = {}
+    for key, suffix in _CONFIG_FIELDS.items():
+        channels[key] = setpoint_channel(suffix, "")
+    for key, suffix in _ENABLE_FIELDS.items():
+        channels[key] = readback_channel(suffix)
+    for key, suffix in _COMMAND_FIELDS.items():
+        channels[key] = command_channel(suffix)
+    for key, suffix in _READBACK_FIELDS.items():
+        channels[key] = readback_channel(suffix, as_string=key in _STRING_CHANNELS)
+    channels["meas_num"] = readback_channel(_READBACK_FIELDS["meas_num"], primary=True)
+    # meas_state and err_msg drive the NICOS status, so recompute it on every
+    # update; both deliver text.
+    channels["meas_state"] = status_channel(
+        _READBACK_FIELDS["meas_state"], as_string=True
+    )
+    channels["err_msg"] = status_channel(_READBACK_FIELDS["err_msg"], as_string=True)
+    channels["device_connected"] = readback_channel(
+        _READBACK_FIELDS["device_connected"], affects_status=True
+    )
+    return channels
+
+
+class RheometerControl(EpicsDeviceBase, Measurable):
     """Anton-Paar MCR 702e rheometer device."""
 
     parameters = {
@@ -148,78 +170,41 @@ class RheometerControl(EpicsParameters, Measurable):
         ),
     }
 
-    def doPreinit(self, mode):
-        self._record_fields = {
-            key: RecordInfo(key, suffix, RecordType.VALUE)
-            for fields in (
-                _CONFIG_FIELDS,
-                _ENABLE_FIELDS,
-                _COMMAND_FIELDS,
-                _READBACK_FIELDS,
-            )
-            for key, suffix in fields.items()
-        }
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            for key, info in self._record_fields.items():
-                if key in _COMMAND_FIELDS:
-                    continue
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        self._pv(key),
-                        info.cache_key,
-                        self._value_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
-
-    def _pv(self, key):
-        return f"{self.pv_root}{self._record_fields[key].pv_suffix}"
-
-    def _get_pv(self, key, as_string=False):
-        return self._epics_wrapper.get_pv_value(self._pv(key), as_string)
-
-    def _get_cached_pv_or_ask(self, key, as_string=False):
-        return get_from_cache_or(
-            self,
-            self._record_fields[key].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self._pv(key), as_string),
-        )
-
-    def _put_pv(self, key, value):
-        self._epics_wrapper.put_pv_value(self._pv(key), value)
+    _primary_channel = "meas_num"
+    _default_pv_prefix_attr = "pv_root"
+    # All channels live on the one rheometer IOC, so probing a single PV at
+    # startup is enough to see that it is there.
+    _connect_channels = ("device_connected",)
+    _epics_channels = _rheometer_channel_table()
 
     def get_choices(self, key):
         """Enum choices for a combo PV, so the panel needn't hardcode lists."""
-        return self._epics_wrapper.get_value_choices(self._pv(key)) or []
+        return self._epics.get_channel_value_choices(key) or []
 
     @usermethod
     def set_pv(self, key, value):
         """Single trusted write entry point, restricted to known config PVs."""
         if key not in _CONFIG_FIELDS:
             raise UsageError(self, f"{key!r} is not a writable configuration PV")
-        self._put_pv(key, value)
+        self._epics.put_channel_value(key, value)
 
     @usermethod
     def add_interval(self):
-        self._put_pv("add_interval", 1)
+        self._epics.put_channel_value("add_interval", 1)
 
     @usermethod
     def clear_intervals(self):
-        self._put_pv("clear_intervals", 1)
+        self._epics.put_channel_value("clear_intervals", 1)
 
     @usermethod
     def send_intervals(self):
-        self._put_pv("send_intervals", 1)
+        self._epics.put_channel_value("send_intervals", 1)
 
     def doStart(self):
-        self._put_pv("start", 1)
+        self._epics.put_channel_value("start", 1)
 
     def doStop(self):
-        self._put_pv("stop", 1)
+        self._epics.put_channel_value("stop", 1)
 
     def doFinish(self):
         pass
@@ -232,123 +217,97 @@ class RheometerControl(EpicsParameters, Measurable):
 
     @usermethod
     def init_device(self):
-        self._put_pv("init_device", 1)
+        self._epics.put_channel_value("init_device", 1)
 
     @usermethod
     def load_meas_syst(self):
-        self._put_pv("load_meas_syst", 1)
+        self._epics.put_channel_value("load_meas_syst", 1)
 
     @usermethod
     def clear_err(self):
-        self._put_pv("clear_err", 1)
+        self._epics.put_channel_value("clear_err", 1)
 
     def valueInfo(self):
         return (Value(f"{self.name}.meas_num", unit=""),)
 
-    def doRead(self, maxage=0):
-        return self._get_cached_pv_or_ask("meas_num")
+    def _on_channel_update(self, update):
+        super()._on_channel_update(update)
+        if update.channel == "meas_num":
+            # The measurement point number doubles as the device value.
+            self._cache.put(self._name, "value", update.value, time.time())
 
-    def _is_measuring(self):
-        if self.monitor:
-            state = self._cache.get(self._name, "meas_state")
-        else:
-            state = self._get_pv("meas_state", as_string=True)
+    def _is_measuring(self, maxage=None):
+        state = self._read_channel_cached("meas_state", maxage=maxage)
         return str(state).strip().lower() in ("1", "running")
 
-    def _do_status(self):
+    def _compute_status(self, maxage=0):
         if self._mode == SIMULATION:
             return status.OK, ""
-        err = self._cache.get(self._name, "err_msg") if self.monitor else None
+        err = self._read_channel_cached("err_msg", maxage=maxage)
         if err:
             return status.WARN, str(err)
-        if self._is_measuring():
+        if self._is_measuring(maxage):
             return status.BUSY, "measuring"
         return status.OK, ""
 
-    def doStatus(self, maxage=0):
-        return self._do_status()
-
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if isinstance(value, numpy.ndarray):
-            value = "".join(chr(int(x)) for x in value)
-        ts = time.time()
-        self._cache.put(self._name, param, value, ts)
-        if param == "meas_num":
-            self._cache.put(self._name, "value", value, ts)
-        self._cache.put(self._name, "status", self._do_status(), ts)
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if param != self._record_fields["device_connected"].cache_key:
-            return
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
-
+    # Volatile parameters always ask the IOC directly; the monitor-fed cache
+    # is only used on the value/status paths above, which honour maxage.
     def doReadTemp_Setpoint(self):
-        return self._get_cached_pv_or_ask("temp_setpoint")
+        return self._epics.get_channel_value("temp_setpoint")
 
     def doWriteTemp_Setpoint(self, value):
-        self._put_pv("temp_setpoint", value)
+        self._epics.put_channel_value("temp_setpoint", value)
 
     def doReadMeas_Num(self):
-        return self._get_cached_pv_or_ask("meas_num")
+        return self._epics.get_channel_value("meas_num")
 
     def doReadMeas_Interval(self):
-        return self._get_cached_pv_or_ask("meas_interval")
+        return self._epics.get_channel_value("meas_interval")
 
     def doReadDevice_Temp(self):
-        return self._get_cached_pv_or_ask("device_temp")
+        return self._epics.get_channel_value("device_temp")
 
     def doReadTemp_Mon(self):
-        return self._get_cached_pv_or_ask("temp_mon")
+        return self._epics.get_channel_value("temp_mon")
 
     def doReadGap(self):
-        return self._get_cached_pv_or_ask("gap")
+        return self._epics.get_channel_value("gap")
 
     def doReadTorque(self):
-        return self._get_cached_pv_or_ask("torque")
+        return self._epics.get_channel_value("torque")
 
     def doReadForce(self):
-        return self._get_cached_pv_or_ask("force")
+        return self._epics.get_channel_value("force")
 
     def doReadRot_Speed(self):
-        return self._get_cached_pv_or_ask("rot_speed")
+        return self._epics.get_channel_value("rot_speed")
 
     def doReadPhase_Ang(self):
-        return self._get_cached_pv_or_ask("phase_ang")
+        return self._epics.get_channel_value("phase_ang")
 
     def doReadStrain(self):
-        return self._get_cached_pv_or_ask("strain")
+        return self._epics.get_channel_value("strain")
 
     def doReadFreq(self):
-        return self._get_cached_pv_or_ask("freq")
+        return self._epics.get_channel_value("freq")
 
     def doReadShear_Stress(self):
-        return self._get_cached_pv_or_ask("shear_stress")
+        return self._epics.get_channel_value("shear_stress")
 
     def doReadShear_Rate(self):
-        return self._get_cached_pv_or_ask("shear_rate")
+        return self._epics.get_channel_value("shear_rate")
 
     def doReadShear_Strain(self):
-        return self._get_cached_pv_or_ask("shear_strain")
+        return self._epics.get_channel_value("shear_strain")
 
     def doReadViscosity(self):
-        return self._get_cached_pv_or_ask("viscosity")
+        return self._epics.get_channel_value("viscosity")
 
     def doReadTot_Modulus(self):
-        return self._get_cached_pv_or_ask("tot_modulus")
+        return self._epics.get_channel_value("tot_modulus")
 
     def doReadLoss_Modulus(self):
-        return self._get_cached_pv_or_ask("loss_modulus")
+        return self._epics.get_channel_value("loss_modulus")
 
     def doReadStorage_Modulus(self):
-        return self._get_cached_pv_or_ask("storage_modulus")
+        return self._epics.get_channel_value("storage_modulus")
