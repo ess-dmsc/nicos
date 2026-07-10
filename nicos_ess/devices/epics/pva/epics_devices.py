@@ -118,9 +118,7 @@ class EpicsStringReadable(EpicsReadable):
 
 
 class EpicsAnalogMoveable(EpicsReadWriteBase, HasPrecision, HasLimits, Moveable):
-    """
-    Handles EPICS devices which can set and read a floating value.
-    """
+    """Handles EPICS devices which can set and read a floating value."""
 
     valuetype = float
 
@@ -188,7 +186,7 @@ class EpicsAnalogMoveable(EpicsReadWriteBase, HasPrecision, HasLimits, Moveable)
         self._startRaw(value)
 
 
-class EpicsDigitalMoveable(EpicsAnalogMoveable):
+class EpicsDigitalMoveable(EpicsReadWriteBase, HasLimits, Moveable):
     """
     Handles EPICS devices which can set and read an integer value.
     """
@@ -196,9 +194,32 @@ class EpicsDigitalMoveable(EpicsAnalogMoveable):
     valuetype = int
 
     parameter_overrides = {
+        "abslimits": Override(mandatory=False, volatile=True),
+        "unit": Override(mandatory=False, settable=False, volatile=True),
         "fmtstr": Override(default="%d", settable=False),
-        "use_prec": Override(default=False),
     }
+
+    _epics_channels = make_rw_channels(
+        write_refresh_status=True, write_limits_cache_key="abslimits"
+    )
+
+    errorstates = {**Moveable.errorstates, status.UNKNOWN: MoveError}
+
+    def _compute_status(self, maxage=0):
+        candidates = []
+        try:
+            target = self.target
+            if not self.isAtTarget(self.doRead(maxage), target):
+                candidates.append((status.BUSY, f"moving to {target}"))
+        except (TimeoutError, CommunicationError):
+            return LOST_CONNECTION_STATUS
+        return worst_status(self._read_primary_alarm(maxage=maxage), *candidates)
+
+    def doReadTarget(self):
+        return self._cached_raw_target()
+
+    def doStart(self, value):
+        self._startRaw(value)
 
 
 class EpicsStringMoveable(EpicsReadWriteBase, Moveable):
