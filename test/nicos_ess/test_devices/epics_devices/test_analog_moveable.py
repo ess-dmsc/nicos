@@ -300,6 +300,27 @@ def test_analog_moveable_stays_busy_while_targetpv_lags_started_target(
     assert device_harness.run("daemon", daemon_device.isCompleted) is False
 
 
+def test_analog_moveable_detects_external_targetpv_move_before_first_start(
+    device_harness, fake_backend
+):
+    """A targetpv move must be BUSY even before NICOS has issued start()."""
+    config = analog_moveable_config()
+    config.update(targetpv="SIM:M1.TARGET", monitor=False)
+    fake_backend.values[config["readpv"]] = 28.0
+    fake_backend.values[config["writepv"]] = 28.0
+    fake_backend.values[config["targetpv"]] = 14.0
+    fake_backend.alarms[config["readpv"]] = (status.OK, "ok")
+
+    daemon_device = device_harness.create(
+        "daemon",
+        EpicsAnalogMoveable,
+        name="analog_moveable",
+        **config,
+    )
+
+    assert device_harness.run("daemon", daemon_device.status, 0)[0] == status.BUSY
+
+
 @pytest.mark.parametrize(
     "device_class,initial_value,target_value,device_name",
     _MOVEABLE_PARAMS,
