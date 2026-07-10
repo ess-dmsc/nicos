@@ -955,9 +955,9 @@ class EditorPanel(Panel):
         if not editor.isModified():
             return True
         if self.filenames[editor]:
-            message = "Save changes in %s before continuing?" % self.filenames[editor]
+            message = "Save changes in %s before closing?" % self.filenames[editor]
         else:
-            message = "Save new file before continuing?"
+            message = "Save changes to new script file before closing?"
         buttons = (
             QMessageBox.StandardButton.Save
             | QMessageBox.StandardButton.Discard
@@ -969,7 +969,7 @@ class EditorPanel(Panel):
                 | QMessageBox.StandardButton.No
                 | QMessageBox.StandardButton.Cancel
             )
-        rc = QMessageBox.question(self, "User Editor", message, buttons)
+        rc = QMessageBox.question(self, "Script Editor", message, buttons)
         if rc in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Yes):
             return self.saveFile(editor)
         if rc in (QMessageBox.StandardButton.Discard, QMessageBox.StandardButton.No):
