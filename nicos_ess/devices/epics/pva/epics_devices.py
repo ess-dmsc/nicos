@@ -171,7 +171,7 @@ class EpicsAnalogMoveable(EpicsReadWriteBase, HasPrecision, HasLimits, Moveable)
     def _compute_status(self, maxage=0):
         candidates = []
         try:
-            target = self._cached_raw_target(maxage)
+            target = self.target
             if not HasPrecision.doIsAtTarget(self, self.doRead(maxage), target):
                 candidates.append((status.BUSY, f"moving to {target}"))
         except (TimeoutError, CommunicationError):

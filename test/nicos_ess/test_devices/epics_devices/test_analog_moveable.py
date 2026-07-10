@@ -272,6 +272,34 @@ def test_moveable_stale_cache_does_not_complete_move_wait(
     assert move_status[0] == status.BUSY
 
 
+def test_analog_moveable_stays_busy_while_targetpv_lags_started_target(
+    device_harness, fake_backend
+):
+    """A stale IOC target readback must not complete a newly started move."""
+    initial_value = 28.0
+    target_value = 14.0
+    config = analog_moveable_config()
+    config["targetpv"] = "SIM:M1.TARGET"
+    fake_backend.values[config["readpv"]] = initial_value
+    fake_backend.values[config["writepv"]] = initial_value
+    fake_backend.values[config["targetpv"]] = initial_value
+    fake_backend.units[config["readpv"]] = "mm"
+    fake_backend.alarms[config["readpv"]] = (status.OK, "ok")
+
+    daemon_device, _poller_device = device_harness.create_pair(
+        EpicsAnalogMoveable,
+        name="analog_moveable",
+        shared=config,
+    )
+
+    device_harness.run("daemon", daemon_device.start, target_value)
+
+    # The write completed, but the IOC has not yet reflected it in targetpv or
+    # the position readback.  maw() must therefore continue waiting.
+    assert device_harness.run("daemon", lambda: daemon_device.target) == target_value
+    assert device_harness.run("daemon", daemon_device.isCompleted) is False
+
+
 @pytest.mark.parametrize(
     "device_class,initial_value,target_value,device_name",
     _MOVEABLE_PARAMS,
