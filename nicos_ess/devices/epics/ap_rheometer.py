@@ -250,8 +250,6 @@ class RheometerControl(EpicsDeviceBase, Measurable):
             return status.BUSY, "measuring"
         return status.OK, ""
 
-    # Volatile parameters always ask the IOC directly; the monitor-fed cache
-    # is only used on the value/status paths above, which honour maxage.
     def doReadTemp_Setpoint(self):
         return self._epics.get_channel_value("temp_setpoint")
 

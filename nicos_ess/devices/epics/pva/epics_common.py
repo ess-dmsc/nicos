@@ -1,3 +1,14 @@
+"""Channel-table based EPICS device bases.
+
+The channel table is the ``_epics_channels`` dict on a device class. It maps a
+logical channel name such as ``"readback"`` to an :class:`EpicsChannelInfo`
+that describes the PV suffix, the cache key and the update policy. Devices
+declare the table, :class:`EpicsChannelComponent` talks to EPICS, and
+:class:`EpicsDeviceBase` turns monitor updates into cache writes.
+
+See ``nicos_ess/devices/epics/epics_integration_guide.md`` for a walkthrough.
+"""
+
 import os
 import threading
 import time
@@ -522,6 +533,11 @@ class EpicsChannelComponent:
         as_string=None,
         source_id=None,
     ):
+        """Subscribe one channel.
+
+        ``as_string=None`` uses the channel table's ``as_string``; pass True
+        or False to override it for this subscription.
+        """
         pv = self.pv_name_for(channel)
         if not pv:
             return None
@@ -620,6 +636,11 @@ class EpicsChannelComponent:
         return self._ask_wrapper(f"error {action} PV {pv_name}", lambda: func(pv_name))
 
     def get_channel_value(self, channel, as_string=None):
+        """Blocking read of a channel's PV.
+
+        ``as_string=None`` uses the channel table's ``as_string``; pass True
+        or False to override it for this read.
+        """
         if as_string is None:
             info = self.epics_channels.get(channel)
             as_string = info.as_string if info is not None else False
@@ -668,8 +689,9 @@ class EpicsChannelComponent:
     def wait_for(self, channel, expected, timeout=5.0, precision=None):
         # This opens a second monitor on (pv, channel). The wrapper refcounts
         # connection state per (pvname, pvparam), so while this wait is in
-        # flight the primary monitor's disconnect callback is suppressed. Only
-        # safe for short-lived waits; do not use on long operations.
+        # flight the primary monitor's disconnect callback is suppressed. The
+        # suppression window lasts as long as the wait: keep timeouts on the
+        # default few-second scale and never wait for a whole movement here.
         event = threading.Event()
 
         def matches(value):
@@ -909,6 +931,14 @@ class EpicsDeviceBase(EpicsParameters):
         return hardware
 
     def _read_channel_cached(self, channel, as_string=None, maxage=None):
+        """Read a channel from the monitor-fed cache, else ask the IOC.
+
+        For ``doRead<Param>`` of a ``volatile=True`` parameter use
+        ``self._epics.get_channel_value()`` instead: volatile means the value
+        must come from hardware, and a cached read just after a write can
+        return the old value. ``as_string=None`` uses the channel table's
+        ``as_string``.
+        """
         return get_from_cache_or(
             self,
             self._epics.cache_key_for(channel),
@@ -1031,6 +1061,13 @@ class EpicsReadWriteBase(EpicsDeviceBase):
 
 
 class EpicsMappedChoiceSupport:
+    """Mixin for devices whose mapping comes from IOC enum choices.
+
+    Must come before the EPICS base class in the bases list: its ``doRead``,
+    ``_readRaw`` and ``_on_channel_update`` cooperate with the base through
+    ``super()``.
+    """
+
     _mapping_channel = "read"
 
     def doRead(self, maxage=0):

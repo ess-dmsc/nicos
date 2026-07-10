@@ -91,6 +91,11 @@ The class needs:
 `EpicsDeviceBase` handles wrapper creation, connections, subscriptions, cache
 updates, units, EPICS alarms, connection status, and shutdown.
 
+Three hooks cover most subclass needs: `_build_epics_channels()` when the
+channel table depends on parameters, `_compute_status()` for device status
+rules, and `_after_subscribe()` for setup that must wait until monitors are
+wired. Each is shown below.
+
 ## Channel declarations
 
 Use these constructors in `_epics_channels`:
@@ -153,6 +158,17 @@ def _build_epics_channels(self):
 
 For an always-present full PV, declare the channel directly in
 `_epics_channels` with `pv_suffix=""` and `pv_name_attr`.
+
+Use `_after_subscribe(mode)` for setup that must wait until the channels are
+connected and, in the poller, monitors are wired. The mapped classes use it to
+read their mapping from the IOC enum choices:
+
+```python
+def _after_subscribe(self, mode):
+    if mode != SIMULATION:
+        self._update_mapped_choices()
+    MappedReadable.doInit(self, mode)
+```
 
 ## Temperature controller example
 
@@ -233,7 +249,7 @@ class EpicsTemperatureController(EpicsDeviceBase, HasPrecision, Moveable):
         self._epics.put_channel_value("setpoint", target)
 
     def doReadLoop_Control(self):
-        return self._read_channel_cached("loop")
+        return self._epics.get_channel_value("loop")
 
     def doWriteLoop_Control(self, value):
         self._epics.put_channel_value("loop", value)
@@ -263,8 +279,24 @@ setup.
 The GUI uses those choices for `loop_control`. Assigning
 `controller.loop_control = "On"` calls `doWriteLoop_Control()`.
 
-Read channel values through `_read_channel_cached()` and pass through
-`maxage`. Write channel values through `put_channel_value()`.
+Write channel values through `put_channel_value()`.
+
+Two read paths exist and the choice matters:
+
+- `_read_channel_cached(channel, maxage=...)` returns the monitor-fed cache
+  value and falls back to a blocking IOC read. Use it in `doRead()` and
+  `_compute_status()`, which receive `maxage` and run often.
+- `self._epics.get_channel_value(channel)` always asks the IOC. Use it in
+  `doRead<Param>()` for `volatile=True` parameters: volatile means the value
+  must come from hardware, and a cached read just after a write can return
+  the old value. The daemon calls these on every parameter access, so this
+  is a blocking network read on the caller's thread.
+
+`target` is the exception, as in `doReadTarget()` above. It is not a volatile
+parameter: monitors write the `target` cache key, which is how external
+setpoint writes become the NICOS target, and the non-volatile getter serves
+`device.target` from that cache. `doReadTarget()` only runs in poller
+parameter sweeps and when monitoring is off.
 
 Override `_compute_status()` for device status rules. Return a NICOS
 `(severity, message)` tuple. Keep `doStatus()` on the base class so connection
