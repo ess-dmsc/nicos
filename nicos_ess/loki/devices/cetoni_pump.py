@@ -80,8 +80,8 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
     def doInit(self, mode):
         if mode != SIMULATION:
             self._set_mapping()
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            self._set_up_subscriptions()
+            if session.sessiontype == POLLER and self.monitor:
+                self._set_up_subscriptions()
         MappedMoveable.doInit(self, mode)
 
     def _get_record_fields(self):
