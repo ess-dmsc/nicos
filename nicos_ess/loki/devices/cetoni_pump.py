@@ -556,8 +556,9 @@ class CetoniPumpController(
         return f"{self.pvroot}{self._record_fields[pv_param].pv_suffix}"
 
     def _get_pv_val(self, pv_param, as_string=False):
-        pv_name = self._get_pv_name(pv_param)
-        pv_val = self._epics_wrapper.get_pv_value(pv_name, as_string)
+        pv_val = self._epics_wrapper.get_pv_value(
+            self._get_pv_name(pv_param), as_string
+        )
         return pv_val
 
     def _put_pv_val(self, pv_param, target):
