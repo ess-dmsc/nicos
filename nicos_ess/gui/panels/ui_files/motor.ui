@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>670</width>
-    <height>479</height>
+    <width>357</width>
+    <height>484</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -286,7 +286,7 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>HW limits:</string>
+           <string>Hardware limits:</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -296,7 +296,7 @@
         <item row="3" column="3">
          <widget class="QPushButton" name="btn_set_offset">
           <property name="text">
-           <string>Change Offset</string>
+           <string>Set Offset</string>
           </property>
          </widget>
         </item>
@@ -329,6 +329,26 @@
              <string>(to)</string>
             </property>
            </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="txt_hw_limits_units">
+            <property name="text">
+             <string>(units)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_5">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
           </item>
          </layout>
         </item>
@@ -380,6 +400,26 @@
              <string>(to)</string>
             </property>
            </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="txt_user_limits_units">
+            <property name="text">
+             <string>(units)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_6">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
           </item>
          </layout>
         </item>
