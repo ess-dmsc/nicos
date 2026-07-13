@@ -32,7 +32,7 @@ from nicos.guisupport.typedvalue import (
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
 from nicos_ess.gui.dialogs.homing_check import HomingCheckDialog
-from nicos_ess.gui.panels.motor import MotorDialog
+from nicos_ess.gui.dialogs.motor import MotorDialog
 from nicos_ess.gui.panels.parameters_table import ParametersTable
 from nicos_ess.gui.panels.utils import (
     attach_status_resources,
