@@ -5,23 +5,19 @@ from logging import WARNING
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel, showPanel
 from nicos.clients.gui.utils import ScriptExecQuestion, dialogFromUi, loadUi
-from nicos.core.status import BUSY, DISABLED, ERROR, NOTREACHED, OK, UNKNOWN, WARN
-from nicos.guisupport.colors import colors
+from nicos.core.status import BUSY, ERROR, OK, UNKNOWN
 from nicos.guisupport.qt import (
-    QBrush,
     QByteArray,
     QComboBox,
-    QCursor,
     QDialog,
     QDialogButtonBox,
-    QFont,
-    QIcon,
     QInputDialog,
     QLabel,
     QMenu,
     QMessageBox,
-    QPalette,
     QPushButton,
+    QSizePolicy,
+    QSpacerItem,
     Qt,
     QTreeWidgetItem,
     pyqtSignal,
@@ -29,95 +25,27 @@ from nicos.guisupport.qt import (
     sip,
 )
 from nicos.guisupport.typedvalue import (
-    ComboWidget,
     DeviceParamEdit,
     DeviceValueEdit,
     EditWidget,
 )
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
-from nicos_ess.gui.utils import get_icon
 from nicos_ess.gui.dialogs.homing_check import HomingCheckDialog
+from nicos_ess.gui.dialogs.motor import MotorDialog
+from nicos_ess.gui.panels.parameters_table import ParametersTable
+from nicos_ess.gui.panels.utils import (
+    attach_status_resources,
+    convert_limit_to_string,
+    setBackgroundBrush,
+    setForegroundBrush,
+)
+from nicos_ess.gui.utils import get_icon
 
 # QTreeWidgetItem types
 SETUP_TYPE = QTreeWidgetItem.ItemType.UserType
 DEVICE_TYPE = SETUP_TYPE + 1
 PARAM_TYPE = SETUP_TYPE + 2
-
-
-def convert_limit_to_string(value, fmtstr):
-    if abs(value) >= 1e10:
-        # Use exponential formatting for big numbers
-        return f"{value:.2g}"
-    return fmtstr % value
-
-
-def setBackgroundBrush(widget, color):
-    palette = widget.palette()
-    palette.setBrush(QPalette.ColorRole.Window, color)
-    widget.setBackgroundRole(QPalette.ColorRole.Window)
-    widget.setPalette(palette)
-
-
-def setForegroundBrush(widget, color):
-    palette = widget.palette()
-    palette.setBrush(QPalette.ColorRole.WindowText, color)
-    widget.setForegroundRole(QPalette.ColorRole.WindowText)
-    widget.setPalette(palette)
-
-
-def attach_status_resources(cls):
-    # hack to make non-Qt usage as in checksetups work
-    if hasattr(cls, "statusIcon"):
-        return
-
-    cls.statusIcon = {
-        OK: get_icon("check_circle_green-24px.svg"),
-        WARN: get_icon("warning_orange-24px.svg"),
-        BUSY: get_icon("sync_orange-24px.svg"),
-        NOTREACHED: get_icon("error-24px.svg"),
-        DISABLED: get_icon("not_interested-24px.svg"),
-        ERROR: get_icon("error-24px.svg"),
-        UNKNOWN: get_icon("device_unknown-24px.svg"),
-    }
-
-    cls.fgBrush = {
-        OK: QBrush(colors.dev_fg_ok),
-        WARN: QBrush(colors.text),
-        BUSY: QBrush(colors.text),
-        NOTREACHED: QBrush(colors.text),
-        DISABLED: QBrush(colors.text),
-        ERROR: QBrush(colors.text),
-        UNKNOWN: QBrush(colors.dev_fg_unknown),
-    }
-
-    cls.bgBrush = {
-        OK: QBrush(),
-        WARN: QBrush(colors.dev_bg_warning),
-        BUSY: QBrush(colors.dev_bg_busy),
-        NOTREACHED: QBrush(colors.dev_bg_error),
-        DISABLED: QBrush(colors.dev_bg_disabled),
-        ERROR: QBrush(colors.dev_bg_error),
-        UNKNOWN: QBrush(),
-    }
-
-    # keys: (expired, fixed)
-    cls.valueBrush = {
-        (False, False): QBrush(),
-        (False, True): QBrush(colors.value_fixed),
-        (True, False): QBrush(colors.value_expired),
-        (True, True): QBrush(colors.value_expired),
-    }
-
-    cls.lowlevelBrush = {
-        False: QBrush(colors.text),
-        True: QBrush(colors.lowlevel),
-    }
-
-    cls.lowlevelFont = {
-        False: QFont(),
-        True: QFont(QFont().family(), -1, -1, True),
-    }
 
 
 class SetupTreeWidgetItem(QTreeWidgetItem):
@@ -789,7 +717,18 @@ class DevicesPanel(Panel):
                 return dlg
         devinfo = self._devinfo[ldevname]
         item = self._devitems[ldevname]
-        dlg = ControlDialog(self, devname, devinfo, item, self.log, self._show_lowlevel)
+
+        classes = self.client.eval("session.getDevice(%r).classes" % devname, [])
+
+        # The first class is the "real" class
+        if classes[0] == "nicos_ess.devices.epics.pva.motor.EpicsMotor":
+            dlg = MotorDialog(
+                self, devname, devinfo, item, self.log, self._show_lowlevel
+            )
+        else:
+            dlg = ControlDialog(
+                self, devname, devinfo, item, self.log, self._show_lowlevel
+            )
         dlg.closed.connect(self._control_dialog_closed)
         dlg.rejected.connect(dlg.close)
         self._control_dialogs[ldevname] = dlg
@@ -870,6 +809,10 @@ class ControlDialog(QDialog):
         self.moveBtn = None
         self.target = None
         self.rel_target = None
+        self.param_table = ParametersTable(
+            parent, self.client, self.devname, self.device_panel
+        )
+        self.is_expert = expert
 
         self._reinit()
         self._show_extension(expert)
@@ -899,7 +842,6 @@ class ControlDialog(QDialog):
         # properties we want
         params = self.client.getDeviceParams(self.devname)
         self.devinfo.params = self.client.getDeviceParamInfo(self.devname)
-        mainunit = params.get("unit", "main")
         self.paramvalues = dict(params)
         # Cache updates for "classes" may lag behind the dialog opening.
         # Use cache value if present, otherwise query the live device classes
@@ -915,29 +857,9 @@ class ControlDialog(QDialog):
             )
             classes = set(live_classes or ())
         self.devinfo.classes = classes
-
-        # put parameter values in the list widget
-        self.paramItems.clear()
-        self.paramList.clear()
-        for key, value in sorted(params.items()):
-            if self.devinfo.params.get(key):
-                # normally, show only userparams, except in expert mode
-                is_userparam = self.devinfo.params[key]["userparam"]
-                if is_userparam or self.device_panel._show_lowlevel:
-                    self.paramItems[key] = item = QTreeWidgetItem(
-                        self.paramList,
-                        [key, self.devinfo.fmtParam(key, value, unit=False)],
-                    )
-                    # display non-userparams in grey italics, like lowlevel
-                    # devices in the device list
-                    if not is_userparam:
-                        item.setFont(
-                            self.col_index["NAME"], self.device_panel.lowlevelFont[True]
-                        )
-                        item.setForeground(
-                            self.col_index["NAME"],
-                            self.device_panel.lowlevelBrush[True],
-                        )
+        self.param_table.set_params(
+            self.paramvalues, self.devinfo.params, self.is_expert
+        )
 
         # set description label
         if params.get("description"):
@@ -1171,35 +1093,22 @@ class ControlDialog(QDialog):
 
         self.device_panel.exec_command("maw(%s, %r)" % (self.devrepr, target))
 
-    def on_paramList_customContextMenuRequested(self, pos):
-        item = self.paramList.itemAt(pos)
-        if not item:
-            return
-
-        menu = QMenu(self)
-        refreshAction = menu.addAction("Refresh")
-        menu.addAction("Refresh all")
-
-        # QCursor.pos is more reliable then the given pos
-        action = menu.exec(QCursor.pos())
-
-        if action:
-            cmd = "session.getDevice(%r).pollParams(volatile_only=False%s)" % (
-                self.devname,
-                ", param_list=[%r]" % item.text(0) if action == refreshAction else "",
-            )
-            # poll even non volatile parameter as requested explicitly
-            self.client.eval(cmd, None)
-
     @pyqtSlot()
     def on_btn_settings_clicked(self):
-        self._show_extension(self.extension.isHidden())
+        self._show_extension(True)
 
     def _show_extension(self, show):
         if show:
             # make "settings shown" permanent
             self.btn_settings.hide()
-        self.extension.setVisible(show)
+            self.main_layout.insertWidget(
+                self.main_layout.count() - 1, self.param_table
+            )
+        else:
+            spacer = QSpacerItem(
+                0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+            )
+            self.main_layout.insertItem(self.main_layout.count() - 1, spacer)
         sz = self.size()
         sz.setHeight(self.sizeHint().height())
         self.resize(sz)
@@ -1350,15 +1259,13 @@ class ControlDialog(QDialog):
         self.closed.emit(self.devname.lower())
 
     def on_cache_params(self, subkey, value):
-        if subkey not in self.paramItems:
+        if subkey not in self.paramvalues:
             return
         if not value:
             return
         value = cache_load(value)
         self.paramvalues[subkey] = value
-        self.paramItems[subkey].setText(
-            self.col_index["VALUE"], self.devinfo.fmtParam(subkey, value, unit=False)
-        )
+        self.param_table.update_param(subkey, str(value))
 
     def on_cache(self, time, subkey, op, value):
         if time < self.devinfo.valtime:
@@ -1394,66 +1301,6 @@ class ControlDialog(QDialog):
             if not value:
                 return
             self._reinit()
-
-    def on_paramList_itemClicked(self, item):
-        pname = item.text(self.col_index["NAME"])
-        self.editParam(pname)
-
-    def editParam(self, pname):
-        if not self.devinfo.params[pname]["settable"] or self.client.viewonly:
-            return
-        mainunit = self.paramvalues.get("unit", "main")
-        punit = (self.devinfo.params[pname]["unit"] or "").replace("main", mainunit)
-
-        dlg = dialogFromUi(
-            self, findResource("nicos_ess/gui/panels/ui_files/devices_param.ui")
-        )
-
-        if pname in ("temperature", "electric_field", "magnetic_field"):
-            params = self.client.getDeviceParams(self.devname)
-            curr_value = params[pname]
-            catitems = self.device_panel._catitems
-            system_devs = [
-                catitems[c].child(i).text(0)
-                for c in catitems
-                if catitems[c].text(0) == "system"
-                for i in range(catitems[c].childCount())
-            ]
-            non_system_devs = [
-                d for d in self.client.getDeviceList() if d not in system_devs
-            ]
-            if curr_value not in non_system_devs:
-                curr_value = ""
-            dlg.target = ComboWidget(self, non_system_devs, curr_value)
-        else:
-            dlg.target = DeviceParamEdit(self, dev=self.devname, param=pname)
-            dlg.target.setClient(self.client)
-        dlg.paramName.setText("Parameter: %s.%s" % (self.devname, pname))
-        dlg.paramDesc.setText(self.devinfo.params[pname]["description"])
-        dlg.paramValue.setText(str(self.paramvalues[pname]) + " " + punit)
-        dlg.targetLayout.addWidget(dlg.target)
-        dlg.resize(dlg.sizeHint())
-        dlg.target.setFocus()
-        if dlg.exec() != QDialog.DialogCode.Accepted:
-            return
-        try:
-            new_value = dlg.target.getValue()
-        except ValueError:
-            self.log.exception("invalid value for typed value")
-            # shouldn't happen, but if it does, at least give an indication that
-            # something went wrong
-            QMessageBox.warning(
-                self, "Error", "The entered value is invalid for this parameter."
-            )
-            return
-        if self.devrepr == self.devname:
-            self.device_panel.exec_command(
-                "%s.%s = %r" % (self.devname, pname, new_value)
-            )
-        else:
-            self.device_panel.exec_command(
-                "set(%s, %r, %r)" % (self.devrepr, pname, new_value)
-            )
 
     @pyqtSlot()
     def on_btn_history_clicked(self):
