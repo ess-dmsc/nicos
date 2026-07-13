@@ -245,9 +245,7 @@ class MotorDialog(QDialog):
 
     @pyqtSlot()
     def on_btn_set_offset_clicked(self):
-        val = self._get_new_value(
-            "Adjust NICOS offset", "Adjust NICOS offset of %s:" % self.devname
-        )
+        val = self._get_new_value("Adjust offset", "Redefine current position of %s" % self.devname)
         if val is not None:
             self.devices_panel.exec_command("adjust(%s, %r)" % (self.devrepr, val))
 
