@@ -106,7 +106,7 @@ class MotorDialog(QDialog):
         self.update_units(params["unit"])
         self.txt_target.setText(str(params["target"]))
         self.txt_speed.setText(str(params["speed"]))
-        self.txt_offset.setText(str(params["offset"]))
+        self.update_offset(params["offset"])
 
         # add a menu for the "More" button
         menu = QMenu(self)
@@ -321,6 +321,10 @@ class MotorDialog(QDialog):
         self.txt_hw_limits_units.setText(value)
         self.txt_user_limits_units.setText(value)
 
+    def update_offset(self, value):
+        fmted = self.devinfo.fmtstr % value
+        self.txt_offset.setText(fmted)
+
     def update_user_limits(self, limits):
         self.txt_user_limits_from.setText(
             convert_limit_to_string(limits[0], self.devinfo.fmtstr)
@@ -406,4 +410,4 @@ class MotorDialog(QDialog):
         elif subkey == "offset":
             if not value:
                 return
-            self.txt_offset.setText(str(cache_load(value)))
+            self.update_offset(cache_load(value))
