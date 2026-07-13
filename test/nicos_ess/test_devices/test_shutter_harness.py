@@ -106,3 +106,36 @@ class TestEpicsShutterHarness:
         device_harness.run("daemon", daemon_device.start, "Open")
 
         assert fake_backend.put_calls[-1] == ("SIM:SHUTTER:WRITE", 1, False)
+
+    def test_fresh_status_bypasses_a_stale_cached_message(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, _poller_device = device_harness.create_pair(
+            shutter.EpicsShutter,
+            name="epics_shutter",
+            shared={
+                "readpv": "SIM:SHUTTER:READ",
+                "writepv": "SIM:SHUTTER:WRITE",
+                "msgtxt": "SIM:SHUTTER:MSGTXT",
+                "mapping": {"Close": 0, "Open": 1},
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        fake_backend.emit_update("SIM:SHUTTER:MSGTXT", value="Opening")
+        fake_backend.emit_update("SIM:SHUTTER:READ", value="Opening")
+        assert device_harness.run("daemon", daemon_device.status) == (
+            status.BUSY,
+            "Opening",
+        )
+
+        # The IOC has completed, but its terminal monitor events have not yet
+        # propagated from the poller to this daemon-side device instance.
+        fake_backend.values["SIM:SHUTTER:READ"] = "Opened"
+        fake_backend.values["SIM:SHUTTER:MSGTXT"] = "Open"
+
+        assert device_harness.run("daemon", daemon_device.status, 0) == (
+            status.OK,
+            "Open",
+        )

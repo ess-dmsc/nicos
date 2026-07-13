@@ -1,3 +1,4 @@
+import threading
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -341,6 +342,44 @@ class TestSubscriptions:
         component.shutdown()
         assert backend.subscriptions == []
         assert component.subscriptions == []
+
+    def test_callbacks_for_one_component_are_serialized(self):
+        component, backend = make_component()
+        component.connect()
+        first_entered = threading.Event()
+        release_first = threading.Event()
+        second_entered = threading.Event()
+
+        def callback(update):
+            if update.channel == "value":
+                first_entered.set()
+                release_first.wait(timeout=1)
+            elif update.channel == "moving":
+                second_entered.set()
+
+        component.subscribe_channels(callback)
+        first = threading.Thread(
+            target=backend.emit_update,
+            args=("SIM:M1.RBV",),
+            kwargs={"value": 1.0},
+        )
+        second = threading.Thread(
+            target=backend.emit_update,
+            args=("SIM:M1.MOVN",),
+            kwargs={"value": 1},
+        )
+
+        first.start()
+        assert first_entered.wait(timeout=1)
+        second.start()
+        try:
+            assert not second_entered.wait(timeout=0.05)
+        finally:
+            release_first.set()
+            first.join(timeout=1)
+            second.join(timeout=1)
+
+        assert second_entered.is_set()
 
 
 class TestReadsAndWrites:

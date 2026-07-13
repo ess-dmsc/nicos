@@ -114,6 +114,13 @@ cache key stores the value under the logical channel name.
 Set `refresh_status=True` on a readback or setpoint when its updates can change
 `_compute_status()`. `status_channel()` enables this by default.
 
+Updates for all channels in one component are delivered to the device
+serially. This keeps one channel's cache-and-status refresh from interleaving
+with another channel's refresh. It does not make values published as separate
+PVs an atomic IOC snapshot: when status requires a combination that must never
+be mixed across transitions, expose an authoritative aggregate PV or an IOC
+sequence/version that lets the client identify a coherent snapshot.
+
 The default PV resolution is:
 
 ```text

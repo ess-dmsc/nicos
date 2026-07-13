@@ -60,12 +60,12 @@ class EpicsShutter(EpicsMappedMoveable):
         return self.read(maxage) in ("Closing", "Opening")
 
     def _compute_status(self, maxage=0):
-        severity, msg = self._read_primary_alarm(maxage=maxage)
+        severity, _ = self._read_primary_alarm(maxage=maxage)
         if severity in [status.ERROR, status.WARN]:
-            return severity, self._read_msgtxt()
+            return severity, self._read_msgtxt(maxage=maxage)
         if self._is_moving(maxage=maxage):
-            return status.BUSY, self._read_msgtxt()
-        return severity, self._read_msgtxt()
+            return status.BUSY, self._read_msgtxt(maxage=maxage)
+        return severity, self._read_msgtxt(maxage=maxage)
 
 
 class EpicsHeavyShutter(EpicsMappedReadable):

@@ -450,10 +450,10 @@ class EpicsChannelComponent:
 
     The ``get_*``/``put_*``/``wait_for`` calls block on the caller's thread
     (daemon/GUI request threads). The monitor callbacks registered via
-    ``subscribe_channels`` run on the wrapper's own callback thread(s); this
-    component never touches the NICOS cache itself - it only marshals wrapper
-    data into ``ChannelUpdate``/``ConnectionUpdate`` and hands them to the
-    device-supplied callbacks.
+    ``subscribe_channels`` run on the wrapper's own callback thread(s). This
+    component serializes their delivery across all of its channels, marshals
+    wrapper data into ``ChannelUpdate``/``ConnectionUpdate``, and hands it to
+    the device-supplied callbacks; it never touches the NICOS cache itself.
     """
 
     def __init__(
@@ -475,6 +475,10 @@ class EpicsChannelComponent:
         self._simulation = False
         self.subscriptions = []
         self._lock = threading.Lock()
+        # p4p assigns subscriptions for different PVs to different worker
+        # queues.  Keep a device's multi-channel cache/status update sequence
+        # atomic even when those workers deliver updates concurrently.
+        self._callback_lock = threading.Lock()
 
     def pv_name_for(self, channel):
         return self.pv_names_by_channel.get(channel)
@@ -557,31 +561,33 @@ class EpicsChannelComponent:
         source_id=None,
     ):
         def _on_change(pv_name, param, value, units, limits, severity, message, **kw):
-            update_callback(
-                ChannelUpdate(
-                    channel=channel,
-                    value=value,
-                    units=units,
-                    limits=limits,
-                    severity=severity,
-                    message=message,
-                    pv_name=pv_name,
-                    source_id=source_id,
+            with self._callback_lock:
+                update_callback(
+                    ChannelUpdate(
+                        channel=channel,
+                        value=value,
+                        units=units,
+                        limits=limits,
+                        severity=severity,
+                        message=message,
+                        pv_name=pv_name,
+                        source_id=source_id,
+                    )
                 )
-            )
 
         _on_connection = None
         if connection_callback is not None:
 
             def _on_connection(pv_name, param, is_connected, **kw):
-                connection_callback(
-                    ConnectionUpdate(
-                        channel=channel,
-                        is_connected=is_connected,
-                        pv_name=pv_name,
-                        source_id=source_id,
+                with self._callback_lock:
+                    connection_callback(
+                        ConnectionUpdate(
+                            channel=channel,
+                            is_connected=is_connected,
+                            pv_name=pv_name,
+                            source_id=source_id,
+                        )
                     )
-                )
 
         sub = self.wrapper.subscribe(
             pv, channel, _on_change, _on_connection, as_string=as_string
