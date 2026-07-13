@@ -317,6 +317,7 @@ class MotorDialog(QDialog):
         self.txt_target_units.setText(value)
         self.txt_rmove_units.setText(value)
         self.txt_speed_units.setText(f"{value}/s" if value else "")
+        self.txt_offset_units.setText(value)
 
     def update_user_limits(self, limits):
         self.txt_user_limits_from.setText(
