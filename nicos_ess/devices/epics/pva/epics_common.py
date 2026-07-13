@@ -701,6 +701,8 @@ class EpicsChannelComponent:
         event = threading.Event()
 
         def matches(value):
+            if callable(expected):
+                return expected(value)
             if precision is not None and isinstance(value, (int, float)):
                 return abs(value - expected) <= precision
             return value == expected
@@ -714,9 +716,12 @@ class EpicsChannelComponent:
             if matches(self.get_channel_value(channel)):
                 return
             if not event.wait(timeout):
-                raise CommunicationError(
-                    f"timeout waiting for {channel} to become {expected}"
-                )
+                if callable(expected):
+                    description = getattr(expected, "__name__", repr(expected))
+                    detail = f"match {description}"
+                else:
+                    detail = f"become {expected}"
+                raise CommunicationError(f"timeout waiting for {channel} to {detail}")
         finally:
             self.close_subscription(sub)
 

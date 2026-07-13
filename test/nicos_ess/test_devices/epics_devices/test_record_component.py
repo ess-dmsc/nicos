@@ -546,6 +546,12 @@ class TestWaitFor:
         backend.values["SIM:M1.RBV"] = 9.999
         component.wait_for("value", 10.0, timeout=0.1, precision=0.01)
 
+    def test_predicate_match(self):
+        component, backend = make_component()
+        component.connect()
+        backend.values["SIM:M1.MOVN"] = 1
+        component.wait_for("moving", lambda value: value != 0, timeout=0.1)
+
 
 class CacheStub:
     def __init__(self):

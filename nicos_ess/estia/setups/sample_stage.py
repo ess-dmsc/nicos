@@ -11,6 +11,7 @@ devices = dict(
         description="Detector Arm Pneumatic Coupling: Support Structure on Air Pads",
         writepv="ESTIA-SpCpl:MC-Pne-01:ShtOpen",
         readpv="ESTIA-SpCpl:MC-Pne-01:ShtAuxBits07",
+        statuspv="ESTIA-SpCpl:MC-Pne-01:ShtStatusCode",
         resetpv="ESTIA-SpCpl:MC-Pne-01:ShtErrRst",
         msgtxt="ESTIA-SpCpl:MC-Pne-01:ShtMsgTxt",
         visibility=(),
