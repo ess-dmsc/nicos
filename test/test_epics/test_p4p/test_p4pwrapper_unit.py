@@ -163,27 +163,32 @@ def test_get_limits_from_display(fake_context: FakeContext):
     assert pva_wrapper.get_limits("PV:LIM") == (-5.0, 5.0)
 
 
-def test_get_control_values_prefers_display(fake_context: FakeContext):
+def test_get_limits_from_display_if_control_is_set(fake_context: FakeContext):
     fake_context.set_get_result(
-        "PV:CTRL", {"display": {"foo": "bar"}, "control": {"x": 1}}
+        "PV:LIM",
+        {
+            "value": 1,
+            "display": {"limitLow": 2.0, "limitHigh": 4.0},
+            "control": {"limitLow": 1.0, "limitHigh": 5.0},
+        },
     )
     pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
 
-    assert pva_wrapper.get_control_values("PV:CTRL") == {"foo": "bar"}
+    assert pva_wrapper.get_limits("PV:LIM") == (2.0, 4.0)
 
 
-def test_get_control_values_falls_back_to_control(fake_context: FakeContext):
-    fake_context.set_get_result("PV:CTRL2", {"control": {"min": 1, "max": 2}})
+def test_get_limits_from_control_if_display_not_set(fake_context: FakeContext):
+    fake_context.set_get_result(
+        "PV:LIM",
+        {
+            "value": 1,
+            "display": {"limitLow": 0.0, "limitHigh": 0.0},
+            "control": {"limitLow": 1.0, "limitHigh": 5.0},
+        },
+    )
     pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
 
-    assert pva_wrapper.get_control_values("PV:CTRL2") == {"min": 1, "max": 2}
-
-
-def test_get_control_values_empty_when_missing(fake_context: FakeContext):
-    fake_context.set_get_result("PV:CTRL3", {"value": 1})
-    pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
-
-    assert pva_wrapper.get_control_values("PV:CTRL3") == {}
+    assert pva_wrapper.get_limits("PV:LIM") == (1.0, 5.0)
 
 
 def test_get_value_choices_bool(fake_context: FakeContext):

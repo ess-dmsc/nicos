@@ -13,7 +13,6 @@ from p4p.server.thread import SharedPV
 from nicos.core import status
 from nicos.devices.epics.pva.p4p import P4pWrapper
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
-
 from test.test_epics.test_p4p.utils.p4p_doubles import EventSink
 from test.test_epics.test_p4p.utils.pva_server import (
     PvaServer,
@@ -200,10 +199,6 @@ def test_metadata_and_alarm_helpers(pva_rig: PvaRig, pva_wrapper: P4pWrapper):
 
     assert pva_wrapper.get_units(float_pv) == "mm"
     assert pva_wrapper.get_limits(enum_pv) == (0, len(_ENUM_CHOICES) - 1)
-
-    control_or_display = pva_wrapper.get_control_values(float_pv)
-    assert "units" in control_or_display
-    assert control_or_display["units"] == "mm"
 
     assert pva_wrapper.get_value_choices(enum_pv) == _ENUM_CHOICES
 
@@ -426,7 +421,8 @@ def test_two_subscriptions_fast_connection_callback_ends_connected(
         ch1.wait_calls(1, timeout=_TIMEOUT)
         ch2.wait_calls(1, timeout=_TIMEOUT)
 
-        # We should have seen an "up" connection notification (aggregated at pvparam level).
+        # We should have seen an "up" connection notification
+        # (aggregated at pvparam level).
         wait_for(
             has_up,
             timeout=_TIMEOUT,
