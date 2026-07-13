@@ -712,7 +712,8 @@ class EditorPanel(Panel):
         self.check_timer = QTimer()
         self.check_timer.setSingleShot(True)
         self.check_timer.timeout.connect(self.check_python_code)
-        self.currentEditor.textChanged.connect(lambda: self.check_timer.start(1000))
+        if self.currentEditor:
+            self.currentEditor.textChanged.connect(lambda: self.check_timer.start(1000))
 
     def check_python_code(self):
         if not has_scintilla:
