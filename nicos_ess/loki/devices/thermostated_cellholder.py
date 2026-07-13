@@ -93,6 +93,7 @@ class ThermoStatedCellHolder(HasNexusConfig, MultiSwitcher):
         if session.sessiontype != POLLER:
             self._generate_mapping(self.cartridges)
         self._attached_moveables = [self._attached_xmotor, self._attached_ymotor]
+        self._adevs["moveables"] = self._attached_moveables
 
     def _mapReadValue(self, value):
         """maps a tuple to one of the configured values"""
