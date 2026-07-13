@@ -1273,16 +1273,14 @@ class ControlDialog(QDialog):
 
     @pyqtSlot()
     def on_actionAdjustOffset_triggered(self):
-        val = self._get_new_value(
-            "Adjust NICOS offset", "Adjust NICOS offset of %s:" % self.devname
-        )
+        val = self._get_new_value("Adjust offset", "Adjust offset of %s" % self.devname)
         if val is not None:
             self.device_panel.exec_command("adjust(%s, %r)" % (self.devrepr, val))
 
     @pyqtSlot()
     def on_actionSetPosition_triggered(self):
         val = self._get_new_value(
-            "Set hardware position", "Set hardware position of %s:" % self.devname
+            "Set hardware position", "Set hardware position of %s" % self.devname
         )
         if val is not None:
             if self.devrepr != self.devname:
