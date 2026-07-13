@@ -1,25 +1,20 @@
 description = "LOKI vacuum readouts (gauges and valves)"
 
 devices = dict(
-    sample_area_vacuum_gauge=device(
+    vacuum_gauge=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Vacuum gauge - MicroPirani sensor pressure (PR1), MKS910 IOC",
         readpv="LOKI-VacInstr:Vac-VGF-050:PR3-R",
         fmtstr="%.6f",
     ),
-    sample_area_vacuum_gate_valve_interlock=device(
+    gate_valve_interlock=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum gauge - the status of the gate valve interlock",
         readpv="LOKI-VacInstr:Vac-VVS-400:IntlckLED",
     ),
-    sample_area_vacuum_valve_open=device(
+    gate_valve=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="Vacuum valve - PLC",
-        readpv="LOKI-VacInstr:Vac-VVS-400:OpenR",
-    ),
-    sample_area_vacuum_valve_closed=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="Vacuum valve - PLC",
-        readpv="LOKI-VacInstr:Vac-VVS-400:ClosedR",
+        description="Vacuum valve - the state of the gate valve",
+        readpv="LOKI-VacInstr:Vac-VVS-400:StatR",
     ),
 )
