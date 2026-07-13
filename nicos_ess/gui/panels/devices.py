@@ -1273,7 +1273,7 @@ class ControlDialog(QDialog):
 
     @pyqtSlot()
     def on_actionAdjustOffset_triggered(self):
-        val = self._get_new_value("Adjust offset", "Adjust offset of %s" % self.devname)
+        val = self._get_new_value("Adjust offset", "Redefine current position of %s" % self.devname)
         if val is not None:
             self.device_panel.exec_command("adjust(%s, %r)" % (self.devrepr, val))
 
