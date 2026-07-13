@@ -116,7 +116,7 @@ class P4pWrapper:
         if as_string:
             # waveforms and arrays are already ndarrays
             if isinstance(value, np.ndarray):
-                return value.tostring().decode()
+                return value.tobytes().decode()
             else:
                 return str(value)
         return value
@@ -164,17 +164,14 @@ class P4pWrapper:
 
     def _extract_limits(self, result, default_low=-1e308, default_high=1e308):
         try:
-            default_low = result["display"]["limitLow"]
-            default_high = result["display"]["limitHigh"]
+            default_low = result["display"].get("limitLow", 0)
+            default_high = result["display"].get("limitHigh", 0)
+            if default_low == 0 and default_high == 0:
+                default_low = result["control"]["limitLow"]
+                default_high = result["control"]["limitHigh"]
         except KeyError:
             pass
         return default_low, default_high
-
-    def get_control_values(self, pvname):
-        raw_result = self._context.get(pvname, timeout=self._timeout)
-        if "display" in raw_result:
-            return raw_result["display"]
-        return raw_result["control"] if "control" in raw_result else {}
 
     def get_value_choices(self, pvname):
         value = self._context.get(pvname, timeout=self._timeout)["value"]
@@ -324,7 +321,12 @@ class P4pWrapper:
             if "alarm.status" in change_set or "alarm.severity" in change_set:
                 self._alarms[pvname] = self._extract_alarm_info(result)
 
-            if "display.limitLow" in change_set:
+            if {
+                "display.limitLow",
+                "display.limitHigh",
+                "control.limitLow",
+                "control.limitHigh",
+            }.intersection(change_set):
                 self._limits[pvname] = self._extract_limits(result)
 
             value = self._values.get(pvname)

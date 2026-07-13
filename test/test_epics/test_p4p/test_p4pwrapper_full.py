@@ -13,7 +13,6 @@ from p4p.server.thread import SharedPV
 from nicos.core import status
 from nicos.devices.epics.pva.p4p import P4pWrapper
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
-
 from test.test_epics.test_p4p.utils.p4p_doubles import EventSink
 from test.test_epics.test_p4p.utils.pva_server import (
     PvaServer,
@@ -26,6 +25,7 @@ from test.test_epics.test_p4p.utils.pva_server import (
 
 _ENUM_CHOICES = ["Alpha", "Beta", "Gamma", "Delta"]
 _TIMEOUT = 5.0  # seconds
+_MONITOR_PRIME_ATTEMPTS = 3
 
 
 def _any_non_ok_alarm_severity() -> tuple[int, int]:
@@ -52,32 +52,46 @@ def _prime_monitor_path(rig: PvaRig) -> None:
     pvname = rig.name("Float")
     pv = rig.pvs["Float"]
     wrapper = P4pWrapper(timeout=2.0, context=rig.ctx)
-    change = EventSink()
-    conn = EventSink()
-    sub = wrapper.subscribe(pvname, "__probe__", change, conn)
+    last_error = None
+
     try:
-        # Warm monitor delivery with unique probe values; this handles startup
-        # jitter where initial monitor callbacks can race with first posts.
-        conn.wait_calls(1, timeout=_TIMEOUT)
-        for i in range(5):
-            probe_value = 1.234567 + i * 0.01
-            before = len(change.calls)
-            pv.post(probe_value, timestamp=time.time())
+        for attempt in range(_MONITOR_PRIME_ATTEMPTS):
+            change = EventSink()
+            conn = EventSink()
+            sub = wrapper.subscribe(pvname, f"__probe__{attempt}", change, conn)
             try:
-                wait_for(
-                    lambda: any(
-                        abs(call[0][2] - probe_value) < 1e-12
-                        for call in change.calls[before:]
-                    ),
-                    timeout=1.0,
-                )
-            except AssertionError:
-                continue
-            break
-        else:
-            raise AssertionError("failed to prime PVA monitor callback delivery")
+                # p4p can lose the initial wakeup if its native monitor callback
+                # runs before Subscription._S is assigned. Such a subscription
+                # remains stalled, so close it and retry with a fresh one.
+                conn.wait_calls(1, timeout=_TIMEOUT)
+                for i in range(5):
+                    probe_value = 1.234567 + i * 0.01
+                    before = len(change.calls)
+                    pv.post(probe_value, timestamp=time.time())
+                    try:
+                        wait_for(
+                            lambda change=change, before=before, probe_value=probe_value: (
+                                any(
+                                    abs(call[0][2] - probe_value) < 1e-12
+                                    for call in change.calls[before:]
+                                )
+                            ),
+                            timeout=1.0,
+                        )
+                    except AssertionError:
+                        continue
+                    return
+                raise AssertionError("monitor connected but delivered no probe update")
+            except AssertionError as err:
+                last_error = err
+            finally:
+                wrapper.close_subscription(sub)
+
+        raise AssertionError(
+            f"failed to prime PVA monitor callback delivery after "
+            f"{_MONITOR_PRIME_ATTEMPTS} attempts"
+        ) from last_error
     finally:
-        wrapper.close_subscription(sub)
         pv.post(1.25, timestamp=time.time())
 
 
@@ -200,10 +214,6 @@ def test_metadata_and_alarm_helpers(pva_rig: PvaRig, pva_wrapper: P4pWrapper):
 
     assert pva_wrapper.get_units(float_pv) == "mm"
     assert pva_wrapper.get_limits(enum_pv) == (0, len(_ENUM_CHOICES) - 1)
-
-    control_or_display = pva_wrapper.get_control_values(float_pv)
-    assert "units" in control_or_display
-    assert control_or_display["units"] == "mm"
 
     assert pva_wrapper.get_value_choices(enum_pv) == _ENUM_CHOICES
 
@@ -426,7 +436,8 @@ def test_two_subscriptions_fast_connection_callback_ends_connected(
         ch1.wait_calls(1, timeout=_TIMEOUT)
         ch2.wait_calls(1, timeout=_TIMEOUT)
 
-        # We should have seen an "up" connection notification (aggregated at pvparam level).
+        # We should have seen an "up" connection notification
+        # (aggregated at pvparam level).
         wait_for(
             has_up,
             timeout=_TIMEOUT,

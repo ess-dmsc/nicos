@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>583</height>
+    <height>426</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,7 +19,7 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="main_layout">
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
@@ -349,35 +349,6 @@
         </layout>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QGroupBox" name="paramGroup">
-        <property name="title">
-         <string>Parameters</string>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_6">
-         <item>
-          <widget class="QTreeWidget" name="paramList">
-           <property name="contextMenuPolicy">
-            <enum>Qt::CustomContextMenu</enum>
-           </property>
-           <property name="rootIsDecorated">
-            <bool>false</bool>
-           </property>
-           <column>
-            <property name="text">
-             <string>Name</string>
-            </property>
-           </column>
-           <column>
-            <property name="text">
-             <string>Value</string>
-            </property>
-           </column>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
@@ -393,7 +364,7 @@
      <item>
       <widget class="QPushButton" name="btn_settings">
        <property name="text">
-	<string>Show parameters</string>
+        <string>Show parameters</string>
        </property>
       </widget>
      </item>
@@ -481,7 +452,6 @@
   <tabstop>moveBtns</tabstop>
   <tabstop>setAliasBtn</tabstop>
   <tabstop>moveBtns</tabstop>
-  <tabstop>paramList</tabstop>
   <tabstop>btn_history</tabstop>
   <tabstop>btn_settings</tabstop>
   <tabstop>btn_close</tabstop>

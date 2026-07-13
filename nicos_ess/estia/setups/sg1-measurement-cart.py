@@ -7,6 +7,7 @@ devices = dict(
     meas_cart_approach1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Rotator for approach",
+        home_warning_msg="Are you sure you want to home the motor?",
         motorpv=pv_approach,
     ),
     meas_cart_approach_controller_1=device(
@@ -21,6 +22,7 @@ devices = dict(
     meas_cart_position1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Cart positioning",
+        home_warning_msg="Are you sure you want to home the motor?",
         motorpv=pv_position,
     ),
     mcart1=device(
