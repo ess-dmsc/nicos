@@ -7,6 +7,7 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Detector Motion System (Z-Rotation)",
         motorpv="ESTIA-DtRot:MC-RotZ01:Mtr",
+        use_prec=False,
         fmtstr="%.4f",
     ),
     pneumatic_coupling_ctrl=device(
