@@ -26,7 +26,8 @@ from functools import partial
 from threading import Lock
 
 import numpy as np
-from p4p.client.thread import Cancelled, Context
+from p4p.client.raw import Context as RawContext
+from p4p.client.thread import Cancelled, Context, Subscription
 
 from nicos.commands import helparglist, hiddenusercommand
 from nicos.core import CommunicationError, status
@@ -36,6 +37,50 @@ from nicos.devices.epics.status import SEVERITY_TO_STATUS
 # nt=False tells p4p not to try to map types itself
 # we want to do this manually to avoid information loss
 _CONTEXT = Context("pva", nt=False)
+
+
+def _safe_monitor(context, name, callback, request, notify_disconnect):
+    """Start a monitor without missing an update during setup.
+
+    p4p may report that an update is waiting before the subscription is ready
+    to read it.  Delay that notification until setup finishes.  Other context
+    implementations continue to use their own monitor method.
+    """
+    if not isinstance(context, Context):
+        return context.monitor(
+            name,
+            callback,
+            request=request,
+            notify_disconnect=notify_disconnect,
+        )
+
+    # Context.monitor() assigns Subscription._S only after RawContext.monitor()
+    # returns.  A native wakeup during that call is otherwise dropped by p4p.
+    subscription = Subscription(
+        context,
+        name,
+        callback,
+        notify_disconnect=notify_disconnect,
+    )
+    gate = Lock()
+    starting = True
+    pending_wakeup = False
+
+    def wakeup():
+        nonlocal pending_wakeup
+        with gate:
+            if starting:
+                pending_wakeup = True
+                return
+        subscription._event()
+
+    raw_subscription = RawContext.monitor(context, name, wakeup, request)
+    with gate:
+        subscription._S = raw_subscription
+        starting = False
+        if pending_wakeup:
+            subscription._event()
+    return subscription
 
 
 @hiddenusercommand
@@ -233,9 +278,7 @@ class P4pWrapper:
             connection_callback,
             as_string,
         )
-        sub = self._context.monitor(
-            pvname, callback, request=request, notify_disconnect=True
-        )
+        sub = _safe_monitor(self._context, pvname, callback, request, True)
 
         self._sub_to_key[id(sub)] = subkey
 

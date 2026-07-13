@@ -4,9 +4,11 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
+from unittest.mock import patch
 
 import numpy as np
 import pytest
+from p4p.client.raw import Context as RawContext
 from p4p.client.thread import Context
 from p4p.server.thread import SharedPV
 
@@ -25,7 +27,6 @@ from test.test_epics.test_p4p.utils.pva_server import (
 
 _ENUM_CHOICES = ["Alpha", "Beta", "Gamma", "Delta"]
 _TIMEOUT = 5.0  # seconds
-_MONITOR_PRIME_ATTEMPTS = 3
 
 
 def _any_non_ok_alarm_severity() -> tuple[int, int]:
@@ -45,54 +46,6 @@ def wait_for(predicate, *, timeout: float = _TIMEOUT, interval: float = 0.02) ->
             return
         time.sleep(interval)
     raise AssertionError("timeout waiting for condition")
-
-
-def _prime_monitor_path(rig: PvaRig) -> None:
-    """Ensure PVA monitor callbacks are flowing before tests run."""
-    pvname = rig.name("Float")
-    pv = rig.pvs["Float"]
-    wrapper = P4pWrapper(timeout=2.0, context=rig.ctx)
-    last_error = None
-
-    try:
-        for attempt in range(_MONITOR_PRIME_ATTEMPTS):
-            change = EventSink()
-            conn = EventSink()
-            sub = wrapper.subscribe(pvname, f"__probe__{attempt}", change, conn)
-            try:
-                # p4p can lose the initial wakeup if its native monitor callback
-                # runs before Subscription._S is assigned. Such a subscription
-                # remains stalled, so close it and retry with a fresh one.
-                conn.wait_calls(1, timeout=_TIMEOUT)
-                for i in range(5):
-                    probe_value = 1.234567 + i * 0.01
-                    before = len(change.calls)
-                    pv.post(probe_value, timestamp=time.time())
-                    try:
-                        wait_for(
-                            lambda change=change, before=before, probe_value=probe_value: (
-                                any(
-                                    abs(call[0][2] - probe_value) < 1e-12
-                                    for call in change.calls[before:]
-                                )
-                            ),
-                            timeout=1.0,
-                        )
-                    except AssertionError:
-                        continue
-                    return
-                raise AssertionError("monitor connected but delivered no probe update")
-            except AssertionError as err:
-                last_error = err
-            finally:
-                wrapper.close_subscription(sub)
-
-        raise AssertionError(
-            f"failed to prime PVA monitor callback delivery after "
-            f"{_MONITOR_PRIME_ATTEMPTS} attempts"
-        ) from last_error
-    finally:
-        pv.post(1.25, timestamp=time.time())
 
 
 @dataclass(frozen=True)
@@ -154,8 +107,6 @@ def pva_rig() -> Generator[PvaRig]:
 
 @pytest.fixture()
 def pva_wrapper(pva_rig: PvaRig) -> P4pWrapper:
-    # Fresh wrapper per test to avoid leaked monitor state / refcnt / caches.
-    _prime_monitor_path(pva_rig)
     return P4pWrapper(timeout=2.0, context=pva_rig.ctx)
 
 
@@ -281,6 +232,71 @@ def test_monitor_change_and_connection_callbacks(
         )
     finally:
         pva_wrapper.close_subscription(sub)
+
+
+def test_monitor_replays_initial_wakeup_before_raw_monitor_returns(
+    pva_rig: PvaRig, pva_wrapper: P4pWrapper
+):
+    pvname = pva_rig.name("Float")
+    pv = pva_rig.pvs["Float"]
+    change = EventSink()
+    conn = EventSink()
+    subscription = None
+    raw_monitor = RawContext.monitor
+
+    def monitor_with_queued_update(context, name, wakeup, request):
+        raw_subscription = raw_monitor(context, name, wakeup, request)
+        end = time.time() + _TIMEOUT
+        initial_update = None
+        while initial_update is None and time.time() < end:
+            initial_update = raw_subscription.pop()
+            if initial_update is None:
+                time.sleep(0.01)
+        if initial_update is None:
+            raise AssertionError("raw monitor delivered no initial update")
+
+        class BufferedRawSubscription:
+            def __init__(self):
+                self.initial_update = initial_update
+
+            def pop(self):
+                if self.initial_update is not None:
+                    update = self.initial_update
+                    self.initial_update = None
+                    return update
+                return raw_subscription.pop()
+
+            def close(self):
+                raw_subscription.close()
+
+            def done(self):
+                return raw_subscription.done()
+
+        wakeup()
+        return BufferedRawSubscription()
+
+    try:
+        # Patching p4p's raw boundary is necessary to place a real SharedPV
+        # update in the exact callback-before-assignment construction window.
+        with patch.object(RawContext, "monitor", monitor_with_queued_update):
+            subscription = pva_wrapper.subscribe(pvname, "value", change, conn)
+
+        change.wait_calls(1, timeout=_TIMEOUT)
+        conn.wait_calls(1, timeout=_TIMEOUT)
+        assert change.calls[-1][0][2] == pytest.approx(1.25)
+
+        before = len(change.calls)
+        pv.post(6.25, timestamp=time.time())
+        wait_for(
+            lambda: (
+                len(change.calls) > before
+                and change.calls[-1][0][2] == pytest.approx(6.25)
+            ),
+            timeout=_TIMEOUT,
+        )
+    finally:
+        if subscription is not None:
+            pva_wrapper.close_subscription(subscription)
 
 
 def test_monitor_connection_only_subscription(pva_rig: PvaRig, pva_wrapper: P4pWrapper):
