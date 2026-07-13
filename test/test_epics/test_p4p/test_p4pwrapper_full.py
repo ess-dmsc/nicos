@@ -26,6 +26,7 @@ from test.test_epics.test_p4p.utils.pva_server import (
 
 _ENUM_CHOICES = ["Alpha", "Beta", "Gamma", "Delta"]
 _TIMEOUT = 5.0  # seconds
+_MONITOR_PRIME_ATTEMPTS = 3
 
 
 def _any_non_ok_alarm_severity() -> tuple[int, int]:
@@ -52,32 +53,46 @@ def _prime_monitor_path(rig: PvaRig) -> None:
     pvname = rig.name("Float")
     pv = rig.pvs["Float"]
     wrapper = P4pWrapper(timeout=2.0, context=rig.ctx)
-    change = EventSink()
-    conn = EventSink()
-    sub = wrapper.subscribe(pvname, "__probe__", change, conn)
+    last_error = None
+
     try:
-        # Warm monitor delivery with unique probe values; this handles startup
-        # jitter where initial monitor callbacks can race with first posts.
-        conn.wait_calls(1, timeout=_TIMEOUT)
-        for i in range(5):
-            probe_value = 1.234567 + i * 0.01
-            before = len(change.calls)
-            pv.post(probe_value, timestamp=time.time())
+        for attempt in range(_MONITOR_PRIME_ATTEMPTS):
+            change = EventSink()
+            conn = EventSink()
+            sub = wrapper.subscribe(pvname, f"__probe__{attempt}", change, conn)
             try:
-                wait_for(
-                    lambda: any(
-                        abs(call[0][2] - probe_value) < 1e-12
-                        for call in change.calls[before:]
-                    ),
-                    timeout=1.0,
-                )
-            except AssertionError:
-                continue
-            break
-        else:
-            raise AssertionError("failed to prime PVA monitor callback delivery")
+                # p4p can lose the initial wakeup if its native monitor callback
+                # runs before Subscription._S is assigned. Such a subscription
+                # remains stalled, so close it and retry with a fresh one.
+                conn.wait_calls(1, timeout=_TIMEOUT)
+                for i in range(5):
+                    probe_value = 1.234567 + i * 0.01
+                    before = len(change.calls)
+                    pv.post(probe_value, timestamp=time.time())
+                    try:
+                        wait_for(
+                            lambda change=change, before=before, probe_value=probe_value: (
+                                any(
+                                    abs(call[0][2] - probe_value) < 1e-12
+                                    for call in change.calls[before:]
+                                )
+                            ),
+                            timeout=1.0,
+                        )
+                    except AssertionError:
+                        continue
+                    return
+                raise AssertionError("monitor connected but delivered no probe update")
+            except AssertionError as err:
+                last_error = err
+            finally:
+                wrapper.close_subscription(sub)
+
+        raise AssertionError(
+            f"failed to prime PVA monitor callback delivery after "
+            f"{_MONITOR_PRIME_ATTEMPTS} attempts"
+        ) from last_error
     finally:
-        wrapper.close_subscription(sub)
         pv.post(1.25, timestamp=time.time())
 
 
