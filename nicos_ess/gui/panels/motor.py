@@ -133,7 +133,7 @@ class MotorDialog(QDialog):
         params = self.client.getDeviceParams(self.devname)
         self.paramvalues = dict(params)
         # paraminfo contains the name and all the metadata about the parameter.
-        # E.g. whether it a user parameter
+        # E.g. whether it is a user parameter
         self.paraminfo = self.client.getDeviceParamInfo(self.devname)
 
         self.param_table.set_params(self.paramvalues, self.paraminfo)
