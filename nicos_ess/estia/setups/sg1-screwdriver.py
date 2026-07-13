@@ -6,11 +6,13 @@ devices = dict(
     sg1_robot_pos=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Robot horizontal positioning",
+        home_warning_msg="Are you sure you want to home the motor?",
         motorpv=f"{pvprefix}LinX-01:Mtr",
     ),
     sg1_robot_vert=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Robot vertical positioning",
+        home_warning_msg="Are you sure you want to home the motor?",
         motorpv=f"{pvprefix}LinZ-01:Mtr",
     ),
     sg1_screwdriver_adjust_1=device(
