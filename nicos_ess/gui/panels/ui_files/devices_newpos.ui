@@ -24,7 +24,10 @@
    <item row="2" column="0">
     <widget class="QLabel" name="label_3">
      <property name="text">
-      <string>Value should be:</string>
+      <string>New value:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
     </widget>
    </item>
@@ -70,12 +73,6 @@
    </item>
    <item row="0" column="0" colspan="2">
     <widget class="QLabel" name="descLabel">
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
      <property name="text">
       <string>dev:</string>
      </property>
@@ -85,6 +82,9 @@
     <widget class="QLabel" name="label_2">
      <property name="text">
       <string>Current value:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
     </widget>
    </item>
