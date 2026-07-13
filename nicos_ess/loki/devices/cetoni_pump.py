@@ -256,10 +256,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             self._put_pv_val("first_fill_syringe", target)
 
     def doEnable(self, on=False):
-        if on:
-            self._put_pv_val("enable", 1)
-        else:
-            self._put_pv_val("enable", 0)
+        self._put_pv_val("enable", 1 if on else 0)
         self._cache.invalidate(self, "is_disabled")
 
     def doStop(self):
