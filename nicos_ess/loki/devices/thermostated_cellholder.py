@@ -15,6 +15,7 @@ from nicos.core import (
     tupleof,
     status,
     multiStatus,
+    PositionError,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable
 from nicos.devices.generic import MultiSwitcher
@@ -97,27 +98,10 @@ class ThermoStatedCellHolder(HasNexusConfig, MultiSwitcher):
 
     def _mapReadValue(self, value):
         """maps a tuple to one of the configured values"""
-        hasprec = bool(self.precision)
-        if hasprec:
-            precisions = self.precision
-            if len(precisions) == 1:
-                precisions = [precisions[0]] * len(self.devices)
-        for name, values in self.mapping.items():
-            if hasprec:
-                for p, v, prec in zip(value, values, precisions):
-                    if prec:
-                        if abs(p - v) > prec:
-                            break
-                    elif p != v:
-                        break
-                else:  # if there was no break we end here...
-                    return name
-            else:
-                if tuple(value) == tuple(values):
-                    return name
-        if self.fallback is not None:
-            return self.fallback
-        return "unknown"
+        try:
+            MultiSwitcher._mapReadValue(self, value)
+        except PositionError:
+            return "unknown"
 
     def doStatus(self, maxage=0):
         # if the underlying devices are moving or in error state,
