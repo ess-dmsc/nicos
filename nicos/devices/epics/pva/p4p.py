@@ -46,6 +46,7 @@ def _safe_monitor(context, name, callback, request, notify_disconnect):
     to read it.  Delay that notification until setup finishes.  Other context
     implementations continue to use their own monitor method.
     """
+    # For tests which use a fake context we don't need to do patch the race condition
     if not isinstance(context, Context):
         return context.monitor(
             name,
