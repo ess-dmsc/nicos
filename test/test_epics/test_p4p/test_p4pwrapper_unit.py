@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import threading
+from collections import deque
+from unittest.mock import patch
+
 import numpy as np
 import pytest
+from p4p.client.raw import Context as RawContext
+from p4p.client.thread import Context
 
 from nicos.core import CommunicationError, status
 from nicos.devices.epics.pva.p4p import P4pWrapper, pvget, pvput
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
-
 from test.test_epics.test_p4p.utils.p4p_doubles import (
     CallSpy,
     FakeContext,
@@ -280,6 +285,63 @@ def test_subscribe_registers_monitor_and_starts_disconnected(fake_context: FakeC
     ]
     assert sub_id in pva_wrapper._sub_to_key
     assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(sub_id)] is False
+
+
+def test_subscribe_delivers_update_that_arrives_before_monitor_returns():
+    update = FakeUpdate(
+        {
+            "value": 12.5,
+            "display": {"units": "mm"},
+            "alarm": {"severity": _any_severity_key(), "message": "NO_ALARM"},
+        },
+        {"value", "display.units", "alarm.severity"},
+    )
+
+    class ImmediateRawSubscription:
+        def __init__(self):
+            self.events = deque([update])
+            self.closed = False
+
+        def pop(self):
+            return self.events.popleft() if self.events else None
+
+        def empty(self):
+            return not self.events
+
+        def done(self):
+            return self.closed
+
+        def close(self):
+            self.closed = True
+
+    raw_subscription = ImmediateRawSubscription()
+
+    def monitor_with_immediate_update(_context, _pvname, wakeup, _request):
+        wakeup()
+        return raw_subscription
+
+    context = Context("pva", nt=False)
+    wrapper = P4pWrapper(timeout=1.0, context=context)
+    received = threading.Event()
+    changes = []
+    subscription = None
+
+    def change(*args):
+        changes.append(args)
+        received.set()
+
+    try:
+        # Patching p4p's raw boundary is necessary to force its timing-dependent
+        # callback-before-assignment race deterministically.
+        with patch.object(RawContext, "monitor", monitor_with_immediate_update):
+            subscription = wrapper.subscribe("PV:RACE", "value", change)
+
+        assert received.wait(1.0)
+        assert changes[-1][0:3] == ("PV:RACE", "value", 12.5)
+    finally:
+        if subscription is not None:
+            wrapper.close_subscription(subscription)
+        context.close()
 
 
 def test_multiple_subscriptions_refcount_connect_disconnect_order(
