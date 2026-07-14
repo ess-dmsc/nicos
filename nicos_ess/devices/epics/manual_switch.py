@@ -66,7 +66,9 @@ class ManualSwitch(EpicsDeviceBase, Moveable):
             raise PositionError(self, f"{target!r} is not among {self.states!r}")
 
         self._epics.put_channel_value("write", self.mapping[target])
-        self._cache.put(self._name, "target", target, time.time())
+        timestamp = time.time()
+        self._cache.put(self._name, "target", target, timestamp)
+        self._cache.put(self._name, "value", target, timestamp)
 
     def doReadTarget(self):
         raw = self._read_channel_cached("write")
@@ -85,4 +87,5 @@ class ManualSwitch(EpicsDeviceBase, Moveable):
 
     def _on_channel_update(self, update):
         value = self._reverse_mapping.get(update.value, update.value)
+        self._cache.put(self._name, "value", value, time.time())
         super()._on_channel_update(replace(update, value=value))

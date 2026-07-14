@@ -24,7 +24,7 @@
 
 import pytest
 
-from nicos.core import MoveError, status
+from nicos.core import MoveError, PositionError, status
 from nicos_ess.devices.epics.pva import epics_common, shutter
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
@@ -84,7 +84,34 @@ def fake_backend(monkeypatch):
     return backend
 
 
+@pytest.fixture
+def shutter_device(device_harness, fake_backend):
+    del fake_backend
+    return device_harness.create(
+        "daemon",
+        shutter.EpicsShutter,
+        name="epics_shutter",
+        readpv="SIM:SHUTTER:READ",
+        writepv="SIM:SHUTTER:WRITE",
+        statuspv="SIM:SHUTTER:STATUS",
+        msgtxt="SIM:SHUTTER:MSGTXT",
+        monitor=False,
+    )
+
+
 class TestEpicsShutterHarness:
+    def test_numeric_state_uses_readback_choices(self, device_harness, shutter_device):
+        result = device_harness.run("daemon", shutter_device._normalize_readback, 3)
+
+        assert result == "Opened"
+
+    @pytest.mark.parametrize("value", [99, 1.5])
+    def test_invalid_numeric_state_is_rejected(
+        self, device_harness, shutter_device, value
+    ):
+        with pytest.raises(PositionError, match="unknown unmapped position"):
+            device_harness.run("daemon", shutter_device._normalize_readback, value)
+
     def test_initializes(self, device_harness, fake_backend):
         del fake_backend
         assert shutter.EpicsShutter.parameters["msgtxt"].mandatory

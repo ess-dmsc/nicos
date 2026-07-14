@@ -52,6 +52,20 @@ class TestPowerSupplyChannelHarness:
 
         assert daemon_device.read(0) == "ON"
 
+    def test_power_readback_update_publishes_mapped_value(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        fake_backend.emit_update(f"{PS_PV}-Pw-RB", value=1)
+
+        assert (
+            device_harness.run(
+                "daemon", daemon_device._cache.get, daemon_device, "value"
+            )
+            == "ON"
+        )
+
     def test_enable_writes_power_pv(self, device_harness, fake_backend):
         daemon_device, _poller_device = self._create_pair(device_harness)
 

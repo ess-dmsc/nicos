@@ -27,7 +27,7 @@ EpicsManualMappedAnalogMoveable."""
 
 import pytest
 
-from nicos.core import ConfigurationError, PositionError, status
+from nicos.core import ConfigurationError, InvalidValueError, PositionError, status
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsManualMappedAnalogMoveable,
     EpicsMappedMoveable,
@@ -39,6 +39,36 @@ from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
 )
 
 from .conftest import manual_moveable_config
+
+
+@pytest.fixture
+def mapped_moveable(device_harness, fake_backend):
+    config = mapped_config()
+    fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+    fake_backend.values[config["readpv"]] = 0
+    fake_backend.values[config["writepv"]] = 0
+    return device_harness.create(
+        "daemon",
+        EpicsMappedMoveable,
+        name="mapped_moveable",
+        monitor=False,
+        **config,
+    )
+
+
+@pytest.fixture
+def manual_mapped_moveable(device_harness, fake_backend):
+    config = manual_moveable_config()
+    fake_backend.values[config["readpv"]] = 14
+    fake_backend.values[config["writepv"]] = 14
+    device = device_harness.create(
+        "daemon",
+        EpicsManualMappedAnalogMoveable,
+        name="manual_mapped",
+        monitor=False,
+        **config,
+    )
+    return device, config
 
 
 @pytest.mark.parametrize(
@@ -379,6 +409,10 @@ class TestEpicsMappedValueContract:
 
 
 class TestEpicsMappedMoveable:
+    def test_rejects_unknown_target(self, device_harness, mapped_moveable):
+        with pytest.raises(InvalidValueError, match="invalid position"):
+            device_harness.run("daemon", mapped_moveable._mapTargetValue, "UNKNOWN")
+
     def test_daemon_mapped_moveable_maps_user_target_to_raw_value(
         self, device_harness, fake_backend
     ):
@@ -617,6 +651,33 @@ class TestEpicsMappedMoveableCompletion:
 
 
 class TestEpicsManualMappedAnalogMoveable:
+    def test_unknown_raw_target_has_no_mapped_target(
+        self, device_harness, fake_backend, manual_mapped_moveable
+    ):
+        device, config = manual_mapped_moveable
+        fake_backend.values[config["writepv"]] = 7
+
+        assert device_harness.run("daemon", device.doReadTarget) is None
+
+    def test_uncomparable_position_is_not_at_target(
+        self, device_harness, manual_mapped_moveable
+    ):
+        device, _config = manual_mapped_moveable
+
+        result = device_harness.run(
+            "daemon", device.doIsAtTarget, "not numeric", "14 Hz"
+        )
+
+        assert result is False
+
+    def test_uncomparable_readback_reports_busy(
+        self, device_harness, fake_backend, manual_mapped_moveable
+    ):
+        device, config = manual_mapped_moveable
+        fake_backend.values[config["readpv"]] = "not numeric"
+
+        assert device_harness.run("daemon", device.status, 0)[0] == status.BUSY
+
     def test_daemon_manual_mapped_reports_busy_status_and_raw_target(
         self, device_harness, fake_backend
     ):

@@ -793,12 +793,11 @@ class EpicsJogMotor(EpicsMotor):
 
         jog_speed = self._get_valid_speed(abs(value))
 
-        self.jog_dir = 1 if value > 0 else -1
-
         # JVEL updates may arrive before the direction callbacks.
         self.stop()
         self._epics.wait_for("donemoving", 1)
 
+        self.jog_dir = 1 if value > 0 else -1
         self._epics.put_channel_value("jog_velocity", jog_speed)
 
         jf = self._read_channel_cached("jogforward")
@@ -829,7 +828,7 @@ class EpicsJogMotor(EpicsMotor):
         moving = self._read_channel_cached("moving")
         return moving == 0
 
-    def _compute_status(self, maxage=0):
+    def _compute_status_from_pvs(self, maxage):
         with self._lock:
             epics_status, message = self._get_alarm_status_and_msg(maxage)
             self._motor_status = epics_status, message

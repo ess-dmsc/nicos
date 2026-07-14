@@ -54,8 +54,8 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         self.offset = 0
 
     def doStart(self):
-        self.total = 0
         self.offset = self._epics.get_channel_value("read")
+        self.total = self.offset
         self.started = True
 
     def doFinish(self):

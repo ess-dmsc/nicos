@@ -1,3 +1,5 @@
+import time
+
 from nicos.core import (
     Attach,
     CanDisable,
@@ -83,6 +85,12 @@ class PowerSupplyChannel(EpicsDeviceBase, CanDisable, MappedReadable):
 
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
+
+    def _on_channel_update(self, update):
+        super()._on_channel_update(update)
+        if update.channel == "power_rb":
+            value = self._mapReadValue(update.value)
+            self._cache.put(self._name, "value", value, time.time())
 
     def status_on(self):
         """Returns a simplified (bool) status."""

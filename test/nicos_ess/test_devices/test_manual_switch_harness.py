@@ -67,3 +67,30 @@ class TestManualSwitchHarness:
 
         assert fake_backend.values["SIM:SWITCH:WRITE"] == "OFF"
         assert daemon_device.read(0) == "OFF"
+
+    def test_move_publishes_value(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        daemon_device.move("OFF")
+
+        assert (
+            device_harness.run(
+                "daemon", daemon_device._cache.get, daemon_device, "value"
+            )
+            == "OFF"
+        )
+
+    def test_monitor_update_publishes_value(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        fake_backend.emit_update("SIM:SWITCH:WRITE", value="OFF")
+
+        assert (
+            device_harness.run(
+                "daemon", daemon_device._cache.get, daemon_device, "value"
+            )
+            == "OFF"
+        )

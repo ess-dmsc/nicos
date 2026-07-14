@@ -2,15 +2,32 @@ from types import SimpleNamespace
 
 import pytest
 
+from nicos.core import CommunicationError, PositionError, status
 from nicos_ess.devices.epics.pva.epics_common import (
+    LOST_CONNECTION_STATUS,
     EpicsChannelKind,
     EpicsMappedChoiceSupport,
     EpicsParameters,
+    EpicsReadWriteBase,
     get_from_cache_or,
 )
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsReadable,
 )
+
+
+class FailingReadback:
+    wait_for_readback = True
+    target = "ON"
+
+    def __init__(self, error):
+        self.error = error
+
+    def doRead(self, maxage):
+        raise self.error
+
+    def isAtTarget(self, value, target):
+        return value == target
 
 
 class TestHelpers:
@@ -126,6 +143,24 @@ class TestHelpers:
         assert result == 777
         assert len(device._cache.calls) == 1
         assert isinstance(device._cache.calls[0][3], float)
+
+    def test_invalid_readback_keeps_move_busy(self):
+        device = FailingReadback(PositionError("invalid readback"))
+
+        result = EpicsReadWriteBase._readback_completion_candidates(device, 0)
+
+        assert result == [(status.BUSY, "moving to ON")]
+
+    @pytest.mark.parametrize(
+        "error",
+        [TimeoutError("timed out"), CommunicationError("disconnected")],
+    )
+    def test_readback_connection_failure_reports_lost_connection(self, error):
+        device = FailingReadback(error)
+
+        result = EpicsReadWriteBase._readback_completion_candidates(device, 0)
+
+        assert result == [LOST_CONNECTION_STATUS]
 
     @pytest.mark.parametrize("mapping_channel", ["read", "write"])
     def test_update_mapped_choices_builds_mapping_and_inverse(
