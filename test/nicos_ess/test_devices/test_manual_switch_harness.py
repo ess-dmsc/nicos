@@ -81,9 +81,7 @@ class TestManualSwitchHarness:
             == "OFF"
         )
 
-    def test_monitor_update_publishes_value(
-        self, device_harness, fake_backend
-    ):
+    def test_monitor_update_publishes_value(self, device_harness, fake_backend):
         daemon_device, _poller_device = self._create_pair(device_harness)
 
         fake_backend.emit_update("SIM:SWITCH:WRITE", value="OFF")
