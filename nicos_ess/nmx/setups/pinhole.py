@@ -6,17 +6,17 @@ aux_pv_root = f"{pv_root}-ApChg:"
 raise_pv_root = f"{aux_pv_root}MC-Pne-01:"
 arm_pv_root = f"{aux_pv_root}MC-Pne-02:"
 
-pin_options = {f"Pinhole {i}": i for i in range(11)}
-pin_options["No pinhole (unmount)"] = 11
+pin_options = {f"Pinhole {i}": i for i in range(1, 11, 1)}  # Pins from 1 to 10.
+pin_options["Unmount pinhole"] = 11  # Set "11" to unmount pin.
 
 devices = dict(
     # Pinhole main controls
-    pinhole__mount_pin=device(
+    mount_pinhole=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="Mount a selected pinhole (or have no pinhole mounted)",
-        readpv=f"{pinhole_pv_root}MC-Pin-01:Mtr.RBV",
+        description="Mount/Unmount a pinhole",
+        readpv=f"{pinhole_pv_root}MC-Pin-01:Mtr.VAL",
         writepv=f"{pinhole_pv_root}MC-Pin-01:Mtr.VAL",
-        mapping=pin_options,  # Value "11" unmounts. TODO: Add all pins.
+        mapping=pin_options,
         fmtstr="%d",
     ),
     pinhole_status=device(
@@ -28,7 +28,7 @@ devices = dict(
         bitvalue_prefix="-StatusBits",
     ),
     # Auxiliary motor controls (for calibration)
-    pinhole__motor=device(
+    pinhole__virtual_motor=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole exchanger (as a motor)",
         motorpv=f"{pinhole_pv_root}MC-Pin-01:Mtr",
