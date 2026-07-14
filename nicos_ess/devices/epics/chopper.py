@@ -12,13 +12,13 @@ from nicos.core import (
 )
 from nicos.devices.abstract import MappedMoveable
 from nicos_ess.devices.epics.pva.epics_common import (
-    EpicsDeviceBase,
+    EpicsStatusOnlyReadable,
     get_from_cache_or,
     status_channel,
 )
 
 
-class ChopperAlarms(EpicsDeviceBase, Readable):
+class ChopperAlarms(EpicsStatusOnlyReadable):
     """
     This device handles chopper alarms.
 
@@ -50,9 +50,6 @@ class ChopperAlarms(EpicsDeviceBase, Readable):
         "software": status_channel("SW_Alrm"),
         "voltage": status_channel("Volt_Alrm"),
     }
-
-    def doRead(self, maxage=0):
-        return ""
 
     def _on_channel_update(self, update):
         ts = time.time()

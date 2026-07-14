@@ -113,6 +113,16 @@ class TestChopperAlarmsHarness:
         assert daemon_device is not None
         assert poller_device is not None
 
+    def test_status_only_device_publishes_blank_value(
+        self, device_harness, fake_backend
+    ):
+        del fake_backend
+        daemon_device, _poller_device = self._create_pair(
+            device_harness, chopper_mod.ChopperAlarms, "chopper_alarms"
+        )
+
+        assert daemon_device._cache.get(daemon_device, "value") == ""
+
     def test_alarm_update_is_reflected_in_status(self, device_harness, fake_backend):
         daemon_device, _poller_device = self._create_pair(
             device_harness, chopper_mod.ChopperAlarms, "chopper_alarms"

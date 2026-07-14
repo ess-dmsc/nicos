@@ -65,6 +65,14 @@ class TestMBBIDirectStatusHarness:
         assert daemon_device is not None
         assert poller_device is not None
 
+    def test_status_only_device_publishes_blank_value(
+        self, device_harness, fake_backend
+    ):
+        del fake_backend
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        assert daemon_device._cache.get(daemon_device, "value") == ""
+
     def test_set_bit_warns_with_bit_name(self, device_harness, fake_backend):
         daemon_device, _poller_device = self._create_pair(device_harness)
 

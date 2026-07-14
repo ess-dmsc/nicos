@@ -30,6 +30,7 @@ from nicos.core import (
     Param,
     PositionError,
     ProgrammingError,
+    Readable,
     floatrange,
     none_or,
     oneof,
@@ -263,6 +264,27 @@ def resolve_channel_pv_names(device, epics_channels, default_pv_prefix_attr=None
                 f"EPICS channel {channel!r} resolved to no PV; set its "
                 "pv_name_attr/pv_prefix_attr or mark it allow_missing_pv=True",
             )
+
+    cached_pvs = {}
+    for channel, info in epics_channels.items():
+        pv_name = names[channel]
+        if (
+            pv_name is None
+            or info.kind == EpicsChannelKind.COMMAND
+            or info.cache_key is None
+        ):
+            continue
+        cache_key = info.cache_key or channel
+        previous = cached_pvs.get(cache_key)
+        if previous is not None and previous[1] != pv_name:
+            raise ConfigurationError(
+                device,
+                f"EPICS channels {previous[0]!r} ({previous[1]}) and "
+                f"{channel!r} ({pv_name}) use the same cache key "
+                f"{cache_key!r}, so their monitor updates would overwrite "
+                "each other",
+            )
+        cached_pvs[cache_key] = channel, pv_name
     return names
 
 
@@ -312,7 +334,7 @@ def readback_channel(
 
 def setpoint_channel(
     pv_suffix,
-    cache_key="target",
+    cache_key="",
     *,
     as_string=False,
     subscribe=True,
@@ -393,7 +415,7 @@ def enum_readback_channel(pv_suffix, cache_key="", **kwargs):
     return readback_channel(pv_suffix, cache_key=cache_key, is_enum=True, **kwargs)
 
 
-def enum_setpoint_channel(pv_suffix, cache_key="target", **kwargs):
+def enum_setpoint_channel(pv_suffix, cache_key="", **kwargs):
     return setpoint_channel(pv_suffix, cache_key=cache_key, is_enum=True, **kwargs)
 
 
@@ -936,7 +958,15 @@ class EpicsDeviceBase(EpicsParameters):
     def _status_snapshot(self, maxage):
         # Track the set of disconnected channels rather than last-writer-wins on
         # "status", so one PV reconnecting cannot mask another still down.
-        hardware = self._compute_status(maxage)
+        try:
+            hardware = self._compute_status(maxage)
+        except (TimeoutError, CommunicationError):
+            # A monitor callback normally records a disconnect first.  A fresh
+            # status request can still race that callback, or time out on an
+            # auxiliary PV used by a device-specific status implementation.
+            # Keep transport failures distinct from genuine EPICS alarm
+            # callbacks, which are returned normally by _compute_status().
+            hardware = LOST_CONNECTION_STATUS
         if self._disconnected:
             return worst_status(hardware, LOST_CONNECTION_STATUS)
         return hardware
@@ -992,6 +1022,19 @@ class EpicsDeviceBase(EpicsParameters):
             self.log.warning("%s (%s)", name, message)
 
 
+class EpicsStatusOnlyReadable(EpicsDeviceBase, Readable):
+    """Readable facade for EPICS devices that only expose status."""
+
+    valuetype = str
+
+    def _after_subscribe(self, mode):
+        if self._cache is not None:
+            self._cache.put(self._name, "value", "", time.time())
+
+    def doRead(self, maxage=0):
+        return ""
+
+
 class EpicsReadWriteBase(EpicsDeviceBase):
     """EpicsDeviceBase for read/write devices: ``readpv`` + ``writepv``, with an
     optional ``targetpv`` readback.
@@ -1033,6 +1076,12 @@ class EpicsReadWriteBase(EpicsDeviceBase):
         epics_channels = dict(self._epics_channels)
         if self.targetpv and "write" in epics_channels:
             epics_channels["write"] = replace(epics_channels["write"], cache_key=None)
+        if self.wait_for_readback:
+            for channel in ("write", "target"):
+                if channel in epics_channels:
+                    epics_channels[channel] = replace(
+                        epics_channels[channel], refresh_status_on_update=True
+                    )
         return epics_channels
 
     def _startRaw(self, value):

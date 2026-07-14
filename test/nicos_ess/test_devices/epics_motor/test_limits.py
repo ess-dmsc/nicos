@@ -79,6 +79,21 @@ class TestEpicsMotorLegacyParity:
 
 
 class TestEpicsMotorLimits:
+    def test_hardware_limit_callbacks_update_derived_limit_parameters(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
+
+        fake_backend.emit_update(pv(".LLM"), value=-50.0)
+        fake_backend.emit_update(pv(".HLM"), value=60.0)
+
+        assert device_harness.run_daemon(
+            daemon_device._cache.get, daemon_device, "hwuserlimits"
+        ) == (-50.0, 60.0)
+        assert device_harness.run_daemon(
+            daemon_device._cache.get, daemon_device, "userlimits"
+        ) == (-50.0, 60.0)
+
     @pytest.mark.parametrize("offset", OFFSET_CASES)
     @pytest.mark.parametrize("direction", ["Pos", "Neg"], ids=["dir_pos", "dir_neg"])
     def test_motor_limits_from_asymmetric_dial_limits_for_direction_and_offset(

@@ -1,17 +1,16 @@
 from nicos.core import (
     Override,
     Param,
-    Readable,
     status,
 )
 from nicos_ess.devices.epics.pva.epics_common import (
-    EpicsDeviceBase,
+    EpicsStatusOnlyReadable,
     readback_channel,
     status_channel,
 )
 
 
-class MBBIDirectStatus(EpicsDeviceBase, Readable):
+class MBBIDirectStatus(EpicsStatusOnlyReadable):
     """
     This device automatically handles EPICS MBBI direct records with named bits.
     """
@@ -57,9 +56,6 @@ class MBBIDirectStatus(EpicsDeviceBase, Readable):
                 refresh_status=True,
             )
         return channels
-
-    def doRead(self, maxage=0):
-        return ""
 
     def _compute_status(self, maxage=0):
         in_alarm = []

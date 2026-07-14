@@ -208,6 +208,28 @@ class TestEpicsShutterHarness:
             "Open",
         )
 
+    def test_fresh_status_reports_unknown_when_auxiliary_pvs_time_out(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, _poller_device = device_harness.create_pair(
+            shutter.EpicsShutter,
+            name="epics_shutter",
+            shared={
+                "readpv": "SIM:SHUTTER:READ",
+                "writepv": "SIM:SHUTTER:WRITE",
+                "statuspv": "SIM:SHUTTER:STATUS",
+                "msgtxt": "SIM:SHUTTER:MSGTXT",
+                "monitor": True,
+                "pva": True,
+            },
+        )
+        fake_backend.disconnect_backend()
+
+        assert device_harness.run("daemon", daemon_device.status, 0) == (
+            status.UNKNOWN,
+            "lost connection to EPICS",
+        )
+
     def test_start_waits_for_status_code_acknowledgement_before_returning(
         self, device_harness, fake_backend
     ):

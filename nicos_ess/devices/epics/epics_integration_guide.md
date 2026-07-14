@@ -91,6 +91,10 @@ The class needs:
 `EpicsDeviceBase` handles wrapper creation, connections, subscriptions, cache
 updates, units, EPICS alarms, connection status, and shutdown.
 
+Use `EpicsStatusOnlyReadable` instead when the EPICS device only has status
+channels but must still satisfy NICOS's `Readable` interface. It provides the
+blank read value and publishes it to the client cache at startup.
+
 Three hooks cover most subclass needs: `_build_epics_channels()` when the
 channel table depends on parameters, `_compute_status()` for device status
 rules, and `_after_subscribe()` for setup that must wait until monitors are
@@ -110,6 +114,11 @@ Use these constructors in `_epics_channels`:
 `primary=True` marks the main value and alarm source. Use `cache_key="value"`
 for the main readback and `cache_key="target"` for the setpoint. An omitted
 cache key stores the value under the logical channel name.
+
+Distinct PVs may not publish to the same cache key. Device creation rejects
+that declaration because callback order would otherwise decide which PV is
+visible. Multiple logical channels may share a cache key only when they resolve
+to the same PV.
 
 Set `refresh_status=True` on a readback or setpoint when its updates can change
 `_compute_status()`. `status_channel()` enables this by default.
@@ -307,7 +316,10 @@ parameter sweeps and when monitoring is off.
 
 Override `_compute_status()` for device status rules. Return a NICOS
 `(severity, message)` tuple. Keep `doStatus()` on the base class so connection
-status is included.
+status is included. A `TimeoutError` or `CommunicationError` raised while
+building a fresh status snapshot is reported as `UNKNOWN / lost connection to
+EPICS`; an EPICS alarm delivered normally by a monitor remains the IOC's real
+`WARN` or `ERROR` status.
 
 Override `_on_channel_update()` when a monitor value needs conversion before
 it enters the cache. Call `super()._on_channel_update(update)` after the

@@ -78,3 +78,19 @@ class TestHPLCPumpControllerHarness:
 
         assert daemon_device.max_pressure == 10.0
         assert daemon_device.min_pressure == 1.0
+
+    @pytest.mark.parametrize(
+        ("suffix", "cache_key", "value"),
+        [
+            pytest.param("PressureMax-R", "max_pressure", 20.0, id="maximum"),
+            pytest.param("PressureMin-R", "min_pressure", 2.0, id="minimum"),
+        ],
+    )
+    def test_pressure_callback_updates_public_parameter(
+        self, device_harness, fake_backend, suffix, cache_key, value
+    ):
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        fake_backend.emit_update(f"{PV_ROOT}{suffix}", value=value)
+
+        assert daemon_device._cache.get(daemon_device, cache_key) == value

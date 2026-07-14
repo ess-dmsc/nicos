@@ -256,6 +256,23 @@ class EpicsMotor(
         if update.channel == "prec":
             update = replace(update, value=f"%.{update.value}f")
         super()._on_channel_update(update)
+        ts = time.time()
+        if update.channel == "position_deadband":
+            self._cache.put(self._name, "precision", update.value, ts)
+        elif update.channel == "description":
+            self._cache.put(self._name, "pv_desc", update.value, ts)
+        elif update.channel in ("lowlimit", "highlimit"):
+            low = self._cache.get(self._name, "lowlimit", Ellipsis)
+            high = self._cache.get(self._name, "highlimit", Ellipsis)
+            if low is not Ellipsis and high is not Ellipsis:
+                hwlimits = (low, high)
+                self._cache.put(self._name, "hwuserlimits", hwlimits, ts)
+                self._cache.put(
+                    self._name,
+                    "userlimits",
+                    self._userlimits_from_hardware(hwlimits),
+                    ts,
+                )
         if update.channel in ("diallowlimit", "dialhighlimit"):
             # Keep the cached "abslimits" in step with the dial limits, as it
             # is the value NICOS uses; doReadAbslimits only refreshes it when
@@ -308,7 +325,10 @@ class EpicsMotor(
         return hw_user_min, hw_user_max
 
     def doReadUserlimits(self):
-        hw_umin, hw_umax = self.hwuserlimits
+        return self._userlimits_from_hardware(self.hwuserlimits)
+
+    def _userlimits_from_hardware(self, hwlimits):
+        hw_umin, hw_umax = hwlimits
         omin, omax = self.limitoffsets
 
         umin = hw_umin + omin
@@ -719,7 +739,12 @@ class EpicsJogMotor(EpicsMotor):
         epics_channels = super()._build_epics_channels()
         epics_channels.update(
             {
-                "target": readback_channel(".JVEL"),
+                "target": setpoint_channel(
+                    ".JVEL",
+                    cache_key=None,
+                    subscribe=False,
+                    connect_on_startup=False,
+                ),
                 "jog_velocity": readback_channel(".JVEL", cache_key="jog_velocity"),
                 "value": status_channel(".JVEL", cache_key="value"),
                 "jogforward": readback_channel(".JOGF"),
@@ -820,7 +845,7 @@ class EpicsJogMotor(EpicsMotor):
         self._epics.put_channel_value("jogforward", 0)
         self._epics.put_channel_value("jogreverse", 0)
         self._epics.put_channel_value("stop", 1)
-        self._cache.put(self._name, "value", 0.0, time.time())
+        self._publish_jog_value(0.0, time.time())
 
     def doIsCompleted(self):
         if self._sim_intercept:
@@ -874,8 +899,7 @@ class EpicsJogMotor(EpicsMotor):
 
         if update.channel == "jog_velocity":
             self._cache.put(self._name, "jog_velocity", update.value, ts)
-            signed = -abs(update.value) if self.jog_dir < 0 else abs(update.value)
-            self._cache.put(self._name, "value", signed, ts)
+            self._publish_jog_value(update.value, ts)
             return
 
         # Update the signed "value" when direction or moving state changes.
@@ -885,10 +909,10 @@ class EpicsJogMotor(EpicsMotor):
             sign = 1 if update.channel == "jogforward" else -1
             if update.value == 1:
                 self._cache.put(self._name, "jog_dir", sign, ts)
-                self._cache.put(self._name, "value", sign * cur_jvel, ts)
+                self._publish_jog_value(cur_jvel, ts)
             elif not self._read_channel_cached(other):
                 self._cache.put(self._name, "jog_dir", 0, ts)
-                self._cache.put(self._name, "value", 0.0, ts)
+                self._publish_jog_value(cur_jvel, ts)
             self._cache.put(self._name, update.channel, update.value, ts)
             return
 
@@ -900,6 +924,16 @@ class EpicsJogMotor(EpicsMotor):
             return
 
         super()._on_channel_update(update)
+
+    def _publish_jog_value(self, raw_velocity, timestamp):
+        if self.jog_dir < 0:
+            value = -abs(raw_velocity)
+        elif self.jog_dir > 0:
+            value = abs(raw_velocity)
+        else:
+            value = 0.0
+        self._cache.put(self._name, "value", value, timestamp)
+        self._cache.put(self._name, "target", value, timestamp)
 
 
 class SmaractPiezoMotor(EpicsMotor):

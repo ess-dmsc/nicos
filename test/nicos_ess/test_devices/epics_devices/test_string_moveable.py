@@ -131,6 +131,27 @@ class TestEpicsStringMoveable:
             "limit",
         )
 
+    def test_external_target_refreshes_wait_for_readback_status(
+        self, device_harness, fake_backend
+    ):
+        config = string_moveable_config()
+        config["wait_for_readback"] = True
+        fake_backend.values[config["readpv"]] = "OFF"
+        fake_backend.values[config["writepv"]] = "OFF"
+
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsStringMoveable,
+            name="string_moveable",
+            shared=config,
+        )
+        fake_backend.emit_update(config["readpv"], value="OFF")
+        fake_backend.emit_update(config["writepv"], value="ON")
+
+        assert device_harness.run("daemon", daemon_device.status) == (
+            status.BUSY,
+            "moving to ON",
+        )
+
     def test_poller_string_moveable_converts_char_waveform_callbacks(
         self, device_harness, fake_backend
     ):

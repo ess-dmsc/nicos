@@ -26,7 +26,7 @@
 
 import pytest
 
-from nicos.core import MoveError, status
+from nicos.core import CommunicationError, MoveError, status
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsAnalogMoveable,
     EpicsDigitalMoveable,
@@ -109,6 +109,29 @@ class TestEpicsAnalogMoveable:
         fake_backend.disconnect_backend()
 
         assert device_harness.run("daemon", daemon_device.status, 0) == (
+            status.UNKNOWN,
+            "lost connection to EPICS",
+        )
+
+    def test_failed_read_does_not_replace_cached_disconnect_status(
+        self, device_harness, fake_backend
+    ):
+        config = analog_moveable_config()
+        fake_backend.values[config["readpv"]] = 1.0
+        fake_backend.values[config["writepv"]] = 1.0
+
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsAnalogMoveable,
+            name="analog_moveable",
+            shared=config,
+        )
+        fake_backend.emit_update(config["readpv"], value=1.0)
+        fake_backend.disconnect_backend()
+
+        with pytest.raises(CommunicationError, match="timed out"):
+            device_harness.run("daemon", daemon_device.read, 0)
+
+        assert device_harness.run("daemon", daemon_device.status) == (
             status.UNKNOWN,
             "lost connection to EPICS",
         )

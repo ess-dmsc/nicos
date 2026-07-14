@@ -154,6 +154,28 @@ class TestEpicsJogMotorHarness:
             device_harness.run("daemon", jog_motor._cache.get, jog_motor, "value")
             == -2.0
         )
+        assert (
+            device_harness.run("daemon", jog_motor._cache.get, jog_motor, "target")
+            == -2.0
+        )
+
+    def test_velocity_update_while_stopped_keeps_value_at_zero(
+        self, device_harness, jog_motor
+    ):
+        device_harness.run(
+            "daemon",
+            jog_motor._on_channel_update,
+            ChannelUpdate("jog_velocity", 2.0),
+        )
+
+        assert (
+            device_harness.run("daemon", jog_motor._cache.get, jog_motor, "value")
+            == 0.0
+        )
+        assert (
+            device_harness.run("daemon", jog_motor._cache.get, jog_motor, "target")
+            == 0.0
+        )
 
     def test_direction_update_sets_signed_velocity(
         self, device_harness, fake_backend, jog_motor
@@ -170,6 +192,25 @@ class TestEpicsJogMotorHarness:
         assert (
             device_harness.run("daemon", jog_motor._cache.get, jog_motor, "value")
             == -2.0
+        )
+        assert (
+            device_harness.run("daemon", jog_motor._cache.get, jog_motor, "target")
+            == -2.0
+        )
+
+    def test_stop_publishes_zero_value_and_target(self, device_harness, jog_motor):
+        device_harness.run("daemon", jog_motor._setROParam, "jog_dir", 1)
+        device_harness.run("daemon", jog_motor._setROParam, "target", 2.0)
+
+        device_harness.run("daemon", jog_motor.doStop)
+
+        assert (
+            device_harness.run("daemon", jog_motor._cache.get, jog_motor, "value")
+            == 0.0
+        )
+        assert (
+            device_harness.run("daemon", jog_motor._cache.get, jog_motor, "target")
+            == 0.0
         )
 
     def test_status_reports_lost_connection(

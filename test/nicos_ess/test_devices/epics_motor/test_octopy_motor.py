@@ -40,6 +40,29 @@ def create_octopy_pair(device_harness):
 
 
 class TestOctopyMotor:
+    def test_speed_and_enable_updates_do_not_overwrite_target(
+        self, device_harness, fake_backend
+    ):
+        seed_octopy_pvs(fake_backend)
+        daemon_device, _poller_device = create_octopy_pair(device_harness)
+
+        fake_backend.emit_update(pv("-s"), value=5.0)
+        fake_backend.emit_update(pv("-velocity-s"), value=7.0)
+        fake_backend.emit_update(pv("-enable-s"), value=0)
+
+        assert (
+            device_harness.run_daemon(daemon_device._cache.get, daemon_device, "target")
+            == 5.0
+        )
+        assert (
+            device_harness.run_daemon(daemon_device._cache.get, daemon_device, "speed")
+            == 7.0
+        )
+        assert (
+            device_harness.run_daemon(daemon_device._cache.get, daemon_device, "enable")
+            == 0
+        )
+
     def test_read_respects_maxage_through_public_read(
         self, device_harness, fake_backend
     ):

@@ -67,13 +67,9 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
             primary=True,
         ),
         "set_pressure_max": command_channel("PressureMax-S"),
-        "pressure_max_rbv": readback_channel(
-            "PressureMax-R", cache_key="pressure_max_rbv"
-        ),
+        "pressure_max_rbv": readback_channel("PressureMax-R", cache_key="max_pressure"),
         "set_pressure_min": command_channel("PressureMin-S"),
-        "pressure_min_rbv": readback_channel(
-            "PressureMin-R", cache_key="pressure_min_rbv"
-        ),
+        "pressure_min_rbv": readback_channel("PressureMin-R", cache_key="min_pressure"),
         "pump_for_time": command_channel("PumpForTime-S"),
         "pump_for_volume": command_channel("PumpForVolume-S"),
         "start_pump": command_channel("Start-S"),

@@ -11,6 +11,7 @@ from nicos.core import (
     status,
 )
 from nicos_ess.devices.epics.pva.epics_common import (
+    LOST_CONNECTION_STATUS,
     ChannelUpdate,
     ConnectionUpdate,
     EpicsChannelComponent,
@@ -227,11 +228,40 @@ class TestPvResolution:
         with pytest.raises(ConfigurationError):
             resolve_channel_pv_names(Device(), channels, "motorpv")
 
+    def test_resolve_channel_pv_names_rejects_distinct_pvs_sharing_cache_key(self):
+        class Device:
+            name = "probe"
+            root = "SIM:"
+
+        channels = {
+            "speed": setpoint_channel("speed", cache_key="target"),
+            "enable": setpoint_channel("enable", cache_key="target"),
+        }
+
+        with pytest.raises(ConfigurationError, match="same cache key"):
+            resolve_channel_pv_names(Device(), channels, "root")
+
     def test_cache_key_for_prefers_channel_info(self):
         component, _ = make_component()
         assert component.cache_key_for("value") == "value"
         assert component.cache_key_for("moving") == "moving"
         assert component.cache_key_for("not_a_channel") == "not_a_channel"
+
+    def test_setpoint_channel_defaults_to_its_logical_channel_name(self):
+        channels = {
+            "speed": setpoint_channel("-velocity-s"),
+            "power": enum_setpoint_channel("-Pw"),
+        }
+        component, _ = make_component(
+            epics_channels=channels,
+            pv_names_by_channel={
+                "speed": "SIM:velocity-s",
+                "power": "SIM:Pw",
+            },
+        )
+
+        assert component.cache_key_for("speed") == "speed"
+        assert component.cache_key_for("power") == "power"
 
     def test_cache_key_for_none_disables_caching(self):
         channels = dict(
@@ -798,6 +828,42 @@ class TestDeviceGlue:
             status.UNKNOWN,
             "lost connection to EPICS",
         )
+
+    @pytest.mark.parametrize(
+        "error",
+        [TimeoutError("timed out"), CommunicationError("disconnected")],
+    )
+    def test_device_specific_status_timeout_reports_unknown_connection_loss(
+        self, error
+    ):
+        def compute_status(maxage=0):
+            raise error
+
+        probe = GlueProbe(compute_status=compute_status)
+
+        assert probe.doStatus(maxage=0) == (
+            status.UNKNOWN,
+            "lost connection to EPICS",
+        )
+
+    def test_real_alarm_replaces_a_previous_status_timeout(self):
+        snapshots = iter(
+            [
+                TimeoutError("timed out"),
+                (status.ERROR, "hardware interlock"),
+            ]
+        )
+
+        def compute_status(maxage=0):
+            result = next(snapshots)
+            if isinstance(result, Exception):
+                raise result
+            return result
+
+        probe = GlueProbe(compute_status=compute_status)
+
+        assert probe.doStatus(maxage=0) == LOST_CONNECTION_STATUS
+        assert probe.doStatus(maxage=0) == (status.ERROR, "hardware interlock")
 
 
 MULTI_CHANNELS = {

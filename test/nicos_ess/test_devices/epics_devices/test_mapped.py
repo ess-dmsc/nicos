@@ -460,6 +460,29 @@ class TestEpicsMappedMoveable:
         assert device_harness.run("poller", device._cache.get, device, "target") == "ON"
         assert fake_backend.get_calls == []
 
+    def test_external_target_refreshes_wait_for_readback_status(
+        self, device_harness, fake_backend
+    ):
+        config = mapped_config()
+        config["wait_for_readback"] = True
+        fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.value_choices[config["writepv"]] = ["OFF", "ON"]
+        fake_backend.values[config["readpv"]] = 0
+        fake_backend.values[config["writepv"]] = 0
+
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsMappedMoveable,
+            name="mapped_moveable",
+            shared=config,
+        )
+        fake_backend.emit_update(config["readpv"], value=0)
+        fake_backend.emit_update(config["writepv"], value=1)
+
+        assert device_harness.run("daemon", daemon_device.status) == (
+            status.BUSY,
+            "moving to ON",
+        )
+
     def test_mapped_moveable_external_writepv_update_changes_target(
         self, device_harness, fake_backend
     ):

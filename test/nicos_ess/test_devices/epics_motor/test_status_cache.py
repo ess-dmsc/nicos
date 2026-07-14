@@ -412,6 +412,27 @@ class TestEpicsMotorCacheAndReadPaths:
         fake_backend.emit_update(pv(".MOVN"), value=0)
         assert device_harness.run_daemon(daemon_device.isCompleted) is True
 
+    @pytest.mark.parametrize(
+        ("suffix", "cache_key", "value"),
+        [
+            pytest.param(".RDBD", "precision", 0.4, id="precision"),
+            pytest.param(".DESC", "pv_desc", "Updated motor", id="description"),
+        ],
+    )
+    def test_aliased_parameter_callbacks_update_public_cache_key(
+        self, device_harness, fake_backend, suffix, cache_key, value
+    ):
+        daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
+
+        fake_backend.emit_update(pv(suffix), value=value)
+
+        assert (
+            device_harness.run_daemon(
+                daemon_device._cache.get, daemon_device, cache_key
+            )
+            == value
+        )
+
     def test_daemon_read_uses_backend_directly_when_monitor_is_disabled(
         self, device_harness, fake_backend
     ):
