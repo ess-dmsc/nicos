@@ -1082,7 +1082,7 @@ class EpicsMappedChoiceSupport:
     _mapping_channel = "read"
 
     def doRead(self, maxage=0):
-        return self._mapReadValue(self._readRaw(maxage))
+        return self._readRaw(maxage)
 
     def _readRaw(self, maxage=0):
         value = get_from_cache_or(
@@ -1092,9 +1092,6 @@ class EpicsMappedChoiceSupport:
             maxage=maxage,
         )
         return self._normalize_readback(value)
-
-    def _mapReadValue(self, value):
-        return value
 
     def _update_mapped_choices(self):
         channel = self._mapping_channel

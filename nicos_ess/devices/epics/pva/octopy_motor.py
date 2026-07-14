@@ -1,4 +1,3 @@
-import threading
 import time
 
 from nicos.core import CommunicationError, MoveError, Override, Param, pvname, status
@@ -46,10 +45,6 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
         "busy": status_channel("-busy-r"),
         "move_done": status_channel("-move_done-r"),
     }
-
-    def doPreinit(self, mode):
-        self._lock = threading.Lock()
-        EpicsDeviceBase.doPreinit(self, mode)
 
     # One PV is enough to see that the IOC is there.
     _connect_channels = ("target",)

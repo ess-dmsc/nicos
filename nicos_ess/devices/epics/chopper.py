@@ -198,17 +198,9 @@ class NewEssChopperController(EssChopperController):
     """Standardized ESS chopper controller for ODIN/NMX style setups."""
 
     attached_devices = {
-        "state": Attach("Current state of the chopper", Readable),
-        "command": Attach("Command PV of the chopper", MappedMoveable),
         "alarms": Attach("Alarms of the chopper", NewChopperAlarms, optional=True),
-        "speed": Attach("Speed PV of the chopper", MappedMoveable),
-        "chic_conn": Attach("Status of the CHIC connection", Readable),
     }
 
     parameter_overrides = {
-        "fmtstr": Override(default="%s"),
-        "unit": Override(mandatory=False),
-        "mapping": Override(
-            mandatory=False, settable=False, userparam=False, volatile=True
-        ),
+        "mapping": Override(settable=False),
     }

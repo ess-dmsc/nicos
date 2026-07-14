@@ -7,7 +7,6 @@ from nicos.core import (
 from nicos_ess.devices.epics.pva.epics_common import (
     command_channel,
     enum_status_channel,
-    readback_channel,
     status_channel,
     worst_status,
 )
@@ -133,15 +132,7 @@ class EpicsHeavyShutter(EpicsMappedReadable):
     }
 
     def _build_epics_channels(self):
-        epics_channels = {
-            "read": readback_channel(
-                "",
-                cache_key="value",
-                primary=True,
-                as_string=True,
-                pv_name_attr="readpv",
-            ),
-        }
+        epics_channels = dict(super()._build_epics_channels())
         if self.resetpv:
             epics_channels["reset"] = command_channel("", pv_name_attr="resetpv")
         return epics_channels
