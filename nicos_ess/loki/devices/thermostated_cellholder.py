@@ -99,7 +99,7 @@ class ThermoStatedCellHolder(HasNexusConfig, MultiSwitcher):
     def _mapReadValue(self, value):
         """maps a tuple to one of the configured values"""
         try:
-            MultiSwitcher._mapReadValue(self, value)
+            return MultiSwitcher._mapReadValue(self, value)
         except PositionError:
             return "unknown"
 
