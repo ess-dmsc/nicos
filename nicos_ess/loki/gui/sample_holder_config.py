@@ -133,6 +133,8 @@ class LokiSampleHolderPanel(PanelBase):
     def on_keyChange(self, key, value, time, expired):
         if self._dev_name and key.startswith(self._dev_name):
             if key.endswith("/number_cells"):
+                if expired or not isinstance(value, dict):
+                    return
                 self.number_cells = value
                 self._update_cartridges()
             if key.endswith("/cartridges"):
