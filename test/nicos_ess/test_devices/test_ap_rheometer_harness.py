@@ -3,7 +3,7 @@
 import numpy
 import pytest
 
-from nicos.core import UsageError, status
+from nicos.core import status
 from nicos_ess.devices.epics import ap_rheometer
 from nicos_ess.devices.epics.ap_rheometer import RheometerControl
 
@@ -21,6 +21,9 @@ def fake_backend(fake_epics_backend_factory):
     # must answer (the real IOC always serves them).
     for suffix in ap_rheometer._READBACK_FIELDS.values():
         backend.values[ROOT + suffix] = 0.0
+    # ErrMsg is a string PV; the no-error state is an empty string, not 0.0
+    # (which would read back as the truthy string "0.0").
+    backend.values[ROOT + ap_rheometer._READBACK_FIELDS["err_msg"]] = ""
     backend.values[ROOT + ap_rheometer._CONFIG_FIELDS["temp_setpoint"]] = 0.0
     return backend
 

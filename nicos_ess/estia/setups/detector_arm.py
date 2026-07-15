@@ -15,6 +15,7 @@ devices = dict(
         description="Detector Arm Pneumatic Coupling: Support Structure on Air Pads",
         writepv=f"{det_arm_root}:ShtOpen",
         readpv=f"{det_arm_root}:ShtAuxBits07",
+        statuspv=f"{det_arm_root}:ShtStatusCode",
         resetpv=f"{det_arm_root}:ShtErrRst",
         msgtxt=f"{det_arm_root}:ShtMsgTxt",
     ),

@@ -27,8 +27,7 @@ EpicsManualMappedAnalogMoveable."""
 
 import pytest
 
-from nicos.core import ConfigurationError, PositionError, status
-
+from nicos.core import ConfigurationError, InvalidValueError, PositionError, status
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsManualMappedAnalogMoveable,
     EpicsMappedMoveable,
@@ -40,6 +39,36 @@ from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
 )
 
 from .conftest import manual_moveable_config
+
+
+@pytest.fixture
+def mapped_moveable(device_harness, fake_backend):
+    config = mapped_config()
+    fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+    fake_backend.values[config["readpv"]] = 0
+    fake_backend.values[config["writepv"]] = 0
+    return device_harness.create(
+        "daemon",
+        EpicsMappedMoveable,
+        name="mapped_moveable",
+        monitor=False,
+        **config,
+    )
+
+
+@pytest.fixture
+def manual_mapped_moveable(device_harness, fake_backend):
+    config = manual_moveable_config()
+    fake_backend.values[config["readpv"]] = 14
+    fake_backend.values[config["writepv"]] = 14
+    device = device_harness.create(
+        "daemon",
+        EpicsManualMappedAnalogMoveable,
+        name="manual_mapped",
+        monitor=False,
+        **config,
+    )
+    return device, config
 
 
 @pytest.mark.parametrize(
@@ -206,11 +235,13 @@ class TestEpicsMappedValueContract:
             **config,
         )
 
-        with pytest.raises(PositionError):
-            fake_backend.emit_update(config["readpv"], value=99, units="")
+        # Invalid updates are reported through status and must not be cached.
+        fake_backend.emit_update(config["readpv"], value=99, units="")
 
+        assert device_harness.run("poller", device._cache.get, device, "value") is None
         assert (
-            device_harness.run("poller", device._cache.get, device, "value") is None
+            device_harness.run("poller", device._cache.get, device, "status")[0]
+            == status.UNKNOWN
         )
 
     def test_poller_callback_refreshes_mapping_for_new_raw_value(
@@ -248,8 +279,7 @@ class TestEpicsMappedValueContract:
             "ERROR": 2,
         }
         assert (
-            device_harness.run("poller", device._cache.get, device, "value")
-            == "ERROR"
+            device_harness.run("poller", device._cache.get, device, "value") == "ERROR"
         )
 
     def test_daemon_direct_read_refreshes_mapping_for_new_raw_value(
@@ -330,7 +360,7 @@ class TestEpicsMappedValueContract:
 
         assert device_harness.run("daemon", device.read, 0) == "THREE"
         assert fake_backend.get_calls == [
-            ("get_pv_value", config["readpv"], False),
+            ("get_pv_value", config["readpv"], True),
         ]
 
     def test_daemon_first_read_before_monitor_callback_returns_mapped_value(
@@ -368,16 +398,20 @@ class TestEpicsMappedValueContract:
             **config,
         )
 
-        with pytest.raises(PositionError):
-            fake_backend.emit_update(config["readpv"], value="1", units="")
+        # Invalid updates are reported through status and must not be cached.
+        fake_backend.emit_update(config["readpv"], value="1", units="")
 
+        assert device_harness.run("poller", device._cache.get, device, "value") is None
         assert (
-            device_harness.run("poller", device._cache.get, device, "value") is None
+            device_harness.run("poller", device._cache.get, device, "status")[0]
+            == status.UNKNOWN
         )
 
 
 class TestEpicsMappedMoveable:
-    """Behavior tests for mapped moveable class."""
+    def test_rejects_unknown_target(self, device_harness, mapped_moveable):
+        with pytest.raises(InvalidValueError, match="invalid position"):
+            device_harness.run("daemon", mapped_moveable._mapTargetValue, "UNKNOWN")
 
     def test_daemon_mapped_moveable_maps_user_target_to_raw_value(
         self, device_harness, fake_backend
@@ -426,11 +460,35 @@ class TestEpicsMappedMoveable:
         assert device_harness.run("poller", device._cache.get, device, "target") == "ON"
         assert fake_backend.get_calls == []
 
-    def test_mapped_moveable_second_start_wins_when_old_callbacks_arrive_late(
+    def test_external_target_refreshes_wait_for_readback_status(
+        self, device_harness, fake_backend
+    ):
+        config = mapped_config()
+        config["wait_for_readback"] = True
+        fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.value_choices[config["writepv"]] = ["OFF", "ON"]
+        fake_backend.values[config["readpv"]] = 0
+        fake_backend.values[config["writepv"]] = 0
+
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsMappedMoveable,
+            name="mapped_moveable",
+            shared=config,
+        )
+        fake_backend.emit_update(config["readpv"], value=0)
+        fake_backend.emit_update(config["writepv"], value=1)
+
+        assert device_harness.run("daemon", daemon_device.status) == (
+            status.BUSY,
+            "moving to ON",
+        )
+
+    def test_mapped_moveable_external_writepv_update_changes_target(
         self, device_harness, fake_backend
     ):
         config = mapped_config()
         fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.value_choices[config["writepv"]] = ["OFF", "ON"]
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["writepv"]] = 0
         fake_backend.alarms[config["readpv"]] = (status.OK, "ok")
@@ -453,18 +511,18 @@ class TestEpicsMappedMoveable:
         )
 
         device_harness.run("daemon", daemon_device.start, "ON")
-        device_harness.run("daemon", daemon_device.start, "OFF")
-        fake_backend.emit_update(config["writepv"], value=1, units="")
+        fake_backend.emit_update(config["writepv"], value=0, units="")
         fake_backend.emit_update(config["readpv"], value=1, units="")
         observed_target = device_harness.run("daemon", lambda: daemon_device.target)
 
         assert observed_target == "OFF"
 
-    def test_mapped_moveable_out_of_order_callbacks_do_not_swap_last_target(
+    def test_mapped_moveable_external_writepv_update_is_visible_before_readback(
         self, device_harness, fake_backend
     ):
         config = mapped_config()
         fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.value_choices[config["writepv"]] = ["OFF", "ON"]
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["writepv"]] = 0
         fake_backend.alarms[config["readpv"]] = (status.OK, "ok")
@@ -486,11 +544,11 @@ class TestEpicsMappedMoveable:
         )
 
         device_harness.run("daemon", daemon_device.start, "ON")
-        fake_backend.emit_update(config["writepv"], value=1, units="")
-        fake_backend.emit_update(config["readpv"], value=0, units="")
+        fake_backend.emit_update(config["writepv"], value=0, units="")
+        fake_backend.emit_update(config["readpv"], value=1, units="")
         observed_target = device_harness.run("daemon", lambda: daemon_device.target)
 
-        assert observed_target == "ON"
+        assert observed_target == "OFF"
 
     def test_mapped_moveable_targetpv_callback_maps_target(
         self, device_harness, fake_backend
@@ -499,6 +557,7 @@ class TestEpicsMappedMoveable:
         config["writepv"] = config["readpv"]
         config["targetpv"] = "SIM:MAP.TARGET"
         fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.value_choices[config["targetpv"]] = ["OFF", "ON"]
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["targetpv"]] = 0
 
@@ -560,10 +619,89 @@ class TestEpicsMappedMoveable:
         assert any("did not reach target" in msg for msg in warning_messages)
 
 
-class TestEpicsManualMappedAnalogMoveable:
-    """Behavior tests for manual mapped analog moveable class."""
+class TestEpicsMappedMoveableCompletion:
+    def test_status_is_ok_before_readback_matches_target_by_default(
+        self, device_harness, fake_backend
+    ):
+        config = mapped_config()
+        config["monitor"] = False
+        fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.value_choices[config["writepv"]] = ["OFF", "ON"]
+        fake_backend.values[config["readpv"]] = 0
+        fake_backend.values[config["writepv"]] = 0
 
-    def test_daemon_manual_mapped_writes_busy_status_and_raw_target(
+        device = device_harness.create(
+            "daemon",
+            EpicsMappedMoveable,
+            name="mapped_moveable",
+            **config,
+        )
+
+        device_harness.run("daemon", device.start, "ON")
+
+        assert device_harness.run("daemon", device.status, 0)[0] == status.OK
+        assert device_harness.run("daemon", device.isCompleted) is True
+
+    def test_status_busy_until_readback_matches_target_when_requested(
+        self, device_harness, fake_backend
+    ):
+        config = mapped_config()
+        config["monitor"] = False
+        config["wait_for_readback"] = True
+        fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.value_choices[config["writepv"]] = ["OFF", "ON"]
+        fake_backend.values[config["readpv"]] = 0
+        fake_backend.values[config["writepv"]] = 0
+
+        device = device_harness.create(
+            "daemon",
+            EpicsMappedMoveable,
+            name="mapped_moveable",
+            **config,
+        )
+
+        device_harness.run("daemon", device.start, "ON")
+
+        assert device_harness.run("daemon", device.status, 0) == (
+            status.BUSY,
+            "moving to ON",
+        )
+        assert device_harness.run("daemon", device.isCompleted) is False
+
+        fake_backend.values[config["readpv"]] = 1
+        assert device_harness.run("daemon", device.status, 0)[0] == status.OK
+        assert device_harness.run("daemon", device.isCompleted) is True
+
+
+class TestEpicsManualMappedAnalogMoveable:
+    def test_unknown_raw_target_has_no_mapped_target(
+        self, device_harness, fake_backend, manual_mapped_moveable
+    ):
+        device, config = manual_mapped_moveable
+        fake_backend.values[config["writepv"]] = 7
+
+        assert device_harness.run("daemon", device.doReadTarget) is None
+
+    def test_uncomparable_position_is_not_at_target(
+        self, device_harness, manual_mapped_moveable
+    ):
+        device, _config = manual_mapped_moveable
+
+        result = device_harness.run(
+            "daemon", device.doIsAtTarget, "not numeric", "14 Hz"
+        )
+
+        assert result is False
+
+    def test_uncomparable_readback_reports_busy(
+        self, device_harness, fake_backend, manual_mapped_moveable
+    ):
+        device, config = manual_mapped_moveable
+        fake_backend.values[config["readpv"]] = "not numeric"
+
+        assert device_harness.run("daemon", device.status, 0)[0] == status.BUSY
+
+    def test_daemon_manual_mapped_reports_busy_status_and_raw_target(
         self, device_harness, fake_backend
     ):
         config = analog_moveable_config()
@@ -584,9 +722,7 @@ class TestEpicsManualMappedAnalogMoveable:
         device_harness.run("daemon", device.start, "10 Hz")
 
         assert fake_backend.put_calls[-1] == (config["writepv"], 10, False)
-        assert device_harness.run("daemon", device._cache.get, device, "status")[0] == (
-            status.BUSY
-        )
+        assert device_harness.run("daemon", device.status, 0)[0] == status.BUSY
         assert device_harness.run("daemon", device.doReadTarget) == "10 Hz"
 
     def test_poller_manual_mapped_callbacks_update_status_and_limits(
@@ -642,14 +778,40 @@ class TestEpicsManualMappedAnalogMoveable:
         )
 
         device_harness.run("daemon", daemon_device.start, "10 Hz")
-        assert device_harness.run("daemon", daemon_device.status, 0)[0] == status.BUSY
+        assert device_harness.run("daemon", daemon_device.status)[0] == status.BUSY
 
         fake_backend.emit_update(config["readpv"], value=10, units="Hz")
         fake_backend.emit_update(config["writepv"], value=10, limits=(0, 20))
-        assert device_harness.run("daemon", daemon_device.status, 0)[0] == status.OK
+        assert device_harness.run("daemon", daemon_device.status)[0] == status.OK
 
         fake_backend.emit_update(config["readpv"], value=5, units="Hz")
-        assert device_harness.run("daemon", daemon_device.status, 0)[0] == status.BUSY
+        assert device_harness.run("daemon", daemon_device.status)[0] == status.BUSY
+
+    def test_poller_keeps_target_in_user_space(self, device_harness, fake_backend):
+        config = analog_moveable_config()
+        config["mapping"] = {"0 Hz": 0, "10 Hz": 10}
+        fake_backend.values[config["readpv"]] = 0
+        fake_backend.values[config["writepv"]] = 0
+        fake_backend.units[config["readpv"]] = "Hz"
+
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsManualMappedAnalogMoveable,
+            name="manual_mapped",
+            shared=config,
+        )
+
+        device_harness.run("daemon", daemon_device.start, "10 Hz")
+        # The poller sees the raw value on the write channel; the cached
+        # target must stay the mapped user value
+        fake_backend.emit_update(config["writepv"], value=10)
+
+        assert (
+            device_harness.run(
+                "daemon", daemon_device._cache.get, daemon_device, "target"
+            )
+            == "10 Hz"
+        )
+        assert device_harness.run("daemon", lambda: daemon_device.target) == "10 Hz"
 
     def test_daemon_manual_mapped_read_prefers_cached_value_when_monitor_enabled(
         self, device_harness, fake_backend
@@ -689,7 +851,7 @@ class TestEpicsManualMappedAnalogMoveable:
         device_harness.run("daemon", daemon_device.start, "14 Hz")
         fake_backend.alarms[config["readpv"]] = (status.WARN, "limit warning")
 
-        observed_status = device_harness.run("daemon", daemon_device.status, 0)
+        observed_status = device_harness.run("daemon", daemon_device.status)
         completed = device_harness.run("daemon", daemon_device.isCompleted)
 
         assert observed_status[0] == status.BUSY
@@ -757,9 +919,9 @@ class TestEpicsManualMappedAnalogMoveable:
 
         device_harness.run("daemon", daemon_device.start, "14 Hz")
         fake_backend.emit_update(config["writepv"], value=14, limits=(0, 40))
-        status_after_write = device_harness.run("daemon", daemon_device.status, 0)
+        status_after_write = device_harness.run("daemon", daemon_device.status)
         fake_backend.emit_update(config["readpv"], value=14, units="Hz")
-        status_after_read = device_harness.run("daemon", daemon_device.status, 0)
+        status_after_read = device_harness.run("daemon", daemon_device.status)
 
         assert status_after_write[0] == status.BUSY
         assert status_after_read[0] == status.OK

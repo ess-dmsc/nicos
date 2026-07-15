@@ -4,7 +4,8 @@ pv_root = "LabS-SEE3:SE-REX-01:"
 
 devices = dict(
     nozzle_switcher=device(
-        "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
+        # REx is a robot interface, not an m-epics pneumatic actuator.
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Nozzle Switcher",
         readpv=f"{pv_root}ActualPosInterpret",
         writepv=f"{pv_root}SetPosition",

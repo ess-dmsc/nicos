@@ -1,29 +1,41 @@
-import time
-
-from nicos import session
 from nicos.core import (
-    POLLER,
-    SIMULATION,
     Param,
     none_or,
     pvname,
     status,
 )
-from nicos.devices.abstract import MappedMoveable
-from nicos.devices.epics.pva import EpicsMappedReadable
+from nicos_ess.devices.epics.pva.epics_common import (
+    command_channel,
+    enum_status_channel,
+    status_channel,
+    worst_status,
+)
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsMappedMoveable,
-    PvReadOrWrite,
-    _update_mapped_choices,
-    get_from_cache_or,
+    EpicsMappedReadable,
 )
 
 
 class EpicsShutter(EpicsMappedMoveable):
     """
-    May become a general class. Works same as EpicsMappedMoveable, but uses
-    choices from the writepv instead of readpv for the mapping.
+    Pneumatic actuator whose command choices and state labels are independent.
+
+    Mapping choices come from ``writepv``.  The standardized actuator
+    ``statuspv`` lifecycle controls completion; the PLC-defined ``readpv``
+    labels remain presentation only.
     """
+
+    _mapping_channel = "write"
+
+    _STATUS_MAP = {
+        "IDLE": status.OK,
+        "DISABLED": status.DISABLED,
+        "WARN": status.WARN,
+        "RESET": status.BUSY,
+        "START": status.BUSY,
+        "BUSY": status.BUSY,
+        "STOP": status.BUSY,
+    }
 
     parameters = {
         "resetpv": Param(
@@ -35,85 +47,74 @@ class EpicsShutter(EpicsMappedMoveable):
         "msgtxt": Param(
             "PV of the message text",
             type=pvname,
-            mandatory=False,
+            mandatory=True,
+            userparam=False,
+        ),
+        "statuspv": Param(
+            "PV of the actuator StatusCode lifecycle enum",
+            type=pvname,
+            mandatory=True,
             userparam=False,
         ),
     }
 
-    def doInit(self, mode):
-        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
-            _update_mapped_choices(self, PvReadOrWrite.readpv)
+    def _build_epics_channels(self):
+        epics_channels = super()._build_epics_channels()
+        # Named 'message' so the cache key does not collide with the
+        # 'msgtxt' parameter (which holds the PV name).
+        epics_channels["message"] = status_channel(
+            "",
+            as_string=True,
+            pv_name_attr="msgtxt",
+        )
+        epics_channels["status_code"] = enum_status_channel(
+            "",
+            cache_key="status_code",
+            pv_name_attr="statuspv",
+        )
+        return epics_channels
 
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
+    def _read_msgtxt(self, maxage=None):
+        return self._read_channel_cached("message", maxage=maxage)
+
+    @staticmethod
+    def _normalize_status_code(value):
+        return str(value).strip().upper()
+
+    def _read_status_code(self, maxage=0):
+        return self._normalize_status_code(
+            self._read_channel_cached("status_code", maxage=maxage)
+        )
+
+    def doStart(self, target):
+        super().doStart(target)
+        # The ADS write returns before the next IOC readback cycle.  Wait only
+        # for the short hardware acknowledgement, not for the movement.  This
+        # prevents the previous IDLE from completing the new NICOS target.
+        self._epics.wait_for(
+            "status_code",
+            lambda value: self._normalize_status_code(value) != "IDLE",
+            timeout=self.epicstimeout,
+        )
+
+    def _compute_status(self, maxage=0):
+        severity, _ = self._read_primary_alarm(maxage=maxage)
+        message = self._read_msgtxt(maxage=maxage)
+        code = self._read_status_code(maxage=maxage)
+        code_status = self._STATUS_MAP.get(code, status.ERROR)
+        code_message = message
+        if not code_message and code_status == status.BUSY:
+            code_message = (
+                f"moving to {self.target}" if self.target is not None else "moving"
             )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.readpv,
-                    self._record_fields["readpv"].cache_key,
-                    self._status_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            self._epics_subscriptions.append(
-                self._epics_wrapper.subscribe(
-                    self.writepv,
-                    self._record_fields["writepv"].cache_key,
-                    self._value_change_callback,
-                    self._connection_change_callback,
-                )
-            )
-            if self.targetpv:
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        self.targetpv,
-                        self._record_fields["targetpv"].cache_key,
-                        self._value_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
+        elif not code_message and code_status != status.OK:
+            code_message = code
+        return worst_status((severity, message), (code_status, code_message))
 
-        if mode != SIMULATION and session.sessiontype != POLLER:
-            _update_mapped_choices(self, PvReadOrWrite.writepv)
-        MappedMoveable.doInit(self, mode)
-
-    def _read_msgtxt(self):
-        return self._epics_wrapper.get_pv_value(self.msgtxt, as_string=True)
-
-    def _is_moving(self):
-        choices = self._epics_wrapper.get_value_choices(self.readpv)
-        choice_mapping = {choice: i for i, choice in enumerate(choices)}
-        CLOSINGBIT = 1
-        OPENINGBIT = 2
-        if choice_mapping[self.read()] in (CLOSINGBIT, OPENINGBIT):
-            return True
-
-    def _do_status(self):
-        try:
-            severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
-        except TimeoutError:
-            return status.ERROR, "timeout reading status"
-        if severity in [status.ERROR, status.WARN]:
-            return severity, self._read_msgtxt()
-        if self._is_moving():
-            return status.BUSY, self._read_msgtxt()
-        return severity, self._read_msgtxt()
-
-    def doStatus(self, maxage=0):
-        return get_from_cache_or(self, "status", self._do_status)
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            # Unexpected updates ignored
-            return
-        self._cache.put(self._name, "status", self._do_status(), time.time())
+    def doFinish(self):
+        # Command and AuxBits07 labels are independent PLC configuration.
+        # StatusCode is the only generic completion/error contract.
+        return False
 
 
 class EpicsHeavyShutter(EpicsMappedReadable):
@@ -130,13 +131,18 @@ class EpicsHeavyShutter(EpicsMappedReadable):
         ),
     }
 
-    def _get_pv_parameters(self):
-        return {"readpv"} | {"resetpv"} if self.resetpv else {"readpv"}
+    def _build_epics_channels(self):
+        epics_channels = dict(super()._build_epics_channels())
+        if self.resetpv:
+            epics_channels["reset"] = command_channel("", pv_name_attr="resetpv")
+        return epics_channels
 
     def doReset(self):
         """Reset shutter state by writing on the configured 'resetpv' parameter"""
 
         if self.resetpv:
-            self._put_pv("resetpv", True)
+            self._epics.put_channel_value("reset", True)
         else:
-            self.log.warn("Reset isn't available on device or the resetpv is missing")
+            self.log.warning(
+                "Reset isn't available on device or the resetpv is missing"
+            )

@@ -10,6 +10,7 @@ devices = dict(
         description="Beam monitor actuator",
         writepv=f"{pv_root}ShtOpen",
         readpv=f"{pv_root}ShtAuxBits07",
+        statuspv=f"{pv_root}ShtStatusCode",
         resetpv=f"{pv_root}ShtErrRst",
         msgtxt=f"{pv_root}ShtMsgTxt",
     ),

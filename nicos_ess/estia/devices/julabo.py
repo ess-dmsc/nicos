@@ -3,13 +3,12 @@ This module contains a device for reading the Julabo temperature
 controller using EPICS.
 """
 
-from nicos.core import ConfigurationError, HasPrecision, Override, Param, pvname, status
-
-from nicos.devices.epics.pva import EpicsAnalogMoveable
+from nicos.core import ConfigurationError, Override, Param, pvname, status
 from nicos.devices.epics.mixins import HasDisablePv
+from nicos.devices.epics.pva import EpicsAnalogMoveable
 
 
-class TemperatureController(HasDisablePv, HasPrecision, EpicsAnalogMoveable):
+class TemperatureController(HasDisablePv, EpicsAnalogMoveable):
     """
     Julabo devices with status and power switch.
 

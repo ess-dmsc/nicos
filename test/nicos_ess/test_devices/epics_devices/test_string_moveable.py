@@ -24,19 +24,16 @@
 
 """Harness tests for EpicsStringMoveable."""
 
-from nicos.core import status
+import numpy
 
+from nicos.core import status
 from nicos_ess.devices.epics.pva.epics_devices import EpicsStringMoveable
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
     string_moveable_config,
 )
 
-from .conftest import assert_error_status
-
 
 class TestEpicsStringMoveable:
-    """Behavior tests for string moveable class."""
-
     def test_daemon_string_moveable_starts_with_string_target(
         self, device_harness, fake_backend
     ):
@@ -57,7 +54,35 @@ class TestEpicsStringMoveable:
         assert fake_backend.put_calls[-1] == (config["writepv"], "ON", False)
         assert device_harness.run("daemon", device.status, 0) == (status.OK, "ok")
 
-    def test_daemon_string_moveable_status_returns_timeout_error(
+    def test_daemon_string_moveable_can_wait_for_readback(
+        self, device_harness, fake_backend
+    ):
+        config = string_moveable_config()
+        config["monitor"] = False
+        config["wait_for_readback"] = True
+        fake_backend.values[config["readpv"]] = "OFF"
+        fake_backend.values[config["writepv"]] = "OFF"
+        fake_backend.alarms[config["readpv"]] = (status.OK, "ok")
+
+        device = device_harness.create(
+            "daemon",
+            EpicsStringMoveable,
+            name="string_moveable",
+            **config,
+        )
+        device_harness.run("daemon", device.start, "ON")
+
+        assert device_harness.run("daemon", device.status, 0) == (
+            status.BUSY,
+            "moving to ON",
+        )
+        assert device_harness.run("daemon", device.isCompleted) is False
+
+        fake_backend.values[config["readpv"]] = "ON"
+        assert device_harness.run("daemon", device.status, 0) == (status.OK, "ok")
+        assert device_harness.run("daemon", device.isCompleted) is True
+
+    def test_daemon_string_moveable_status_returns_unknown_on_backend_timeout(
         self, device_harness, fake_backend
     ):
         config = string_moveable_config()
@@ -73,8 +98,8 @@ class TestEpicsStringMoveable:
             **config,
         )
         assert device_harness.run("daemon", device.status, 0) == (
-            status.ERROR,
-            "timeout reading status",
+            status.UNKNOWN,
+            "lost connection to EPICS",
         )
 
     def test_poller_string_moveable_value_and_status_callbacks_update_cache(
@@ -106,7 +131,54 @@ class TestEpicsStringMoveable:
             "limit",
         )
 
-    def test_poller_string_moveable_connection_callback_sets_comm_failure(
+    def test_external_target_refreshes_wait_for_readback_status(
+        self, device_harness, fake_backend
+    ):
+        config = string_moveable_config()
+        config["wait_for_readback"] = True
+        fake_backend.values[config["readpv"]] = "OFF"
+        fake_backend.values[config["writepv"]] = "OFF"
+
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsStringMoveable,
+            name="string_moveable",
+            shared=config,
+        )
+        fake_backend.emit_update(config["readpv"], value="OFF")
+        fake_backend.emit_update(config["writepv"], value="ON")
+
+        assert device_harness.run("daemon", daemon_device.status) == (
+            status.BUSY,
+            "moving to ON",
+        )
+
+    def test_poller_string_moveable_converts_char_waveform_callbacks(
+        self, device_harness, fake_backend
+    ):
+        config = string_moveable_config()
+        fake_backend.values[config["readpv"]] = ""
+        fake_backend.values[config["writepv"]] = ""
+
+        device = device_harness.create(
+            "poller",
+            EpicsStringMoveable,
+            name="string_moveable",
+            **config,
+        )
+
+        fake_backend.emit_update(
+            config["readpv"], value=numpy.array([79, 78]), units=""
+        )
+        fake_backend.emit_update(
+            config["writepv"], value=numpy.array([79, 70, 70]), units=""
+        )
+
+        assert device_harness.run("poller", device._cache.get, device, "value") == "ON"
+        assert (
+            device_harness.run("poller", device._cache.get, device, "target") == "OFF"
+        )
+
+    def test_poller_string_moveable_connection_callback_sets_lost_epics_connection(
         self, device_harness, fake_backend
     ):
         config = string_moveable_config()
@@ -121,8 +193,9 @@ class TestEpicsStringMoveable:
         )
         fake_backend.emit_connection(config["readpv"], False)
 
-        assert_error_status(
-            device_harness.run("poller", device._cache.get, device, "status")
+        assert device_harness.run("poller", device._cache.get, device, "status") == (
+            status.UNKNOWN,
+            "lost connection to EPICS",
         )
 
     def test_daemon_string_moveable_prefers_cached_value_and_status_from_poller(
@@ -156,7 +229,7 @@ class TestEpicsStringMoveable:
         )
         assert len(fake_backend.get_calls) == get_calls_before
 
-    def test_string_moveable_second_start_wins_when_old_callbacks_arrive_late(
+    def test_string_moveable_external_writepv_update_changes_target(
         self, device_harness, fake_backend
     ):
         config = string_moveable_config()
@@ -171,14 +244,13 @@ class TestEpicsStringMoveable:
         )
 
         device_harness.run("daemon", daemon_device.start, "ON")
-        device_harness.run("daemon", daemon_device.start, "OFF")
-        fake_backend.emit_update(config["writepv"], value="ON", units="")
+        fake_backend.emit_update(config["writepv"], value="OFF", units="")
         fake_backend.emit_update(config["readpv"], value="ON", units="")
         observed_target = device_harness.run("daemon", lambda: daemon_device.target)
 
         assert observed_target == "OFF"
 
-    def test_string_moveable_out_of_order_callbacks_do_not_swap_last_target(
+    def test_string_moveable_external_writepv_update_is_visible_before_readback(
         self, device_harness, fake_backend
     ):
         config = string_moveable_config()
@@ -193,11 +265,11 @@ class TestEpicsStringMoveable:
         )
 
         device_harness.run("daemon", daemon_device.start, "ON")
-        fake_backend.emit_update(config["writepv"], value="ON", units="")
-        fake_backend.emit_update(config["readpv"], value="OFF", units="")
+        fake_backend.emit_update(config["writepv"], value="OFF", units="")
+        fake_backend.emit_update(config["readpv"], value="ON", units="")
         observed_target = device_harness.run("daemon", lambda: daemon_device.target)
 
-        assert observed_target == "ON"
+        assert observed_target == "OFF"
 
     def test_string_moveable_finish_warns_if_target_not_reached(
         self, device_harness, fake_backend

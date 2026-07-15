@@ -9,6 +9,7 @@ devices = dict(
         description="Heavy Shutter",
         writepv="ODIN-HvSht:MC-Pne-01:ShtOpen",
         readpv="ODIN-HvSht:MC-Pne-01:ShtAuxBits07",
+        statuspv="ODIN-HvSht:MC-Pne-01:ShtStatusCode",
         resetpv="ODIN-HvSht:MC-Pne-01:ShtErrRst",
         msgtxt="ODIN-HvSht:MC-Pne-01:ShtMsgTxt",
     ),

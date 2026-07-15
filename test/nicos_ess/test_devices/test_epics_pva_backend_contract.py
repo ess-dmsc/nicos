@@ -25,16 +25,16 @@
 """Contract tests for the EPICS PVA backend test double.
 
 These tests keep ``FakeEpicsBackend`` aligned with the production wrapper
-surface used by ``nicos_ess.devices.epics.pva.epics_devices``.
+surface used by the ESS EPICS PVA devices.
 """
 
 import ast
 import inspect
 from pathlib import Path
 
-import nicos_ess.devices.epics.pva.epics_devices as epics_devices
 import pytest
 
+import nicos_ess.devices.epics.pva.epics_common as epics_common
 from nicos.core import status
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
     FakeEpicsBackend,
@@ -86,8 +86,7 @@ def _signature_spec_from_ast(method_node):
 
     return {
         "positional": tuple(
-            (arg.arg, default is not None)
-            for arg, default in zip(positional, defaults)
+            (arg.arg, default is not None) for arg, default in zip(positional, defaults)
         ),
         "kwonly": tuple(
             (arg.arg, default is not None)
@@ -146,9 +145,10 @@ WRAPPER_SPECS = _wrapper_specs_from_source()
 @pytest.mark.parametrize("method_name", COMMON_WRAPPER_METHODS)
 def test_pva_wrappers_share_common_method_contract(method_name):
     # Both production wrappers should expose the same API surface.
-    assert WRAPPER_SPECS["P4pWrapper"][method_name] == WRAPPER_SPECS["CaprotoWrapper"][
-        method_name
-    ]
+    assert (
+        WRAPPER_SPECS["P4pWrapper"][method_name]
+        == WRAPPER_SPECS["CaprotoWrapper"][method_name]
+    )
 
 
 @pytest.mark.parametrize("method_name", COMMON_WRAPPER_METHODS)
@@ -160,25 +160,20 @@ def test_fake_epics_backend_matches_wrapper_method_contract(method_name):
 
 
 def test_patch_create_wrapper_injects_backend_for_pva_and_ca(monkeypatch):
-    # Setup
-    backend = patch_create_wrapper(monkeypatch, epics_devices)
+    backend = patch_create_wrapper(monkeypatch, epics_common)
 
-    # Act + Assert
-    assert epics_devices.create_wrapper(timeout=1.0, use_pva=True) is backend
-    assert epics_devices.create_wrapper(timeout=1.0, use_pva=False) is backend
+    assert epics_common.create_wrapper(timeout=1.0, use_pva=True) is backend
+    assert epics_common.create_wrapper(timeout=1.0, use_pva=False) is backend
 
 
 def test_fake_backend_defaults_follow_wrapper_style_for_units_and_limits():
-    # Setup
     backend = FakeEpicsBackend()
 
-    # Act + Assert
     assert backend.get_units("PV:UNKNOWN", default="Hz") == "Hz"
     assert backend.get_limits("PV:UNKNOWN", default_low=-5, default_high=15) == (-5, 15)
 
 
 def test_fake_backend_subscription_callback_shape_matches_wrapper_contract():
-    # Setup
     backend = FakeEpicsBackend()
     observed_changes = []
     observed_connections = []
@@ -191,7 +186,6 @@ def test_fake_backend_subscription_callback_shape_matches_wrapper_contract():
     def on_connection(pvname, pvparam, is_connected):
         observed_connections.append((pvname, pvparam, is_connected))
 
-    # Act
     token = backend.subscribe(
         "SIM:READ.RBV",
         "value",
@@ -209,14 +203,13 @@ def test_fake_backend_subscription_callback_shape_matches_wrapper_contract():
         message="minor alarm",
     )
 
-    # Assert
     assert token == ("SIM:READ.RBV", "value", on_change, on_connection, True)
     assert observed_connections == [("SIM:READ.RBV", "value", True)]
     assert observed_changes == [
         (
             "SIM:READ.RBV",
             "value",
-            2.5,
+            "2.5",
             "A",
             (0.0, 10.0),
             status.WARN,
@@ -226,18 +219,15 @@ def test_fake_backend_subscription_callback_shape_matches_wrapper_contract():
 
 
 def test_fake_backend_reads_enum_as_choice_string_when_requested():
-    # Setup
     backend = FakeEpicsBackend()
     backend.value_choices["SIM:ENUM"] = ["OFF", "ON"]
     backend.values["SIM:ENUM"] = 1
 
-    # Act + Assert
     assert backend.get_pv_value("SIM:ENUM") == 1
     assert backend.get_pv_value("SIM:ENUM", as_string=True) == "ON"
 
 
 def test_fake_backend_subscription_reads_enum_as_choice_string_when_requested():
-    # Setup
     backend = FakeEpicsBackend()
     backend.value_choices["SIM:ENUM"] = ["OFF", "ON"]
     observed_changes = []
@@ -248,15 +238,12 @@ def test_fake_backend_subscription_reads_enum_as_choice_string_when_requested():
 
     backend.subscribe("SIM:ENUM", "value", on_change, as_string=True)
 
-    # Act
     backend.emit_update("SIM:ENUM", value=1)
 
-    # Assert
     assert observed_changes == ["ON"]
 
 
 def test_fake_backend_backend_disconnect_emits_all_subscription_connections():
-    # Setup
     backend = FakeEpicsBackend()
     observed_connections = []
 
@@ -266,11 +253,9 @@ def test_fake_backend_backend_disconnect_emits_all_subscription_connections():
     backend.subscribe("SIM:A.RBV", "value", None, on_connection)
     backend.subscribe("SIM:B.RBV", "status", None, on_connection)
 
-    # Act
     backend.disconnect_backend()
     backend.connect_backend()
 
-    # Assert
     assert observed_connections == [
         ("SIM:A.RBV", "value", False),
         ("SIM:B.RBV", "status", False),
@@ -293,7 +278,6 @@ def test_fake_backend_backend_disconnect_emits_all_subscription_connections():
 def test_fake_backend_synchronous_reads_timeout_while_backend_disconnected(
     method, args
 ):
-    # Setup
     backend = FakeEpicsBackend()
     backend.values["SIM:READ.RBV"] = 3.0
     backend.units["SIM:READ.RBV"] = "mm"
@@ -302,33 +286,26 @@ def test_fake_backend_synchronous_reads_timeout_while_backend_disconnected(
     backend.value_choices["SIM:READ.RBV"] = ["OFF", "ON"]
     backend.disconnect_backend()
 
-    # Act + Assert
     with pytest.raises(TimeoutError):
         getattr(backend, method)(*args)
 
 
 def test_fake_backend_reads_recover_after_backend_reconnect():
-    # Setup
     backend = FakeEpicsBackend()
     backend.values["SIM:READ.RBV"] = 3.0
     backend.disconnect_backend()
 
-    # Act
     backend.connect_backend()
 
-    # Assert
     assert backend.get_pv_value("SIM:READ.RBV") == 3.0
 
 
 def test_fake_backend_put_records_wait_flag_for_future_wait_paths():
-    # Setup
     backend = FakeEpicsBackend()
 
-    # Act
     backend.put_pv_value("SIM:WRITE.VAL", 14.0)
     backend.put_pv_value("SIM:WRITE.VAL", 18.0, wait=True)
 
-    # Assert
     assert backend.put_calls == [
         ("SIM:WRITE.VAL", 14.0, False),
         ("SIM:WRITE.VAL", 18.0, True),
