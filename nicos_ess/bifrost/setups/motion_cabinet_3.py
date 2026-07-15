@@ -13,11 +13,10 @@ devices = dict(
         description="Get-Lost-Tube In-Beam Positioner",
         readpv="BIFRO-InBm:MC-Pne-01:ShtAuxBits07",
         writepv="BIFRO-InBm:MC-Pne-01:ShtOpen",
+        statuspv="BIFRO-InBm:MC-Pne-01:ShtStatusCode",
         msgtxt="BIFRO-InBm:MC-Pne-01:ShtMsgTxt",
         pva=True,
         monitor=True,
-        pollinterval=0.5,
-        maxage=None,
     ),
     cabinet_3_pressure_1=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

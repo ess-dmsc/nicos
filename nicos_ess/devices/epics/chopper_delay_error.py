@@ -1,4 +1,5 @@
 import time
+from dataclasses import replace
 
 import numpy as np
 
@@ -18,13 +19,10 @@ class ChopperDelayError(EpicsReadable):
         ),
     }
 
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self.readpv:
-            # Unexpected updates ignored
+    def _on_channel_update(self, update):
+        if update.channel != "read":
             return
         time_stamp = time.time()
-        mean_value = np.mean(value)
-        self._cache.put(self._name, "value", mean_value, time_stamp)
-        self._cache.put(self._name, "raw_errors", value, time_stamp)
+        mean_value = np.mean(update.value)
+        self._cache.put(self._name, "raw_errors", update.value, time_stamp)
+        super()._on_channel_update(replace(update, value=mean_value))

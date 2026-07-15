@@ -1,11 +1,24 @@
 import pytest
-from nicos_ess.devices.epics.power_supply_channel import PowerSupplyChannel, PowerSupplyBank
+
+from nicos_ess.devices.epics.power_supply_channel import (
+    PowerSupplyBank,
+    PowerSupplyChannel,
+)
+from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsComponent
 
 session_setup = None
 
-class FakePowerSupplyChannel(PowerSupplyChannel):
 
-    _record_fields = {
+class FakePowerSupplyComponent(FakeEpicsComponent):
+    def put_channel_value(self, channel, value):
+        self.values[channel] = value
+        if channel == "power":
+            self.values["power_rb"] = value
+            self.values["status_on"] = bool(value)
+
+
+def initial_channel_values():
+    return {
         "voltage_monitor": 0.0,
         "current_monitor": 0.0,
         "power_rb": 0,
@@ -13,32 +26,21 @@ class FakePowerSupplyChannel(PowerSupplyChannel):
         "status_on": False,
     }
 
+
+class FakePowerSupplyChannel(PowerSupplyChannel):
     def doPreinit(self, mode):
-        pass
+        self._epics = FakePowerSupplyComponent(initial_channel_values())
 
     def doInit(self, mode):
         self._inverse_mapping = {}
         for k, v in self.mapping.items():
             self._inverse_mapping[v] = k
 
-    def _put_pv(self, pvparam, value, wait=False):
-        self._record_fields[pvparam] = value
-        if pvparam == "power":
-            self._simulate_power_on_or_off(value)
-
-    def _get_pv(self, pvparam, as_string=False):
-        return self._record_fields[pvparam]
-
-    def _simulate_power_on_or_off(self, value):
-        self._put_pv("power_rb", value)
-        self._put_pv("status_on", bool(value))
-
-    def doReadVoltage_Monitor(self):
-        return self._get_pv("voltage_monitor")
+    def _read_channel_cached(self, channel, as_string=None, maxage=None):
+        return self._epics.values[channel]
 
 
 class FakePowerSupplyBank(PowerSupplyBank):
-
     def doPreinit(self, mode):
         pass
 
@@ -49,7 +51,6 @@ class FakePowerSupplyBank(PowerSupplyBank):
 
 
 class TestPowerSupply:
-
     @pytest.fixture(autouse=True)
     def prepare(self, session):
         self.session = session
@@ -61,18 +62,18 @@ class TestPowerSupply:
 
     def test_enable_ps_channel(self):
         self.ps_channel.enable()
-        assert self.ps_channel._get_pv("power") == 1
+        assert self.ps_channel._epics.values["power"] == 1
 
     def test_disable_ps_channel(self):
         self.ps_channel.disable()
-        assert self.ps_channel._get_pv("power") == 0
+        assert self.ps_channel._epics.values["power"] == 0
 
     def test_enable_ps_bank(self):
         self.ps_bank.enable()
-        assert self.ps_channel._get_pv("power") == 1
+        assert self.ps_channel._epics.values["power"] == 1
         assert self.ps_bank.status_on() == (True, 1)
 
     def test_disable_ps_bank(self):
         self.ps_bank.disable()
-        assert self.ps_channel._get_pv("power") == 0
+        assert self.ps_channel._epics.values["power"] == 0
         assert self.ps_bank.status_on() == (False, 0)
