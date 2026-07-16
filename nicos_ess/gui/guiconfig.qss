@@ -353,15 +353,6 @@ QSplitter::handle:vertical{
     image: url(:/splitterh);
 }
 
-/* --------- QCheckBox ----------------------- */
-
-QCheckBox {
-    color: black;
-}
-
-QCheckBox:focus {
-    border: none;
-}
 
 QTabWidget QWidget,
 QTabWidget QLabel
@@ -392,15 +383,11 @@ QDoubleSpinBox,
 QListWidget,
 QTextBrowser,
 QLineEdit {
-    background-color: white;
-    color: black;
     border: 1px solid #a9a9a9;
     border-radius: 5px;
 }
 
 QLineEdit:read-only {
-    background-color: gainsboro;
-    color: black;
     border: 1px solid #a9a9a9;
     border-radius: 5px;
 }
@@ -429,13 +416,6 @@ QHeaderView {
     padding: 0px;
     margin: 0px;
     border-radius: 5px;
-}
-
-/* -------------------- QPlainTextEdit --------------------- */
-
-QPlainTextEdit {
-    background-color: white;
-    color: black;
 }
 
 /* -------------------- QPushButton ------------------------ */
@@ -496,7 +476,6 @@ QPushButton:checked:pressed {
 /* -------------------- QDialog ------------------------ */
 /* At the end, so that it overrides QTab*/
 
-QDialog,
 QMessageBox > QLabel {
     background-color: #a9a9a9;
     color: black;
@@ -573,19 +552,9 @@ LiveWidgetWrapper[state="UNSELECTED"] {
     border-radius: 5px;
 }
 
-/* For Auth Dialog */
-QDialog QComboBox {
-    color: black;
-    background-color: white;
-}
-
 QLineEdit:disabled, QComboBox:disabled {
     background-color: #d4d8dc; /* Light gray background */
     color: #959ea7; /* Gray text */
-}
-
-QCheckBox:disabled {
-    color: #959ea7;
 }
 
 /* Remove icons from built-in Qt dialogs. */
