@@ -1,7 +1,32 @@
-from nicos.core import DeviceMixinBase, Param
+from nicos import session
+from nicos.core import (
+    SLAVE,
+    AccessError,
+    CanDisable,
+    DeviceMixinBase,
+    ModeError,
+    Param,
+)
 from nicos.core.params import string
 from nicos.devices.abstract import CanReference
 from nicos.utils import readonlydict, readonlylist
+
+
+class EventDrivenCanDisable(CanDisable):
+    """CanDisable variant whose state changes are published by events."""
+
+    def _enable(self, on):
+        what = "enable" if on else "disable"
+        if self._mode == SLAVE:
+            raise ModeError(self, f"{what} not possible in slave mode")
+        if getattr(self, "requires", None):
+            try:
+                session.checkAccess(self.requires)
+            except AccessError as err:
+                raise AccessError(self, f"cannot {what} device: {err}") from None
+        if self._sim_intercept:
+            return
+        self.doEnable(on)
 
 
 class nexusconfiglist:

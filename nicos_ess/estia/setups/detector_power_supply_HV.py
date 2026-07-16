@@ -12,38 +12,11 @@ BANK_CHANNELS = [
 # Keys to access channel info
 keys = get_channel_keys(BANK_CHANNELS)
 
-# Create channels
-devices = dict()
-ps_channels = []
-module_num = 1
-
-for key in keys:
-    channel = ALL_CHANNELS[key]
-    pv_root = channel["pv_root_channel"]
-    power_supply_channel = device(
-        "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
-        description=channel["description"],
-        board=0,  # TODO: Set board and channel properly.
-        channel=0,
-        pollinterval=0.5,
-        maxage=None,
-        ps_pv=pv_root,
-        mapping={"OFF": 0, "ON": 1},
-        # visibility={}
+devices = {
+    BANK_NAME: device(
+        "nicos_ess.devices.epics.power_supply_group.PowerSupplyGroup",
+        description="Detector HV power supplies",
+        precision=7.0,
+        sources={key: ALL_CHANNELS[key]["pv_root_channel"] for key in keys},
     )
-    devices[f"M{module_num:02d}_{key}"] = power_supply_channel
-    module_num += 1
-
-channel_keys = list(devices.keys())
-
-# Bank device
-power_supply_module = device(
-    "nicos_ess.devices.epics.power_supply_channel.PowerSupplyBank",
-    description="Detector HV Power Supplies",
-    pollinterval=1.0,
-    maxage=None,
-    ps_channels=channel_keys,
-    mapping={"OFF": 0, "ON": 1},
-)
-
-devices[BANK_NAME] = power_supply_module
+}

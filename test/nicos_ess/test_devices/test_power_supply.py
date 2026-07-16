@@ -1,53 +1,79 @@
 import pytest
 
-from nicos_ess.devices.epics.power_supply_channel import (
-    PowerSupplyBank,
-    PowerSupplyChannel,
-)
-from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsComponent
+from nicos.core import status
+from nicos_ess.devices.epics.power_supply_group import PowerSupplyGroup
 
 session_setup = None
 
 
-class FakePowerSupplyComponent(FakeEpicsComponent):
-    def put_channel_value(self, channel, value):
-        self.values[channel] = value
-        if channel == "power":
-            self.values["power_rb"] = value
-            self.values["status_on"] = bool(value)
-
-
-def initial_channel_values():
-    return {
-        "voltage_monitor": 0.0,
-        "current_monitor": 0.0,
-        "power_rb": 0,
-        "power": 0,
-        "status_on": False,
-    }
-
-
-class FakePowerSupplyChannel(PowerSupplyChannel):
+class FakePowerSupplyGroup(PowerSupplyGroup):
     def doPreinit(self, mode):
-        self._epics = FakePowerSupplyComponent(initial_channel_values())
+        self._source_ids = tuple(self.sources)
+        self.valuetype = float
+        self._voltage = 0.0
+        self._voltage_target = 800.0
+        self._currents = 0.0
+        self._current_limits = 10.0
+        self._powered = False
+        self._hardware_status = status.OK, ""
+        self.parameters["currents"].unit = "uA"
+        self.parameters["current_limits"].unit = "uA"
+
+    @property
+    def voltage(self):
+        return self._voltage
+
+    @voltage.setter
+    def voltage(self, value):
+        self._voltage = value
+        self._cache.invalidate(self, "value")
+
+    @property
+    def powered(self):
+        return self._powered
+
+    @property
+    def hardware_status(self):
+        return self._hardware_status
+
+    @hardware_status.setter
+    def hardware_status(self, value):
+        self._hardware_status = value
 
     def doInit(self, mode):
-        self._inverse_mapping = {}
-        for k, v in self.mapping.items():
-            self._inverse_mapping[v] = k
-
-    def _read_channel_cached(self, channel, as_string=None, maxage=None):
-        return self._epics.values[channel]
-
-
-class FakePowerSupplyBank(PowerSupplyBank):
-    def doPreinit(self, mode):
         pass
 
-    def doInit(self, mode):
-        self._inverse_mapping = {}
-        for k, v in self.mapping.items():
-            self._inverse_mapping[v] = k
+    def doRead(self, maxage=0):
+        return self.voltage
+
+    def doReadTarget(self):
+        return self._voltage_target
+
+    def doReadCurrents(self):
+        return self._currents
+
+    def doReadCurrent_Limits(self):
+        return self._current_limits
+
+    def doReadUnit(self):
+        return "V"
+
+    def doStart(self, target):
+        self._voltage_target = target
+
+    def doWriteCurrent_Limits(self, value):
+        self._current_limits = value
+        return value
+
+    def doEnable(self, on):
+        self._powered = on
+
+    def doStatus(self, maxage=0):
+        if self.hardware_status != (status.OK, ""):
+            return self.hardware_status
+        if not self.powered:
+            return status.DISABLED, "output disabled"
+        return status.OK, "output enabled"
 
 
 class TestPowerSupply:
@@ -55,25 +81,15 @@ class TestPowerSupply:
     def prepare(self, session):
         self.session = session
         self.session.loadSetup("ess_power_supply", {})
-        self.ps_channel = self.session.getDevice("ps_channel_1")
-        self.ps_bank = self.session.getDevice("ps_bank_hv")
+        self.power_supply = self.session.getDevice("ps_bank_hv")
         yield
         self.session.unloadSetup()
 
-    def test_enable_ps_channel(self):
-        self.ps_channel.enable()
-        assert self.ps_channel._epics.values["power"] == 1
+    def test_enable(self):
+        self.power_supply.enable()
+        assert self.power_supply.powered
 
-    def test_disable_ps_channel(self):
-        self.ps_channel.disable()
-        assert self.ps_channel._epics.values["power"] == 0
-
-    def test_enable_ps_bank(self):
-        self.ps_bank.enable()
-        assert self.ps_channel._epics.values["power"] == 1
-        assert self.ps_bank.status_on() == (True, 1)
-
-    def test_disable_ps_bank(self):
-        self.ps_bank.disable()
-        assert self.ps_channel._epics.values["power"] == 0
-        assert self.ps_bank.status_on() == (False, 0)
+    def test_disable(self):
+        self.power_supply.enable()
+        self.power_supply.disable()
+        assert not self.power_supply.powered

@@ -62,6 +62,22 @@ class EpicsMultiSourceComponent(EpicsChannelComponent):
             lambda pv: self.wrapper.get_alarm_status(pv),
         )
 
+    def get_source_units(self, source_id, channel, default=""):
+        return self._on_pv(
+            self.source_pv(source_id, channel),
+            "reading units of",
+            lambda pv: self.wrapper.get_units(pv, default),
+        )
+
+    def get_source_limits(
+        self, source_id, channel, default_low=-1e308, default_high=1e308
+    ):
+        return self._on_pv(
+            self.source_pv(source_id, channel),
+            "reading limits of",
+            lambda pv: self.wrapper.get_limits(pv, default_low, default_high),
+        )
+
     def put_source_value(self, source_id, channel, value):
         self._on_pv(
             self.source_pv(source_id, channel),

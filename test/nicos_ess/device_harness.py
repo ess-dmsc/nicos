@@ -201,6 +201,7 @@ class UnitTestSession:
         self.daemon_device = SimpleNamespace(
             current_script=lambda: SimpleNamespace(user=SimpleNamespace(level=999))
         )
+        self.executing_user = SimpleNamespace(name="unit-test", level=999)
 
     @property
     def mode(self):
@@ -238,9 +239,12 @@ class UnitTestSession:
         mode = required.get("mode")
         if mode and mode != self.mode:
             raise AccessError(f"mode {mode!r} is required")
+        level = required.get("level")
+        if level is not None and not self.checkUserLevel(level):
+            raise AccessError(f"level {level!r} is required")
 
     def getExecutingUser(self):
-        return SimpleNamespace(level=999)
+        return self.executing_user
 
     def checkUserLevel(self, level=0, user=None):
         user = user or self.getExecutingUser()

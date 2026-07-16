@@ -1,3 +1,4 @@
+# ruff: noqa: F821
 """
 LOKI script to move the detector carriage, controlling the PS bank (disable/enable).
 
@@ -5,36 +6,48 @@ Example usage in NICOS shell:
 >> DET_POS=20; run("/ess/ecdc/nicos-core/nicos_ess/loki/testscripts/move_det.py")
 """
 
-from nicos.core import NicosError
+from nicos.core import NicosError, status
 
 # 0. Variable check
 try:
-    DET_POS
-except:
-    DET_POS = None  # Will raise the next error.
+    target_position = DET_POS
+except NameError:
+    target_position = None
 
-if DET_POS is None:
+if target_position is None:
     raise NicosError("DET_POS variable is not set. Please set a value for it.")
 
-# 1. Disable PS Bank, if needed
-if HV_Bank_0.status_on()[0]:
+# 1. Disable the power-supply group
+if hv_bank0.status()[0] != status.DISABLED:
     print("Disabling PS Bank...")
-    disable(HV_Bank_0)
-    sleep(0.3)
-    while HV_Bank_0.status_on()[0]:
-        sleep(1)
+    disable(hv_bank0)
 
-# 2. Wait voltage zero, if needed
-if not detector_carriage.bank_voltage_is_zero():
-    print("Waiting for voltages to be zero...")
-    while not detector_carriage.bank_voltage_is_zero():
-        sleep(1)
+# 2. Wait until the group is disabled and its voltage has decayed
+power_status, message = hv_bank0.status()
+while power_status != status.DISABLED:
+    if power_status in (status.ERROR, status.UNKNOWN):
+        raise NicosError(f"Cannot make the detector safe: {message}")
+    print(f"Waiting for the power supply to switch off: {message}")
+    sleep(1)
+    power_status, message = hv_bank0.status()
 
-move(detector_carriage, DET_POS)
+voltages = hv_bank0.read()
+if not isinstance(voltages, tuple):
+    voltages = (voltages,)
+while (
+    max(abs(voltage) for voltage in voltages) > detector_carriage.voltage_off_threshold
+):
+    print("Waiting for power-supply voltages to decay...")
+    sleep(1)
+    voltages = hv_bank0.read()
+    if not isinstance(voltages, tuple):
+        voltages = (voltages,)
+
+move(detector_carriage, target_position)
 
 # 3. Re-enable PS Bank (OPTIONAL, uncomment if it's needed and safe)
 # print("Re-enabling detector PS bank...")
-# enable(HV_Bank_0)
+# enable(hv_bank0)
 
 # 4. Clean variable to avoid undesired past positions
 DET_POS = None

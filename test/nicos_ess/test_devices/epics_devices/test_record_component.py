@@ -957,6 +957,20 @@ class TestMultiSource:
         backend.values["SIM:HVM-0:Ch1-VMon"] = 999.0
         assert component.get_source_value("ch1", "voltage") == 999.0
 
+    def test_get_source_units_reads_epics_metadata(self):
+        component, backend = make_multi_component()
+        component.connect()
+        backend.units["SIM:HVM-0:Ch1-VMon"] = "V"
+
+        assert component.get_source_units("ch1", "voltage") == "V"
+
+    def test_get_source_limits_reads_epics_metadata(self):
+        component, backend = make_multi_component()
+        component.connect()
+        backend.limits["SIM:HVM-0:Ch1-Pw"] = (0, 1)
+
+        assert component.get_source_limits("ch1", "power") == (0, 1)
+
     def test_put_source_value_writes_the_source_pv(self):
         component, backend = make_multi_component()
         component.connect()

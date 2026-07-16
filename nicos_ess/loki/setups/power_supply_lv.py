@@ -11,42 +11,26 @@ devices = {}
 
 # Power supplies for detector banks
 for bank, channels in lv_detector_channels.items():
-    bank_channels = []
-    for ch in channels:
-        ch_name = f"lv_{bank}_module{ch['module']}"
-        ch_device = device(
-            "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
-            description="A power supply channel",
-            board=ch["board"],
-            channel=int(ch["channel"]),
-            pollinterval=0.5,
-            maxage=None,
-            ps_pv=f"{pv_root}-LVM-{ch['board']}:Ch{ch['channel']}",
-            mapping={"OFF": 0, "ON": 1},
-            visibility={},
-        )
-        bank_channels.append(ch_name)
-        devices[ch_name] = ch_device
     bank_name = f"lv_{bank}"
-    bank_device = device(
-        "nicos_ess.devices.epics.power_supply_channel.PowerSupplyBank",
+    devices[bank_name] = device(
+        "nicos_ess.devices.epics.power_supply_group.PowerSupplyGroup",
         description="Collection of power supply channels for a detector bank",
-        pollinterval=1.0,
-        maxage=None,
-        ps_channels=bank_channels,
-        mapping={"OFF": 0, "ON": 1},
+        precision=0.1,
+        sources={
+            f"module{ch['module']}": (f"{pv_root}-LVM-{ch['board']}:Ch{ch['channel']}")
+            for ch in channels
+        },
     )
-    devices[bank_name] = bank_device
 
 # Power supplies for beam monitors
 for monitor, channel_info in lv_bm_channels.items():
     devices[f"lv_{monitor}"] = device(
-        "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
+        "nicos_ess.devices.epics.power_supply_group.PowerSupplyGroup",
         description="A power supply channel",
-        board=channel_info["board"],
-        channel=int(channel_info["channel"]),
-        pollinterval=0.5,
-        maxage=None,
-        ps_pv=f"{pv_root}-LVM-{channel_info['board']}:Ch{channel_info['channel']}",
-        mapping={"OFF": 0, "ON": 1},
+        precision=0.1,
+        sources={
+            monitor: (
+                f"{pv_root}-LVM-{channel_info['board']}:Ch{channel_info['channel']}"
+            )
+        },
     )
