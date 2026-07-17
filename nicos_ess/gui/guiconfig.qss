@@ -153,16 +153,6 @@ QSplitter::handle:vertical{
     image: url(:/splitterh);
 }
 
-QListView,
-QColumnView
-{
-    color: black;
-    border: 1px solid #a9a9a9;
-    gridline-color: #32414B;
-    border-radius: 5px;
-}
-
-
 QTableView {
     background-color: white;
     color: black;
