@@ -704,7 +704,7 @@
   <customwidget>
    <class>MessageView</class>
    <extends>QTextBrowser</extends>
-   <header>nicos.clients.gui.widgets.messageview.h</header>
+   <header>nicos_ess.gui.widgets.messageview.h</header>
   </customwidget>
   <customwidget>
    <class>HistoryLineEdit</class>
