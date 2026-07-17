@@ -155,7 +155,7 @@ docs:
     UV_PYTHON: "3.13"
 
 
-pages:
+deploy-pages:
   stage: docs
   needs:
     - job: docs
@@ -164,6 +164,8 @@ pages:
   after_script: []
   script:
     - echo "Publishing documentation to GitLab Pages"
+  pages:
+    publish: public
   artifacts:
     paths:
       - public
