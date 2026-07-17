@@ -195,6 +195,22 @@ QPushButton:checked:pressed {
     background-color: white;
 }
 
+/* ----- Tree view ----- */
+
+QTreeView::item:!selected:hover {
+    outline: 0;
+    color: white;
+    background-color: #1f5366;
+}
+
+/* ----- List view ----- */
+
+QListView::item:!selected:hover {
+    outline: 0;
+    color: white;
+    background-color: #1f5366;
+}
+
 /* ----- Command line ----- */
 
 Panel[panel='CommandPanel'] QPushButton {
