@@ -33,6 +33,7 @@ stages:
   - lint
   - test
   - integration
+  - docs
 
 
 tests_py312_cov:
@@ -133,6 +134,41 @@ integration-smoke:
       - smoke-artifacts/docker-info.log
     reports:
       junit: smoke-artifacts/smoke-junit.xml
+
+
+docs:
+  stage: docs
+  needs: []
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - echo "Running uv with UV_CACHE_DIR=$UV_CACHE_DIR"
+    # The gui extra is needed because doc/ext/nicosclassdoc.py imports
+    # nicos.guisupport at build time.
+    - uv sync --extra gui --all-packages --group docs
+  script:
+    - uv run sphinx-build -b html doc/source public
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 week
+  variables:
+    UV_PYTHON: "3.13"
+
+
+pages:
+  stage: docs
+  needs:
+    - job: docs
+      artifacts: true
+  before_script: []
+  after_script: []
+  script:
+    - echo "Publishing documentation to GitLab Pages"
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 
 publish:
