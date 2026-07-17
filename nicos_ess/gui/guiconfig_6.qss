@@ -1,0 +1,244 @@
+QWidget {
+    font-size: 14px;
+}
+
+MainWindow {
+    /* background-color: #1f5366; */
+    /* color: white; */
+    font-family: "Source Sans Pro";
+}
+
+MainWindow > QSplitter::hover {
+    background: transparent;
+}
+
+/* ----- Main MenuBar ----- */
+
+QMenuBar {
+    background-color: #1f5366;
+    color: white;
+    font-family: "Source Sans Pro";
+}
+
+QMenuBar::item:selected {
+    background-color: white;
+    color: black;
+}
+
+QMenuBar::item:pressed {
+    background: white;
+    color:black;
+}
+
+/* ----- Burger Menu ----- */
+
+QMenu {
+     background-color: #ececec;
+     color: black;
+     margin: 0px;
+     border-radius: 5px;
+}
+
+QMenu::item:disabled {
+     color:#959ea7;
+}
+
+/* ----- Dashboard ----- */
+
+MainWindow > QToolBar {
+    background-color: #1f5366;
+    color: white;
+    border: none;
+    min-height: 22px;
+}
+
+MainWindow > QToolBar QWidget {
+    color: white;
+    background: transparent;
+}
+
+/* ------ The main tab on the left ------ */
+
+/* Sets the overall shape of the tab buttons and spacing */
+QTabBar::tab:left {
+    margin-top: 0px;
+    margin-right: 0px;
+    margin-bottom: 2px;
+    padding-left: 2px;
+    padding-right: 2px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    min-height: 5px;
+}
+
+/* We use disable tabs as spacers between the tab groups
+QTabBar::tab:left:disabled {
+    border: transparent;
+    background: transparent;
+}
+
+/* Tabs that are not selected */
+QTabBar::tab:left:!selected:!disabled {
+    background: transparent;
+    margin-right: 1px;
+}
+
+QTabBar::tab:left:!selected:hover {
+    background-color: #0094ca;
+}
+
+/* The selected tab */
+QTabBar::tab:left:selected {
+    background-color: white;
+    border-right: 0px solid #1464A0;
+}
+
+/* ----- Standard tabs ----- */
+
+QTabBar::tab:top {
+    margin-left: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    min-width: 90px;
+    min-height:24px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+QTabBar::tab:top:disabled {
+    border: transparent;
+    background: transparent;
+}
+
+QTabBar::tab:top:selected {
+    background-color: #0094ca;
+    color: #F0F0F0;
+}
+
+QTabBar::tab:top:!selected:hover {
+    background-color: #6b7784;
+    border-color: #1f5366;
+    padding: 0px;
+}
+
+QTabBar {
+    background-color: transparent;
+    qproperty-drawBase:0;
+}
+
+/* ----- QSplitter ----- */
+
+QSplitter::handle:horizontal{
+    image: url(:/splitterv);
+}
+
+QSplitter::handle:vertical{
+    image: url(:/splitterh);
+}
+
+/* ----- QPushButton ----- */
+
+QPushButton {
+    background-color: white;
+    border: 1px solid darkgrey;
+    color: black;
+    border-radius: 5px;
+    padding: 5px;
+    outline: none;
+    min-width: 75px;
+}
+
+QPushButton:disabled {
+    background-color: #d4d8dc; /* Light gray background */
+    color: #a0a0a9;
+    border-color:#a9a9a9;
+}
+
+QPushButton:default {
+    border: 1px solid lightblue;
+    background-color: #f3f8fB;
+}
+
+QPushButton:focus {
+    border: 1px solid lightblue;
+    background-color: #f3f8fB;
+}
+
+QPushButton:!checked:hover {
+    border: 1px solid #e9ebed;
+    background-color: #e9ebed;
+}
+
+QPushButton:!checked:pressed {
+    border: 1px solid #d4d8dc;
+    background-color: #d4d8dc;
+}
+
+QPushButton:checked {
+    background-color: #0094ca;
+    color: white;
+    border: 0px solid #0094ca;
+}
+
+QPushButton:checked:hover {
+    border: 0px;
+    background-color: #89c3ea;
+}
+
+QPushButton:checked:pressed {
+    border: 1px solid #0094ca;
+    color: #0094ca;
+    background-color: white;
+}
+
+/* ----- Command line ----- */
+
+Panel[panel='CommandPanel'] QPushButton {
+    width:80px;
+}
+
+CommandLineEdit[state="DEFAULT"] {
+    font-size: 20;
+    min-height: 22px;
+    border: 2px solid #0094ca;
+    border-radius: 5px;
+}
+
+CommandLineEdit[state="BUSY"] {
+    font-size: 20;
+    min-height: 22px;
+    border: 2px solid #0094ca;
+    border-radius: 5px;
+    background-color: #ffdddd;
+}
+
+QTableView {
+    alternate-background-color: #1f5366;
+}
+
+/* ----- LiveWidgetWrapper ----- */
+
+LiveWidgetWrapper:title {
+    subcontrol-origin: margin;
+    subcontrol-position: top center;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+LiveWidgetWrapper[state="SELECTED"] {
+    border: 5px solid #0094CA;
+    border-radius: 5px;
+}
+
+LiveWidgetWrapper[state="UNSELECTED"] {
+    border: 5px solid red;
+    border-radius: 5px;
+}
+
+/* ----- Remove icons from built-in Qt dialogs ----- */
+
+QDialogButtonBox { dialogbuttonbox-buttons-have-icons: 0; }

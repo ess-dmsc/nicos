@@ -9,6 +9,7 @@ from nicos.clients.gui.utils import loadUi
 from nicos.core import InvalidValueError
 from nicos.guisupport.qt import (
     QAction,
+    QApplication,
     QCursor,
     QFileDialog,
     QHeaderView,
@@ -35,7 +36,8 @@ from nicos_ess.utilities.csv_utils import (
     import_table_from_csv_stream,
 )
 
-TABLE_QSS = "alternate-background-color: aliceblue;"
+LIGHT_TABLE_QSS = "alternate-background-color: aliceblue;"
+DARK_TABLE_QSS = "alternate-background-color: #1f5366;"
 
 Column = namedtuple(
     "Column", ["header", "optional", "style", "can_bulk_update", "delegate"]
@@ -249,8 +251,20 @@ class LokiScriptBuilderPanel(PanelBase):
         for i, column in enumerate(self.columns.values()):
             self.tableView.horizontalHeader().setSectionResizeMode(i, column.style)
         self.tableView.setAlternatingRowColors(True)
-        self.tableView.setStyleSheet(TABLE_QSS)
+        self._apply_qss()
         self._create_keyboard_shortcuts()
+
+    def _apply_qss(self):
+        # Will try to determine whether to use dark mode.
+        # Defaults to light if the mode cannot be determined.
+        try:
+            scheme = QApplication.instance().styleHints().colorScheme()
+            if scheme == Qt.ColorScheme.Dark:
+                self.tableView.setStyleSheet(DARK_TABLE_QSS)
+                return
+        except:
+            pass
+        self.tableView.setStyleSheet(LIGHT_TABLE_QSS)
 
     def setViewOnly(self, viewonly):
         for control in [

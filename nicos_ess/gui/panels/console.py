@@ -114,10 +114,8 @@ class ConsolePanel(Panel):
         return []
 
     def setCustomStyle(self, font, back):
-        self.commandInput.idle_color = back
         for widget in (self.outView, self.commandInput):
             widget.setFont(font)
-            setBackgroundColor(widget, back)
         self.promptLabel.setFont(font)
 
     def updateStatus(self, status, exception=False):

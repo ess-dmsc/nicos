@@ -157,7 +157,11 @@ def main(_argv):
     gui_conf.stylefile = ""
 
     if gui_conf.options.get("facility") in ["ess", "sinq"]:
-        gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig.qss")
+        if os.environ.get("NICOS_QT") == "5":
+            gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig.qss")
+        else:
+            gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig.qss")
+            gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig_6.qss")
 
     stylefiles = [
         path.join(userpath, "style-%s.qss" % sys.platform),

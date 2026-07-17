@@ -74,18 +74,6 @@ class LokiSampleHolderPanel(PanelBase):
         self._configure_sample_table()
         self._connect_up_widgets()
         self.initialise_connection_status_listeners()
-        self.tabWidget.setStyleSheet(
-            "QTabWidget::tab-bar {left: 0px;} "
-            "QTabWidget::pane {"
-            "border: 1px solid darkgray; "
-            "border-radius: 5px}"
-        )
-        self._style_scroll_area_contents(self.scrollAreaWidgetContents)
-
-    def _style_scroll_area_contents(self, widget):
-        # A workaround to get the formatting correct for the main widget
-        # without breaking other widgets in the scroll area.
-        widget.setStyleSheet(f"QWidget#{widget.objectName()}{{background: white}}")
 
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
@@ -181,10 +169,8 @@ class LokiSampleHolderPanel(PanelBase):
     def set_samples_viewonly(self, viewonly):
         if viewonly:
             self.sampleTable.setItemDelegate(ReadOnlyDelegate())
-            self.sampleTable.setStyleSheet("QTableView {background: gainsboro;}")
         else:
             self.sampleTable.setItemDelegate(QItemDelegate())
-            self.sampleTable.setStyleSheet("QTableView {background: white;}")
 
     def _read_mode(self):
         for combo in self.cartridge_combos:

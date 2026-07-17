@@ -34,7 +34,6 @@ class ErrorPanel(Panel):
 
     def setCustomStyle(self, font, back):
         self.outView.setFont(font)
-        setBackgroundColor(self.outView, back)
 
     def on_client_connected(self):
         messages = self.client.ask("getmessages", "10000", default=[])
