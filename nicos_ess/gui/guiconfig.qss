@@ -130,20 +130,7 @@ QTabBar {
     qproperty-drawBase:0;
 }
 
-/* -------------------- QSplitter ------------------------ */
-
-QSplitter {
-    background-color: white;
-    spacing: 0px;
-    padding: 0px;
-    margin: 0px;
-}
-
-QSplitter::separator {
-    spacing: 0px;
-    padding: 1px;
-    margin: 0px;
-}
+/* ----- QSplitter ----- */
 
 QSplitter::handle:horizontal{
     image: url(:/splitterv);
