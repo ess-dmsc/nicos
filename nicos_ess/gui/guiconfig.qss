@@ -140,55 +140,7 @@ QSplitter::handle:vertical{
     image: url(:/splitterh);
 }
 
-QTableView {
-    background-color: white;
-    color: black;
-}
-
-QTableView QTableCornerButton::section {
-    background: gray;
-}
-
-QDoubleSpinBox,
-QListWidget,
-QTextBrowser,
-QLineEdit {
-    border: 1px solid #a9a9a9;
-    border-radius: 5px;
-}
-
-QLineEdit:read-only {
-    border: 1px solid #a9a9a9;
-    border-radius: 5px;
-}
-
-QTreeView {
-    background-color: white;
-    alternate-background-color: #f1f2f2;
-    color: black;
-}
-
-QTreeView::item {
-    color: black;
-}
-
-QTreeView::item:!selected:hover,
-QListView::item:!selected:hover {
-    outline: 0;
-    color: white;
-    background-color: #1f5366;
-}
-
-QHeaderView {
-    color: black;
-    background-color: #a9a9a9;
-    border: 0px transparent #32414B;
-    padding: 0px;
-    margin: 0px;
-    border-radius: 5px;
-}
-
-/* -------------------- QPushButton ------------------------ */
+/* ----- QPushButton ----- */
 
 QPushButton {
     background-color: white;
@@ -298,7 +250,6 @@ CommandLineEdit[state="BUSY"] {
     border-radius: 5px;
     background-color: #ffdddd;
 }
-
 
 LiveWidgetWrapper:title {
     subcontrol-origin: margin;
