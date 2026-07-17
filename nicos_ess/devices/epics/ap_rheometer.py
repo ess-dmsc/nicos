@@ -160,7 +160,10 @@ class RheometerControl(EpicsDeviceBase, Measurable):
         ),
         "viscosity": Param("Viscosity", type=float, settable=False, volatile=True),
         "tot_modulus": Param(
-            "Complex modulus |G*|", type=float, settable=False, volatile=True
+            "Magnitude of complex modulus G*",
+            type=float,
+            settable=False,
+            volatile=True,
         ),
         "loss_modulus": Param(
             "Loss modulus G''", type=float, settable=False, volatile=True

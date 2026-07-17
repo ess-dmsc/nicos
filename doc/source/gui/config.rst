@@ -269,8 +269,10 @@ Nicos includes a comprehensive set of Panels for most general use cases:
      :alt: editor panel
      :align: center
 
-.. autoclass:: nicos.clients.gui.panels.elog.ELogPanel()
-     :no-members:
+.. class:: nicos.clients.gui.panels.elog.ELogPanel()
+
+   Provides an HTML widget for the electronic logbook. This panel is available
+   when the optional Qt webview component is installed.
 
 .. figure:: elogpanel.png
      :alt: electronic logbook panel
@@ -473,8 +475,10 @@ Tools that come with NICOS are:
      :alt: emergency stop tool
      :align: center
 
-.. autoclass:: nicos.clients.gui.tools.website.WebsiteTool()
-     :no-members:
+.. class:: nicos.clients.gui.tools.website.WebsiteTool()
+
+   Displays a website in a Qt HTML view. This tool is available when the
+   optional Qt webview component is installed.
 
 .. figure:: websitetool.png
      :scale: 50%

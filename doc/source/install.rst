@@ -28,7 +28,23 @@ The bug tracker and project wiki are at
   https://forge.frm2.tum.de/projects/nicos/
 
 
-.. include:: ../../INSTALL
+Install the development environment
+-----------------------------------
+
+NICOS uses `uv <https://docs.astral.sh/uv/>`_ to manage Python and its
+dependencies.  The required native build packages are
+``pkgconf-pkg-config`` and ``systemd-devel`` on RHEL-based systems, or
+``build-essential``, ``python3-dev``, ``libsystemd-dev`` and ``pkg-config``
+on Debian-based systems.  A GUI installation additionally needs the native
+Qt 5 and Qt WebEngine development packages.
+
+From a source checkout, create the development environment with::
+
+  uv sync --all-packages --extra gui
+
+NICOS commands can then be run in that environment, for example::
+
+  uv run nicos-demo
 
 
 Configure for experimenting
