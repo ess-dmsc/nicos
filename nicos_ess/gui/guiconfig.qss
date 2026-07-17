@@ -2,8 +2,7 @@ QWidget {
     font-size: 14px;
 }
 
-MainWindow,
-QMenuBar {
+MainWindow {
     /* background-color: #1f5366; */
     /* color: white; */
     font-family: "Source Sans Pro";
@@ -13,20 +12,25 @@ MainWindow > QSplitter::hover {
     background: transparent;
 }
 
-/* ----- QMenuBar -- OK ------------------------------------------------ */
+/* ----- Main MenuBar ----- */
+
+QMenuBar {
+    background-color: #1f5366;
+    color: white;
+    font-family: "Source Sans Pro";
+}
 
 QMenuBar::item:selected {
     background-color: white;
-    color: #1f5366 ;
-    color: black ;
+    color: black;
 }
 
 QMenuBar::item:pressed {
-    background: white ;
+    background: white;
     color:black;
 }
 
-/* ----- QMenu -------------------------------------------------- */
+/* ----- Burger Menu ----- */
 
 QMenu {
      background-color: #ececec;
