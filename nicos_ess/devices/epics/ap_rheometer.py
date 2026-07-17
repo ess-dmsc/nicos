@@ -190,14 +190,17 @@ class RheometerControl(EpicsDeviceBase, Measurable):
 
     @usermethod
     def add_interval(self):
+        """Add a measurement interval with the current interval settings."""
         self._epics.put_channel_value("add_interval", 1)
 
     @usermethod
     def clear_intervals(self):
+        """Clear all configured measurement intervals."""
         self._epics.put_channel_value("clear_intervals", 1)
 
     @usermethod
     def send_intervals(self):
+        """Send the configured measurement intervals to the rheometer."""
         self._epics.put_channel_value("send_intervals", 1)
 
     def doStart(self):
@@ -217,14 +220,17 @@ class RheometerControl(EpicsDeviceBase, Measurable):
 
     @usermethod
     def init_device(self):
+        """Initialize the rheometer."""
         self._epics.put_channel_value("init_device", 1)
 
     @usermethod
     def load_meas_syst(self):
+        """Load the measuring system on the rheometer."""
         self._epics.put_channel_value("load_meas_syst", 1)
 
     @usermethod
     def clear_err(self):
+        """Clear the error state of the rheometer."""
         self._epics.put_channel_value("clear_err", 1)
 
     def valueInfo(self):

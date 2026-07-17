@@ -2,6 +2,8 @@ from nicos import session
 from nicos.commands import usercommand
 from nicos_ess.devices.sample import EssSample
 
+__all__ = ["set_sample_fields", "clear_sample_fields"]
+
 
 def _find_sample_dev():
     for dev in session.devices.values():
@@ -16,6 +18,15 @@ def _dev_exists(device):
 
 @usercommand
 def set_sample_fields(**kwargs):
+    """Set fields of the sample device to the given device names.
+
+    Example:
+
+    >>> set_sample_fields(temperature='T_sensor', rotation='omega')
+
+    Each keyword must be a field of the sample device and each value the
+    name of an existing device.
+    """
     sample_dev = _find_sample_dev()
     for field in kwargs:
         device = kwargs[field]
@@ -34,6 +45,12 @@ def set_sample_fields(**kwargs):
 
 @usercommand
 def clear_sample_fields(*args):
+    """Clear the given fields of the sample device.
+
+    Example:
+
+    >>> clear_sample_fields('temperature', 'rotation')
+    """
     sample_dev = _find_sample_dev()
     for field in args:
         if field is None:

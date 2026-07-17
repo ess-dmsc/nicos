@@ -317,6 +317,7 @@ def build_named_index_map(
             (e.g. ``/entry/instrument/depends_on``).
         include_groups: Include groups as named paths.
         on_conflict: Behavior for duplicate named paths:
+
             - ``'first'`` (default): keep first occurrence;
             - ``'last'``: keep last occurrence;
             - ``'list'``: store all index paths under the same name;
@@ -324,6 +325,7 @@ def build_named_index_map(
 
     Returns:
         dict mapping ``"/a/b"`` to:
+
           - index path like ``['children', 0, ...]``, or
           - a list of such index paths (if ``on_conflict='list'``).
     """
