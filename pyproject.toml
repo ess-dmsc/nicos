@@ -154,6 +154,10 @@ gui_qt6 = [
 gui-test = [
     "pytest-qt>=4.5,<4.6",
 ]
+docs = [
+    "sphinx>=9.0",
+    "sphinx-rtd-theme>=3.0",
+]
 dev = [
     "gitpython>=3.1.45",
     "memory-profiler>=0.61.0",

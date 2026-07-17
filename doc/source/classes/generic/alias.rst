@@ -7,5 +7,7 @@ This class is re-exported in :mod:`nicos.devices.generic` from
 
 
 .. module:: nicos.core.device
+   :no-index:
 
 .. autoclass:: DeviceAlias()
+   :no-index:

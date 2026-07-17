@@ -14,4 +14,3 @@ Welcome to NICOS
    howtos/index
    tutorials/index
    indices
-   changes

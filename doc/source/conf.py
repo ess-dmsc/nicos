@@ -38,19 +38,18 @@ import nicos
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    #'rst2pdf.pdfbuilder',
     "sphinx.ext.graphviz",
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.viewcode",
     "sphinx.ext.inheritance_diagram",
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
-    # "ext.setupdoc",
-    # "ext.daemondoc",
+    "sphinx.ext.napoleon",
+    "ext.setupdoc",
+    "ext.daemondoc",
     "ext.stubs",
     "ext.nicosclassdoc",
-    "sphinxcontrib.seqdiag",
-    #'alabaster',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -408,42 +407,48 @@ texinfo_documents = [
 #
 # texinfo_no_detailmenu = False
 
-pdf_documents = [
-    ("index", "NICOS", "NICOS Documentation", author, "manual"),
-]
-# A comma-separated list of custom stylesheets. Example:
-pdf_stylesheets = ["frm2.json", "sphinx", "kerning", "friendly", "a4"]
-
-# A list of folders to search for stylesheets. Example:
-pdf_style_path = [".", "_styles", "source"]
-# Mode for literal blocks wider than the frame. Can be
-# overflow, shrink or truncate
-pdf_fit_mode = "shrink"
-# verbosity level. 0 1 or 2
-pdf_verbosity = 1
-# Section level that forces a break page.
-# For example: 1 means top-level sections start in a new page
-# 0 means disabled
-pdf_break_level = 2
-# Enable experimental feature to split table cells. Use it
-# if you get "DelayedTable too big" errors
-pdf_splittables = True
-# When a section starts in a new page, force it to be 'even', 'odd',
-# or just use 'any'
-pdf_breakside = "any"
-
-# Insert footnotes where they are defined instead of
-# at the end.
-pdf_inline_footnotes = True
-# Set the default DPI for images
-pdf_default_dpi = 300
-
 man_pages = [("index", "nicos", "NICOS Documentation", ["NICOS contributors"], 1)]
 
 # from the doc: Setting None is equivalent to giving the option
 # name in the list format (i.e. it means “yes/true/on”).
 autodoc_default_options = {"members": None}
-autodoc_mock_imports = ["p4p", "pvxs"]
+# Optional third-party libraries that are not part of the docs environment.
+autodoc_mock_imports = [
+    "p4p",
+    "pvxs",
+    "pyads",
+    "pamela",
+    "influxdb_client",
+    "slack",
+    "frappy",
+]
+
+# GUI code and guiconfig files are not importable outside a running GUI and
+# should not be part of the API docs.  The list is computed dynamically so
+# that new instruments are excluded automatically.
+import pkgutil
+import nicos_ess
+
+autosummary_mock_imports = autodoc_mock_imports + [
+    "nicos_ess.gui",
+    "nicos_ess.guiconfig",
+]
+for _mod in pkgutil.iter_modules(nicos_ess.__path__):
+    autosummary_mock_imports += [
+        "nicos_ess.%s.gui" % _mod.name,
+        "nicos_ess.%s.guiconfig" % _mod.name,
+    ]
+
+# ext.nicosclassdoc builds on the class-based autodoc API, which is
+# opt-in since Sphinx 9.
+autodoc_use_legacy_class_based = True
+
+# Auto-generate API pages for everything reachable from the autosummary
+# directives (see esapi/index.rst) so that new nicos_ess modules, classes
+# and commands show up in the docs without manual updates.
+autosummary_generate = True
+autosummary_generate_overwrite = True
+autosummary_ignore_module_all = False
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {"https://docs.python.org/": None}

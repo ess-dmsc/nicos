@@ -10,7 +10,6 @@ standard interface to NICOS.
 .. toctree::
    :maxdepth: 1
 
-   caress
    ipc
    qmesydaq
    astrium

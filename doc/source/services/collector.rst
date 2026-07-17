@@ -72,15 +72,11 @@ data from the cache defined in the ``cache`` and the ``keyfilter``
 parameters of the ``Collector`` device. The target cache is defined in the
 ``cache`` parameter of the ``TargetCache``.
 
-.. seqdiag::
-
-   seqdiag {
-        autonumber = True;
-
-        "source host cache" -> Collector [label="cache event"];
-        Collector -> TargetCache [ label="filter event"];
-        TargetCache --> "target host cache" [leftnote="filtering successful", label="put key value pair"];
-   }
+#. The source host cache sends a cache event to the collector.
+#. The collector filters the event and passes it to the target cache
+   forwarder.
+#. If the filtering was successful, the forwarder puts the key/value pair
+   into the target host cache.
 
 
 Server class
