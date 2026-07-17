@@ -4,19 +4,13 @@ QWidget {
 
 MainWindow,
 QMenuBar {
-    background-color: #1f5366;
-    color: white;
+    /* background-color: #1f5366; */
+    /* color: white; */
     font-family: "Source Sans Pro";
 }
 
 MainWindow > QSplitter::hover {
     background: transparent;
-}
-
-/* ----- QMessageBox ------------------------------------------------ */
-
-QMessageBox QLabel {
-    color: white;
 }
 
 /* ----- QMenuBar -- OK ------------------------------------------------ */
@@ -45,223 +39,24 @@ QMenu::item:disabled {
      color:#959ea7;
 }
 
-/* -------------------- QToolBar -------------------- */
+/* ----- Dashboard ----- */
 
-QToolBar {
-    background-color: transparent;
+MainWindow > QToolBar {
+    background-color: #1f5366;
     color: white;
     border: none;
     min-height: 22px;
 }
 
-QToolBar > QComboBox,
-QToolBar > QLabel,
-QToolBar > QCheckBox {
+MainWindow > QToolBar QWidget {
     color: white;
-    border-radius: 5px;
-    min-height: 22px;
     background: transparent;
 }
 
-QToolBar > QToolButton {
-    background-color: #1f5366;
-}
+/* ------ The main tab on the left ------ */
 
-QToolBar > QToolButton::disabled,
-QToolBar > QComboBox::disabled,
-QToolBar > QCheckBox::disabled {
-    color: grey;
-    border-radius: 5px;
-    background: lightgrey;
-    min-height: 22px;
-}
-
-QToolBar > QToolButton::indicator {
-    image: None
-}
-
-QToolBar > QToolButton::menu-indicator {
-    image: None;
-}
-
-QToolBar > QToolButton::hover,
-QToolBar > QComboBox::hover {
-    color: white;
-    background: #6b7784;
-    border: 0px;
-    border-radius: 5px;
-    min-height: 22px;
-}
-
-QToolBar > QToolButton:!hover,
-QToolBar > QComboBox:!hover {
-    background: transparent;
-}
-
-QToolBar > QToolButton::pressed {
-    color: black;
-    border: 1px inset white;
-    background: white;
-}
-
-/* Background color of popup-list. */
-QToolBar > QComboBox QListView {
-    background-color: white;
-    border: 1px solid grey;
-}
-
-QToolBar > QComboBox::item {
-    color: black;
-}
-
-QToolBar > QComboBox::item:alternate {
-    background: white;
-}
-
-QToolBar > QComboBox::item:selected {
-    border: 1px solid transparent;
-    background: #0094ca;
-}
-
-QToolBar > QComboBox::indicator{
-    background-color:transparent;
-    selection-background-color:transparent;
-    color:transparent;
-    selection-color:transparent;
-    width: 0px;
-}
-
-QToolBar QWidget {
-    color: white; /* Ensuring text color is white for all widgets in toolbars and panels */
-    background: transparent; /* Maintain transparency for background */
-}
-
-/* -------------------- QTabWidget -------------------- */
-
-QTabWidget {
-    border: 0px;
-}
-
-QTabWidget QMainWindow {
-    background: white;
-}
-
-/* -------------------- Panel -------------------- */
-
-Panel QToolBar {
-    background: #d9d9d9;
-}
-
-Panel QToolButton::menu-button {
-    background: transparent;
-}
-
-Panel QToolBar > QToolButton,
-Panel QToolBar > QComboBox,
-Panel QToolBar > QLabel,
-Panel QToolBar > QCheckBox {
-    color: black;
-    border-width: 0px;
-    border-radius: 5px;
-    min-height: 22px;
-    background: #a9a9a9;
-}
-
-Panel QToolBar > QToolButton::hover,
-Panel QToolBar > QComboBox::hover,
-Panel QToolBar > QLabel::hover,
-Panel QToolBar > QCheckBox::hover {
-    border-width: 0px;
-    background: #a9a9a9;
-    color: black;
-}
-
-Panel QToolBar > QToolButton::pressed,
-Panel QToolBar > QCheckBox::pressed {
-    background: white;
-    color: black;
-}
-
-Panel QToolBar > QToolButton::disabled,
-Panel QToolBar > QComboBox::disabled,
-Panel QToolBar > QCheckBox::disabled {
-    background: transparent;
-    color: gray;
-}
-
-Panel QToolBar > QToolButton::checked {
-    border-radius: 5px;
-    background: #0094ca;
-    color: white;
-}
-
-Panel QToolBar > QToolButton::checked::hover {
-    background: #89c3ea;
-    color: white;
-}
-
-Panel QToolBar > QToolButton::checked::pressed {
-    background: white;
-    color: black;
-}
-
-Panel QToolBar > QComboBox QAbstractItemView {
-    background-color: #19232D;
-    border-radius: 5px;
-    border: 1px solid #32414B;
-    selection-color: #148CD2;
-    selection-background-color: #32414B;
-}
-
-Panel QToolBar > QComboBox::indicator:alternate {
-    background: #19232D;
-}
-
-Panel QToolBar > QWidget > QCheckBox:hover {
-    min-height: 22px;
-    background: #d4d8dc;
-}
-
-Panel QToolBar > QComboBox::item {
-    color: black;
-    background : white;
-    min-width: 500px;
-}
-
-Panel QToolBar > QComboBox QAbstractItemView {
-    min-width: 150px;
-}
-
-Panel QToolBar > QComboBox{
-    width: 120px;
-}
-
-Panel QToolBar > QComboBox::drop-down {
-    subcontrol-origin: border;
-    subcontrol-position: center right;
-    border-top-right-radius: 5px; /* same radius as the QComboBox */
-    border-bottom-right-radius: 5px;
-    image: None ; /*url('resources/icons/down-arrow.png');*/
-}
-
-Panel QToolBar > QMenu,
-Panel QToolBar > QCheckBox {
-    border-radius: 5px;
-}
-
-/* QTabBar::tab  ------------------------------------------------
-
-https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qtabwidget-and-qtabbar
-
---------------------------------------------------------------------------- */
-QTabBar::tab {
-  /* !selected and disabled ----------------------------------------- */
-  /* selected ------------------------------------------------------- */
-}
-
+/* Sets the overall shape of the tab buttons and spacing */
 QTabBar::tab:left {
-    color: white;
-    background-color: #32414B;
     margin-top: 0px;
     margin-right: 0px;
     margin-bottom: 2px;
@@ -274,28 +69,31 @@ QTabBar::tab:left {
     min-height: 5px;
 }
 
+/* We use disable tabs as spacers between the tab groups
 QTabBar::tab:left:disabled {
     border: transparent;
     background: transparent;
 }
 
+/* Tabs that are not selected */
 QTabBar::tab:left:!selected:!disabled {
-    background: #d9d9d9;
+    background: transparent;
     margin-right: 1px;
-}
-
-QTabBar::tab:left:selected {
-    background-color: white;
-    border-right: 0px solid #1464A0;
 }
 
 QTabBar::tab:left:!selected:hover {
     background-color: #0094ca;
 }
 
+/* The selected tab */
+QTabBar::tab:left:selected {
+    background-color: white;
+    border-right: 0px solid #1464A0;
+}
+
+/* ----- Standard tabs ----- */
+
 QTabBar::tab:top {
-    background-color: #1f5366;
-    color: #e9ebed;
     margin-left: 2px;
     padding-left: 4px;
     padding-right: 4px;
@@ -303,7 +101,6 @@ QTabBar::tab:top {
     padding-bottom: 2px;
     min-width: 90px;
     min-height:24px;
-    border-bottom: 3px solid #273748;
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
 }
@@ -316,7 +113,6 @@ QTabBar::tab:top:disabled {
 QTabBar::tab:top:selected {
     background-color: #0094ca;
     color: #F0F0F0;
-    border-bottom: 3px solid #5cace2;
 }
 
 QTabBar::tab:top:!selected:hover {
@@ -351,13 +147,6 @@ QSplitter::handle:horizontal{
 
 QSplitter::handle:vertical{
     image: url(:/splitterh);
-}
-
-
-QTabWidget QWidget,
-QTabWidget QLabel
-{
-    color: black;
 }
 
 QListView,
@@ -475,11 +264,6 @@ QPushButton:checked:pressed {
 
 /* -------------------- QDialog ------------------------ */
 /* At the end, so that it overrides QTab*/
-
-QMessageBox > QLabel {
-    background-color: #a9a9a9;
-    color: black;
-}
 
 /* ----------------------------------------- */
 Panel[panel='DevicesPanel'] QComboBox {
