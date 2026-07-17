@@ -172,16 +172,17 @@ def main(_argv):
         path.splitext(opts.configfile)[0] + ".qss",
     ]
 
+    # Set the background of all the tabs to match light or dark mode.
     # Default is light mode.
-    style_extra = "QTabWidget QMainWindow {background: #fffcfcfd;} \n"
+    base_style = "QTabWidget QMainWindow {background: #fffcfcfd;} \n"
     if is_dark_mode_enabled():
-        style_extra = "QTabWidget QMainWindow {background: #333339;} \n"
+        base_style = "QTabWidget QMainWindow {background: #333339;} \n"
 
     for stylefile in [gui_conf.stylefile] or stylefiles:
         if path.isfile(stylefile):
             try:
                 with open(stylefile, "r", encoding="utf-8") as fd:
-                    app.setStyleSheet(style_extra + fd.read())
+                    app.setStyleSheet(base_style + fd.read())
                 gui_conf.stylefile = stylefile
                 break
             except Exception:
