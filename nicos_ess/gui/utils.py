@@ -2,7 +2,7 @@ from enum import Enum
 from os import path
 
 from nicos import config
-from nicos.guisupport.qt import QIcon, pyqtProperty
+from nicos.guisupport.qt import QApplication, QIcon, Qt, pyqtProperty
 
 root_path = config.nicos_root
 icons_path = path.join(root_path, "resources", "material", "icons")
@@ -41,3 +41,11 @@ def refresh_widget(widget):
     widget.style().unpolish(widget)
     widget.style().polish(widget)
     widget.update()
+
+
+def is_dark_mode_enabled():
+    try:
+        scheme = QApplication.instance().styleHints().colorScheme()
+        return scheme == Qt.ColorScheme.Dark
+    except:
+        return False

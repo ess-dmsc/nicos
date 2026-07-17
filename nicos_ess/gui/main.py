@@ -16,6 +16,8 @@ from nicos.clients.base import ConnectionData
 from nicos.clients.gui.config import processGuiConfig
 from nicos.clients.gui.dialogs.instr_select import InstrSelectDialog
 from nicos.clients.gui.utils import DebugHandler
+from nicos_ess.gui.utils import is_dark_mode_enabled
+
 
 try:
     from nicos.guisupport.qt import QApplication
@@ -170,11 +172,16 @@ def main(_argv):
         path.splitext(opts.configfile)[0] + ".qss",
     ]
 
+    # Default is light mode.
+    style_extra = "QTabWidget QMainWindow {background: #fffcfcfd;} \n"
+    if is_dark_mode_enabled():
+        style_extra = "QTabWidget QMainWindow {background: #333339;} \n"
+
     for stylefile in [gui_conf.stylefile] or stylefiles:
         if path.isfile(stylefile):
             try:
                 with open(stylefile, "r", encoding="utf-8") as fd:
-                    app.setStyleSheet(fd.read())
+                    app.setStyleSheet(style_extra + fd.read())
                 gui_conf.stylefile = stylefile
                 break
             except Exception:

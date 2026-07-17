@@ -3,8 +3,7 @@ QWidget {
 }
 
 MainWindow {
-    /* background-color: #1f5366; */
-    /* color: white; */
+    background-color: #1f5366;
     font-family: "Source Sans Pro";
 }
 

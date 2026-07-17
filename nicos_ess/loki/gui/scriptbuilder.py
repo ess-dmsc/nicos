@@ -25,7 +25,7 @@ from nicos.guisupport.qt import (
 from nicos.utils import findResource
 
 from nicos_ess.gui.panels.panel import PanelBase
-from nicos_ess.gui.utils import get_icon
+from nicos_ess.gui.utils import get_icon, is_dark_mode_enabled
 from nicos_ess.loki.gui.sample_holder_config import ReadOnlyDelegate
 from nicos_ess.loki.gui.script_generator import ScriptFactory, TransOrder
 from nicos_ess.loki.gui.scriptbuilder_model import LokiScriptModel
@@ -257,14 +257,10 @@ class LokiScriptBuilderPanel(PanelBase):
     def _apply_qss(self):
         # Will try to determine whether to use dark mode.
         # Defaults to light if the mode cannot be determined.
-        try:
-            scheme = QApplication.instance().styleHints().colorScheme()
-            if scheme == Qt.ColorScheme.Dark:
-                self.tableView.setStyleSheet(DARK_TABLE_QSS)
-                return
-        except:
-            pass
-        self.tableView.setStyleSheet(LIGHT_TABLE_QSS)
+        if is_dark_mode_enabled():
+            self.tableView.setStyleSheet(DARK_TABLE_QSS)
+        else:
+            self.tableView.setStyleSheet(LIGHT_TABLE_QSS)
 
     def setViewOnly(self, viewonly):
         for control in [
