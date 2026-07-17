@@ -85,6 +85,30 @@ class RedisClient:
         )
 
     @handle_redis_errors(
+        default_return=[],
+        custom_message="Failed to retrieve reverse zrange by score from Redis",
+    )
+    def zrevrangebyscore(
+        self,
+        name,
+        max,
+        min,
+        start=None,
+        num=None,
+        withscores=False,
+        score_cast_func=float,
+    ):
+        return self._redis.zrevrangebyscore(
+            name,
+            max,
+            min,
+            start=start,
+            num=num,
+            withscores=withscores,
+            score_cast_func=score_cast_func,
+        )
+
+    @handle_redis_errors(
         default_return=0, custom_message="Failed to check existence of key in Redis"
     )
     def exists(self, key):

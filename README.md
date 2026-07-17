@@ -177,15 +177,26 @@ For Redis-based caching, `RedisCacheDatabase`, configure as follows:
 DB=device(
     "nicos.services.cache.server.RedisCacheDatabase",
     historydays=14,
-    # Arbitrary values such as status tuples and waveforms are not archived
-    # by default. Set a short retention period here to opt in.
+    # Flat numeric tuples, lists and dictionaries up to this size use native
+    # RedisTimeSeries component series.
+    maxnativecomponents=50,
+    # Serialized text and mixed or larger structures are not archived by
+    # default. Set a short retention period here to opt in.
     arbitraryhistorydays=None,
     loglevel="info",
 )
 ```
 
-`historydays` controls native RedisTimeSeries retention. The separate
-`arbitraryhistorydays` setting controls serialized arbitrary-value history;
+`historydays` controls native RedisTimeSeries retention for scalar numbers and
+flat, fully numeric tuples, lists and dictionaries. `maxnativecomponents` limits
+how many component series one value may create. Device status is treated
+separately: its numeric status code is archived natively while its descriptive
+text remains part of the current value. If a native structure changes shape or
+container type at runtime, its existing component history is replaced so that
+older samples cannot be reconstructed with the wrong layout.
+
+The separate `arbitraryhistorydays` setting controls serialized history for
+text, mixed structures and numeric structures above the native component limit;
 `None` disables it, `0` keeps it indefinitely, and a positive value retains
 that many days. Current values are stored regardless of the history setting.
 When arbitrary history is disabled, its old history keys are removed the next

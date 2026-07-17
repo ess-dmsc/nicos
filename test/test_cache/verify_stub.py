@@ -1,19 +1,19 @@
 # This file verifies the stub implementation of the RedisClient class.
-# If later this is included in the automated tests we would need to deploy a Redis server.
+# If this is included in the automated tests, a Redis server must be deployed.
 # For now, we can manually run this file to verify the stub implementation.
 
 import pytest
 
 from nicos.services.cache.endpoints.redis_client import RedisClient
-
 from test.test_cache.test_redis import RedisClientStub
 
 
 @pytest.fixture(scope="function")
 def real_redis_client():
-    client = RedisClient(host="localhost", port=6379, db=0)
-    client.execute_command("FLUSHALL")
+    client = RedisClient(host="localhost", port=6379, db=15)
+    client.execute_command("FLUSHDB")
     yield client
+    client.execute_command("FLUSHDB")
     client.close()
 
 
@@ -64,6 +64,11 @@ def test_execute_command_ts_create_add_range(real_redis_client, stub_redis_clien
     stub_range = stub_redis_client.execute_command("TS.RANGE", key, 0, 3)
 
     assert real_range == stub_range
+
+    command = ("TS.REVRANGE", key, 0, 3, "COUNT", 1)
+    assert real_redis_client.execute_command(
+        *command
+    ) == stub_redis_client.execute_command(*command)
 
 
 def test_keys(real_redis_client, stub_redis_client):
@@ -173,7 +178,9 @@ def test_execute_command_hdel(real_redis_client, stub_redis_client):
     real_removed = real_redis_client.execute_command("HDEL", key, "b", "c")
     stub_removed = stub_redis_client.execute_command("HDEL", key, "b", "c")
     assert real_removed == stub_removed
-    assert real_redis_client.hgetall(key) == stub_redis_client.hgetall(key) == {"a": "1"}
+    assert (
+        real_redis_client.hgetall(key) == stub_redis_client.hgetall(key) == {"a": "1"}
+    )
 
 
 def test_execute_command_zremrangebyscore(real_redis_client, stub_redis_client):
@@ -217,19 +224,91 @@ def test_execute_command_ts_del(real_redis_client, stub_redis_client):
     assert real_range == stub_range == [[30, "3"]]
 
 
-def test_execute_command_ts_create_with_retention(real_redis_client, stub_redis_client):
+def test_execute_command_ts_add_creates_with_retention(
+    real_redis_client, stub_redis_client
+):
     key = "ts_retention_key"
-    real_redis_client.execute_command(
-        "TS.CREATE", key, "RETENTION", 50, "DUPLICATE_POLICY", "LAST"
-    )
-    stub_redis_client.execute_command(
-        "TS.CREATE", key, "RETENTION", 50, "DUPLICATE_POLICY", "LAST"
-    )
-
     for ts, val in [(10, 1), (40, 2), (70, 3)]:
-        real_redis_client.execute_command("TS.ADD", key, ts, val)
-        stub_redis_client.execute_command("TS.ADD", key, ts, val)
+        command = (
+            "TS.ADD",
+            key,
+            ts,
+            val,
+            "RETENTION",
+            50,
+            "DUPLICATE_POLICY",
+            "LAST",
+        )
+        real_redis_client.execute_command(*command)
+        stub_redis_client.execute_command(*command)
 
     real_range = real_redis_client.execute_command("TS.RANGE", key, 0, 100)
     stub_range = stub_redis_client.execute_command("TS.RANGE", key, 0, 100)
     assert real_range == stub_range == [[40, "2"], [70, "3"]]
+
+
+@pytest.mark.parametrize("aggregation", ["avg", "last", "max"])
+def test_execute_command_ts_range_aligned_aggregations(
+    real_redis_client, stub_redis_client, aggregation
+):
+    key = f"aligned-{aggregation}"
+    real_redis_client.execute_command("TS.CREATE", key)
+    stub_redis_client.execute_command("TS.CREATE", key)
+    for timestamp, value in ((10, 1), (40, 5), (60, 2), (90, 8)):
+        real_redis_client.execute_command("TS.ADD", key, timestamp, value)
+        stub_redis_client.execute_command("TS.ADD", key, timestamp, value)
+
+    command = (
+        "TS.RANGE",
+        key,
+        5,
+        100,
+        "ALIGN",
+        5,
+        "AGGREGATION",
+        aggregation,
+        50,
+    )
+    assert real_redis_client.execute_command(
+        *command
+    ) == stub_redis_client.execute_command(*command)
+
+
+def test_execute_command_zrevrangebyscore(real_redis_client, stub_redis_client):
+    mapping = {"old": 10, "middle": 20, "new": 30}
+    real_redis_client.zadd("reverse-index", mapping)
+    stub_redis_client.zadd("reverse-index", mapping)
+
+    command = (
+        "ZREVRANGEBYSCORE",
+        "reverse-index",
+        25,
+        float("-inf"),
+        "LIMIT",
+        0,
+        1,
+    )
+    real_result = real_redis_client.execute_command(*command)
+    stub_result = stub_redis_client.execute_command(*command)
+
+    assert real_result == stub_result == ["middle"]
+
+    real_result = real_redis_client.zrevrangebyscore(
+        "reverse-index", 25, float("-inf"), start=0, num=1, withscores=True
+    )
+    stub_result = stub_redis_client.zrevrangebyscore(
+        "reverse-index", 25, float("-inf"), start=0, num=1, withscores=True
+    )
+    assert real_result == stub_result == [("middle", 20.0)]
+
+
+def test_scan_iter_hash_excludes_timeseries(real_redis_client, stub_redis_client):
+    real_redis_client.hset("current-value", mapping={"value": "1"})
+    stub_redis_client.hset("current-value", mapping={"value": "1"})
+    real_redis_client.execute_command("TS.CREATE", "history")
+    stub_redis_client.execute_command("TS.CREATE", "history")
+
+    real_result = sorted(real_redis_client.scan_iter(_type="hash"))
+    stub_result = sorted(stub_redis_client.scan_iter(_type="hash"))
+
+    assert real_result == stub_result == ["current-value"]
