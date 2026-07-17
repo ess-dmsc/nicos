@@ -792,9 +792,7 @@ def test_cache_dump_list_of_strings_is_cache_loadable_via_arbitrary_history(
     assert decoded == original
 
 
-def test_cache_dump_status_tuple_roundtrip_via_arbitrary_history(
-    db, arbitrary_history
-):
+def test_cache_dump_status_tuple_roundtrip_via_arbitrary_history(db, arbitrary_history):
     status = (200, "idle")
     dumped = cache_dump(status)  # "(200, 'idle')"
 
@@ -1182,9 +1180,7 @@ def test_can_handle_set_without_category(db):
 
 
 def test_can_handle_triple_hash(db):
-    db._set_data(
-        "nocat", "###", CacheEntry("123", "456", cache_dump("some_value"))
-    )
+    db._set_data("nocat", "###", CacheEntry("123", "456", cache_dump("some_value")))
     assert db._get_data("###") is None
 
 
