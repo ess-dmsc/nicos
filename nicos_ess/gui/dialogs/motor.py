@@ -1,4 +1,5 @@
 from nicos.clients.gui.utils import dialogFromUi, loadUi
+from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.guisupport.qt import (
     QDialog,
     QDoubleValidator,
@@ -154,6 +155,11 @@ class MotorDialog(QDialog):
 
     def stop(self):
         self.devices_panel.exec_command("stop(%s)" % self.devrepr, immediate=True)
+
+    @pyqtSlot()
+    def on_btn_reset_pressed(self):
+        print("pressed!")
+        self.reset()
 
     @pyqtSlot()
     def on_txt_target_returnPressed(self):
