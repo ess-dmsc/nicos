@@ -151,5 +151,3 @@ Troubleshooting
 - **Still stuck?**
 
   Use :py:func:`nicos.commands.basic.help()` or :py:func:`nicos.commands.basic.ListCommands()` to explore available commands in NICOS.
-
-------------------

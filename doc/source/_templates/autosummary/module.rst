@@ -49,7 +49,7 @@
 {%- block modules %}
 {#- gui/guiconfig/setups are also excluded via autosummary_mock_imports in
     conf.py; this filter is a safety net in case they become importable. #}
-{%- set submodules = modules | reject("in", ["gui", "guiconfig", "setups"]) | list %}
+{%- set submodules = modules | reject("in", ["gui", "guiconfig", "setups", "pnp_listener"]) | list %}
 {%- if submodules %}
 .. rubric:: Modules
 

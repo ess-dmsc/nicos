@@ -5,7 +5,6 @@ HOWTOs
    :maxdepth: 1
 
    gettingstarted
-   plugplay
    restrictaccess
    influxdb
    testscripts

@@ -124,8 +124,6 @@ class CanReference(DeviceMixinBase):
 
     This reference drive will be used by the `reference` user command.
 
-    .. automethod:: reference
-
     .. method:: doReference(*args)
 
        This method is called by `home` to do the reference drive.  It

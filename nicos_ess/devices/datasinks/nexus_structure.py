@@ -1,3 +1,5 @@
+"""Build File Writer NeXus JSON from templates and NICOS metadata."""
+
 import copy
 import json
 
@@ -35,6 +37,8 @@ ALLOWED_INSTRUMENT_NAMES = [
 
 
 class NexusStructureProvider(Device):
+    """Interface for devices that provide a File Writer NeXus structure."""
+
     parameter_overrides = {
         "visibility": Override(default=()),
     }
@@ -44,6 +48,13 @@ class NexusStructureProvider(Device):
 
 
 class NexusStructureJsonFile(NexusStructureProvider):
+    """Build a run-specific NeXus structure from a JSON template.
+
+    The template is filtered for the loaded setups and active structure alias,
+    then extended with EPICS streams, proposal metadata, users, sample details
+    and detector array sizes.
+    """
+
     parameters = {
         "nexus_config_path": Param(
             "NeXus configuration filepath",

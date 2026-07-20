@@ -631,5 +631,4 @@ Currently NICOS supports the following list of common mixin classes:
 ``SequencerMixin``
 ==================
 
-.. autoclass:: SequencerMixin()
-   :noindex:
+The class and its use are documented in :doc:`sequencer`.

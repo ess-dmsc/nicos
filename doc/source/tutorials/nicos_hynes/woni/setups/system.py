@@ -1,7 +1,4 @@
-# A detailed description of the setup file structure and it's elements is
-# available here: https://forge.frm2.tum.de/nicos/doc/nicos-stable/setups/
-#
-# Please remove these lines after copying this file.
+# See the setup-file documentation for the available entries.
 
 description = "system setup"
 

@@ -22,8 +22,8 @@ In order for these tests to run in the test suite, without the real instrument
 present, some special directives can be added. These allow defining the needed
 settings of the instrument to run the test script in simulation mode.
 
-The test scripts have to be located in the `testscripts` subdirectory of each
-facility/instrument directory.
+Test scripts are stored in the ``testscripts`` subdirectory of each instrument
+package, for example ``nicos_ess/ymir/testscripts``.
 
 The syntax is quite simple. Each line starting with::
 
@@ -51,7 +51,7 @@ same file.
 
 Example:
 
-.. literalinclude:: ../../../nicos_mlz/refsans/testscripts/basic.py
+.. literalinclude:: ../../../nicos_ess/ymir/testscripts/basic.py
 
 
 Cache entries
@@ -66,4 +66,4 @@ subdirectory of the instrument directory.
 
 Example:
 
-.. literalinclude:: ../../../nicos_mlz/refsans/testscripts/cache
+.. literalinclude:: ../../../nicos_ess/ymir/testscripts/cache

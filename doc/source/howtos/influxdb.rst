@@ -7,7 +7,7 @@ In order to install InfluxDB instance, best to follow official
 Initial setup can be implemented through InfluxDB2 web interface or via CLI.
 One needs to specify organization name, initial bucket, username and password::
 
-   influx setup -o mlz -b nicos-cache -u nicos -p password -f
+   influx setup -o ORGANIZATION -b nicos-cache -u nicos -p PASSWORD -f
 
 The API token should be generated at the previous step. If not please check
 the official documentation for the version of InfluxDB which is running.
@@ -22,4 +22,3 @@ The token should be stored in nicos keystore as a new field "influxdb"::
 Start InfluxDB2 service with telemetry disabled::
 
    influxd --reporting-disabled
-

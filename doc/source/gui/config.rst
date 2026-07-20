@@ -43,14 +43,13 @@ A small example configuration file looks like this:
    tools = [
        tool('Calculator', 'nicos.clients.gui.tools.calculator.CalculatorTool'),
        tool('Report NICOS bug', 'nicos.clients.gui.tools.website.WebsiteTool',
-            url='http://forge.frm2.tum.de/redmine/projects/nicos/issues/new'),
+            url='https://gitlab.esss.lu.se/ecdc/ess-dmsc/nicos/-/issues/new'),
    ]
 
    options = {
-       'reader_classes': ['nicos_demo.demo.demo_file.DemoReader'],
+       'facility': 'ess',
        'connection_presets': {
-           'WONI': 'woni.example.my',
-           'INST': 'instrument.facility.my',
+           'Local development': 'localhost',
        }
    }
 
