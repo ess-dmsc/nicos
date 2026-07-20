@@ -5,8 +5,7 @@ devices = dict(
     Auth=device(
         "nicos.services.daemon.auth.list.Authenticator",
         hashing="md5",
-        # for the meaning of these entries see
-        # https://forge.frm2.tum.de/nicos/doc/nicos-stable/services/daemon/#nicos.services.daemon.auth.list.Authenticator
+        # See the daemon service documentation for the meaning of these entries.
         passwd=[
             ("guest", "", "guest"),
             # The entries for these password hashes are generated from randomized

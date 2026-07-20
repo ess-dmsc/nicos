@@ -7,16 +7,15 @@ For easy programming of graphical interfaces, NICOS provides a couple of
 Qt widgets that can display and edit information about NICOS devices or
 device parameters.
 
-NICOS provides the ``bin/designer-nicos`` script that starts the Qt designer
-with appropriate options to add the widgets to the designer's of widgets
+NICOS provides the ``designer-nicos`` command that starts the Qt designer
+with appropriate options to add the NICOS widgets to the Designer widget box
 (see below for custom widgets).
 
-The ``bin/designer-nicos`` script should be invoked to start the Qt designer
-with NICOS widgets integrated.  If custom widgets should be included, give
-the module name(s) with widget classes on the command line.  For example, ::
+If custom widgets should be included, give the module name or names with widget
+classes on the command line. To edit an existing UI file with the standard
+NICOS widgets available, run for example::
 
-   bin/designer-nicos nicos_mlz.sans1.gui.monitorwidgets nicos_mlz/sans1/gui/panel.ui
+   uv run designer-nicos nicos_ess/gui/panels/ui_files/devices.ui
 
-will edit the ``panel.ui`` file with the widgets from
-``nicos_mlz.sans1.gui.monitorwidgets`` available in addition to the standard widgets
-mentioned above.
+This opens the UI file used by
+``nicos_ess.gui.panels.devices.DevicesPanel``.

@@ -8,10 +8,9 @@ Welcome to NICOS
    :hidden:
 
    Home Page <https://www.nicos-controls.org>
-   Project Page <https://forge.frm2.tum.de/redmine/projects/nicos>
+   Project Page <https://gitlab.esss.lu.se/ecdc/ess-dmsc/nicos>
    documentation
-   download
    howtos/index
    tutorials/index
+   ESS API reference <classes/nicos_ess>
    indices
-   changes

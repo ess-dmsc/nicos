@@ -711,17 +711,20 @@ class EpicsMotor(
 
 
 class EpicsJogMotor(EpicsMotor):
-    """
-    EPICS motor wrapper that behaves like a speed controller.
-    - start(+v): set JVEL=v and jog forward
-    - start(-v): set JVEL=|v| and jog reverse
-    - start(0): stop and clear jog fields
+    """EPICS motor wrapper that behaves like a speed controller.
+
+    - ``start(+v)``: set ``JVEL=v`` and jog forward
+    - ``start(-v)``: set ``JVEL=|v|`` and jog reverse
+    - ``start(0)``: stop and clear jog fields
+
     Other behaviour (limits, enable, error handling, readbacks) is the same
-    as EpicsMotor, but this device never issues .VAL moves.
+    as :class:`EpicsMotor`, but this device never issues ``.VAL`` moves.
 
     Notes on readbacks in this subclass:
-    - "jog_velocity" is the raw EPICS .JVEL (usually small and never actually 0).
-    - "value" is a synthetic NICOS-side signal: signed speed based on jog_dir,
+
+    - ``jog_velocity`` is the raw EPICS ``.JVEL`` (usually small and never
+      actually 0).
+    - ``value`` is a synthetic NICOS-side signal: signed speed based on ``jog_dir``,
       and set to 0 when stopping, etc.
     """
 

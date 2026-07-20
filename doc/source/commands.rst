@@ -4,6 +4,7 @@ User Commands
 - `Getting help`_
 - `Device commands`_
 - `Scanning commands`_
+- `ESS-specific commands`_
 - `Output commands`_
 - `Setup-related commands`_
 - `Experiment-related commands`_
@@ -174,6 +175,25 @@ Scanning commands
 .. autofunction:: manualscan
 .. autofunction:: gridscan
 
+ESS-specific commands
+---------------------
+
+These commands are defined in :mod:`nicos_ess.commands` and are available
+at ESS instruments.  All public commands of these modules are documented
+automatically.
+
+.. automodule:: nicos_ess.commands.filewriter
+   :no-index:
+
+.. automodule:: nicos_ess.commands.sample
+   :no-index:
+
+.. automodule:: nicos_ess.commands.wait
+   :no-index:
+
+.. automodule:: nicos_ess.commands.base
+   :no-index:
+
 On-line analysis commands
 -------------------------
 
@@ -221,11 +241,6 @@ one of your loaded setups.  Additionally, your experiment device has to be an
 
 .. autofunction:: tomo
 .. autofunction:: grtomo
-
-.. module:: nicos_mlz.frm2.commands.imaging
-
-.. autofunction:: openbeamimage
-.. autofunction:: darkimage
 
 Sample-related commands
 -----------------------
