@@ -6,5 +6,4 @@ HOWTOs
 
    gettingstarted
    restrictaccess
-   influxdb
    testscripts
