@@ -126,11 +126,10 @@ except the :ref:`description <setup-description>` entry:
    Example::
 
        sysconfig = dict(
-           cache = 'mira1',
-           instrument = 'mira',
+           cache = 'localhost',
+           instrument = 'YMIR',
            experiment = 'Exp',
-           notifiers = ['email', 'smser'],
-           datasinks = ['conssink', 'filesink', 'dmnsink'],
+           datasinks = ['conssink', 'daemonsink', 'liveview'],
        )
 
    The entries `notifiers` and `datasinks` may occur in multiple setups and
@@ -193,28 +192,31 @@ except the :ref:`description <setup-description>` entry:
    example ``devices`` entries::
 
       devices = dict(
-          p = device('nicos.devices.entangle.Sensor',
-                     description = 'detector gas pressure',
-                     tangodevice = 'tango://mira/ccr/pressure',
-                     unit = 'bar'),
+          mX = device(
+              'nicos_ess.devices.epics.pva.motor.EpicsMotor',
+              description = 'Single axis positioner',
+              motorpv = 'YMIR-SpScn:MC-X-01:Mtr',
+          ),
 
-          mth_motor = device('nicos.devices.entangle.Motor',
-                             tangodevice = 'tango://mira/motor/mth',
-                             visibility = (),
-                             unit = 'deg'),
+          timer = device(
+              'nicos.devices.generic.VirtualTimer',
+              description = 'Simulated timer',
+              unit = 's',
+          ),
 
-          mth_coder = device('nicos.devices.entangle.Sensor',
-                             tangodevice = 'tango://mira/coder/mth',
-                             visibility = (),
-                             unit = 'deg'),
+          pulse_counter = device(
+              'nicos_ess.devices.epics.pulse_counter.PulseCounter',
+              description = 'EVR Pulse Counter',
+              readpv = 'YMIR-TS:Ctrl-EVR-01:EvtACnt-I',
+              fmtstr = '%d',
+          ),
 
-          mth = device('nicos.devices.generic.Axis',
-                       description = 'Monochromator theta angle',
-                       motor = 'mth_motor',
-                       coder = 'mth_coder',
-                       abslimits = (0, 100),
-                       userlimits = (0, 50),
-                       precision = 0.01),
+          detector = device(
+              'nicos.devices.generic.Detector',
+              description = 'Classical detector with single channels',
+              timers = ['timer'],
+              counters = ['pulse_counter'],
+          ),
       )
 
    For example, an instrument with varying sample environment could have two
@@ -353,7 +355,7 @@ except the :ref:`description <setup-description>` entry:
 
 .. todo::
 
-   document "extended" more once we have use for it. PANDA uses it now !!!
+   Document ``extended`` when its intended interface is settled.
 
 .. _setup-help_topics:
 
@@ -467,7 +469,7 @@ All these messages have to be considered serious problems and should be fixed.
 
 In case of emitted warnings::
 
-   [17:15:03] nicos_mlz/refsans/setups/elements/prim_monitor.py:52: WARNING: hv_mon: device has no description
+   [17:15:03] nicos_ess/ymir/setups/detector.py:52: WARNING: monitor: device has no description
 
 which may happen if the tool runs over directories and devices are defined more
 than once or a device has no description, it's up to the user of the tool to

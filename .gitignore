@@ -67,3 +67,5 @@ venv
 
 # Symlink to NeXus JSON templates
 nexus-json-templates
+doc/source/classes/nicos_ess_api/
+/public/
