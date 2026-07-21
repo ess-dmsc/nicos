@@ -156,6 +156,10 @@ class MotorDialog(QDialog):
         self.devices_panel.exec_command("stop(%s)" % self.devrepr, immediate=True)
 
     @pyqtSlot()
+    def on_btn_reset_pressed(self):
+        self.reset()
+
+    @pyqtSlot()
     def on_txt_target_returnPressed(self):
         self.move()
 
