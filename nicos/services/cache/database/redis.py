@@ -145,6 +145,11 @@ class RedisCacheDatabase(CacheDatabase):
         (target or self._client).execute_command(*cmd)
 
     def _query_ranges(self, keys, fromtime, totime, *args):
+        """Query each series and include its latest value from before the range.
+
+        When available, the earlier value shows what was in effect when the
+        requested range began.
+        """
         pipe = self._client.pipeline(transaction=False)
         if pipe is None:
             return [[] for _ in keys]
@@ -360,6 +365,11 @@ class RedisCacheDatabase(CacheDatabase):
 
     @staticmethod
     def _decimate_history(entries, fromtime, interval):
+        """Thin entries inside the range while preserving earlier entries.
+
+        Keep the first entry in the range, then keep the next entry only after
+        at least ``interval`` seconds have passed since the last one kept.
+        """
         result, next_boundary = [], None
         bucket_ms = int(interval * 1000)
         for entry in entries:
@@ -435,6 +445,13 @@ class RedisCacheDatabase(CacheDatabase):
         return entries
 
     def _apply_recent_update(self, dbkey, entry):
+        """Apply an update to the current values held by this process.
+
+        Return whether clients should be notified and whether the update needs
+        to be saved. Repeating an unexpired value refreshes its timestamp and
+        lifetime without notifying clients. Removing a value that has already
+        expired requires neither action.
+        """
         with self._recent_lock:
             current = self._recent.get(dbkey)
             if current is not None:
