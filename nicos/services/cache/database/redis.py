@@ -5,54 +5,25 @@ from __future__ import annotations
 import math
 import threading
 import time
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from collections.abc import Iterable
 
-from nicos.core import Param
+from nicos.core import Param, floatrange, intrange, none_or
 from nicos.protocols.cache import cache_load
 from nicos.services.cache.database.base import CacheDatabase
-from nicos.services.cache.endpoints.redis_client import RedisClient, RedisError
+from nicos.services.cache.endpoints.redis_client import RedisClient
 from nicos.services.cache.entry import CacheEntry
-from nicos.utils import createThread
 
-KeyTuple = Tuple[str, str]
-
-
-CLEANER_LUA = """
-local now   = tonumber(ARGV[1])
-local cursor = ARGV[2] and tonumber(ARGV[2]) or 0
-local cleaned = 0
-repeat
-  local res = redis.call('SCAN', cursor, 'COUNT', 512)
-  cursor = tonumber(res[1])
-  for _, key in ipairs(res[2]) do
-    local key_type = redis.call('TYPE', key)
-    if key_type == 'hash' then
-      local ttl_str  = redis.call('HGET', key, 'ttl')
-      local time_str = redis.call('HGET', key, 'time')
-      local expired  = redis.call('HGET', key, 'expired')
-
-      if ttl_str and ttl_str ~= 'None' and expired == 'False' then
-        local ttl = tonumber(ttl_str)
-        local t0  = tonumber(time_str)
-        if ttl and t0 and (t0 + ttl) < now then
-          redis.call('HSET', key, 'expired', 'True')
-          cleaned = cleaned + 1
-        end
-      end
-    end
-  end
-until cursor == 0
-return cleaned
-"""
+KeyTuple = tuple[str, str]
 
 
 class RedisCacheDatabase(CacheDatabase):
     """Cache database that persists to Redis but serves reads from RAM.
 
-    Layout in Redis (unchanged):
+    Layout in Redis:
       - One hash per value: "<category>/<subkey>" (or "<subkey>" if nocat)
-        fields: time, ttl, value, expired ("True"/"False" as strings)
-      - Optional RedisTimeSeries per numeric value: "<key>_ts"
+        fields: time, ttl, value
+      - RedisTimeSeries for finite scalar values and numeric components
+      - Optional arbitrary-value history in a sorted set: "<key>_hs"
     """
 
     parameters = {
@@ -60,19 +31,27 @@ class RedisCacheDatabase(CacheDatabase):
         "port": Param("Redis port", type=int, default=6379),
         "db": Param("Redis DB", type=int, default=0),
         "historydays": Param(
-            "Maximum history retention in days for TS/hash_series "
-            "(0 disables history pruning)",
-            type=float,
+            "Maximum RedisTimeSeries history retention in days (0 disables pruning)",
+            type=floatrange(0),
             default=14.0,
+        ),
+        "arbitraryhistorydays": Param(
+            "Maximum arbitrary-value history retention in days "
+            "(None disables arbitrary history, 0 disables pruning)",
+            type=none_or(floatrange(0)),
+            default=None,
+        ),
+        "maxnativecomponents": Param(
+            "Maximum numeric components archived with RedisTimeSeries",
+            type=intrange(1, 10000),
+            default=50,
         ),
     }
 
-    def doInit(self, mode: str, injected_client: Union[RedisClient, None] = None):
-        # in-memory current-value store: {category: [None, Lock(), {subkey: CacheEntry}]}
-        self._recent: Dict[
-            str, List[Union[None, threading.Lock, Dict[str, CacheEntry]]]
-        ] = {}
-        self._recent_lock = threading.Lock()
+    def doInit(self, mode: str, injected_client: RedisClient | None = None):
+        self._recent: dict[KeyTuple, CacheEntry] = {}
+        self._recent_lock = threading.RLock()
+        self._layouts: dict[str, tuple] = {}
 
         self._client = injected_client or RedisClient(
             host=self.host, port=self.port, db=self.db
@@ -84,190 +63,250 @@ class RedisCacheDatabase(CacheDatabase):
         # Prefill in-memory state from Redis once (via SCAN + pipelined HGETALL).
         self.initDatabase()
 
-        # Background TTL cleaner using Lua in Redis; we also update RAM flags locally.
-        self._stoprequest = False
-        self._cleaner = self._start_cleaner()
-
     def doShutdown(self):
-        self._stoprequest = True
-        try:
-            if hasattr(self, "_cleaner"):
-                self._cleaner.join()
-        finally:
-            self._client.close()
+        self._client.close()
 
-    def _literal_or_str(self, val: str):
+    def initDatabase(self, batch: int = 512):
+        loaded = 0
+        for (cat, sub), entry in self._iter_entries_stream(batch):
+            self._set_recent(cat, sub, entry)
+            loaded += 1
+        self.log.info("RedisCacheDatabase: loaded %d current entries into RAM", loaded)
+
+    def getEntry(self, dbkey: KeyTuple):
+        category, subkey = dbkey
+        with self._recent_lock:
+            entry = self._recent.get(dbkey)
+            if entry is not None:
+                self._refresh_expired_flag(entry)
+                return entry
+
+        redis_key = self._redis_key(category, subkey)
         try:
-            parsed = cache_load(val)
-            return parsed if isinstance(parsed, (int, float)) else val
+            entry = self._get_data(redis_key)
         except Exception:
-            return val
+            entry = None
+        if entry:
+            self._set_recent(category, subkey, entry)
+        return entry
 
-    def _hash_set(self, key, time_value, ttl, value, expired, target=None):
-        t = target or self._client
-        t.hset(
-            key,
-            mapping={
-                "time": str(time_value),
-                "ttl": str(ttl),
-                "value": str(value),
-                "expired": str(expired),
-            },
+    def iterEntries(self):
+        with self._recent_lock:
+            now = time.time()
+            items = list(self._recent.items())
+            for _, entry in items:
+                self._refresh_expired_flag(entry, now)
+        yield from items
+
+    def updateEntries(
+        self, categories: list[str], subkey: str, no_store: bool, entry: CacheEntry
+    ):
+        """Apply a logical update to one or more categories (due to rewrites)."""
+        entry = self._normalize_entry(entry)
+        self._refresh_expired_flag(entry)
+        real_update = True
+        persist = []
+        for category in categories:
+            changed, should_persist = self._apply_recent_update(
+                (category, subkey), entry
+            )
+            real_update = real_update and changed
+            if should_persist and not no_store:
+                persist.append((category, subkey, entry))
+        self._persist_entries(persist)
+        return real_update
+
+    def queryHistory(self, dbkey, fromtime, totime, interval=None):
+        category, subkey = dbkey
+        redis_key = self._redis_key(category, subkey)
+        from_ms = int(fromtime * 1000)
+        to_ms = int(totime * 1000)
+        layout = self._layouts.get(redis_key)
+        if not layout:
+            return []
+        if layout[0] == "arbitrary":
+            return self._query_arbitrary_history(
+                self._arbitrary_key(redis_key), fromtime, totime, interval
+            )
+        return self._query_native_history(
+            redis_key, subkey, layout, from_ms, to_ms, interval
         )
 
     def _hash_getall(self, key, target=None):
         t = target or self._client
         return t.hgetall(key)
 
-    def _redis_key_exists(self, key, target=None):
-        # NOTE: usually call without target inside write paths to avoid pipelining EXISTS.
-        t = target or self._client
-        return t.exists(key)
-
-    def _create_timeseries(self, key, target=None):
-        cmd = ["TS.CREATE", key]
-        retention_ms = self._history_retention_ms()
+    def _add_timeseries(self, key, timestamp, value, target=None):
+        cmd = ["TS.ADD", key, timestamp, value]
+        retention_ms = self._timeseries_retention_ms()
         if retention_ms is not None:
             cmd.extend(["RETENTION", retention_ms])
         cmd.extend(["DUPLICATE_POLICY", "LAST"])
         (target or self._client).execute_command(*cmd)
 
-    def _add_to_timeseries(self, key, timestamp, value, target=None):
-        (target or self._client).execute_command("TS.ADD", key, timestamp, value)
+    def _query_ranges(self, keys, fromtime, totime, *args):
+        """Query each series and include its latest value from before the range.
 
-    def _query_timeseries(self, key, fromtime, totime, *args, target=None):
-        return (target or self._client).execute_command(
-            "TS.RANGE", key, fromtime, totime, *args
-        )
+        When available, the earlier value shows what was in effect when the
+        requested range began.
+        """
+        pipe = self._client.pipeline(transaction=False)
+        if pipe is None:
+            return [[] for _ in keys]
+        for key in keys:
+            pipe.execute_command("TS.RANGE", key, fromtime, totime, *args)
+        if fromtime > 0:
+            for key in keys:
+                pipe.execute_command("TS.REVRANGE", key, 0, fromtime - 1, "COUNT", 1)
+        try:
+            results = pipe.execute()
+        except Exception as e:
+            self.log.warning("RedisTimeSeries query failed: %s", e)
+            return [[] for _ in keys]
+        current = results[: len(keys)]
+        if fromtime <= 0:
+            return current
+        return [results[len(keys) + i] + samples for i, samples in enumerate(current)]
 
     def _redis_keys(self, match="*", count=1024, _type=None) -> Iterable[str]:
         return self._client.scan_iter(match=match, count=count, _type=_type)
 
-    def _delete(self, key, target=None):
-        (target or self._client).execute_command("DEL", key)
+    def _delete(self, *keys, target=None):
+        if keys:
+            # History hashes can be very large. UNLINK removes their names
+            # immediately while reclaiming memory outside Redis' main thread.
+            (target or self._client).execute_command("UNLINK", *keys)
 
-    def _history_retention_ms(self) -> Optional[int]:
+    @staticmethod
+    def _retention_ms(days) -> int | None:
+        if days is None:
+            return None
         try:
-            days = float(
-                getattr(
-                    self,
-                    "_historydays_override",
-                    getattr(self, "historydays", 0.0),
-                )
-            )
+            days = float(days)
         except Exception:
             return None
         if days <= 0:
             return None
-        ms = int(days * 86400 * 1000)
-        return ms if ms > 0 else None
+        return max(1, int(days * 86400 * 1000))
 
-    def _history_cutoff_ms(self, newest_ts_ms: int) -> Optional[int]:
-        retention_ms = self._history_retention_ms()
-        if retention_ms is None:
-            return None
-        return int(newest_ts_ms - retention_ms)
+    def _timeseries_retention_ms(self) -> int | None:
+        return self._retention_ms(self.historydays)
 
-    def _prune_timeseries(self, ts_key: str, newest_ts_ms: int, target=None):
-        cutoff = self._history_cutoff_ms(newest_ts_ms)
-        if cutoff is None:
-            return
-        try:
-            (target or self._client).execute_command("TS.DEL", ts_key, 0, cutoff)
-        except Exception:
-            self.log.exception("TS prune failed for %s", ts_key)
+    def _arbitrary_history_enabled(self) -> bool:
+        return self.arbitraryhistorydays is not None
 
-    def _prune_hash_series(
-        self, hs_hash_key: str, hs_idx_key: str, newest_ts_ms: int, target=None
-    ):
-        cutoff = self._history_cutoff_ms(newest_ts_ms)
-        if cutoff is None:
-            return
-
-        try:
-            stale_fields = self._client.zrangebyscore(hs_idx_key, float("-inf"), cutoff)
-        except Exception:
-            self.log.exception(
-                "hash_series prune index lookup failed for %s", hs_idx_key
-            )
-            return
-
-        if not stale_fields:
-            return
-
-        normalized = []
-        for f in stale_fields:
-            if isinstance(f, str):
-                normalized.append(f)
-            else:
-                try:
-                    normalized.append(f.decode("utf-8"))
-                except Exception:
-                    normalized.append(str(f))
-
-        t = target or self._client
-        try:
-            t.execute_command("HDEL", hs_hash_key, *normalized)
-            t.execute_command("ZREMRANGEBYSCORE", hs_idx_key, float("-inf"), cutoff)
-        except Exception:
-            self.log.exception(
-                "hash_series prune failed for %s/%s", hs_hash_key, hs_idx_key
-            )
+    def _arbitrary_retention_ms(self) -> int | None:
+        return self._retention_ms(self.arbitraryhistorydays)
 
     def _check_get_key_format(self, key: str) -> bool:
         return "###" not in key
 
-    def _format_key(self, category: str, subkey: str):
-        """
-        Return Redis keys for main hash and associated TS structures.
-        Returns: (main_key, ts_key, hs_key, hs_idx_key)
-        """
-        key = subkey if category == "nocat" else f"{category}/{subkey}"
-        return key, f"{key}_ts", f"{key}_hs", f"{key}_hs_idx"
+    @staticmethod
+    def _redis_key(category: str, subkey: str):
+        return subkey if category == "nocat" else f"{category}/{subkey}"
 
-    def _entry_from_hash(self, h: Union[Dict[str, str], None]) -> Optional[CacheEntry]:
-        if not h or not {"time", "ttl", "value"}.issubset(h):
+    @staticmethod
+    def _arbitrary_key(redis_key: str):
+        return f"{redis_key}_hs"
+
+    def _classify_history(self, subkey: str, value):
+        status_code = self._status_code(subkey, value)
+        if status_code is not None:
+            return ("status",), (status_code,)
+        if self._is_native_number(value):
+            return ("scalar",), (value,)
+        components = self._numeric_components(value)
+        if components is not None:
+            return components
+        return ("arbitrary",), ()
+
+    def _status_code(self, subkey, value):
+        if (
+            subkey == "status"
+            and isinstance(value, tuple)
+            and len(value) == 2
+            and type(value[0]) is int
+            and isinstance(value[1], str)
+            and self._is_native_number(value[0])
+        ):
+            return value[0]
+        return None
+
+    def _numeric_components(self, value):
+        if isinstance(value, dict):
+            layout = ("dict", tuple(value))
+            components = tuple(value.values())
+        elif isinstance(value, tuple):
+            layout = ("tuple", len(value))
+            components = value
+        elif isinstance(value, list):
+            layout = ("list", len(value))
+            components = tuple(value)
+        else:
+            return None
+        if not components or len(components) > self.maxnativecomponents:
+            return None
+        if not all(self._is_native_number(component) for component in components):
+            return None
+        return layout, components
+
+    def _history_keys(self, redis_key: str, layout):
+        if not layout:
+            return []
+        kind = layout[0]
+        if kind in ("scalar", "status"):
+            return [f"{redis_key}_ts"]
+        if kind == "arbitrary":
+            return [self._arbitrary_key(redis_key)]
+        try:
+            count = len(layout[1]) if kind == "dict" else int(layout[1])
+        except (IndexError, TypeError, ValueError):
+            return []
+        return [f"{redis_key}_ts_{i}" for i in range(count)]
+
+    def _remove_history(self, redis_key: str, layout, target=None):
+        keys = self._history_keys(redis_key, layout)
+        if keys:
+            self._delete(*keys, target=target)
+
+    def _entry_from_hash(self, h: dict[str, str] | None) -> CacheEntry | None:
+        if not h or not {"time", "value"}.issubset(h):
             return None
         if h.get("value", "") == "":
             return None
-
-        ttl = None if h["ttl"] == "None" else self._literal_or_str(h["ttl"])
-        expired = True if h.get("expired", "False") == "True" else False
-        entry = CacheEntry(self._literal_or_str(h["time"]), ttl, h["value"])
-        entry.expired = expired
+        try:
+            timestamp = float(h["time"])
+            ttl = float(h["ttl"]) if h.get("ttl") else None
+        except (TypeError, ValueError):
+            return None
+        entry = CacheEntry(timestamp, ttl, h["value"])
+        self._refresh_expired_flag(entry)
         return entry
 
-    def _flush(self, keys: List[str], raws: List[Dict[str, str]]):
+    def _flush(self, keys: list[str], raws: list[dict[str, str]]):
         for k, h in zip(keys, raws):
             entry = self._entry_from_hash(h)
             if not entry:
                 continue
             cat, sub = k.rsplit("/", 1) if "/" in k else ("nocat", k)
+            try:
+                value = cache_load(entry.value)
+            except Exception:
+                self.log.warning("Invalid serialized cache value in %s", k)
+                continue
+            self._layouts[k] = self._classify_history(sub, value)[0]
             yield (cat, sub), entry
 
     def _normalize_entry(self, entry: CacheEntry) -> CacheEntry:
-        """Ensure time/ttl are numeric (not strings) before storing in RAM."""
-        t = entry.time
-        tt = entry.ttl
-        t_conv = self._literal_or_str(t) if isinstance(t, str) else t
-        tt_conv = None
-        if tt not in (None, "None"):
-            tt_conv = self._literal_or_str(tt) if isinstance(tt, str) else tt
-
-        norm = CacheEntry(t_conv, tt_conv, entry.value)
+        """Ensure time and TTL are numeric before storing in RAM."""
+        timestamp = float(entry.time)
+        ttl = None if entry.ttl is None else float(entry.ttl)
+        norm = CacheEntry(timestamp, ttl, entry.value)
         norm.expired = entry.expired
         return norm
 
-    def initDatabase(self, batch: int = 512):
-        loaded = 0
-        for (cat, sub), entry in self._iter_entries_stream(batch):
-            # entry from _entry_from_hash already has numeric time/ttl
-            self._set_recent(cat, sub, entry)
-            loaded += 1
-        self.log.info("RedisCacheDatabase: loaded %d current entries into RAM", loaded)
-
     def _iter_entries_stream(self, batch: int = 512):
-        buf: List[str] = []
+        buf: list[str] = []
         pipe = None
         for key in self._redis_keys(count=batch, _type="hash"):
             if not isinstance(key, str):
@@ -295,285 +334,153 @@ class RedisCacheDatabase(CacheDatabase):
                 raws = [{} for _ in buf]
             yield from self._flush(buf, raws)
 
-    def _ensure_category(self, category: str):
-        with self._recent_lock:
-            if category not in self._recent:
-                self._recent[category] = [None, threading.Lock(), {}]
-            return self._recent[category]
+    def _refresh_expired_flag(self, entry: CacheEntry, now: float | None = None):
+        if entry.expired or entry.value in ("", None):
+            return
+        if not entry.ttl:
+            return
+        try:
+            expired = entry.time + entry.ttl < (time.time() if now is None else now)
+        except TypeError:
+            return
+        if expired:
+            entry.expired = True
 
     def _set_recent(self, category: str, subkey: str, entry: CacheEntry):
-        _, lock, db = self._ensure_category(category)
         norm = self._normalize_entry(entry)
-        with lock:
-            db[subkey] = norm
-
-    def _del_recent(self, category: str, subkey: str):
+        self._refresh_expired_flag(norm)
         with self._recent_lock:
-            triple = self._recent.get(category)
-        if not triple:
-            return
-        _, lock, db = triple
-        with lock:
-            db.pop(subkey, None)
+            self._recent[(category, subkey)] = norm
 
-    def getEntry(self, dbkey: KeyTuple):
-        category, subkey = dbkey
-        with self._recent_lock:
-            triple = self._recent.get(category)
-        if triple:
-            _, lock, db = triple
-            with lock:
-                entry = db.get(subkey)
-                if entry is not None:
-                    return entry
+    @staticmethod
+    def _arbitrary_member(timestamp, value):
+        return f"{timestamp}:{value}"
 
-        # Lazy fallback: if not in RAM (e.g., external writer), read once and cache.
-        redis_key, _, _, _ = self._format_key(category, subkey)
-        try:
-            entry = self._get_data(redis_key)
-        except Exception:
-            entry = None
-        if entry:
-            self._set_recent(category, subkey, entry)
-        return entry
+    @staticmethod
+    def _arbitrary_entries(samples):
+        return [
+            CacheEntry(timestamp / 1000.0, None, member.split(":", 1)[1])
+            for member, timestamp in samples
+        ]
 
-    def iterEntries(self):
-        # Iterate a snapshot of categories to avoid holding the big lock too long
-        for cat, (_, lock, db) in list(self._recent.items()):
-            with lock:
-                for subkey, entry in db.items():
-                    yield (cat, subkey), entry
+    @staticmethod
+    def _decimate_history(entries, fromtime, interval):
+        """Thin entries inside the range while preserving earlier entries.
 
-    def queryHistory(self, dbkey, fromtime, totime, interval=None):
-        category, subkey = dbkey
-        redis_key, base_ts_key, hs_hash_key, hs_idx_key = self._format_key(
-            category, subkey
+        Keep the first entry in the range, then keep the next entry only after
+        at least ``interval`` seconds have passed since the last one kept.
+        """
+        result, next_boundary = [], None
+        bucket_ms = int(interval * 1000)
+        for entry in entries:
+            timestamp = int(entry.time * 1000)
+            if entry.time < fromtime:
+                result.append(entry)
+            elif next_boundary is None or timestamp >= next_boundary:
+                result.append(entry)
+                next_boundary = timestamp + bucket_ms
+        return result
+
+    def _query_arbitrary_history(self, key, fromtime, totime, interval):
+        from_ms = int(fromtime * 1000)
+        carry = []
+        if from_ms > 0:
+            carry = self._client.zrevrangebyscore(
+                key,
+                from_ms - 1,
+                float("-inf"),
+                start=0,
+                num=1,
+                withscores=True,
+            )
+        samples = carry + self._client.zrangebyscore(
+            key, from_ms, int(totime * 1000), withscores=True
+        )
+        entries = self._arbitrary_entries(samples)
+        return (
+            self._decimate_history(entries, fromtime, interval) if interval else entries
         )
 
-        from_ms = int(fromtime * 1000)
-        to_ms = int(totime * 1000)
+    @staticmethod
+    def _native_range_options(kind, subkey, from_ms, interval):
+        if not interval:
+            return ()
+        aggregation = (
+            "max"
+            if kind == "status"
+            else "last"
+            if subkey.endswith("limits")
+            else "avg"
+        )
+        return "ALIGN", from_ms, "AGGREGATION", aggregation, int(interval * 1000)
 
-        # Read metadata describing how this value is archived in TS
-        try:
-            meta = self._hash_getall(redis_key)
-        except Exception as e:
-            self.log.warning(
-                "queryHistory: failed to read metadata hash for %s: %s",
-                redis_key,
-                e,
-            )
-            meta = {}
+    @staticmethod
+    def _rebuild_history_value(layout, values):
+        kind = layout[0]
+        if kind == "status":
+            return int(values[0]), None
+        if kind == "scalar":
+            return values[0]
+        if kind == "dict":
+            return dict(zip(layout[1], values))
+        return tuple(values) if kind == "tuple" else values
 
-        encoding = meta.get("ts_encoding")  # "scalar", "list", "dict", or None
-        children_raw = meta.get("ts_children", "")
-        children = [c for c in children_raw.split(",") if c] if children_raw else []
-
-        def _range(ts_key: str):
-            """Wrapper around TS.RANGE with optional aggregation."""
-            try:
-                if interval:
-                    return self._query_timeseries(
-                        ts_key,
-                        from_ms,
-                        to_ms,
-                        "AGGREGATION",
-                        "avg",
-                        int(interval * 1000),
-                    )
-                else:
-                    return self._query_timeseries(ts_key, from_ms, to_ms)
-            except Exception as e:
-                self.log.warning(
-                    "queryHistory: TS.RANGE failed for %s: %s",
-                    ts_key,
-                    e,
-                )
-                return []
-
-        if encoding == "list" and children:
-            # children are indices for list positions
-            try:
-                indices = [int(c) for c in children]
-            except ValueError:
-                # corrupt metadata, fall back to scalar behaviour
-                indices = []
-
-            if not indices:
-                res = _range(base_ts_key)
-                return [
-                    CacheEntry(ts / 1000.0, None, cache_load(val)) for ts, val in res
-                ]
-
-            ts_map: Dict[int, Dict[int, float]] = {}
-
-            for idx in indices:
-                ts_key = f"{redis_key}_l_{idx}_ts"
-                samples = _range(ts_key)
-                for ts, val in samples:
-                    ts_int = int(ts)
-                    # val may already be numeric in real RedisTimeSeries.
-                    numeric = cache_load(val) if isinstance(val, str) else val
-                    per_ts = ts_map.setdefault(ts_int, {})
-                    per_ts[idx] = numeric
-
-            entries: List[CacheEntry] = []
-            for ts_int in sorted(ts_map.keys()):
-                per_ts = ts_map[ts_int]
-                # Reconstruct list in the original order of indices, padding missing with None
-                reconstructed = [per_ts.get(idx, None) for idx in indices]
-                entries.append(CacheEntry(ts_int / 1000.0, None, reconstructed))
-
-            return entries
-
-        if encoding == "dict" and children:
-            keys = children[:]  # dict keys as strings
-
-            ts_map: Dict[int, Dict[str, float]] = {}
-
-            for key_name in keys:
-                ts_key = f"{redis_key}_d_{key_name}_ts"
-                samples = _range(ts_key)
-                for ts, val in samples:
-                    ts_int = int(ts)
-                    numeric = cache_load(val) if isinstance(val, str) else val
-                    per_ts = ts_map.setdefault(ts_int, {})
-                    per_ts[key_name] = numeric
-
-            entries: List[CacheEntry] = []
-            for ts_int in sorted(ts_map.keys()):
-                per_ts = ts_map[ts_int]
-                # Only include keys that actually have values at this timestamp
-                reconstructed = {k: per_ts[k] for k in keys if k in per_ts}
-                entries.append(CacheEntry(ts_int / 1000.0, None, reconstructed))
-
-            return entries
-
-        if encoding == "hash_series":
-            try:
-                # 1) Get all timestamps in range, sorted by time
-                ts_fields = self._client.zrangebyscore(hs_idx_key, from_ms, to_ms)
-            except Exception as e:
-                self.log.warning(
-                    "queryHistory: failed to read hash_series index %s: %s",
-                    hs_idx_key,
-                    e,
-                )
-                return []
-
-            if not ts_fields:
-                return []
-
-            try:
-                # 2) Bulk fetch values for those timestamps
-                values = self._client.hmget(hs_hash_key, *ts_fields)
-            except Exception as e:
-                self.log.warning(
-                    "queryHistory: failed to HMGET hash_series %s: %s",
-                    hs_hash_key,
-                    e,
-                )
-                return []
-
-            entries: List[CacheEntry] = []
-            append = entries.append
-
-            for ts_str, val_str in zip(ts_fields, values):
-                if val_str is None:
-                    # hash and zset out of sync; skip this sample
-                    continue
-                try:
-                    ts_int = int(ts_str)
-                except (TypeError, ValueError):
-                    continue
-
-                if not isinstance(val_str, str):
-                    try:
-                        val_str = val_str.decode("utf-8")
-                    except Exception:
-                        val_str = str(val_str)
-
-                append(CacheEntry(ts_int / 1000.0, None, val_str))
-
-            # Optional interval decimation – unchanged, we just decimate whole entries.
-            if interval:
-                bucket_ms = int(interval * 1000)
-                if bucket_ms > 0 and len(entries) > 1:
-                    bucketed: List[CacheEntry] = []
-                    next_boundary = int(entries[0].time * 1000) + bucket_ms
-                    bucketed_append = bucketed.append
-                    bucketed_append(entries.pop(0))  # always include first entry
-                    for e in entries:
-                        t_ms = int(e.time * 1000)
-                        if t_ms >= next_boundary:
-                            bucketed_append(e)
-                            next_boundary = t_ms + bucket_ms
-                    return bucketed
-
-            return entries
-
-        res = _range(base_ts_key)
-
-        def _ts_entry(ts, val):
-            return CacheEntry(ts / 1000.0, None, cache_load(val))
-
-        return list(map(lambda p: _ts_entry(*p), res))
-
-    def updateEntries(
-        self, categories: List[str], subkey: str, no_store: bool, entry: CacheEntry
+    def _query_native_history(
+        self, redis_key, subkey, layout, from_ms, to_ms, interval
     ):
-        """Apply a logical update to one or more categories (due to rewrites)."""
-        real_update = True
-        # Normalize once (used both for RAM and to refresh TTL/time)
-        ne = self._normalize_entry(entry)
+        ranges = self._query_ranges(
+            self._history_keys(redis_key, layout),
+            from_ms,
+            to_ms,
+            *self._native_range_options(layout[0], subkey, from_ms, interval),
+        )
+        entries = []
+        for samples in zip(*ranges):
+            timestamps = {int(sample[0]) for sample in samples}
+            if len(timestamps) != 1:
+                continue
+            values = [cache_load(sample[1]) for sample in samples]
+            value = self._rebuild_history_value(layout, values)
+            entries.append(CacheEntry(timestamps.pop() / 1000.0, None, value))
+        return entries
 
-        for cat in categories:
-            # Ensure category structures
-            _, lock, db = self._ensure_category(cat)
+    def _apply_recent_update(self, dbkey, entry):
+        """Apply an update to the current values held by this process.
 
-            update_needed = True
-            refresh_only = False
-            with lock:
-                if subkey in db:
-                    curentry = db[subkey]
-                    # same value and not expired: refresh time/ttl only
-                    if curentry.value == ne.value and not curentry.expired:
-                        curentry.time = ne.time
-                        curentry.ttl = ne.ttl
-                        update_needed = False
-                        refresh_only = True
-                        real_update = False
-                    # delete (value None) but already expired: skip
-                    elif ne.value is None and curentry.expired:
-                        update_needed = False
-                        real_update = False
+        Return whether clients should be notified and whether the update needs
+        to be saved. Repeating an unexpired value refreshes its timestamp and
+        lifetime without notifying clients. Removing a value that has already
+        expired requires neither action.
+        """
+        with self._recent_lock:
+            current = self._recent.get(dbkey)
+            if current is not None:
+                self._refresh_expired_flag(current)
+                if current.value == entry.value and not current.expired:
+                    current.time, current.ttl = entry.time, entry.ttl
+                    return False, True
+                if entry.value is None and current.expired:
+                    return False, False
+            if entry.value is None:
+                self._recent.pop(dbkey, None)
+            else:
+                self._recent[dbkey] = entry
+            return True, True
 
-                if update_needed:
-                    db[subkey] = ne
-
-            if (update_needed or refresh_only) and not no_store:
-                # Persist to Redis (batched via pipeline per updateEntries call)
-                with self._write_lock:
-                    pipe = self._client.pipeline(transaction=False)
-                    self._set_data(
-                        cat,
-                        subkey,
-                        ne,
-                        pipe=pipe,
-                        archive_history=update_needed,
-                    )
-                    if pipe is not None:
-                        try:
-                            pipe.execute()
-                        except Exception:
-                            self.log.exception(
-                                "Redis pipeline execute failed for %s/%s", cat, subkey
-                            )
-
-            if ne.value in ("", None) and update_needed:
-                # Also remove from RAM if deletion
-                self._del_recent(cat, subkey)
-
-        return real_update
+    def _persist_entries(self, entries):
+        if not entries:
+            return
+        with self._write_lock:
+            pipe = self._client.pipeline(transaction=False)
+            try:
+                for category, subkey, entry in entries:
+                    self._set_data(category, subkey, entry, pipe=pipe)
+                if pipe is not None:
+                    pipe.execute()
+            except Exception:
+                self.log.exception(
+                    "Redis write pipeline failed for %d cache entries", len(entries)
+                )
 
     def _get_data(self, key):
         """Fetch a single entry directly from Redis (used by tests)."""
@@ -586,201 +493,84 @@ class RedisCacheDatabase(CacheDatabase):
             # Guard against Redis errors / corrupted data
             return None
 
-    def _set_data(
-        self, category, subkey, entry: CacheEntry, pipe=None, archive_history=True
-    ):
-        """Write a single entry to Redis (and update RAM) — signature unchanged for tests."""
-        # Type checks (compat with old test expectations)
-        if type(entry.value) not in (int, float, str, list, tuple, dict, type(None)):
+    def _valid_data_update(self, subkey, entry):
+        if entry.value is not None and not isinstance(entry.value, str):
             self.log.warning("Unsupported value type: %s", type(entry.value))
-            return
-        if not isinstance(self._literal_or_str(entry.time), (float, int)):
+            return False
+        try:
+            float(entry.time)
+        except (TypeError, ValueError):
             self.log.warning("Unsupported time type: %s", type(entry.time))
-            return
+            return False
         if "*" in subkey or "###" in subkey:
             self.log.debug("Subkey ignored contains: %s", subkey)
+            return False
+        return True
+
+    def _delete_stored_entry(self, redis_key, target):
+        self._remove_history(redis_key, self._layouts.pop(redis_key, ()), target=target)
+        self._delete(redis_key, target=target)
+
+    def _set_history_layout(self, redis_key, layout, target):
+        old_layout = self._layouts.get(redis_key)
+        if old_layout is not None and old_layout != layout:
+            self._remove_history(redis_key, old_layout, target=target)
+        self._layouts[redis_key] = layout
+
+    def _store_arbitrary_history(self, key, timestamp, value, target):
+        if not self._arbitrary_history_enabled():
+            self._delete(key, target=target)
+            return
+        target.execute_command("ZREMRANGEBYSCORE", key, timestamp, timestamp)
+        target.zadd(key, {self._arbitrary_member(timestamp, value): timestamp})
+        retention = self._arbitrary_retention_ms()
+        if retention is not None:
+            target.execute_command(
+                "ZREMRANGEBYSCORE", key, float("-inf"), timestamp - retention
+            )
+
+    def _set_data(self, category, subkey, entry: CacheEntry, pipe=None):
+        """Write a single entry to Redis."""
+        if not self._valid_data_update(subkey, entry):
             return
 
-        redis_key, base_ts_key, hs_hash_key, hs_idx_key = self._format_key(
-            category, subkey
-        )
+        redis_key = self._redis_key(category, subkey)
         target = pipe or self._client
 
-        # Deletion
-        if entry.value in ("", None):
-            try:
-                self._delete(redis_key, target=target)
-                if self._redis_key_exists(base_ts_key):
-                    self._delete(base_ts_key, target=target)
-                if self._redis_key_exists(hs_hash_key):
-                    self._delete(hs_hash_key, target=target)
-                if self._redis_key_exists(hs_idx_key):
-                    self._delete(hs_idx_key, target=target)
-            except Exception:
-                self.log.exception(
-                    "Failed to delete keys %s/%s (and hash_series)",
-                    redis_key,
-                    base_ts_key,
-                )
-            self._del_recent(category, subkey)
+        if entry.value is None:
+            self._delete_stored_entry(redis_key, target)
             return
-
-        # --- Decide how to archive the value in TS ---------------------------------
-        # Normalize value just for archiving decisions (hash always stores str(value))
-        value = (
-            self._literal_or_str(entry.value)
-            if isinstance(entry.value, str)
-            else entry.value
-        )
-
-        ts = int(float(entry.time) * 1000)
-
-        ts_values: List[float] = []
-        ts_keys: List[str] = []
-        ts_encoding: Optional[str] = None  # "list" or "dict" only
-        ts_children: Optional[str] = None  # comma-separated indices or keys
-
-        if self._native_archiving(value):
-            # Simple scalar numeric value — no metadata needed
-            ts_values.append(value)
-            ts_keys.append(base_ts_key)
-
-        else:
-            # Complex type: try list-of-numbers or dict-of-numbers
-            if (
-                isinstance(value, (list, tuple))
-                and value
-                and all(self._native_archiving(v) for v in value)
-            ):
-                ts_encoding = "list"
-                indices = list(range(len(value)))
-                ts_children = ",".join(str(i) for i in indices)
-
-                for idx in indices:
-                    val = value[idx]
-                    ts_keys.append(f"{redis_key}_l_{idx}_ts")
-                    ts_values.append(val)
-
-            elif (
-                isinstance(value, dict)
-                and value
-                and all(self._native_archiving(v) for v in value.values())
-            ):
-                ts_encoding = "dict"
-                keys = list(value.keys())
-                ts_children = ",".join(str(k) for k in keys)
-
-                for subk in keys:
-                    val = value[subk]
-                    ts_keys.append(f"{redis_key}_d_{subk}_ts")
-                    ts_values.append(val)
-            else:
-                ts_encoding = "hash_series"
-                ts_children = None
-                ts_values = []
-                ts_keys = []
-
-        hash_mapping = {
-            "time": str(entry.time),
-            "ttl": str(entry.ttl),
-            "value": str(entry.value),
-            "expired": str(entry.expired),
-        }
-        if ts_encoding is not None:
-            hash_mapping["ts_encoding"] = ts_encoding
-        if ts_children is not None:
-            hash_mapping["ts_children"] = ts_children
 
         try:
-            target.hset(redis_key, mapping=hash_mapping)
+            value = cache_load(entry.value)
         except Exception:
-            self.log.exception("Redis HSET failed for %s", redis_key)
-            # Still update RAM so reads are immediate
-            self._set_recent(category, subkey, entry)
+            self.log.warning("Invalid serialized cache value for %s", redis_key)
+            return
+        layout, components = self._classify_history(subkey, value)
+        self._set_history_layout(redis_key, layout, target)
+
+        ts = int(float(entry.time) * 1000)
+        target.hset(
+            redis_key,
+            mapping={
+                "time": str(entry.time),
+                "ttl": "" if entry.ttl is None else str(entry.ttl),
+                "value": entry.value,
+            },
+        )
+
+        if layout[0] == "arbitrary":
+            self._store_arbitrary_history(
+                self._arbitrary_key(redis_key), ts, entry.value, target
+            )
             return
 
-        stale_meta_fields = []
-        if ts_encoding is None:
-            stale_meta_fields.append("ts_encoding")
-        if ts_children is None:
-            stale_meta_fields.append("ts_children")
-        if stale_meta_fields:
-            try:
-                target.execute_command("HDEL", redis_key, *stale_meta_fields)
-            except Exception:
-                self.log.exception(
-                    "Redis HDEL failed for metadata cleanup on %s", redis_key
-                )
+        for key, value in zip(self._history_keys(redis_key, layout), components):
+            self._add_timeseries(key, ts, value, target=target)
 
-        # Update RAM to mirror current value immediately (normalized)
-        self._set_recent(category, subkey, entry)
-
-        if not archive_history:
-            return
-
-        for series_key, sample in zip(ts_keys, ts_values):
-            try:
-                if not self._redis_key_exists(series_key):
-                    self._create_timeseries(series_key, target=target)
-                self._add_to_timeseries(series_key, ts, sample, target=target)
-                self._prune_timeseries(series_key, ts, target=target)
-            except Exception:
-                self.log.exception(
-                    "TS write failed for %s. Got type %s", series_key, type(sample)
-                )
-
-        if ts_encoding == "hash_series":
-            ts_str = str(ts)
-            try:
-                # payload in HASH
-                target.hset(hs_hash_key, ts_str, str(value))
-                # index in ZSET
-                # member is the ts_str; score is ts (ms)
-                target.zadd(hs_idx_key, {ts_str: ts})
-                self._prune_hash_series(hs_hash_key, hs_idx_key, ts, target=target)
-            except Exception:
-                self.log.exception(
-                    "Redis write failed for hash_series %s/%s",
-                    hs_hash_key,
-                    hs_idx_key,
-                )
-
-    def _native_archiving(self, value):
-        if isinstance(value, (float, int)) and not isinstance(value, bool):
-            if math.isfinite(value):
-                return True
-        return False
-
-    def _start_cleaner(self):
-        lua_sha = self._client.script_load(CLEANER_LUA)
-
-        def _tick():
-            while not self._stoprequest:
-                time.sleep(self._long_loop_delay)
-                try:
-                    cleaned = self._client.evalsha(lua_sha, 0, time.time())
-                    if cleaned:
-                        self.log.debug("Redis cleaner: marked %s keys expired", cleaned)
-                except Exception:
-                    self.log.exception("Redis cleaner failed")
-
-                # Always sync RAM flags (cheap, no Redis writes here)
-                try:
-                    self._sync_ram_expired_flags()
-                except Exception:
-                    self.log.exception("Redis RAM flag sync failed")
-
-        return createThread("redis-cleaner", _tick)
-
-    def _sync_ram_expired_flags(self):
-        """Mark entries as expired in RAM when their TTL has elapsed.
-        This mirrors the Lua cleaner's behavior locally without writing back."""
-        now = time.time()
-        for _, lock, db in list(self._recent.values()):
-            with lock:
-                for entry in db.values():
-                    if not entry.value or entry.expired:
-                        continue
-                    ttl = entry.ttl
-                    if ttl and (entry.time + ttl < now):
-                        entry.expired = True
+    def _is_native_number(self, value):
+        return (
+            isinstance(value, (float, int))
+            and not isinstance(value, bool)
+            and math.isfinite(value)
+        )
