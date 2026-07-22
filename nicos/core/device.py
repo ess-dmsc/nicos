@@ -312,7 +312,7 @@ class DeviceMeta(DeviceMixinMeta):
 
         # check attribute names for the attached devices (created by
         # Device.__init__)
-        for adevname, entry in newtype.attached_devices.items():
+        for adevname, _entry in newtype.attached_devices.items():
             pname = "_attached_%s" % adevname
             if newtype.parameters and (pname in newtype.parameters):
                 raise ProgrammingError(
@@ -943,7 +943,8 @@ class Device(metaclass=DeviceMeta):
         for category, name, unit in self._infoparams:
             try:
                 parvalue = self._getFromCache(
-                    name, lambda _maxage=None: getattr(self, name)
+                    name,
+                    lambda _maxage=None: getattr(self, name),  # noqa: B023
                 )
             except Exception as err:
                 self.log.warning("error getting %s parameter", name, exc=err)
@@ -1876,7 +1877,7 @@ class Moveable(Waitable):
                 self.format(pos, unit=True),
             )
 
-    def isAtTarget(self, pos=None, target=None):
+    def isAtTarget(self, pos=None, target=None, maxage=0):
         """Check if the device has arrived at the given target.
         If target is omitted it defaults to the device's currently set target.
         If pos is omitted the device checks against its current read value.
@@ -1903,7 +1904,7 @@ class Moveable(Waitable):
         if target is None:
             target = self.target
         if pos is None:
-            pos = self.read(0)
+            pos = self.read(maxage)
 
         if hasattr(self, "doIsAtTarget"):
             return self.doIsAtTarget(pos, target)
