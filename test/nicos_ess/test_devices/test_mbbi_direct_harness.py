@@ -27,12 +27,14 @@ import pytest
 from nicos.core import status
 from nicos_ess.devices.epics import mbbi_direct
 from nicos_ess.devices.epics.pva import epics_common
+from nicos_ess.nmx.devices.pinhole_mbbi_direct import PinholeStatus
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 
 @pytest.fixture
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
+    # EPICS is an external service; route the device through the in-memory backend.
     monkeypatch.setattr(
         epics_common, "create_wrapper", lambda timeout, use_pva: backend
     )
@@ -81,3 +83,29 @@ class TestMBBIDirectStatusHarness:
         fake_backend.emit_update("SIM:MBBI.B1", value=1)
 
         assert daemon_device.status() == (status.WARN, "Bit 1 Alarm")
+
+
+def test_nmx_pinhole_uses_configured_bit_value_prefix(device_harness, fake_backend):
+    fake_backend.values.update(
+        {
+            "SIM:MBBI-StatusBits.B0": 0,
+            "SIM:MBBI-StatusBits.B1": 1,
+            "SIM:MBBI-NamAuxBit0": "Ready",
+            "SIM:MBBI-NamAuxBit1": "Pinhole moving",
+        }
+    )
+
+    daemon_device, _poller_device = device_harness.create_pair(
+        PinholeStatus,
+        name="pinhole_status",
+        shared={
+            "pv_root": "SIM:MBBI",
+            "number_of_bits": 2,
+            "bitname_prefix": "-NamAuxBit",
+            "bitvalue_prefix": "-StatusBits",
+            "monitor": True,
+            "pva": True,
+        },
+    )
+
+    assert daemon_device.status() == (status.OK, "Pinhole moving")
