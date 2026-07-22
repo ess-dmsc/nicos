@@ -231,7 +231,7 @@ pre-commit install
 # Redis Setup
 
 This section guides you through installing Redis, an in-memory data store, and RedisTimeSeries, a module for time-series data processing.
-The RedisTimeSeries module is mandatory.
+With Redis versions lower than version 8, the RedisTimeSeries module is mandatory.
 
 The instructions are for Linux systems (tested on ubuntu 22.04 and CentOS 7). For other operating systems, refer to the Redis and RedisTimeSeries documentation.
 
@@ -351,6 +351,10 @@ redis-cli ping
 ```
 
 ## Installing RedisTimeSeries
+
+*Note:* Starting with Redis 8, the Time Series data structure is integral to Redis.
+If you have installed a Redis version equal or higher to 8, you don't need
+to install this module separately.
 
 ### Step 1: Clone and Set Up RedisTimeSeries
 
