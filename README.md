@@ -163,7 +163,7 @@ vim nicos_ess/<instrument>/setups/special/cache.py
 No changes needed if you are using the default `MemoryCacheDatabase`:
 ```python
 DB=device(
-    "nicos.services.cache.server.MemoryCacheDatabase",
+    "nicos.services.cache.database.MemoryCacheDatabase",
     loglevel="info",
 )
 ```
@@ -172,7 +172,7 @@ DB=device(
 To use `FlatfileCacheDatabase`, update the setup file as follows:
 ```python
 DB=device(
-    "nicos.services.cache.server.FlatfileCacheDatabase",
+    "nicos.services.cache.database.FlatfileCacheDatabase",
     storepath="/opt/nicos-data/cache",
     loglevel="info",
 )
@@ -182,7 +182,7 @@ DB=device(
 For Redis-based caching, `RedisCacheDatabase`, configure as follows:
 ```python
 DB=device(
-    "nicos.services.cache.server.RedisCacheDatabase",
+    "nicos.services.cache.database.RedisCacheDatabase",
     historydays=14,
     # Flat numeric tuples, lists and dictionaries up to this size use native
     # RedisTimeSeries component series.

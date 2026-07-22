@@ -4,7 +4,7 @@ import time
 from typing import Union
 
 import pytest
-from mock.mock import MagicMock
+from unittest.mock import MagicMock
 
 from nicos.protocols.cache import cache_dump, cache_load
 from nicos.services.cache.database import RedisCacheDatabase
