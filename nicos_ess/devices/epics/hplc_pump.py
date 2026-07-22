@@ -126,7 +126,7 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
 
         return status.OK, run_state
 
-    def doIsAtTarget(self, pos, target):
+    def doIsAtTarget(self, pos, target, maxage=0):
         if self.run_started:
             return False
         try:

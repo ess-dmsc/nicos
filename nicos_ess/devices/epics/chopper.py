@@ -1018,5 +1018,5 @@ class ChopperPosition(HasPrecision, ChopperAxis):
     def doStart(self, target):
         self._attached_chopper._park_at(target)
 
-    def doIsAtTarget(self, pos, target):
+    def doIsAtTarget(self, pos, target, maxage=0):
         return target is None or angle_distance(pos, target) <= self.precision

@@ -365,7 +365,7 @@ class EpicsMotor(
     def doReadPrecision(self):
         return self._epics.get_channel_value("position_deadband")
 
-    def doIsAtTarget(self, pos=None, target=None):
+    def doIsAtTarget(self, pos=None, target=None, maxage=0):
         return self._read_channel_cached("miss") == 0
 
     def doIsCompleted(self):
