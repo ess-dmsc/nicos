@@ -104,10 +104,14 @@ def stop_filewriting(job_number=None):
 
 
 @usercommand
+@helparglist("n")
 @parallel_safe
-def list_filewriting_jobs():
-    """List current and recent jobs with their state and first error."""
-    _find_filewriter_dev().list_jobs()
+def list_filewriting_jobs(n=None):
+    """List current and recent jobs with their state and first error.
+
+    :param :n: print only the most recent n jobs
+    """
+    _find_filewriter_dev().list_jobs(n)
 
 
 @usercommand

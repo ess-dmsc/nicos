@@ -640,7 +640,7 @@ class FileWriterControlSink(Device):
         active_jobs = self._attached_status.marked_for_stop.symmetric_difference(jobs)
         return active_jobs
 
-    def list_jobs(self):
+    def list_jobs(self, n=None):
         dt_format = "%Y-%m-%d %H:%M:%S"
         headers = ["job", "status", "start time", "stop time", "replay of", "error"]
         funcs = [
@@ -654,8 +654,16 @@ class FileWriterControlSink(Device):
         if session.daemon_device.current_script().user.level == ADMIN:
             headers.insert(1, "job  GUID")
             funcs.insert(1, lambda job: job.job_id)
+
+        jobs = list(self._attached_status._jobs_in_order.values())
+        if n is not None:
+            n = int(n)
+            if n > 0:
+                jobs = jobs[-n:]
+
         items = []
-        for job in self._attached_status._jobs_in_order.values():
+
+        for job in jobs:
             items.append([func(job) for func in funcs])
         printTable(headers, items, self.log.info)
 
