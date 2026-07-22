@@ -428,6 +428,12 @@ possible with the device:
       daemon-client shell, e.g. you can use ``requires = {'level': 'admin'}`` to
       restrict write actions to ADMIN users.
 
+   .. parameter:: ignore_general_stop : bool
+
+      Controls whether a general :func:`stop() <nicos.commands.device.stop>`
+      without arguments ignores this device. Explicit ``stop(dev)`` and
+      ``dev.stop()`` calls still stop it.
+
 
 ``Measurable``
 ==============

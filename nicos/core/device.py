@@ -1620,6 +1620,12 @@ class Moveable(Waitable):
             type=dictof(str, anytype),
             userparam=False,
         ),
+        "ignore_general_stop": Param(
+            "Flag to ignore general stop",
+            type=bool,
+            prefercache=False,
+            userparam=False,
+        ),
     }
 
     #: The type of the device value, used for typechecking in doStart().

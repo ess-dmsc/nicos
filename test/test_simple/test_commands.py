@@ -478,6 +478,20 @@ class TestDevice:
         move(motor, 10)
         stop(motor)
 
+        # A general stop respects the opt-out, but an explicit stop does not.
+        motor._setROParam("ignore_general_stop", True)
+        speed = motor.speed
+        motor.speed = 0.1
+        move(motor, -5)
+        assert motor.status(0)[0] == devstatus.BUSY
+        stop()
+        assert motor.status(0)[0] == devstatus.BUSY
+        stop(motor)
+        wait(motor)
+        assert motor.status(0)[0] == devstatus.OK
+        motor.speed = speed
+        motor._setROParam("ignore_general_stop", False)
+
     @pytest.mark.timeout(timeout=60, method="thread", func_only=True)
     def test_stop_privileged(self, session, log):
         # Change the user level to lower access rights to check that the stop

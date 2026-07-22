@@ -71,6 +71,7 @@ runtime_root = os.environ.get(
 cache_addr = "localhost:%s" % os.environ.get("NICOS_CACHE_PORT", 14877)
 alt_cache_addr = "localhost:%s" % os.environ.get("NICOS_CACHE_ALT_PORT", 14878)
 daemon_addr = "localhost:%s" % os.environ.get("NICOS_DAEMON_PORT", 14874)
+secop_port = int(os.environ.get("NICOS_SECOP_PORT", 14879))
 
 pythonpath = None
 

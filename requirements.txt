@@ -18,6 +18,8 @@ ess-streaming-data-types==0.27.0
     # via nicos (pyproject.toml)
 flatbuffers==25.12.19
     # via ess-streaming-data-types
+frappy-core==0.20.8
+    # via nicos (pyproject.toml)
 gitdb==4.0.12
     # via gitpython
 gitpython==3.1.46
@@ -44,8 +46,12 @@ keyrings-alt==5.0.0
     # via nicos (pyproject.toml)
 ldap3==2.9.1
     # via nicos (pyproject.toml)
+lockfile==0.12.2
+    # via python-daemon
 lttb==0.3.2
     # via nicos (pyproject.toml)
+mlzlog==0.5.0
+    # via frappy-core
 more-itertools==10.8.0
     # via jaraco-classes
 nicos-pyctl==1.4
@@ -69,7 +75,9 @@ platformdirs==4.9.4
 ply==3.11
     # via p4p
 psutil==7.2.2
-    # via nicos (pyproject.toml)
+    # via
+    #   nicos (pyproject.toml)
+    #   frappy-core
 pvxslibs==1.5.1
     # via p4p
 pyasn1==0.6.2
@@ -82,6 +90,10 @@ pycryptodomex==3.23.0
     # via nicos (pyproject.toml)
 pyqtgraph==0.14.0
     # via nicos (pyproject.toml)
+pyserial==3.5
+    # via frappy-core
+python-daemon==3.1.2
+    # via frappy-core
 pyzmq==27.1.0
     # via nicos (pyproject.toml)
 redis==5.0.4

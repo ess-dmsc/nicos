@@ -283,6 +283,7 @@ def test_parameter_queries(client):
             "curstatus",
             "ramp",
             "devclass",
+            "ignore_general_stop",
         ]
     )
     params = client.getDeviceParams("dm1")
@@ -315,6 +316,7 @@ def test_parameter_queries(client):
             "warnlimits",
             "status",
             "value",
+            "ignore_general_stop",
         }
     )
     assert client.getDeviceParam("dm1", "name") == "dm1"

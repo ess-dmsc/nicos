@@ -18,6 +18,7 @@ charset-normalizer==3.4.5
     # via requests
 colorama==0.4.6
     # via
+    #   mlzlog
     #   pylint
     #   pyqtgraph
     #   pytest
@@ -47,6 +48,8 @@ flake8==7.3.0
     # via nicos (pyproject.toml:dev)
 flatbuffers==25.12.19
     # via ess-streaming-data-types
+frappy-core==0.20.8
+    # via nicos (pyproject.toml)
 fonttools==4.61.1
     # via matplotlib
 gitdb==4.0.12
@@ -89,10 +92,14 @@ kiwisolver==1.5.0
     # via matplotlib
 ldap3==2.9.1
     # via nicos (pyproject.toml)
+lockfile==0.12.2
+    # via python-daemon
 lttb==0.3.2
     # via nicos (pyproject.toml)
 matplotlib==3.10.8
     # via nicos (pyproject.toml)
+mlzlog==0.5.0
+    # via frappy-core
 mccabe==0.7.0
     # via
     #   flake8
@@ -147,6 +154,7 @@ pre-commit==4.5.1
 psutil==7.2.2
     # via
     #   nicos (pyproject.toml)
+    #   frappy-core
     #   memory-profiler
 pvxslibs==1.5.1
     # via p4p
@@ -204,6 +212,8 @@ pyqt6-webengine-qt6==6.6.0 ; sys_platform == 'darwin'
     #   pyqt6-webengine
 pyqtgraph==0.14.0
     # via nicos (pyproject.toml)
+pyserial==3.5
+    # via frappy-core
 pyqtwebengine==5.15.7 ; sys_platform == 'linux' or sys_platform == 'win32'
     # via nicos (pyproject.toml)
 pyqtwebengine-qt5==5.15.18 ; sys_platform == 'linux' or sys_platform == 'win32'
@@ -222,6 +232,8 @@ pytest-timeout==2.4.0
     # via nicos (pyproject.toml:dev)
 python-dateutil==2.9.0.post0
     # via matplotlib
+python-daemon==3.1.2
+    # via frappy-core
 python-discovery==1.1.1
     # via virtualenv
 python-redmine==2.5.0

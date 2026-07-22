@@ -37,6 +37,7 @@ from nicos.core import (
     AccessError,
     CanDisable,
     Device,
+    DeviceAlias,
     DeviceMixinBase,
     HasLimits,
     HasOffset,
@@ -531,7 +532,7 @@ def status(*devlist):
 @spmsyntax(Multi(Dev((Moveable, Measurable))))
 @parallel_safe
 def stop(*devlist):
-    """Stop one or more devices.
+    """Stop one or more or all moving devices.
 
     If no device is given, stop all stoppable devices in parallel.
 
@@ -540,21 +541,15 @@ def stop(*devlist):
     >>> stop(phi)       # stop the phi device
     >>> stop(phi, psi)  # stop the phi and psi devices
     >>> stop()          # stop all devices
+
+    A device configured with ``ignore_general_stop=True`` is skipped by
+    ``stop()`` without arguments. Explicit ``stop(dev)`` calls are unchanged.
     """
-    stop_all = False
-    if not devlist:
-        stop_all = True
-        devlist = [
-            session.devices[devname]
-            for devname in session.explicit_devices
-            if isinstance(session.devices[devname], (Moveable, Measurable))
-        ]
-    finished = []
 
     def stopdev(dev):
         try:
             dev.stop()
-            if not stop_all:
+            if not stop_all or dev in stoplist:
                 dev.log.info("stopped")
         except AccessError:
             # do not warn about devices we cannot access if they were not
@@ -565,12 +560,63 @@ def stop(*devlist):
         finally:
             finished.append(dev)
 
+    stop_all = not devlist
+    if stop_all:
+        devlist = [
+            session.devices[devname]
+            for devname in session.explicit_devices
+            if isinstance(session.devices[devname], (Moveable, Measurable))
+        ]
+        stoplist = {
+            dev
+            for dev in devlist
+            if session.cache.get_explicit(dev, "status", (None,))[2][0] == BUSY
+        }
+        skipset = {
+            dev
+            for dev in stoplist
+            if isinstance(dev, Moveable) and dev.ignore_general_stop
+        }
+        devlist = [dev for dev in stoplist if dev not in skipset]
+    else:
+        stoplist = ()
+        skipset = ()
+
+    finished = []
     for dev in devlist:
         dev = session.getDevice(dev)
         createThread("device stopper %s" % dev, stopdev, (dev,))
     while len(finished) != len(devlist):
         session.delay(Device._base_loop_delay)
-    if stop_all:
+    if stop_all and skipset:
+        aliases = {}
+        for dev in list(skipset):
+            if isinstance(dev, DeviceAlias):
+                aliases.setdefault(dev.alias, []).append(dev.name)
+                skipset.discard(dev)
+
+        session.log.warning("all devices stopped, except:")
+        stopargs = []
+        for dev in skipset:
+            if dev.name in aliases:
+                name = f"{dev.name} ({', '.join(aliases[dev.name])})"
+                stopargs.append(aliases[dev.name][0])
+            else:
+                name = dev.name
+                stopargs.append(name)
+            session.log.warning(
+                "%s is still moving from %s to %s %s",
+                name,
+                dev.format(dev.read(0)),
+                dev.format(dev.target),
+                dev.unit,
+            )
+        session.log.warning('these devices are configured to ignore "stop all"')
+        session.log.warning(
+            "if you really want to stop them, you may use stop(%s)",
+            ", ".join(stopargs),
+        )
+    elif stop_all:
         session.log.info("all devices stopped")
 
 
@@ -680,7 +726,9 @@ def getall(*names):
     lists the offset for all devices with an "offset" parameter.
     """
     items = []
-    for name, dev in sorted(session.devices.items(), key=lambda nd: nd[0].lower()):  # codespell:ignore
+    for name, dev in sorted(
+        session.devices.items(), key=lambda name_dev: name_dev[0].lower()
+    ):
         pvalues = []
         for param in names:
             if param in dev.parameters:
@@ -1068,14 +1116,14 @@ def resetlimits(*devlist):
         if dev.userlimits != newlim:
             dev.userlimits = newlim
             dev.log.info(
-                "limits reset to absolute limits, new range: " "%8s --- %8s %s",
+                "limits reset to absolute limits, new range: %8s --- %8s %s",
                 dev.format(dev.userlimits[0]),
                 dev.format(dev.userlimits[1]),
                 dev.unit,
             )
         else:
             dev.log.info(
-                "limits kept at: " "%8s --- %8s %s",
+                "limits kept at: %8s --- %8s %s",
                 dev.format(dev.userlimits[0]),
                 dev.format(dev.userlimits[1]),
                 dev.unit,
