@@ -124,7 +124,9 @@ class TestFileWriterControl(TestCase):
             job = JobRecord(job_id, idx, 0, 0)
             self.filewriter_status._jobs_in_order[job_id] = job
 
-        with mock.patch("nicos_ess.devices.datasinks.file_writer.printTable") as print_table:
+        with mock.patch(
+            "nicos_ess.devices.datasinks.file_writer.printTable"
+        ) as print_table:
             self.filewriter_control.list_jobs(2)
 
         _, items, _ = print_table.call_args.args
