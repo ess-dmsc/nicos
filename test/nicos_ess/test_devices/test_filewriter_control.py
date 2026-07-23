@@ -24,6 +24,7 @@
 from unittest import TestCase, mock
 
 import pytest
+
 pytest.importorskip("epics")
 from test.utils import ErrorLogged
 
@@ -117,6 +118,21 @@ class TestFileWriterControl(TestCase):
         self.filewriter_control.start_job()
 
         assert new_job_id in self.filewriter_status.jobs_in_progress
+
+    def test_list_jobs_limits_output_to_most_recent_jobs(self):
+        self.filewriter_status._jobs_in_order = {}
+        for idx, job_id in enumerate(["job id 1", "job id 2", "job id 3"], start=1):
+            job = JobRecord(job_id, idx, 0, 0)
+            self.filewriter_status._jobs_in_order[job_id] = job
+
+        with mock.patch(
+            "nicos_ess.devices.datasinks.file_writer.printTable"
+        ) as print_table:
+            self.filewriter_control.list_jobs(2)
+
+        _, items, _ = print_table.call_args.args
+        assert len(items) == 2
+        assert [item[0] for item in items] == ["2", "3"]
 
     def test_stop_job_ignored_if_no_job_in_progress(self):
         self.filewriter_control.stop_job()
