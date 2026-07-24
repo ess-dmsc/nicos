@@ -21,7 +21,7 @@ devices = dict(
     ad_sim_detector_area_detector_collector=device( 
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
         description="Area detector collector",
-        images=["orca_camera"],
+        images=["ad_sim_detector"],
         liveinterval=1,
         pollinterval=1,
         unit="",
