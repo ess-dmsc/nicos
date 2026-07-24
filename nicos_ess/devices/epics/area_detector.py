@@ -525,6 +525,196 @@ class TimepixDetector(AreaDetector):
         self._put_pv("threshold_coarse", value)
 
 
+class ADSimDetector(AreaDetector):
+    """
+    Device that controls and acquires data from an ADSimDetector.
+    """
+    parameters = {
+        "imagemode": Param(
+            "Mode to acquire images.",
+            type=oneof("single", "multiple", "continuous"),
+            settable=True,
+            default="continuous",
+            volatile=True,
+        ),
+        "binning": Param(
+            "Binning factor",
+            type=oneof("1x1", "2x2", "4x4"),
+            settable=True,
+            default="1x1",
+            volatile=False,
+        ),
+        "sizex": Param("Image X size.", settable=True, volatile=True),
+        "sizey": Param("Image Y size.", settable=True, volatile=True),
+        "startx": Param("Image X start index.", settable=True, volatile=True),
+        "starty": Param("Image Y start index.", settable=True, volatile=True),
+        "binx": Param("Binning factor X", settable=True, volatile=True),
+        "biny": Param("Binning factor Y", settable=True, volatile=True),
+        "numimages": Param(
+            "Number of images to take (only in imageMode=multiple).",
+            settable=True,
+            volatile=True,
+        ),
+        "numexposures": Param(
+            "Number of exposures per image.", settable=True, volatile=True
+        ),
+    }
+
+    def doPreinit(self, mode):
+        self._init_area_detector_state()
+        if mode == SIMULATION:
+            return
+
+        self._control_pvs = {
+            "size_x": "SizeX",
+            "size_y": "SizeY",
+            "min_x": "MinX",
+            "min_y": "MinY",
+            "bin_x": "BinX",
+            "bin_y": "BinY",
+            "acquire_time": "AcquireTime",
+            "acquire_period": "AcquirePeriod",
+            "num_images": "NumImages",
+            "num_exposures": "NumExposures",
+            "image_mode": "ImageMode",
+        }
+        self._record_fields = {
+            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
+        }
+        self._record_fields.update(self._control_pvs)
+        AreaDetector._set_custom_record_fields(self)
+        EpicsDevice.doPreinit(self, mode)
+
+    def doPrepare(self):
+        AreaDetector.doPrepare(self)
+
+    def _get_pv_parameters(self):
+        return set(self._record_fields) | set(["image_pv"])
+
+    def _get_array_shape(self):
+        shape = self._get_pv("size_y"), self._get_pv("size_x")
+        binning_factor = int(self.binning[0])
+        return (shape[0] // binning_factor, shape[1] // binning_factor)
+
+    def _get_array_dtype(self):
+        return data_type_t[self._get_pv("data_type", as_string=True)]
+
+    def doStatus(self, maxage=0):
+        detector_state = self._get_pv("acquire_status", True)
+        alarm_status = STAT_TO_STATUS.get(
+            self._get_pv("detector_state.STAT"), status.UNKNOWN
+        )
+        alarm_severity = SEVERITY_TO_STATUS.get(
+            self._get_pv("detector_state.SEVR"), status.UNKNOWN
+        )
+        if detector_state != "Done" and alarm_severity < status.BUSY:
+            alarm_severity = status.BUSY
+        self._write_alarm_to_log(detector_state, alarm_severity, alarm_status)
+        return alarm_severity, "%s, image mode is %s" % (detector_state, self.imagemode)
+
+    def _write_alarm_to_log(self, pv_value, severity, stat):
+        msg_format = "%s (%s)"
+        if severity in [status.ERROR, status.UNKNOWN]:
+            self.log.error(msg_format, pv_value, stat)
+        elif severity == status.WARN:
+            self.log.warning(msg_format, pv_value, stat)
+
+    def _limit_size(self, value, max_pv):
+        max_value = self._get_pv(max_pv)
+        if value > max_value:
+            value = max_value
+        elif value < max_value:
+            self.subarraymode = True
+        return int(value)
+
+    def _limit_start(self, value):
+        if value < 0:
+            value = 0
+        elif value > 0:
+            self.subarraymode = True
+        return int(value)
+
+    def check_if_max_size(self):
+        if (
+            self.sizex == self._get_pv("max_size_x")
+            and self.sizey == self._get_pv("max_size_y")
+            and self.startx == 0
+            and self.starty == 0
+        ):
+            self.subarraymode = False
+
+    def doStart(self):
+        num_images = self.preselection if self.iscontroller else None
+
+        if num_images == 0:
+            return
+        elif not num_images or num_images < 0:
+            self.imagemode = "continuous"
+        elif num_images == 1:
+            self.imagemode = "single"
+        elif num_images > 1:
+            self.imagemode = "multiple"
+            self.numimages = num_images
+
+        self.doAcquire()
+
+    def doReadSizex(self):
+        return self._get_pv("size_x_rbv")
+
+    def doWriteSizex(self, value):
+        self._put_pv("size_x", self._limit_size(value, "max_size_x"))
+        self.check_if_max_size()
+
+    def doReadSizey(self):
+        return self._get_pv("size_y_rbv")
+
+    def doWriteSizey(self, value):
+        self._put_pv("size_y", self._limit_size(value, "max_size_y"))
+        self.check_if_max_size()
+
+    def doReadStartx(self):
+        return self._get_pv("min_x_rbv")
+
+    def doWriteStartx(self, value):
+        self._put_pv("min_x", self._limit_start(value))
+
+    def doReadStarty(self):
+        return self._get_pv("min_y_rbv")
+
+    def doWriteStarty(self, value):
+        self._put_pv("min_y", self._limit_start(value))
+
+    def doReadBinx(self):
+        return self._get_pv("bin_x_rbv")
+
+    def doWriteBinx(self, value):
+        self._put_pv("bin_x", value)
+
+    def doReadBiny(self):
+        return self._get_pv("bin_y_rbv")
+
+    def doWriteBiny(self, value):
+        self._put_pv("bin_y", value)
+
+    def doReadNumimages(self):
+        return self._get_pv("num_images_rbv")
+
+    def doWriteNumimages(self, value):
+        self._put_pv("num_images", value)
+
+    def doReadNumexposures(self):
+        return self._get_pv("num_exposures_rbv")
+
+    def doWriteNumexposures(self, value):
+        self._put_pv("num_exposures", value)
+
+    def doWriteImagemode(self, value):
+        self._put_pv("image_mode", ImageMode[value.upper()].value)
+
+    def doReadImagemode(self):
+        return ImageMode(self._get_pv("image_mode")).name.lower()
+
+
 class OrcaFlash4(AreaDetector):
     """
     Device that controls and acquires data from an Orca Flash 4 area detector.
