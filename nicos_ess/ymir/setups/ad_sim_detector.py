@@ -11,7 +11,7 @@ devices = dict(
         "nicos_ess.devices.epics.area_detector.ADSimDetector",
         description="Simulated detector data.",
         pv_root=f"{camera_system_pv_root}{camera_device_pv_root}",
-        image_pv=f"{camera_system_pv_root}{camera_ndplugin_pv_root}ArrayData", ####the image comes from this
+        image_pv=f"{camera_system_pv_root}{camera_ndplugin_pv_root}ArrayData",
         unit="images",
         pva=True,
         monitor=True,
