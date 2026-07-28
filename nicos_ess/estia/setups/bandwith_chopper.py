@@ -13,8 +13,8 @@ devices = dict(
     bwc_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv=f"{pv_root}C_Execute",
-        writepv=f"{pv_root}C_Execute",
+        readpv=f"{pv_root}C_ExecuteUser",
+        writepv=f"{pv_root}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
@@ -57,17 +57,28 @@ devices = dict(
         readpv=f"{pv_root}InPhaseTS-R",
     ),
     bwc_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv=f"{pv_root}Pos_R",
         writepv=f"{pv_root}Park_S",
         visibility=(),
+        mapping={
+            "park pos 0": 0,
+            "park pos 1": 45,
+            "park pos 2": 90,
+            "park pos 3": 180,
+        },
+    ),
+    bwc_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the BWC1 chopper.",
+        readpv=f"{pv_root}ParkStatus_R",
     ),
     bwc_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the BWC chopper.",
-        readpv=f"{pv_root}ParkPos_S",
-        writepv=f"{pv_root}ParkPos_S",
+        readpv=f"{pv_root}C_Park",
+        writepv=f"{pv_root}C_Park",
     ),
     bwc_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -77,13 +88,13 @@ devices = dict(
         pva=True,
     ),
     bwc_alarms=device(
-        "nicos_ess.devices.epics.chopper.ChopperAlarms",
+        "nicos_ess.devices.epics.chopper.NewChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root,
         visibility=(),
     ),
     bwc=device(
-        "nicos_ess.devices.epics.chopper.EssChopperController",
+        "nicos_ess.devices.epics.chopper.NewEssChopperController",
         description="The chopper controller",
         pollinterval=0.5,
         maxage=None,
