@@ -529,6 +529,7 @@ class ADSimDetector(AreaDetector):
     """
     Device that controls and acquires data from an ADSimDetector.
     """
+
     parameters = {
         "imagemode": Param(
             "Mode to acquire images.",
