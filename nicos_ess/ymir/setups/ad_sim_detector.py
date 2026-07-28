@@ -6,7 +6,7 @@ camera_system_pv_root = "13SIM1:"
 camera_device_pv_root = "cam1:"
 camera_ndplugin_pv_root = "image1:"
 
-devices = dict( 
+devices = dict(
     ad_sim_detector=device(
         "nicos_ess.devices.epics.area_detector.ADSimDetector",
         description="Simulated detector data.",
