@@ -289,6 +289,88 @@ class EpicsMappedMoveable(
         MappedMoveable.doInit(self, mode)
 
 
+class EpicsManualMappedMoveable(EpicsReadWriteBase, MappedMoveable):
+    """
+    Acts as a moveable analog device, which reads and writes to EPICS PVs but it
+    has a configurable mapping. Can be used for, e.g., map sample names in a
+    string PV for sample loading, instead mapping them in the PV itself
+    (which may change according to the experiment) or requiring precise
+    sample names as user input.
+    """
+
+    parameter_overrides = {
+        "mapping": Override(settable=True),
+    }
+
+    valuetype = anytype
+
+    _epics_channels = make_rw_channels(
+        write_refresh_status=True,
+    )
+
+    def _after_subscribe(self, mode):
+        MappedMoveable.doInit(self, mode)
+
+    def _readRaw(self, maxage=0):
+        return self._read_channel_cached("read", maxage=maxage)
+
+    def _on_channel_update(self, update):
+        # The write/target channels deliver raw EPICS values, but their cache
+        # key is the user-facing 'target' parameter - map back to the user
+        # value so the cached target does not depend on a poller running.
+        if self._epics.cache_key_for(update.channel) == "target":
+            update = replace(update, value=self._map_target_readback(update.value))
+        super()._on_channel_update(update)
+
+    def doRead(self, maxage=0):
+        return self._readRaw(maxage=maxage)
+
+    def doReadTarget(self):
+        return self._map_target_readback(self._cached_raw_target())
+
+    def _map_target_readback(self, value):
+        if value in self.mapping:
+            return value
+        if not hasattr(self, "_inverse_mapping"):
+            MappedReadable.doInit(self, getattr(self, "_mode", None))
+        try:
+            return MappedReadable._mapReadValue(self, value)
+        except PositionError:
+            pass
+        return None
+
+    def _raw_target(self, maxage=0):
+        target = self._cached_raw_target(maxage)
+        return self.mapping.get(target, target)
+
+    def _compute_status(self, maxage=0):
+        candidates = []
+        try:
+            raw_pos = self._readRaw(maxage)
+            raw_tgt = self._raw_target(maxage)
+            at_target = raw_pos == raw_tgt
+        except Exception:
+            at_target = False
+
+        if not at_target:
+            candidates.append((status.BUSY, f"moving to {self.target}"))
+        return worst_status(self._read_primary_alarm(maxage=maxage), *candidates)
+
+    def doIsAtTarget(self, pos=None, target=None):
+        if target is None:
+            target = self.target
+        if pos is None:
+            pos = self.read(0)
+        raw_target = self.mapping.get(target, target)
+        try:
+            return pos == raw_target
+        except Exception:
+            return False
+
+    def doIsCompleted(self):
+        return self.isAtTarget()
+
+
 class EpicsManualMappedAnalogMoveable(
     EpicsReadWriteBase, HasPrecision, HasLimits, MappedMoveable
 ):
