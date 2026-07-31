@@ -1,6 +1,6 @@
 description = "The PACE5000 in the E03 lab."
 
-pv_root = "SE-PS01:SE-PACE5000-001:"
+pv_root = "SE-PS:SE-PACE5K-001:"
 
 devices = dict(
     pace_setpoint=device(
