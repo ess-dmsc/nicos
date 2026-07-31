@@ -586,9 +586,6 @@ class ADSimDetector(AreaDetector):
         AreaDetector._set_custom_record_fields(self)
         EpicsDevice.doPreinit(self, mode)
 
-    def doPrepare(self):
-        AreaDetector.doPrepare(self)
-
     def _get_pv_parameters(self):
         return set(self._record_fields) | set(["image_pv"])
 
