@@ -597,19 +597,6 @@ class ADSimDetector(AreaDetector):
     def _get_array_dtype(self):
         return data_type_t[self._get_pv("data_type", as_string=True)]
 
-    def doStatus(self, maxage=0):
-        detector_state = self._get_pv("acquire_status", True)
-        alarm_status = STAT_TO_STATUS.get(
-            self._get_pv("detector_state.STAT"), status.UNKNOWN
-        )
-        alarm_severity = SEVERITY_TO_STATUS.get(
-            self._get_pv("detector_state.SEVR"), status.UNKNOWN
-        )
-        if detector_state != "Done" and alarm_severity < status.BUSY:
-            alarm_severity = status.BUSY
-        self._write_alarm_to_log(detector_state, alarm_severity, alarm_status)
-        return alarm_severity, "%s, image mode is %s" % (detector_state, self.imagemode)
-
     def _write_alarm_to_log(self, pv_value, severity, stat):
         msg_format = "%s (%s)"
         if severity in [status.ERROR, status.UNKNOWN]:
