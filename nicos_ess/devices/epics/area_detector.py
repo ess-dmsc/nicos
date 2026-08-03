@@ -551,6 +551,8 @@ class ADSimDetector(AreaDetector):
         "starty": Param("Image Y start index.", settable=True, volatile=True),
         "binx": Param("Binning factor X", settable=True, volatile=True),
         "biny": Param("Binning factor Y", settable=True, volatile=True),
+        "acquiretime" : Param("Exposure time", settable=True, volatile=True),
+        "acquireperiod" : Param("Acquire period", settable=True, volatile=True),
         "numimages": Param(
             "Number of images to take (only in imageMode=multiple).",
             settable=True,
@@ -680,6 +682,18 @@ class ADSimDetector(AreaDetector):
 
     def doWriteBiny(self, value):
         self._put_pv("bin_y", value)
+
+    def doReadAcquiretime(self):
+        return self._get_pv("acquire_time")
+
+    def doWriteAcquiretime(self, value):
+        self._put_pv("acquire_time", value)
+
+    def doReadAcquireperiod(self):
+        return self._get_pv("acquire_period")
+
+    def doWriteAcquireperiod(self, value):
+        return self._put_pv("acquire_period", value)
 
     def doReadNumimages(self):
         return self._get_pv("num_images_rbv")
