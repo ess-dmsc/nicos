@@ -551,8 +551,8 @@ class ADSimDetector(AreaDetector):
         "starty": Param("Image Y start index.", settable=True, volatile=True),
         "binx": Param("Binning factor X", settable=True, volatile=True),
         "biny": Param("Binning factor Y", settable=True, volatile=True),
-        "acquiretime" : Param("Exposure time", settable=True, volatile=True),
-        "acquireperiod" : Param("Acquire period", settable=True, volatile=True),
+        "acquiretime": Param("Exposure time", settable=True, volatile=True),
+        "acquireperiod": Param("Acquire period", settable=True, volatile=True),
         "numimages": Param(
             "Number of images to take (only in imageMode=multiple).",
             settable=True,
