@@ -1,3 +1,5 @@
+from nicos_ess.devices.datasources.just_bin_it import input_schemas
+
 description = "The just-bin-it histogrammer."
 
 devices = dict(
@@ -74,6 +76,7 @@ devices = dict(
         unit="evts",
         hist_type="1-D TOF",
         hist_topic="nmx_visualisation",
+        input_schema="da00",
     ),
     mon_2_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
