@@ -147,9 +147,9 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             self._update_status(status.OK, "")
 
     def doInit(self, mode):
-        self._selector_obj: Optional[Selector] = (
-            Selector.parse_selector_str(self.selector) if self.selector else None
-        )
+        # self._selector_obj: Optional[Selector] = (
+        #     Selector.parse_selector_str(self.selector) if self.selector else None
+        # )
         self._device_selector_obj: Optional[DeviceSelector] = (
             DeviceSelector.parse_device_name(self.device_name, self.workflow_id)
             if self.device_name
@@ -168,8 +168,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
     def doStatus(self, maxage=0):
         return self.curstatus
 
-    def doWriteSelector(self, value):
-        self._selector_obj = Selector.parse_selector_str(value)
+    # def doWriteSelector(self, value):
+    #     self._selector_obj = Selector.parse_selector_str(value)
 
     def doWriteDeviceName(self, value):
         self._device_selector_obj = DeviceSelector.parse_device_name(
