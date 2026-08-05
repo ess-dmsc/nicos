@@ -132,9 +132,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         "unit": Override(default="events", settable=False, mandatory=False),
         "fmtstr": Override(default="%d"),
         "pollinterval": Override(default=None, userparam=False, settable=False),
-        "mapping": Override(
-            volatile=True, internal=True, mandatory=False, settable=True
-        ),
+        "mapping": Override(settable=True),
     }
 
     arraydesc = ArrayDesc("", shape=(), dtype=np.int32)
@@ -187,10 +185,10 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
     def doWriteMapping(self, mapping):
         self.valuetype = oneof(*sorted(mapping, key=num_sort))
 
-    def doReadMapping(self):
-        if not self._collector:
-            return {}
-        return self._collector.get_current_mapping()
+    # def doReadMapping(self):
+    #     if not self._collector:
+    #         return {}
+    #     return self._collector.get_current_mapping()
 
     def start(self, target=None, **preset):
         # DataChannel is both a Moveable (selector changes) and a PassiveChannel
@@ -206,7 +204,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         # check if a valid selector is set
         self.curvalue = 0
         self._signal = None
-        if not self._selector_obj:
+        if not self._device_selector_obj:
             self.log.warning(
                 "No workflow channel selected for %s. Will not prepare channel.",
                 self.name,
@@ -232,7 +230,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
 
         # passivechannel path
         if target is None:
-            if not self._selector_obj:
+            if not self._device_selector_obj:
                 self.log.warning(
                     "No workflow channel selected for %s. Will not start counting.",
                     self.name,
@@ -670,7 +668,7 @@ class LiveDataCollector(Detector):
 
         try:
             self._registry.expire_stale()
-            self._push_mapping_to_channels()
+            # self._push_mapping_to_channels()
         except Exception as e:
             self.log.warning(f"Error expiring stale jobs: {e}")
 
@@ -734,7 +732,7 @@ class LiveDataCollector(Detector):
 
                 self._registry.expire_stale()
 
-                self._push_mapping_to_channels()
+                # self._push_mapping_to_channels()
 
             except Exception as exc:
                 self.log.warning(f"Bad status message: {exc}")
@@ -777,7 +775,7 @@ class LiveDataCollector(Detector):
 
                     if remove_hint and src and jn:
                         self._registry.remove_job(src, jn)
-                        self._push_mapping_to_channels()
+                        # self._push_mapping_to_channels()
 
             except Exception:
                 pass
