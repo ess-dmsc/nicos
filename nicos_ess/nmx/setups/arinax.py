@@ -17,6 +17,8 @@ UNIPUCKS = {
     for i in range(1, 17)
 }
 
+ZOOM_LEVELS = {f"Zoom level {l}": l for l in range(1, 8)}
+
 devices = dict(
     # General statue/status of ARINAX system
     arinax_state=device(
@@ -179,5 +181,36 @@ devices = dict(
         description="ARINAX centring table motor Y",
         readpv=f"{pv_root}getCentringTableYPosition",
         writepv=f"{pv_root}setCentringTableYPosition",
+    ),
+    # Backlight
+    # TODO: This can possibly be changed to (manual) mapped device once we know its real limits.
+    backlight_level=device(
+        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
+        description="ARINAX SPU backlight level, control",
+        readpv=f"{pv_root}getBackLightLevel",
+        writepv=f"{pv_root}setBackLightLevel",
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        userlimits=[0, 100],
+        fmtstr="%d",
+    ),
+    backlight_position=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX SPU backlight position, control",
+        readpv=f"{pv_root}getBackLightPOS",
+        writepv=f"{pv_root}setBackLightPOS",
+    ),
+    # Zoom
+    zoom_level=device(
+        # The zoom range is on the :getZoomRange PV.
+        "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
+        description="ARINAX SPU zoom level, control",
+        readpv=f"{pv_root}getZoomLevel",
+        writepv=f"{pv_root}setZoomLevel",
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping=ZOOM_LEVELS,
     ),
 )
