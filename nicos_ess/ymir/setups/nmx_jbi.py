@@ -10,9 +10,9 @@ devices = dict(
         hist_schema="hs01",
         liveinterval=5,
         timeoutinterval=30,
-        command_topic="nmx_jbi_commands",
-        response_topic="nmx_jbi_responses",
-        statustopic=["nmx_jbi_heartbeat"],
+        command_topic="ymir_jbi_commands",
+        response_topic="ymir_jbi_responses",
+        statustopic=["ymir_jbi_heartbeat"],
         images=[
             "det_p0_data",
             "det_p1_data",
@@ -32,7 +32,7 @@ devices = dict(
     det_p0_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
-        hist_topic="nmx_visualisation",
+        hist_topic="ymir_visualisation",
         data_topic="nmx_detector_p0",
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
@@ -44,7 +44,7 @@ devices = dict(
     det_p1_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
-        hist_topic="nmx_visualisation",
+        hist_topic="ymir_visualisation",
         data_topic="nmx_detector_p1",
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
@@ -56,7 +56,7 @@ devices = dict(
     det_p2_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
-        hist_topic="nmx_visualisation",
+        hist_topic="ymir_visualisation",
         data_topic="nmx_detector_p2",
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
@@ -73,7 +73,7 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
         hist_type="1-D TOF",
-        hist_topic="nmx_visualisation",
+        hist_topic="ymir_visualisation",
     ),
     mon_2_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
@@ -83,7 +83,7 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
         hist_type="1-D TOF",
-        hist_topic="nmx_visualisation",
+        hist_topic="ymir_visualisation",
     ),
     mon_3_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
@@ -93,7 +93,7 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
         hist_type="1-D TOF",
-        hist_topic="nmx_visualisation",
+        hist_topic="ymir_visualisation",
     ),
 )
 
