@@ -237,3 +237,48 @@ class JobRegistry:
         for key in todel:
             del self._jobs[key]
         return len(todel)
+
+
+@dataclass(frozen=True)
+class DeviceSelector:
+    """
+    A binding to a specific device name from the ESSlivedata device contract.
+
+    This is simpler than Selector - it only needs the device name, as the
+    DeviceExtractor in ESSlivedata publishes messages keyed by device name
+    to the LIVEDATA_NICOS_DATA topic.
+
+    The device name corresponds to entries in the ESSlivedata device contract,
+    e.g., "monitor1_counts_total" for a monitor cumulative count.
+
+    Parameters
+    ----------
+    device_name : str
+        The name of the derived device from the device contract.
+    workflow_id : str, optional
+        The workflow ID in format "instrument/name/version" that provides
+        this device. Used for sending reset commands.
+    """
+
+    device_name: str
+    workflow_id: Optional[str] = None
+
+    @classmethod
+    def parse_device_name(
+        cls, s: str, workflow_id: Optional[str] = None
+    ) -> DeviceSelector:
+        """Create a DeviceSelector from a device name."""
+        return cls(device_name=s, workflow_id=workflow_id)
+
+    def matches(self, device_name: str) -> bool:
+        """Check if this selector matches a device name."""
+        return self.device_name == device_name
+
+    def matches_da00_source(self, source_name: str) -> bool:
+        """
+        Check if this selector matches the source_name from a DA00 message.
+
+        For NICOS_DATA topic messages, the DeviceExtractor sets the DA00
+        source_name to the device name.
+        """
+        return self.device_name == source_name
