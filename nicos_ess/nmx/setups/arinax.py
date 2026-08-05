@@ -1,4 +1,4 @@
-description = "ARINAX controls (for detector and sample positioning)"
+description = "ARINAX controls (sample exposure system)"
 
 group = "optional"
 
