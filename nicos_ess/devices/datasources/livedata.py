@@ -2,18 +2,23 @@
 NICOS data source devices for consuming ESSLivedata and sending light commands.
 
 - LiveDataCollector:
-    * Subscribes to DA00 data topics
+    * Subscribes to DA00 data topics (including LIVEDATA_NICOS_DATA)
     * Tails X5F2 status/heartbeat topics
     * (optional) Tails responses topics
     * Maintains a JobRegistry and publishes it into NICOS cache
-    * Routes DA00 to DataChannel(s) by Selector
+    * Routes DA00 to DataChannel(s) by Selector or DeviceSelector
     * Provides job_command helpers (reset/stop/remove)
 
 - DataChannel:
-    * User selects a "selector" string of the form:
-      "<instr>/<ns>/<name>/<version>@<source>#<job_number>/<output>"
+    * User selects either:
+      - A "selector" string of the form:
+        "<instr>/<ns>/<name>/<version>@<source>#<job_number>/<output>"
+        for job-based channels (regular data topics)
+      - Or a "device_name" (from ESSlivedata device contract) for device-based
+        channels (LIVEDATA_NICOS_DATA topic)
     * Receives matched DA00 messages and pushes to NICOS live plots
     * Offers convenience methods reset()/stop()/remove() that send JobCommand
+    * For device-based channels, reset() sends workflow-level commands
 """
 
 from __future__ import annotations
@@ -47,8 +52,9 @@ from nicos.core import (
     tupleof,
 )
 from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
-from nicos.utils import byteBuffer, createThread, num_sort, sleep
+from nicos.utils import byteBuffer, createThread, num_sort
 from nicos_ess.devices.datasources.livedata_utils import (
+    DeviceSelector,
     JobInfo,
     JobRegistry,
     Selector,
@@ -63,10 +69,20 @@ INIT_MESSAGE = "Initializing LiveDataCollector…"
 
 
 class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
-    """Channel for a particular workflow/source/job/output.
+    """Channel for a particular workflow/source/job/output or a derived device.
 
     Forwards DA00 'signal' arrays to NICOS live data.
     Supports 1D, 2D, and N-D.
+
+    Can be configured in two modes:
+    1. Selector mode (default): Uses a selector string to match messages from
+       regular data topics (with job_number)
+    2. Device mode: Uses a device_name to match messages from the
+       LIVEDATA_NICOS_DATA topic (without job_number)
+
+    For device mode, set the device_name and workflow_id parameters instead
+    of selector. The device_name should match an entry in the ESSlivedata
+    device contract.
     """
 
     parameters = {
@@ -75,6 +91,21 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             type=str,
             userparam=True,
             settable=True,
+            default="",
+        ),
+        "device_name": Param(
+            "Device name (from ESSlivedata device contract, for NICOS_DATA topic)",
+            type=str,
+            userparam=True,
+            settable=True,
+            default="",
+        ),
+        "workflow_id": Param(
+            "Workflow ID (instrument/name/version) for device-based channels",
+            type=str,
+            userparam=False,
+            settable=True,
+            default="",
         ),
         "curstatus": Param(
             "Store the current device status",
@@ -119,6 +150,11 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         self._selector_obj: Optional[Selector] = (
             Selector.parse_selector_str(self.selector) if self.selector else None
         )
+        self._device_selector_obj: Optional[DeviceSelector] = (
+            DeviceSelector.parse_device_name(self.device_name, self.workflow_id)
+            if self.device_name
+            else None
+        )
 
     def doRead(self, maxage=0):
         return [self.curvalue]
@@ -134,6 +170,19 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
 
     def doWriteSelector(self, value):
         self._selector_obj = Selector.parse_selector_str(value)
+
+    def doWriteDeviceName(self, value):
+        self._device_selector_obj = DeviceSelector.parse_device_name(
+            value, self.workflow_id
+        )
+
+    def doWriteWorkflowId(self, value):
+        self._workflow_id = value
+        # Update device selector if it exists
+        if self._device_selector_obj:
+            self._device_selector_obj = DeviceSelector(
+                device_name=self._device_selector_obj.device_name, workflow_id=value
+            )
 
     def doWriteMapping(self, mapping):
         self.valuetype = oneof(*sorted(mapping, key=num_sort))
@@ -165,8 +214,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             self._update_status(status.WARN, "No workflow channel selected")
             return
 
-        self.reset_job()
-        sleep(0.5)  # give backend time to process reset
+        # self.reset_job()
+        # sleep(0.5)  # give backend time to process reset
         self._update_status(status.OK, "")
 
     def doStop(self):
@@ -596,15 +645,23 @@ class LiveDataCollector(Detector):
                 if get_schema(raw) != "da00":
                     continue
                 da = deserialise_da00(raw)
-                rk = parse_result_key(da.source_name)
-                self._registry.note_output(rk.workflow_id, rk.job_id, rk.output_name)
 
+                # Try to parse as ResultKey (for regular data topics)
+                # For NICOS_DATA topic, source_name is just the device name
                 try:
-                    self._registry.mark_seen(
-                        rk.job_id.source_name, rk.job_id.job_number
+                    rk = parse_result_key(da.source_name)
+                    self._registry.note_output(
+                        rk.workflow_id, rk.job_id, rk.output_name
                     )
-                except Exception:
-                    pass
+                    try:
+                        self._registry.mark_seen(
+                            rk.job_id.source_name, rk.job_id.job_number
+                        )
+                    except Exception:
+                        pass
+                except (json.JSONDecodeError, KeyError, TypeError):
+                    # Not a ResultKey JSON, must be a device name from NICOS_DATA topic
+                    rk = None
 
                 # Route to matching channels
                 self._dispatch_to_channels(timestamp_ns, rk, da)
@@ -730,10 +787,21 @@ class LiveDataCollector(Detector):
     def _dispatch_to_channels(self, timestamp_ns: int, rk, da):
         for ch in self._channels:
             sel: Optional[Selector] = getattr(ch, "_selector_obj", None)
-            if not sel:
-                continue
-            if sel.selector_matches(rk):
-                ch.update_data_from_da00(da, timestamp_ns)
+            dev_sel: Optional[DeviceSelector] = getattr(
+                ch, "_device_selector_obj", None
+            )
+
+            # Try Selector first (for regular data topics)
+            if sel and rk:
+                if sel.selector_matches(rk):
+                    ch.update_data_from_da00(da, timestamp_ns)
+                    continue
+
+            # Try DeviceSelector (for NICOS_DATA topic)
+            if dev_sel and da.source_name:
+                if dev_sel.matches_da00_source(da.source_name):
+                    ch.update_data_from_da00(da, timestamp_ns)
+                    continue
 
     def send_job_command(
         self,
