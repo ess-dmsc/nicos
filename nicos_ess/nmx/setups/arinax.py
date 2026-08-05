@@ -128,4 +128,56 @@ devices = dict(
         writepv=f"{pv_root}setThetaPosition",
         # unit="mm",
     ),
+    # Alignment table motion
+    # TODO: Add the set PVs below to the proxy.
+    alignment_table_x=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX alignment table motor X",
+        readpv=f"{pv_root}getAlignmentTableXPosition",
+        writepv=f"{pv_root}setAlignmentTableXPosition",
+    ),
+    alignment_table_y=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX alignment table motor Y",
+        readpv=f"{pv_root}getAlignmentTableYPosition",
+        writepv=f"{pv_root}setAlignmentTableYPosition",
+    ),
+    alignment_table_z=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX alignment table motor Z",
+        readpv=f"{pv_root}getAlignmentTableZPosition",
+        writepv=f"{pv_root}setAlignmentTableZPosition",
+    ),
+    # TODO: Add AlignmentTable Vx, Vy, Vfocus to the proxy.
+    alignment_table_vx=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX alignment table motor Vx",
+        readpv=f"{pv_root}getAlignmentTableVxPosition",
+        writepv=f"{pv_root}setAlignmentTableVxPosition",
+    ),
+    alignment_table_vy=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX alignment table motor Vy",
+        readpv=f"{pv_root}getAlignmentTableVyPosition",
+        writepv=f"{pv_root}setAlignmentTableVyPosition",
+    ),
+    alignment_table_vFocus=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX alignment table motor Vfocus",
+        readpv=f"{pv_root}getAlignmentTableVfocusPosition",
+        writepv=f"{pv_root}setAlignmentTableVfocusPosition",
+    ),
+    # Centring table motion
+    centring_table_x=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX centring table motor X",
+        readpv=f"{pv_root}getCentringTableXPosition",
+        writepv=f"{pv_root}setCentringTableXPosition",
+    ),
+    centring_table_y=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX centring table motor Y",
+        readpv=f"{pv_root}getCentringTableYPosition",
+        writepv=f"{pv_root}setCentringTableYPosition",
+    ),
 )
