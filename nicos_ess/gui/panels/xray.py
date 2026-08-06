@@ -1,20 +1,14 @@
 """NICOS X-ray panel."""
 
 from nicos.clients.gui.panels import Panel
-from nicos.guisupport.qt import (
-    QWidget, 
-    QPushButton,
-    QLineEdit, 
-    QHBoxLayout, 
-    QVBoxLayout,
-    QFormLayout, 
-    pyqtSlot
-)
+from nicos.clients.gui.utils import loadUi
+from nicos.utils import findResource
 from nicos_ess.gui.panels.live_pyqt import LiveDataPanel
 
 class XrayPanel(Panel):
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
+        loadUi(self, findResource("nicos_ess/ymir/gui/xray.ui"))
 
         # Get devices.
         self.devmodel = options.get("model")
@@ -34,119 +28,32 @@ class XrayPanel(Panel):
         self.devcamera = options.get("camera")
         self.devcollector = options.get("collector")
 
-        # Base layout.
-        self.window = QWidget(self) #put self as argument for it to stay within the panel
-        self.layout = QVBoxLayout(self.window)
-        self.layouta = QHBoxLayout()
-        self.layoutb = QHBoxLayout()
-        self.layout.addLayout(self.layouta)
-        self.layout.addLayout(self.layoutb)
-
-        self.create_buttons_xray()
+        # Create and place detector image.
         self.panel = LiveDataPanel(parent, client, options) #can also use MultiLiveDataPanel
         self.panel.update_widget_to_show(True) #shows 2D-image
-        self.create_buttons_detector()
-
-        # Initiate.
-        self.window.show()
+        self.place_panel.addWidget(self.panel)
 
         client.setup.connect(self.on_client_setup) #keeps running until setup is ready
 
-    def create_buttons_xray(self):
-        # Basic command buttons.
-        self.bxray = QPushButton(f"X-ray", self)
-        self.bwarmup = QPushButton(f"Warmup", self)
-        self.breset = QPushButton(f"Reset", self)
-        #self.button1.setFixedSize(120, 60)
-        #self.button1.setGeometry(500, 500, 100, 50)
 
-        # Basic command button layout.
-        self.layout1 = QVBoxLayout()
-        self.layouta.addLayout(self.layout1)
-        self.layout1.addWidget(self.bxray)
-        self.layout1.addWidget(self.bwarmup)
-        self.layout1.addWidget(self.breset)
+    # Setup commands.
+    def get_info(self):
+        if self._is_live():
+            self.load_data()
 
-        # Read-only parameters.
-        self.bmodel = QLineEdit("Model", self, readOnly=True)
-        self.bstatus = QLineEdit("Status", self, readOnly=True)
-        self.bbeam_align = QLineEdit("Beam Alignment Status", self, readOnly=True)
-        self.binterlock = QLineEdit("Interlock Status", self, readOnly=True)
-        self.bvacuum = QLineEdit("Vacuum Level Check", self, readOnly=True)
-        self.btemperature = QLineEdit("Temperature Check", self, readOnly=True)
+    def _is_live(self):
+        check = self.client.getDeviceList()
+        vmodel = self.client.getDeviceParam(self.devmodel, "value")
+        # name returns as a non-empty list if something exists
+        if check != []:
+            return True
+        return False
 
-        # Read-only layout.
-        self.layout2 = QFormLayout()
-        self.layouta.addLayout(self.layout2)
-        self.layout2.addWidget(self.bmodel)
-        self.layout2.addWidget(self.bstatus)
-        self.layout2.addWidget(self.bbeam_align)
-        self.layout2.addWidget(self.binterlock)
-        self.layout2.addWidget(self.bvacuum)
-        self.layout2.addWidget(self.btemperature)
+    def on_client_setup(self):
+        self.get_info()
 
-        # Read-and-write parameters.
-        self.bvoltage = QPushButton("Voltage", self)
-        self.bwvoltage = QLineEdit("", self)
-        self.brvoltage = QLineEdit("", self, readOnly=True)
-        self.bcurrent = QPushButton("Current", self)
-        self.bwcurrent = QLineEdit("", self)
-        self.brcurrent = QLineEdit("", self, readOnly=True)
-        self.bfocus = QPushButton("Focus", self)
-        self.bwfocus = QLineEdit("", self)
-                
-        # Read-and-write layout.
-        self.layout3 = QFormLayout()
-        self.layouta.addLayout(self.layout3)
-        self.layout3.addRow(self.bvoltage, self.bwvoltage)
-        self.layout3.addRow(self.bcurrent, self.bwcurrent)
-        self.layout3.addRow(self.bfocus, self.bwfocus)
-
-        self.layout4 = QFormLayout()
-        self.layouta.addLayout(self.layout4)
-        self.layout4.addWidget(self.brvoltage)
-        self.layout4.addWidget(self.brcurrent)
-
-        # Align parameters.
-        self.balign_x = QPushButton("Set X-dir Object Align", self)
-        self.bwalign_x = QLineEdit("")
-        self.balign_y = QPushButton("Set Y-dir Object Align", self)
-        self.bwalign_y = QLineEdit("")
-        self.balign_beam = QPushButton("Start Beam Alignment", self)
-        self.balign_all = QPushButton("Start Overall Alignment", self)
-        self.balign_stop = QPushButton("Stop Beam Alignment", self)
-
-        # Align layout.
-        self.layout5 = QFormLayout()
-        self.layouta.addLayout(self.layout5)
-        self.layout5.addRow(self.balign_x, self.bwalign_x)
-        self.layout5.addRow(self.balign_y, self.bwalign_y)
-        self.layout5.addWidget(self.balign_beam)
-        self.layout5.addWidget(self.balign_all)
-        self.layout5.addWidget(self.balign_stop)
-
-    def create_buttons_detector(self):
-        self.bstart = QPushButton("Acquire Start", self)
-        self.bstop = QPushButton("Acquire Stop", self)
-        self.bacquire_time = QPushButton("Exposure Time", self)
-        self.bwacquire_time = QLineEdit("", self)
-        self.bacquire_period = QPushButton("Acquire Period", self)
-        self.bwacquire_period = QLineEdit("", self)
-
-        # General layout for this part.
-        self.layout_detector = QHBoxLayout()
-        self.layoutb.addLayout(self.layout_detector)
-
-        # Controls for camera/detector layout.
-        self.layout_controls = QFormLayout()
-        self.layout_detector.addLayout(self.layout_controls)
-        self.layout_controls.addRow(self.bstart, self.bstop)
-        self.layout_controls.addRow(self.bacquire_time, self.bwacquire_time)
-        self.layout_controls.addRow(self.bacquire_period, self. bwacquire_period)
-
-        # Panel layout.
-        self.panel.setMaximumSize(600, 600)
-        self.layout_detector.addWidget(self.panel)
+    def exec_command(self, command):
+        self._exec_reqid = self.client.run(command)
 
 
     # Commands to control the devices.
@@ -167,129 +74,87 @@ class XrayPanel(Panel):
         vvacuum = self.client.getDeviceParam(self.devvacuum, "value")
         vtemperature = self.client.getDeviceParam(self.devtemperature, "value")
 
+        vacquire_time = self.client.getDeviceParam(self.devcamera, "acquiretime")
+        vacquire_period = self.client.getDeviceParam(self.devcamera, "acquireperiod")
+
         # Write parameter values.
-        self.bmodel.setText(f"Model: {vmodel}")
-        self.bstatus.setText(f"Status: {vstatus}")
-        self.bbeam_align.setText(f"Beam Alignment Status: {vbeam_align}")
-        self.binterlock.setText(f"Interlock Status: {vinterlock}")
-        self.bvacuum.setText(f"Vacuum Level Check: {vvacuum}")
-        self.btemperature.setText(f"Temperature Check: {vtemperature} C")
-        self.bwvoltage.setText(f"{vvoltage}")
-        self.brvoltage.setText(f"{vvoltage_r}")
-        self.bwcurrent.setText(f"{vcurrent}")
-        self.brcurrent.setText(f"{vcurrent_r}")
-        self.bwfocus.setText(f"{vfocus}")
+        self.brmodel.setText(vmodel)
+        self.brstatus.setText(vstatus)
+        self.brbeam_align.setText(vbeam_align)
+        self.brinterlock.setText(vinterlock)
+        self.brvacuum.setText(str(vvacuum))
+        self.brtemperature.setText(str(vtemperature))
+        self.bwvoltage.setValue(vvoltage)
+        self.brvoltage.setText(str(vvoltage_r))
+        self.bwcurrent.setValue(vcurrent)
+        self.brcurrent.setText(str(vcurrent_r))
+        self.bwfocus.setValue(vfocus)
+        self.bwacquire_time.setValue(vacquire_time)
+        self.bracquire_time.setText(str(vacquire_time))
+        self.bwacquire_period.setValue(vacquire_period)
+        self.bracquire_period.setText(str(vacquire_period))
 
-        self.xray()
-        # self.align_x()
-        # self.align_y()
+        self.on_bxray_pressed()
 
-        # Click buttons for X-ray.
-        self.bxray.clicked.connect(self.xray)
-        self.bwarmup.clicked.connect(self.warmup)
-        self.breset.clicked.connect(self.reset)
-
-        self.balign_all.clicked.connect(self.align_beam)
-        self.balign_all.clicked.connect(self.align_all)
-        self.balign_all.clicked.connect(self.align_stop)
-
-        # Change values.
-        self.bwvoltage.returnPressed.connect(self.voltage)
-        self.bwcurrent.returnPressed.connect(self.current)
-        self.bwfocus.returnPressed.connect(self.focus)
-        self.bwalign_x.returnPressed.connect(self.align_x)
-        self.bwalign_y.returnPressed.connect(self.align_y)
-
-        # Buttons for detector.
-        self.bstart.clicked.connect(self.start)
-        self.bstop.clicked.connect(self.stop)
-        self.bwacquire_time.returnPressed.connect(self.acquire_time)
-        self.bwacquire_period.returnPressed.connect(self.acquire_period)
-
-
-    def xray(self):
+    def on_bxray_pressed(self):
         test = self.client.getDeviceParam(self.devxray, "value")
         if test == "XOF":
             self.exec_command(f"move(xray, 'XON')")
-            self.bxray.setText('X-ray ON')
+            self.xray_info.setText('X-ray ON')
+            self.bxray.setText('Turn OFF')
         elif test == "XON":
             self.exec_command(f"move(xray, 'XOF')")
-            self.bxray.setText('X-ray OFF')
+            self.xray_info.setText('X-ray OFF')
+            self.bxray.setText('Turn ON')
 
-    def warmup(self):
+    def on_bwarmup_pressed(self):
         self.exec_command(f"move(warmup, '')")
 
-    def reset(self):
+    def on_breset_pressed(self):
         self.exec_command(f"move(reset, '')")
 
-    def voltage(self):
-        value = self.bwvoltage.text()
+    def on_bwvoltage_editingFinished(self): #could do valueChanged instead
+        value = self.bwvoltage.value()
         self.exec_command(f"move(voltage, {value})")
 
-    def current(self):
-        value = self.bwcurrent.text()
+    def on_bwcurrent_editingFinished(self):
+        value = self.bwcurrent.value()
         self.exec_command(f"move(current, {value})")
 
-    def focus(self): # will not finish due to no focus_r most likely
-        value = self.bwfocus.text()
+    def on_bwfocus_editingFinished(self): # will not finish due to no focus_r most likely
+        value = self.bwfocus.value()
         self.exec_command(f"move(focus, {value})")
 
-    def align_x(self): # will not finish due to no align_x_r most likely
+    def on_bwalign_x_editingFinished(self): # will not finish due to no align_x_r most likely
             value = self.bwalign_x.text()
             self.exec_command(f"move(align_x, {value})")
 
-    def align_y(self): # will not finish due to no align_y_r most likely
+    def on_bwalign_y_editingFinished(self): # will not finish due to no align_y_r most likely
             value = self.bwalign_y.text()
             self.exec_command(f"move(align_y, {value})")
 
-    def align_beam(self):
+    def on_balign_beam_pressed(self):
          self.exec_command(f"move(align_beam, '')")
 
-    def align_all(self):
+    def on_balign_all_pressed(self):
         self.exec_command(f"move(align_all, '')")
 
-    def align_stop(self):
+    def on_balign_stop_pressed(self):
         self.exec_command(f"move(align_stop, '')")
 
-    def start(self):
+    def on_bstart_pressed(self):
         self.exec_command(f"SetDetectors({self.devcollector})")
         self.exec_command(f"{self.devcamera}.start()")
 
-    def stop(self):
+    def on_bstop_pressed(self):
         self.exec_command(f"stop({self.devcamera})")
 
-    def acquire_time(self):
+    def on_bwacquire_time_editingFinished(self):
         value = self.bwacquire_time.text()
         self.exec_command(f"set({self.devcamera}, 'acquiretime', {value})")
+        self.bracquire_time.setText(str(value))
 
-    def acquire_period(self):
+    def on_bwacquire_period_editingFinished(self):
         value = self.bwacquire_period.text()
         self.exec_command(f"set({self.devcamera}, 'acquireperiod', {value})")
-
-
-    # Setup commands.
-    def get_info(self):
-        if self._is_live():
-            self.load_data()
-
-    def _is_live(self):
-        check = self.client.getDeviceList()
-        # name returns as a list if something exists
-        if check != []:
-            return True
-        return False
-
-    def on_client_setup(self):
-        self.get_info()
-
-
-    # Other commands.
-    def exec_command(self, command):
-        self._exec_reqid = self.client.run(command)
-
-    @pyqtSlot()
-    def on_butStart_pressed(self):
-        target = []
-        for axis in self.qtObj:
-            target.append(self.qtObj[axis]["newVal"].value())
-        self.exec_command(f"move({self.devname}, ({target}))")
+        self.bracquire_period.setText(str(value))
