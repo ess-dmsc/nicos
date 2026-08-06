@@ -72,7 +72,7 @@ def attached_chopper_devices(device_harness, fake_backend):
     device_harness.create_pair(
         HarnessMappedMoveable,
         name="ess_speed",
-        shared={"mapping": {"0 Hz": 0, "14 Hz": 14}},
+        shared={"mapping": {"0": 0, "14": 14}},
     )
     device_harness.create_pair(
         HarnessReadable,
@@ -85,7 +85,7 @@ def attached_chopper_devices(device_harness, fake_backend):
         shared={
             "readpv": "SIM:ODIN:SPD.RBV",
             "writepv": "SIM:ODIN:SPD.VAL",
-            "mapping": {"0 Hz": 0.0, "14 Hz": 14.0},
+            "mapping": {"0": 0.0, "14": 14.0},
             "monitor": True,
             "pva": True,
         },
