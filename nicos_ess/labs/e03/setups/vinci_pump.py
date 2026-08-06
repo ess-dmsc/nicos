@@ -45,7 +45,7 @@ devices = dict(
     vinci_pump=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Status of the pump",
-        readpv="{}Stopped-RB".format(pv_root),
+        readpv="{}Start-S".format(pv_root),
         writepv="{}Start-S".format(pv_root),
     ),
 )
