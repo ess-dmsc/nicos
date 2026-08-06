@@ -687,9 +687,7 @@ class TestEpicsManualMappedAnalogMoveable:
     ):
         device, _config = manual_mapped_moveable
 
-        result = device_harness.run(
-            "daemon", device.doIsAtTarget, "not numeric", "14"
-        )
+        result = device_harness.run("daemon", device.doIsAtTarget, "not numeric", "14")
 
         assert result is False
 
