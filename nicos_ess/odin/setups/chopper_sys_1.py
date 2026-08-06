@@ -11,37 +11,38 @@ devices = dict(
     chpsy1_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
-        readpv="{}ConnectedR".format(chpsy1_chic_pv_root),
+        readpv=f"{chpsy1_chic_pv_root}ConnectedR",
         visibility=(),
         pva=True,
     ),
     wfmc1_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
-        readpv="{}ChopState_R".format(wfmc1_pv_root),
+        readpv=f"{wfmc1_pv_root}ChopState_R",
         visibility=(),
     ),
     wfmc1_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_ExecuteUser".format(wfmc1_pv_root),
-        writepv="{}C_ExecuteUser".format(wfmc1_pv_root),
+        readpv=f"{wfmc1_pv_root}C_ExecuteUser",
+        writepv=f"{wfmc1_pv_root}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
     wfmc1_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",  # Should be EpicsAnalogMoveable later
+        # Should be EpicsAnalogMoveable later
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
-        readpv="{}Spd_R".format(wfmc1_pv_root),
-        writepv="{}Spd_S".format(wfmc1_pv_root),
+        readpv=f"{wfmc1_pv_root}Spd_R",
+        writepv=f"{wfmc1_pv_root}Spd_S",
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0, "28 Hz": 28, "56 Hz": 56},
+        mapping={"14": 14, "7": 7, "0": 0, "28": 28, "56": 56},
     ),
     wfmc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
-        readpv="{}ChopDly-S".format(wfmc1_pv_root),
-        writepv="{}ChopDly-S".format(wfmc1_pv_root),
+        readpv=f"{wfmc1_pv_root}ChopDly-S",
+        writepv=f"{wfmc1_pv_root}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
     wfmc1_chopper_phase=device(
@@ -55,7 +56,7 @@ devices = dict(
     wfmc1_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
-        readpv="{}DiffTSSamples".format(wfmc1_pv_root),
+        readpv=f"{wfmc1_pv_root}DiffTSSamples",
         unit="ns",
         visibility=(
             "metadata",
@@ -65,13 +66,13 @@ devices = dict(
     wfmc1_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhaseTS-R".format(wfmc1_pv_root),
+        readpv=f"{wfmc1_pv_root}InPhaseTS-R",
     ),
     wfmc1_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
-        readpv="{}Pos_R".format(wfmc1_pv_root),
-        writepv="{}Park_S".format(wfmc1_pv_root),
+        readpv=f"{wfmc1_pv_root}Pos_R",
+        writepv=f"{wfmc1_pv_root}Park_S",
         visibility=(),
         mapping={
             "park pos 0": 0,
@@ -83,13 +84,13 @@ devices = dict(
     wfmc1_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The park status for the WLS1 chopper.",
-        readpv="{}ParkStatus_R".format(wfmc1_pv_root),
+        readpv=f"{wfmc1_pv_root}ParkStatus_R",
     ),
     wfmc1_chopper_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the WLS1 chopper.",
-        readpv="{}C_Park".format(wfmc1_pv_root),
-        writepv="{}C_Park".format(wfmc1_pv_root),
+        readpv=f"{wfmc1_pv_root}C_Park",
+        writepv=f"{wfmc1_pv_root}C_Park",
     ),
     wfmc1_chopper_alarms=device(
         "nicos_ess.devices.epics.chopper.NewChopperAlarms",
@@ -122,36 +123,36 @@ devices = dict(
     wfmc1_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The vacuum pressure",
-        readpv="{}100:PrsR".format(vacuum_pv_root),
+        readpv=f"{vacuum_pv_root}100:PrsR",
         fmtstr="%.2e",
     ),
     wfmc2_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
-        readpv="{}ChopState_R".format(wfmc2_pv_root),
+        readpv=f"{wfmc2_pv_root}ChopState_R",
         visibility=(),
     ),
     wfmc2_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_ExecuteUser".format(wfmc2_pv_root),
-        writepv="{}C_ExecuteUser".format(wfmc2_pv_root),
+        readpv=f"{wfmc2_pv_root}C_ExecuteUser",
+        writepv=f"{wfmc2_pv_root}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
     wfmc2_chopper_speed=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
-        readpv="{}Spd_R".format(wfmc2_pv_root),
-        writepv="{}Spd_S".format(wfmc2_pv_root),
+        readpv=f"{wfmc2_pv_root}Spd_R",
+        writepv=f"{wfmc2_pv_root}Spd_S",
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0, "28 Hz": 28, "56 Hz": 56},
+        mapping={"14": 14, "7": 7, "0": 0, "28": 28, "56": 56},
     ),
     wfmc2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
-        readpv="{}ChopDly-S".format(wfmc2_pv_root),
-        writepv="{}ChopDly-S".format(wfmc2_pv_root),
+        readpv=f"{wfmc2_pv_root}ChopDly-S",
+        writepv=f"{wfmc2_pv_root}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
     wfmc2_chopper_phase=device(
@@ -165,20 +166,20 @@ devices = dict(
     wfmc2_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
-        readpv="{}DiffTSSamples".format(wfmc2_pv_root),
+        readpv=f"{wfmc2_pv_root}DiffTSSamples",
         unit="ns",
         visibility=("metadata", "namespace"),
     ),
     wfmc2_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhaseTS-R".format(wfmc2_pv_root),
+        readpv=f"{wfmc2_pv_root}InPhaseTS-R",
     ),
     wfmc2_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
-        readpv="{}Pos_R".format(wfmc2_pv_root),
-        writepv="{}Park_S".format(wfmc2_pv_root),
+        readpv=f"{wfmc2_pv_root}Pos_R",
+        writepv=f"{wfmc2_pv_root}Park_S",
         visibility=(),
         mapping={
             "park pos 0": 0,
@@ -190,13 +191,13 @@ devices = dict(
     wfmc2_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The park status for the WFMC2 chopper.",
-        readpv="{}ParkStatus_R".format(wfmc2_pv_root),
+        readpv=f"{wfmc2_pv_root}ParkStatus_R",
     ),
     wfmc2_chopper_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the WFMC2 chopper.",
-        readpv="{}C_Park".format(wfmc2_pv_root),
-        writepv="{}C_Park".format(wfmc2_pv_root),
+        readpv=f"{wfmc2_pv_root}C_Park",
+        writepv=f"{wfmc2_pv_root}C_Park",
     ),
     wfmc2_chopper_alarms=device(
         "nicos_ess.devices.epics.chopper.NewChopperAlarms",
@@ -229,36 +230,36 @@ devices = dict(
     wfmc2_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The vacuum pressure",
-        readpv="{}101:PrsR".format(vacuum_pv_root),
+        readpv=f"{vacuum_pv_root}101:PrsR",
         fmtstr="%.2e",
     ),
     foc1_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
-        readpv="{}ChopState_R".format(foc1_pv_root),
+        readpv=f"{foc1_pv_root}ChopState_R",
         visibility=(),
     ),
     foc1_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_ExecuteUser".format(foc1_pv_root),
-        writepv="{}C_ExecuteUser".format(foc1_pv_root),
+        readpv=f"{foc1_pv_root}C_ExecuteUser",
+        writepv=f"{foc1_pv_root}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
     foc1_chopper_speed=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
-        readpv="{}Spd_R".format(foc1_pv_root),
-        writepv="{}Spd_S".format(foc1_pv_root),
+        readpv=f"{foc1_pv_root}Spd_R",
+        writepv=f"{foc1_pv_root}Spd_S",
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0, "21 Hz": 21, "42 Hz": 42},
+        mapping={"14": 14, "7": 7, "0": 0, "21": 21, "42": 42},
     ),
     foc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
-        readpv="{}ChopDly-S".format(foc1_pv_root),
-        writepv="{}ChopDly-S".format(foc1_pv_root),
+        readpv=f"{foc1_pv_root}ChopDly-S",
+        writepv=f"{foc1_pv_root}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
     foc1_chopper_phase=device(
@@ -272,20 +273,20 @@ devices = dict(
     foc1_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
-        readpv="{}DiffTSSamples".format(foc1_pv_root),
+        readpv=f"{foc1_pv_root}DiffTSSamples",
         unit="ns",
         visibility=("metadata", "namespace"),
     ),
     foc1_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhaseTS-R".format(foc1_pv_root),
+        readpv=f"{foc1_pv_root}InPhaseTS-R",
     ),
     foc1_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
-        readpv="{}Pos_R".format(foc1_pv_root),
-        writepv="{}Park_S".format(foc1_pv_root),
+        readpv=f"{foc1_pv_root}Pos_R",
+        writepv=f"{foc1_pv_root}Park_S",
         visibility=(),
         mapping={
             "park pos 0": 0,
@@ -297,13 +298,13 @@ devices = dict(
     foc1_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The park status for the WLS1 chopper.",
-        readpv="{}ParkStatus_R".format(foc1_pv_root),
+        readpv=f"{foc1_pv_root}ParkStatus_R",
     ),
     foc1_chopper_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the WLS1 chopper.",
-        readpv="{}C_Park".format(foc1_pv_root),
-        writepv="{}C_Park".format(foc1_pv_root),
+        readpv=f"{foc1_pv_root}C_Park",
+        writepv=f"{foc1_pv_root}C_Park",
     ),
     foc1_chopper_alarms=device(
         "nicos_ess.devices.epics.chopper.NewChopperAlarms",
@@ -336,36 +337,36 @@ devices = dict(
     foc1_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The vacuum pressure",
-        readpv="{}102:PrsR".format(vacuum_pv_root),
+        readpv=f"{vacuum_pv_root}102:PrsR",
         fmtstr="%.2e",
     ),
     bpc1_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
-        readpv="{}ChopState_R".format(bpc1_pv_root),
+        readpv=f"{bpc1_pv_root}ChopState_R",
         visibility=(),
     ),
     bpc1_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_ExecuteUser".format(bpc1_pv_root),
-        writepv="{}C_ExecuteUser".format(bpc1_pv_root),
+        readpv=f"{bpc1_pv_root}C_ExecuteUser",
+        writepv=f"{bpc1_pv_root}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
     bpc1_chopper_speed=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
-        readpv="{}Spd_R".format(bpc1_pv_root),
-        writepv="{}Spd_S".format(bpc1_pv_root),
+        readpv=f"{bpc1_pv_root}Spd_R",
+        writepv=f"{bpc1_pv_root}Spd_S",
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0},
+        mapping={"14": 14, "7": 7, "0": 0},
     ),
     bpc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
-        readpv="{}ChopDly-S".format(bpc1_pv_root),
-        writepv="{}ChopDly-S".format(bpc1_pv_root),
+        readpv=f"{bpc1_pv_root}ChopDly-S",
+        writepv=f"{bpc1_pv_root}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
     bpc1_chopper_phase=device(
@@ -379,20 +380,20 @@ devices = dict(
     bpc1_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
-        readpv="{}DiffTSSamples".format(bpc1_pv_root),
+        readpv=f"{bpc1_pv_root}DiffTSSamples",
         unit="ns",
         visibility=("metadata", "namespace"),
     ),
     bpc1_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhaseTS-R".format(bpc1_pv_root),
+        readpv=f"{bpc1_pv_root}InPhaseTS-R",
     ),
     bpc1_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
-        readpv="{}Pos_R".format(bpc1_pv_root),
-        writepv="{}Park_S".format(bpc1_pv_root),
+        readpv=f"{bpc1_pv_root}Pos_R",
+        writepv=f"{bpc1_pv_root}Park_S",
         visibility=(),
         mapping={
             "park pos 0": 0,
@@ -404,13 +405,13 @@ devices = dict(
     bpc1_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The park status for the WLS1 chopper.",
-        readpv="{}ParkStatus_R".format(bpc1_pv_root),
+        readpv=f"{bpc1_pv_root}ParkStatus_R",
     ),
     bpc1_chopper_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the WLS1 chopper.",
-        readpv="{}C_Park".format(bpc1_pv_root),
-        writepv="{}C_Park".format(bpc1_pv_root),
+        readpv=f"{bpc1_pv_root}C_Park",
+        writepv=f"{bpc1_pv_root}C_Park",
     ),
     bpc1_chopper_alarms=device(
         "nicos_ess.devices.epics.chopper.NewChopperAlarms",
@@ -436,7 +437,7 @@ devices = dict(
     bpc1_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The vacuum pressure",
-        readpv="{}102:PrsR".format(vacuum_pv_root),  # same as foc
+        readpv=f"{vacuum_pv_root}102:PrsR",  # same as foc
         fmtstr="%.2e",
     ),
 )

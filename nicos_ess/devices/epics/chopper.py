@@ -139,7 +139,7 @@ class EssChopperController(MappedMoveable):
         if target.lower() == "stop":
             # Set the speed to zero to keep EPICS behaviour consistent.
             try:
-                target_speed = self._attached_speed._inverse_mapping.get(0, "0 Hz")
+                target_speed = self._attached_speed._inverse_mapping.get(0, "0")
                 self._attached_speed.move(target_speed)
             except Exception:
                 self.log.exception(

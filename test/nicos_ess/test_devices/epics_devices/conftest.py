@@ -46,7 +46,7 @@ def assert_connection_unknown_status(observed_status):
 
 def manual_moveable_config():
     config = analog_moveable_config()
-    config["mapping"] = {"14 Hz": 14, "28 Hz": 28}
+    config["mapping"] = {"14": 14, "28": 28}
     return config
 
 
