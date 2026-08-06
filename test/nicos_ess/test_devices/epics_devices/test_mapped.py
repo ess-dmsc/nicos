@@ -688,7 +688,7 @@ class TestEpicsManualMappedAnalogMoveable:
         device, _config = manual_mapped_moveable
 
         result = device_harness.run(
-            "daemon", device.doIsAtTarget, "not numeric", "14 Hz"
+            "daemon", device.doIsAtTarget, "not numeric", "14"
         )
 
         assert result is False
@@ -705,7 +705,7 @@ class TestEpicsManualMappedAnalogMoveable:
         self, device_harness, fake_backend
     ):
         config = analog_moveable_config()
-        config["mapping"] = {"0 Hz": 0, "10 Hz": 10}
+        config["mapping"] = {"0": 0, "10": 10}
         config["monitor"] = False
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["writepv"]] = 0
@@ -719,17 +719,17 @@ class TestEpicsManualMappedAnalogMoveable:
             **config,
         )
 
-        device_harness.run("daemon", device.start, "10 Hz")
+        device_harness.run("daemon", device.start, "10")
 
         assert fake_backend.put_calls[-1] == (config["writepv"], 10, False)
         assert device_harness.run("daemon", device.status, 0)[0] == status.BUSY
-        assert device_harness.run("daemon", device.doReadTarget) == "10 Hz"
+        assert device_harness.run("daemon", device.doReadTarget) == "10"
 
     def test_poller_manual_mapped_callbacks_update_status_and_limits(
         self, device_harness, fake_backend
     ):
         config = analog_moveable_config()
-        config["mapping"] = {"0 Hz": 0, "10 Hz": 10}
+        config["mapping"] = {"0": 0, "10": 10}
         config["targetpv"] = "SIM:MAP.TARGET"
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["writepv"]] = 0
@@ -766,7 +766,7 @@ class TestEpicsManualMappedAnalogMoveable:
         self, device_harness, fake_backend
     ):
         config = analog_moveable_config()
-        config["mapping"] = {"0 Hz": 0, "10 Hz": 10}
+        config["mapping"] = {"0": 0, "10": 10}
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["writepv"]] = 0
         fake_backend.units[config["readpv"]] = "Hz"
@@ -777,7 +777,7 @@ class TestEpicsManualMappedAnalogMoveable:
             shared=config,
         )
 
-        device_harness.run("daemon", daemon_device.start, "10 Hz")
+        device_harness.run("daemon", daemon_device.start, "10")
         assert device_harness.run("daemon", daemon_device.status)[0] == status.BUSY
 
         fake_backend.emit_update(config["readpv"], value=10, units="Hz")
@@ -789,7 +789,7 @@ class TestEpicsManualMappedAnalogMoveable:
 
     def test_poller_keeps_target_in_user_space(self, device_harness, fake_backend):
         config = analog_moveable_config()
-        config["mapping"] = {"0 Hz": 0, "10 Hz": 10}
+        config["mapping"] = {"0": 0, "10": 10}
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["writepv"]] = 0
         fake_backend.units[config["readpv"]] = "Hz"
@@ -800,7 +800,7 @@ class TestEpicsManualMappedAnalogMoveable:
             shared=config,
         )
 
-        device_harness.run("daemon", daemon_device.start, "10 Hz")
+        device_harness.run("daemon", daemon_device.start, "10")
         # The poller sees the raw value on the write channel; the cached
         # target must stay the mapped user value
         fake_backend.emit_update(config["writepv"], value=10)
@@ -809,15 +809,15 @@ class TestEpicsManualMappedAnalogMoveable:
             device_harness.run(
                 "daemon", daemon_device._cache.get, daemon_device, "target"
             )
-            == "10 Hz"
+            == "10"
         )
-        assert device_harness.run("daemon", lambda: daemon_device.target) == "10 Hz"
+        assert device_harness.run("daemon", lambda: daemon_device.target) == "10"
 
     def test_daemon_manual_mapped_read_prefers_cached_value_when_monitor_enabled(
         self, device_harness, fake_backend
     ):
         config = analog_moveable_config()
-        config["mapping"] = {"0 Hz": 0, "10 Hz": 10}
+        config["mapping"] = {"0": 0, "10": 10}
         fake_backend.values[config["readpv"]] = 0
         fake_backend.values[config["writepv"]] = 0
         fake_backend.units[config["readpv"]] = "Hz"
@@ -848,7 +848,7 @@ class TestEpicsManualMappedAnalogMoveable:
             name="manual_mapped",
             shared=config,
         )
-        device_harness.run("daemon", daemon_device.start, "14 Hz")
+        device_harness.run("daemon", daemon_device.start, "14")
         fake_backend.alarms[config["readpv"]] = (status.WARN, "limit warning")
 
         observed_status = device_harness.run("daemon", daemon_device.status)
@@ -893,7 +893,7 @@ class TestEpicsManualMappedAnalogMoveable:
 
             active_session.delay = controlled_delay
             try:
-                return daemon_device.maw("14 Hz"), delay_calls["count"]
+                return daemon_device.maw("14"), delay_calls["count"]
             finally:
                 active_session.delay = original_delay
 
@@ -917,7 +917,7 @@ class TestEpicsManualMappedAnalogMoveable:
             shared=config,
         )
 
-        device_harness.run("daemon", daemon_device.start, "14 Hz")
+        device_harness.run("daemon", daemon_device.start, "14")
         fake_backend.emit_update(config["writepv"], value=14, limits=(0, 40))
         status_after_write = device_harness.run("daemon", daemon_device.status)
         fake_backend.emit_update(config["readpv"], value=14, units="Hz")
@@ -941,7 +941,7 @@ class TestEpicsManualMappedAnalogMoveable:
             name="manual_mapped",
             **config,
         )
-        device_harness.run("daemon", daemon_device.start, "14 Hz")
+        device_harness.run("daemon", daemon_device.start, "14")
 
         def _finish_and_capture_warning():
             messages = []
@@ -966,7 +966,7 @@ class TestEpicsManualMappedAnalogMoveable:
         self, device_harness, fake_backend
     ):
         config = analog_moveable_config()
-        config["mapping"] = {"14 Hz": 14, "28 Hz": 28}
+        config["mapping"] = {"14": 14, "28": 28}
         fake_backend.values[config["readpv"]] = 28
         fake_backend.values[config["writepv"]] = 28
         fake_backend.units[config["readpv"]] = "Hz"
@@ -985,9 +985,9 @@ class TestEpicsManualMappedAnalogMoveable:
             **config,
         )
 
-        device_harness.run("poller", poller_device._setROParam, "target", "28 Hz")
+        device_harness.run("poller", poller_device._setROParam, "target", "28")
 
-        device_harness.run("daemon", daemon_device.start, "14 Hz")
+        device_harness.run("daemon", daemon_device.start, "14")
         fake_backend.emit_update(config["readpv"], value=28, units="Hz")
         st = device_harness.run("daemon", daemon_device.status)
 
