@@ -27,6 +27,8 @@ class XrayPanel(Panel):
         self.devalign_y = options.get("align_y")
         self.devcamera = options.get("camera")
         self.devcollector = options.get("collector")
+        self.devsource_motor = options.get("source_motor")
+        self.devflatpanel_motor = options.get("flatpanel_motor")
 
         # Create and place detector image.
         self.panel = LiveDataPanel(parent, client, options) #can also use MultiLiveDataPanel
@@ -34,23 +36,33 @@ class XrayPanel(Panel):
         self.place_panel.addWidget(self.panel)
 
         client.setup.connect(self.on_client_setup) #keeps running until setup is ready
+        client.cache.connect(self.on_client_cache) #update position info
 
-
-    # Setup commands.
-    def get_info(self):
-        if self._is_live():
-            self.load_data()
 
     def _is_live(self):
         check = self.client.getDeviceList()
-        vmodel = self.client.getDeviceParam(self.devmodel, "value")
         # name returns as a non-empty list if something exists
         if check != []:
             return True
         return False
 
     def on_client_setup(self):
-        self.get_info()
+        if self._is_live():
+            self.load_data()
+
+    def on_client_cache(self, data):
+        (time, key, op, value) = data
+        if "/" not in key:
+            return
+        devname, pname = key.split("/")
+        # if devname != "session":
+        #     print(devname, pname, value)
+
+        # Update position for source motor and flatpanel motor.
+        if devname == self.devsource_motor and pname == "value":
+            self.brsource_motor.setText(str(round(float(value), 2)))
+        elif devname == self.devflatpanel_motor and pname == "value":
+            self.brflatpanel_motor.setText(str(round(float(value), 2)))
 
     def exec_command(self, command):
         self._exec_reqid = self.client.run(command)
@@ -77,6 +89,9 @@ class XrayPanel(Panel):
         vacquire_time = self.client.getDeviceParam(self.devcamera, "acquiretime")
         vacquire_period = self.client.getDeviceParam(self.devcamera, "acquireperiod")
 
+        vsource_motor = self.client.getDeviceParam(self.devsource_motor, "value")
+        vflatpanel_motor = self.client.getDeviceParam(self.devflatpanel_motor, "value")
+
         # Write parameter values.
         self.brmodel.setText(vmodel)
         self.brstatus.setText(vstatus)
@@ -93,8 +108,11 @@ class XrayPanel(Panel):
         self.bracquire_time.setText(str(vacquire_time))
         self.bwacquire_period.setValue(vacquire_period)
         self.bracquire_period.setText(str(vacquire_period))
+        self.bwsource_motor.setValue(vsource_motor)
+        self.bwflatpanel_motor.setValue(vflatpanel_motor)
 
         self.on_bxray_pressed()
+
 
     def on_bxray_pressed(self):
         test = self.client.getDeviceParam(self.devxray, "value")
@@ -158,3 +176,11 @@ class XrayPanel(Panel):
         value = self.bwacquire_period.text()
         self.exec_command(f"set({self.devcamera}, 'acquireperiod', {value})")
         self.bracquire_period.setText(str(value))
+
+    def on_bwsource_motor_editingFinished(self):
+        value = self.bwsource_motor.value()
+        self.exec_command(f"move({self.devsource_motor}, {value})")
+
+    def on_bwflatpanel_motor_editingFinished(self):
+        value = self.bwflatpanel_motor.value()
+        self.exec_command(f"move({self.devflatpanel_motor}, {value})")
