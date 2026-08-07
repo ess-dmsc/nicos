@@ -68,7 +68,7 @@ DISCONNECTED_STATE = (status.ERROR, "Disconnected")
 INIT_MESSAGE = "Initializing LiveDataCollector…"
 
 
-class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
+class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
     """Channel for a particular workflow/source/job/output or a derived device.
 
     Forwards DA00 'signal' arrays to NICOS live data.
@@ -132,7 +132,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         "unit": Override(default="events", settable=False, mandatory=False),
         "fmtstr": Override(default="%d"),
         "pollinterval": Override(default=None, userparam=False, settable=False),
-        "mapping": Override(settable=True),
+        # "mapping": Override(settable=True),
     }
 
     arraydesc = ArrayDesc("", shape=(), dtype=np.int32)
@@ -182,8 +182,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 device_name=self._device_selector_obj.device_name, workflow_id=value
             )
 
-    def doWriteMapping(self, mapping):
-        self.valuetype = oneof(*sorted(mapping, key=num_sort))
+    # def doWriteMapping(self, mapping):
+    #     self.valuetype = oneof(*sorted(mapping, key=num_sort))
 
     # def doReadMapping(self):
     #     if not self._collector:
@@ -242,10 +242,10 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             return
 
         # moveable path
-        target_value = self.mapping.get(target, "")
-        if not target_value:
-            raise ValueError(f"Unknown selection '{target}' in mapping")
-        self.selector = target_value
+        # target_value = self.mapping.get(target, "")
+        # if not target_value:
+        #     raise ValueError(f"Unknown selection '{target}' in mapping")
+        # self.selector = target_value
 
     def _update_status(self, new_status, message):
         self.curstatus = (new_status, message)
