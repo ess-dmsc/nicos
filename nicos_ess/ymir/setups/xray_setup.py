@@ -139,4 +139,22 @@ devices = dict(
         readpv="{}AlignStop-S".format(pv_root),
         writepv="{}AlignStop-S".format(pv_root),
     ),
+
+    # Virtual motors (to be replaced with real ones)
+    source_motor=device(
+            "nicos.devices.generic.virtual.VirtualMotor",
+            description="Source Motor",
+            abslimits=(0, 100),
+            curvalue=0,
+            unit="mm",
+            speed=5.0,
+        ),
+    flatpanel_motor=device(
+        "nicos.devices.generic.virtual.VirtualMotor",
+        description="Detector/Flat Panel Motor",
+        abslimits=(0, 100),
+        curvalue=0,
+        unit="mm",
+        speed=5.0,
+    )
 )
