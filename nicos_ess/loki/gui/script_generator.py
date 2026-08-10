@@ -3,7 +3,7 @@
 from enum import Enum
 
 
-INDENT = "    "
+INDENT = " " * 4
 
 
 class TransOrder(Enum):
