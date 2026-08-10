@@ -29,7 +29,7 @@ import os
 import time
 from math import gcd
 
-from numpy import arctan2, array, asmatrix, cos, cross, delete, linspace, mat, sin, sqrt
+from numpy import arctan2, array, asmatrix, cos, cross, delete, linspace, sin, sqrt
 
 from nicos.core import ComputationError
 from nicos.devices.tas.cell import CellBase
