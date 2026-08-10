@@ -27,6 +27,7 @@ Class for magnets powered by unipolar power supplies.
 
 import math
 
+import numpy as np
 from scipy.optimize import fsolve
 
 from nicos import session
@@ -100,9 +101,11 @@ class CalibratedMagnet(HasLimits, Moveable):
                 "data!  Need exactly 5 coefficients!"
             )
         return (
-            v[0] * current
-            + v[1] * math.erf(v[2] * current)
-            + v[3] * math.atan(v[4] * current)
+            np.asarray(v[0]).item() * current
+            + np.asarray(v[1]).item()
+            * math.erf(np.asarray(v[2]).item() * np.asarray(current).item())
+            + np.asarray(v[3]).item()
+            * math.atan(np.asarray(v[4]).item() * np.asarray(current).item())
         )
 
     def _field2current(self, field):
