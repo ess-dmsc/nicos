@@ -65,7 +65,7 @@ def _fixType(dev, args, mkpos):
             for l in args[0]:
                 if len(l) != len(args[0][0]):
                     raise UsageError(
-                        "all position lists must have the same " "number of entries"
+                        "all position lists must have the same number of entries"
                     )
             values = list(zip(*args[0]))
             restargs = args[1:]
@@ -81,7 +81,7 @@ def _fixType(dev, args, mkpos):
             ):
                 raise UsageError("start and step must be lists")
             if not len(dev) == len(args[0]) == len(args[1]):
-                raise UsageError("start and step lists must be of equal " "length")
+                raise UsageError("start and step lists must be of equal length")
             values = mkpos(args[0], args[1], args[2])
             restargs = args[3:]
     else:
@@ -125,7 +125,7 @@ def _handleScanArgs(args, kwargs, scaninfo):
             if isinstance(value, list):
                 if multistep and len(value) != len(multistep[-1][1]):
                     raise UsageError(
-                        "all multi-step arguments must have the " "same length"
+                        "all multi-step arguments must have the same length"
                     )
                 multistep.append((session.devices[key], value))
             else:
@@ -275,7 +275,7 @@ def gridscan(dev, *args, **kwargs):
         if isinstance(numpoints, (list, tuple)):
             if len(starts) != len(numpoints):
                 raise UsageError(
-                    "start, steps, and numpoint arguments must " "have the same length"
+                    "start, steps, and numpoint arguments must have the same length"
                 )
             scanvals = [
                 [start + j * step for j in range(numpoint)]
@@ -437,7 +437,7 @@ def sweep(dev, start, end, *args, **kwargs):
 
 
 @usercommand
-@helparglist("dev1, start1, step1, numpoints1, dev2, start2, step2, " "numpoints2, ...")
+@helparglist("dev1, start1, step1, numpoints1, dev2, start2, step2, numpoints2, ...")
 @spmsyntax(Dev(Moveable), Bare, Bare, Bare, Dev(Moveable), Bare, Bare, Bare)
 def twodscan(
     dev1, start1, step1, numpoints1, dev2, start2, step2, numpoints2, *args, **kwargs
@@ -458,7 +458,7 @@ def twodscan(
         except NicosError as err:
             if isinstance(err, CONTINUE_EXCEPTIONS):
                 session.log.warning(
-                    "Positioning problem of %s at %s, " "scanning %s anyway",
+                    "Positioning problem of %s at %s, scanning %s anyway",
                     dev1,
                     dev1.format(dev1value, unit=True),
                     dev2,
@@ -707,7 +707,7 @@ def appendscan(numpoints=5, stepsize=None):
     be a list with the same number of elements.
     """
     if numpoints == 0:
-        raise UsageError("number of points must be either positive or " "negative")
+        raise UsageError("number of points must be either positive or negative")
     direction = numpoints / abs(numpoints)
     dslist = session.experiment.data.getLastScans()
     if not dslist:
@@ -786,7 +786,7 @@ def appendscan(numpoints=5, stepsize=None):
         else:
             # we can't produce new values for this device
             raise NicosError(
-                "cannot append to this scan; some devices " "have nonnumeric values"
+                "cannot append to this scan; some devices have nonnumeric values"
             )
 
     numpoints = abs(numpoints)
