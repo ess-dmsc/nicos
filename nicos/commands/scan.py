@@ -281,7 +281,7 @@ def gridscan(dev, *args, **kwargs):
                 [start + j * step for j in range(numpoint)]
                 for start, step, numpoint in zip(starts, steps, numpoints)
             ]
-            values = meshgrid(*scanvals)
+            values = list(meshgrid(*scanvals))
             for i, grid in enumerate(values):
                 values[i] = list(grid.reshape(grid.size))
             return [tuple(v[i] for v in values) for i in range(len(values[0]))]
