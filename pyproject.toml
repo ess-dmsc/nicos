@@ -45,19 +45,17 @@ pattern = "default-unprefixed"
 
 [tool.hatch.build]
 exclude = [
-    "/integration_test/runtime",
-    "/integration_test/runtime/**",
     "**/__pycache__",
     "**/__pycache__/**",
     "**/*.py[cod]",
 ]
 
 [tool.hatch.build.targets.sdist]
-only-include = ["nicos", "integration_test"]
+only-include = ["nicos"]
 
 # Configure wheel options. See https://hatch.pypa.io/latest/plugins/builder/wheel/#options
 [tool.hatch.build.targets.wheel]
-packages = ["nicos", "integration_test"]
+packages = ["nicos"]
 
 # to install into the top level of the venv:
 # could be used to load via `sys.prefix` + path
