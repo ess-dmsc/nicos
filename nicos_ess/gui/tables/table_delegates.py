@@ -2,16 +2,16 @@
 
 from nicos.guisupport.qt import (
     QAbstractSpinBox,
+    QApplication,
     QComboBox,
     QDoubleSpinBox,
     QItemDelegate,
-    Qt,
-    QStyledItemDelegate,
-    QStyleOptionButton,
-    QStyle,
-    QApplication,
     QPoint,
     QRect,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionButton,
+    Qt,
 )
 
 
@@ -25,11 +25,15 @@ class LimitsDelegate(QItemDelegate):
         return self._create_widget(parent)
 
     def _create_widget(self, parent):
+        # Use Spinbox as it allows us to set limits and ensures the value is
+        # numeric. However, disable incrementing/decrementing the value as we
+        # don't need that.
         spinbox = QDoubleSpinBox(parent)
         spinbox.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
         spinbox.setMinimum(self.limits[0])
         spinbox.setMaximum(self.limits[1])
         spinbox.setDecimals(self.precision)
+        spinbox.setSingleStep(0)
         return spinbox
 
 
