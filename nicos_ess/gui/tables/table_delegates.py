@@ -55,7 +55,7 @@ class ComboBoxDelegate(QItemDelegate):
 
 class CheckboxDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
-        super(CheckboxDelegate, self).__init__(parent)
+        super().__init__(parent)
         self.model = None
 
     def paint(self, painter, option, index):
@@ -88,19 +88,19 @@ class CheckboxDelegate(QStyledItemDelegate):
         if (
             event.type() == event.Type.MouseButtonPress
             or event.type() == event.Type.MouseButtonRelease
-        ):
-            if event.button() != Qt.MouseButton.LeftButton:
-                return False
+        ) and event.button() != Qt.MouseButton.LeftButton:
+            return False
 
         if event.type() == event.Type.MouseButtonDblClick:
             return False
 
-        if event.type() == event.Type.MouseButtonRelease:
-            if self.getCheckBoxRect(option).contains(event.pos()):
-                checked = self.model.data(index, Qt.ItemDataRole.EditRole)
-                checked = checked == "False" or checked is False or checked == ""
-                self.model.setData(index, checked, Qt.ItemDataRole.EditRole)
-                return True
+        if event.type() == event.Type.MouseButtonRelease and self.getCheckBoxRect(
+            option
+        ).contains(event.pos()):
+            checked = self.model.data(index, Qt.ItemDataRole.EditRole)
+            checked = checked == "False" or checked is False or checked == ""
+            self.model.setData(index, checked, Qt.ItemDataRole.EditRole)
+            return True
         return False
 
     def getCheckBoxRect(self, option):
