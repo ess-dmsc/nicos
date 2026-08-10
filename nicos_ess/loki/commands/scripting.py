@@ -1,7 +1,7 @@
 from nicos import session
 from nicos.commands import usercommand
-from nicos.commands.measure import count, SetDetectors
 from nicos.commands.device import maw
+from nicos.commands.measure import SetDetectors, count
 from nicos_ess.loki.commands.general import start_run, stop_run
 
 __all__ = ["do_trans", "do_sans", "do_sans_trans"]
