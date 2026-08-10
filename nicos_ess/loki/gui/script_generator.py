@@ -2,6 +2,8 @@
 
 from enum import Enum
 
+INDENT = " " * 4
+
 
 class TransOrder(Enum):
     TRANSFIRST = 0
@@ -46,7 +48,7 @@ class Script:
         return self._get_command(row_values.get("post-command")) + "\n"
 
     def _define_var_for_positioner(self):
-        return f"positioner = sample_changer"
+        return "positioner = sample_changer"
 
 
 class TransFirst(Script):
@@ -64,7 +66,7 @@ class TransFirst(Script):
                 for row_values in table_data:
                     script += self._start_sample(row_values)
                     script += self._start_nexus(row_values)
-                    script += f"\t{
+                    script += f"{INDENT}{
                         self._do_trans(
                             row_values['trans_duration'], trans_duration_type
                         )
@@ -74,7 +76,7 @@ class TransFirst(Script):
                 for row_values in table_data:
                     script += self._start_sample(row_values)
                     script += self._start_nexus(row_values)
-                    script += f"\t{
+                    script += f"{INDENT}{
                         self._do_sans(row_values['sans_duration'], sans_duration_type)
                     }"
                     script += self._finish_sample(row_values)
@@ -96,7 +98,7 @@ class SansFirst(Script):
                 for row_values in table_data:
                     script += self._start_sample(row_values)
                     script += self._start_nexus(row_values)
-                    script += f"\t{
+                    script += f"{INDENT}{
                         self._do_sans(row_values['sans_duration'], sans_duration_type)
                     }"
                     script += self._finish_sample(row_values)
@@ -104,7 +106,7 @@ class SansFirst(Script):
                 for row_values in table_data:
                     script += self._start_sample(row_values)
                     script += self._start_nexus(row_values)
-                    script += f"\t{
+                    script += f"{INDENT}{
                         self._do_trans(
                             row_values['trans_duration'], trans_duration_type
                         )
@@ -128,13 +130,13 @@ class TransThenSans(Script):
                 script += self._start_sample(row_values)
                 script += self._start_nexus(row_values)
                 if i < trans_times:
-                    script += f"\t{
+                    script += f"{INDENT}{
                         self._do_trans(
                             row_values['trans_duration'], trans_duration_type
                         )
                     }"
                 if i < sans_times:
-                    script += f"\t{
+                    script += f"{INDENT}{
                         self._do_sans(row_values['trans_duration'], sans_duration_type)
                     }"
                 script += self._finish_sample(row_values)
@@ -156,11 +158,11 @@ class SansThenTrans(Script):
                 script += self._start_sample(row_values)
                 script += self._start_nexus(row_values)
                 if i < sans_times:
-                    script += f"\t{
+                    script += f"{INDENT}{
                         self._do_sans(row_values['sans_duration'], sans_duration_type)
                     }"
                 if i < trans_times:
-                    script += f"\t{
+                    script += f"{INDENT}{
                         self._do_trans(
                             row_values['trans_duration'], trans_duration_type
                         )
@@ -183,7 +185,7 @@ class Simultaneous(Script):
             for row_values in table_data:
                 script += self._start_sample(row_values)
                 script += self._start_nexus(row_values)
-                script += f"\t{
+                script += f"{INDENT}{
                     self._do_simultaneous(
                         row_values['sans_duration'], sans_duration_type
                     )
