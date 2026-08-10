@@ -29,8 +29,14 @@ from nicos.devices.generic import (
     ImageChannelMixin,
     ManualSwitch,
 )
-from nicos.utils import byteBuffer, createThread
+from nicos.utils import byteBuffer
 from nicos_ess.devices.epics.pva import EpicsAnalogMoveable, EpicsMappedMoveable
+from nicos_ess.devices.epics.pva.epics_common import (
+    EpicsDeviceBase,
+    command_channel,
+    readback_channel,
+    status_channel,
+)
 
 deserialiser_by_schema = {
     "ADAr": deserialise_ADAr,
@@ -173,7 +179,7 @@ class ImageType(ManualSwitch):
         self.move(INVALID)
 
 
-class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
+class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
     parameters = {
         "pv_root": Param("Area detector EPICS prefix", type=pvname, mandatory=True),
         "image_pv": Param("Image PV name", type=pvname, mandatory=True),
@@ -182,6 +188,24 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
     arraydesc = ArrayDesc("", shape=(10, 10), dtype=numpy.uint32)
     _last_update = 0
     _plot_update_delay = 2.0
+
+    _default_pv_prefix_attr = "pv_root"
+    _primary_channel = "readpv"
+    _epics_channels = {
+        "readpv": readback_channel(
+            "NumImagesCounter_RBV", cache_key="value", primary=True
+        ),
+        "max_size_x": readback_channel("MaxSizeX_RBV"),
+        "max_size_y": readback_channel("MaxSizeY_RBV"),
+        "data_type": readback_channel("DataType_RBV"),
+        "detector_state": readback_channel("DetectorState_RBV"),
+        "detector_state.STAT": status_channel("DetectorState_RBV.STAT"),
+        "detector_state.SEVR": status_channel("DetectorState_RBV.SEVR"),
+        "array_rate_rbv": readback_channel("ArrayRate_RBV"),
+        "acquire": command_channel("Acquire"),
+        "acquire_status": status_channel("AcquireBusy"),
+        "image": readback_channel("", pv_prefix_attr="image_pv"),
+    }
 
     def _init_area_detector_state(self):
         self._image_processing_lock = threading.Lock()
@@ -194,13 +218,10 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
         self._init_area_detector_state()
         if mode == SIMULATION:
             return
-
-        self._record_fields = {}
-        self._set_custom_record_fields()
-        EpicsDevice.doPreinit(self, mode)
+        EpicsDeviceBase.doPreinit(self, mode)
 
     def doInit(self, mode):
-        EpicsDevice.doInit(self, mode)
+        EpicsDeviceBase.doInit(self, mode)
         if mode != SIMULATION:
             self._refresh_array_metadata()
 
@@ -212,30 +233,6 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
     def _update_status(self, new_status, message):
         self._current_status = new_status, message
         self._cache.put(self._name, "status", self._current_status, time.time())
-
-    def _set_custom_record_fields(self):
-        self._record_fields["max_size_x"] = "MaxSizeX_RBV"
-        self._record_fields["max_size_y"] = "MaxSizeY_RBV"
-        self._record_fields["data_type"] = "DataType_RBV"
-        self._record_fields["readpv"] = "NumImagesCounter_RBV"
-        self._record_fields["detector_state"] = "DetectorState_RBV"
-        self._record_fields["detector_state.STAT"] = "DetectorState_RBV.STAT"
-        self._record_fields["detector_state.SEVR"] = "DetectorState_RBV.SEVR"
-        self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
-        self._record_fields["acquire"] = "Acquire"
-        self._record_fields["acquire_status"] = "AcquireBusy"
-        self._record_fields["image_pv"] = self.image_pv
-
-    def _get_pv_parameters(self):
-        return set(self._record_fields) | set(["image_pv"])
-
-    def _get_pv_name(self, pvparam):
-        pv_name = self._record_fields.get(pvparam)
-        if "image_pv" == pvparam:
-            return self.image_pv
-        if pv_name:
-            return self.pv_root + pv_name
-        return getattr(self, pvparam)
 
     def valueInfo(self):
         return (Value(self.name, fmtstr="%d"),)
@@ -257,7 +254,9 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
         return self.arraydesc
 
     def _get_array_shape(self):
-        return self._get_pv("max_size_y"), self._get_pv("max_size_x")
+        return self._epics.get_channel_value(
+            "max_size_y"
+        ), self._epics.get_channel_value("max_size_x")
 
     def _get_array_dtype(self):
         return numpy.uint32
@@ -265,9 +264,10 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
     def status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        if param == "readpv" and value != 0:
-            if time.monotonic() >= self._last_update + self._plot_update_delay:
-                _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
+        # issue with codespell here... Does this do anything?
+        # if param == "readpv" and value != 0:
+        #     if time.monotonic() >= self._last_update + self._plot_update_delay:
+        #         _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
 
         EpicsDevice.status_change_callback(
             self, name, param, value, units, limits, severity, message, **kwargs
@@ -275,7 +275,9 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
 
     def get_image(self):
         arraydesc = self._refresh_array_metadata()
-        dataarray = numpy.asarray(self._get_pv("image_pv")).reshape(arraydesc.shape)
+        dataarray = numpy.asarray(self._epics.get_channel_value("image")).reshape(
+            arraydesc.shape
+        )
         self.putResult(LIVE, dataarray, time.time())
         self._last_update = time.monotonic()
 
@@ -307,12 +309,12 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
                 session.updateLiveData(parameters, databuffer, labelbuffers)
 
     def doStatus(self, maxage=0):
-        detector_state = self._get_pv("acquire_status", True)
+        detector_state = self._epics.get_channel_value("acquire_status", True)
         alarm_status = STAT_TO_STATUS.get(
-            self._get_pv("detector_state.STAT"), status.UNKNOWN
+            self._epics.get_channel_value("detector_state.STAT"), status.UNKNOWN
         )
         alarm_severity = SEVERITY_TO_STATUS.get(
-            self._get_pv("detector_state.SEVR"), status.UNKNOWN
+            self._epics.get_channel_value("detector_state.SEVR"), status.UNKNOWN
         )
         if detector_state != "Done" and alarm_severity < status.BUSY:
             alarm_severity = status.BUSY
@@ -330,16 +332,16 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
         self.doAcquire()
 
     def doAcquire(self):
-        self._put_pv("acquire", 1)
+        self._epics.put_channel_value("acquire", 1)
 
     def doFinish(self):
         self.doStop()
 
     def doStop(self):
-        self._put_pv("acquire", 0)
+        self._epics.put_channel_value("acquire", 0)
 
     def doRead(self, maxage=0):
-        return self._get_pv("readpv")
+        return self._epics.get_channel_value("readpv")
 
     def doReadArray(self, quality):
         self._refresh_array_metadata()
@@ -445,7 +447,7 @@ class TimepixDetector(AreaDetector):
             # already done? exit immediately
             current_value = self._get_pv(
                 pv_name,
-                as_string=False if isinstance(expected_value, (int, float)) else True,
+                as_string=not isinstance(expected_value, (int, float)),
             )
             if precision is not None and isinstance(current_value, (int, float)):
                 if abs(current_value - expected_value) <= precision:
@@ -480,7 +482,8 @@ class TimepixDetector(AreaDetector):
         # wait until the IOC has received a trigger
         self._wait_until("ts_ready", 1)
 
-        # we then need to set the path_toAdd to the same filename for empir to look for the new folder
+        # we then need to set the path_toAdd to the same filename
+        # for empir to look for the new folder
         self._put_pv("path_to_add", foldername)
         # wait until EMPIR has confirmed it has queued the new folder for processing
         self._wait_until("path_last_added", foldername)
@@ -773,7 +776,9 @@ class OrcaFlash4(AreaDetector):
             "Number of triggers per image.", settable=True, volatile=True
         ),
         "triggeractive": Param(
-            "Trigger active of the camera. While in sync_readout mode, the exposure time is controlled via numtriggers NOT acquiretime and acquireperiod.",
+            "Trigger active of the camera. While in sync_readout mode, "
+            "the exposure time is controlled via numtriggers "
+            "NOT acquiretime and acquireperiod.",
             type=oneof("edge", "level", "sync_readout"),
             settable=True,
             volatile=True,
@@ -887,11 +892,11 @@ class OrcaFlash4(AreaDetector):
 
     def _get_pv_name(self, pvparam):
         pv_name = self._record_fields.get(pvparam)
-        if "image_pv" == pvparam:
+        if pvparam == "image_pv":
             return self.image_pv
-        if "topicpv" == pvparam:
+        if pvparam == "topicpv":
             return self.topicpv
-        if "sourcepv" == pvparam:
+        if pvparam == "sourcepv":
             return self.sourcepv
         if pv_name:
             return self.pv_root + pv_name
@@ -916,7 +921,7 @@ class OrcaFlash4(AreaDetector):
         if detector_state != "Done" and alarm_severity < status.BUSY:
             alarm_severity = status.BUSY
         self._write_alarm_to_log(detector_state, alarm_severity, alarm_status)
-        return alarm_severity, "%s, image mode is %s" % (detector_state, self.imagemode)
+        return alarm_severity, f"{detector_state}, image mode is {self.imagemode}"
 
     def _write_alarm_to_log(self, pv_value, severity, stat):
         msg_format = "%s (%s)"
