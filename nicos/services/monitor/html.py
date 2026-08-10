@@ -32,8 +32,8 @@ from threading import RLock
 from time import sleep
 from time import time as currenttime
 
+import lttbc
 import numpy
-from lttb import lttb
 
 from nicos.core import Param
 from nicos.core.constants import NOT_AVAILABLE
@@ -263,7 +263,7 @@ class Plot:
     def maybeDownsamplePlotdata(self, data):
         if len(data[0]) > self.width:
             temp = numpy.array(data).T
-            down = lttb.downsample(temp[temp[:, 0].argsort()], n_out=self.width)
+            down = lttbc.downsample(temp[temp[:, 0].argsort()], n_out=self.width)
             data = down[:, 0], down[:, 1]
         return data
 
