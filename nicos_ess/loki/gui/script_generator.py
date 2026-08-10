@@ -76,7 +76,7 @@ class TransFirst(Script):
                 for row_values in table_data:
                     script += self._start_sample(row_values)
                     script += self._start_nexus(row_values)
-                    script += f"    {
+                    script += f"{INDENT}{
                         self._do_sans(row_values['sans_duration'], sans_duration_type)
                     }"
                     script += self._finish_sample(row_values)
