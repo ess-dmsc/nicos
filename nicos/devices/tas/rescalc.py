@@ -30,6 +30,7 @@ neutrons.instruments.tas.tasres from the neutrons Python package, compiled by
 Marc Janoschek.
 """
 
+import numpy as np
 from numpy import (
     absolute,
     arange,
@@ -908,6 +909,11 @@ Resolution Info:
         # calculates sigmas in system h,k,l (r.l.u) en (meV)
         # print self.M
         [E, V] = eig(self.M)
+        # In NumPy versions >=2.5.0 eig always returns complex values. This
+        # ensures the behavior of previous versions:
+        if np.all(E.imag == 0):  # this is what NumPy prior v2.5 used to do
+            E = E.real
+            V = V.real
 
         # print 'Eigenvalues'
         # print E
