@@ -1967,19 +1967,17 @@ wheels = [
 
 [[package]]
 name = "pyqt6-qscintilla"
-version = "2.14.1"
+version = "2.13.4"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
 dependencies = [
     { name = "pyqt6" },
     { name = "pyqt6-sip" },
 ]
-sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/e8/06/799c04a51f6cc2111f0cfb090ed4938fc044c5c12d1d9671280e235f2f2e/PyQt6_QScintilla-2.14.1.tar.gz", hash = "sha256:8849a4a9847bbf3698d0c1cf47e6d08552a49a66928543a73f10d6dcba617d10" }
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/74/74/cb2f0d5e9fc0931741e0ffb7325f0b2fad88add236e8380fd1353d7cd6a5/PyQt6_QScintilla-2.13.4.tar.gz", hash = "sha256:e6b2bd722944d885fb0bc653208c55dfd47264751081d597f8327f85c30817c8" }
 wheels = [
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/ff/1a/482b5370d1f198dc70f4cfc0057343b9043dc161078dc150b33e34f4b4c4/PyQt6_QScintilla-2.14.1-cp37-abi3-macosx_10_14_universal2.whl", hash = "sha256:a9b5939bd7160bbd095bc06312f2a1289a344b7c4f89633ea7657207212c7d56" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/25/89/3f5a0823b891d81a61d05a7b79d08e4c9dad0ae66c119564fe790ff6bb73/PyQt6_QScintilla-2.14.1-cp37-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:2b16b3ca0c8f6cf4772a85a0a5b030d2a7ad8128e6f5a3fae6d8a641b04f7e41" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/5a/89/dc01e93261a520d25c8ee214b483cf3c9e34d6b9ada4530382eb1dc0d8f7/PyQt6_QScintilla-2.14.1-cp37-abi3-win_amd64.whl", hash = "sha256:b22e93cd70b35cb83dc4177d14c670a02d92d9ea51ee6759bb97d81679c39af2" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/f5/8f/1c9edcd3c4c94d976f3c8d85cfc5ff7b18b01e17a16def29e31524d2f69f/PyQt6_QScintilla-2.14.1-cp38-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:1395515e1dd24264e3db324ad19a8367fa3e485c8616932a2b32517b51a4d2d2" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/5f/d2/85290c984b9b5eff836db12b729d1237ed2b2cb2f2d92608bb9dc9767124/PyQt6_QScintilla-2.14.1-cp39-abi3-win_arm64.whl", hash = "sha256:8ac7f3f61b76a73d60d7837aa1233f7147b5179fbc426e977a3ac21294a3dc48" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/0e/28/37550e322d984f991c1b1c67426314d56e6a974e9237a75912697127dfe0/PyQt6_QScintilla-2.13.4-cp37-abi3-macosx_10_14_universal2.whl", hash = "sha256:17785556ae817275f12f2563078afc42499d87ea52fa5e7825890240903d1ba3" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/e8/bb/257d88b80e264cc674936eb64b5d9d99102e34e08b8c344436604246f476/PyQt6_QScintilla-2.13.4-cp37-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:32608d65378ef20fba11e209fd60f94e030ce49719e298b9aa0f7b6f15df7b82" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/06/d6/4b1cb75f1fb277b1bdb931b263a9c99b5c78287d711400be87fe21ad4ab8/PyQt6_QScintilla-2.13.4-cp37-abi3-win_amd64.whl", hash = "sha256:b1c13639e623d2ee855078a1243152a59960e23cf7e21d09c944e9e1c16498ee" },
 ]
 
 [[package]]
@@ -2281,19 +2279,18 @@ wheels = [
 
 [[package]]
 name = "qscintilla"
-version = "2.14.1"
+version = "2.13.4"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
 dependencies = [
     { name = "pyqt5" },
     { name = "pyqt5-sip" },
 ]
-sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/a9/f6/a7aa4b495dcee4c521b87205de9363fb62ee5fdc8eab91d4ddb97257c85b/QScintilla-2.14.1.tar.gz", hash = "sha256:2c120a56d60363ff4bc73b8a763dc69fae5f84681c24efcb03064c7df103052b" }
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/cb/e1/1f4cac5ce5f98ca7bfcf2f8aa44b8cb9d842f92143a5f53f4892cb6d3bc1/QScintilla-2.13.4.tar.gz", hash = "sha256:3568da2f029a2d5d2f40603d7cc6869ecffc9bdd4a53a805adb0cec6cb734150" }
 wheels = [
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/6d/4f/5c6aa437d7ff3ef9e31eda5bd5cb174acd0e5a35186869af0bd0a845b8a8/QScintilla-2.14.1-cp37-abi3-macosx_10_13_x86_64.whl", hash = "sha256:31fa0ddd4d61908c903e8c53783338d4d2e312cb2bccdc544fb4c41a8a0580f2" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/d1/eb/558f878eef98cc1c5a3ec4df91d1bc6519027ade59fc519b7553a0133b67/QScintilla-2.14.1-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:9be3cfe39756d94aacdecf8ab8964eaac7223f36eddff62bc74df2128266510f" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/c0/1a/2ef3561b60a3fd59ba2da59c32cbe9d7de576cbd8ce7d39b4c2519685970/QScintilla-2.14.1-cp37-abi3-manylinux_2_17_x86_64.whl", hash = "sha256:8dedbfc646669ad7a380497abddcfe1dd8ea08831cdd07ce89538eb75123ceeb" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/7d/8f/9a520c1e17d26f937e4032197eb644abbc80d4ae32ad016edc0efd78f722/QScintilla-2.14.1-cp37-abi3-win32.whl", hash = "sha256:ba3d7ffe5a8610674e9f11c4e69197763bb968e73f06397d4c64d08ffcd5a15e" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/47/36/cb3ffe322e0c1400316999983d5a175a3f738132c8bf7129e030f87df836/QScintilla-2.14.1-cp37-abi3-win_amd64.whl", hash = "sha256:3a0deb6d00251643fbbd0bfd6e7f876477c179313a5fc2a7d7050a1c21b595b0" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/13/4b/5e310a7b1417b5f93578b0074e95f2e2088c0e410bce782b2faef67a2867/QScintilla-2.13.4-cp37-abi3-macosx_10_13_x86_64.whl", hash = "sha256:81654c9c8be9a01b230538693ed3636869c1d786fbfe8fe3d6f764360f813474" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/7d/2d/7907dc8b1ac7cde1dc6c29a2fae6d808adc42dba68db00343987de07409b/QScintilla-2.13.4-cp37-abi3-manylinux_2_17_x86_64.whl", hash = "sha256:dd471cda37a02de2a94701172c8e509df7174de9338bfd526c6359d73181e6ef" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/d5/33/3c87c2aaa154442b7b793c5ccde3b96882d766e0f890aed37af2f3f4e6aa/QScintilla-2.13.4-cp37-abi3-win32.whl", hash = "sha256:2963635e456295b7cf0a28eb7fd692a055ec33f89a4897dea3ba3897d71aa309" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/49/15/bb27b1af90e296e947b7451a4b8c5ca9aeea3ea449f44d1cd21e816f2b3a/QScintilla-2.13.4-cp37-abi3-win_amd64.whl", hash = "sha256:a518897e330aa05dd4b2c6ab80351eaafaab3bdd74ae75c84cbea840e7a097a2" },
 ]
 
 [[package]]
