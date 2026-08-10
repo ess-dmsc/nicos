@@ -702,9 +702,7 @@ class LiveDataPanel(PlotPanel):
         try:
             descriptions = params["datadescs"]
         except KeyError:
-            self.log.warning(
-                'Livedata with tag "Live" without ' '"datadescs" provided.'
-            )
+            self.log.warning('Livedata with tag "Live" without "datadescs" provided.')
             return
 
         # pylint: disable=len-as-condition
@@ -839,7 +837,7 @@ class LiveDataPanel(PlotPanel):
             return
 
         # determine 1D array size
-        arraysize = numpy.product(shape)
+        arraysize = numpy.prod(shape)
 
         # check and split the input array `entry` into `count` arrays of size
         # `arraysize`
