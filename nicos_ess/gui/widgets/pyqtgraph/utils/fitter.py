@@ -1,8 +1,10 @@
 import warnings
+from enum import Enum
 
 import numpy as np
-from enum import Enum
+from numpy.exceptions import RankWarning
 from scipy.optimize import curve_fit
+
 from nicos.guisupport.qt import QObject
 
 
@@ -107,7 +109,7 @@ class Fitter1D(QObject):
             warnings.filterwarnings("error")
             try:
                 p = np.polyfit(self.x_data, self.y_data, 2)
-            except np.RankWarning:
+            except RankWarning:
                 print("Data not suitable for quadratic fit")
                 return None
 
