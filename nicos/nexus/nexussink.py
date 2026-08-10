@@ -40,10 +40,10 @@ class NexusFile(DataFileBase):
     def __init__(self, shortpath, filepath):
         DataFileBase.__init__(self, shortpath, filepath)
         with H5File(filepath, "w") as h5file:
-            h5file.attrs["file_name"] = numpy.string_(filepath)
-            h5file.attrs["HDF5_Version"] = numpy.string_(hdf5_version)
+            h5file.attrs["file_name"] = numpy.bytes_(filepath)
+            h5file.attrs["HDF5_Version"] = numpy.bytes_(hdf5_version)
             tf = NXTime()
-            h5file.attrs["file_time"] = numpy.string_(tf.formatTime())
+            h5file.attrs["file_time"] = numpy.bytes_(tf.formatTime())
 
 
 class NexusTemplateProvider:
@@ -139,7 +139,7 @@ class NexusSinkHandler(DataSinkHandler):
                     continue
                 [nxname, nxclass] = key.rsplit(":", 1)
                 nxgroup = h5obj.create_group(nxname)
-                nxgroup.attrs["NX_class"] = numpy.string_(nxclass)
+                nxgroup.attrs["NX_class"] = numpy.bytes_(nxclass)
                 self.create(val, nxgroup)
             elif isinstance(val, NexusElementBase):
                 val.create(key, h5obj, self)
@@ -212,7 +212,7 @@ class NexusSinkHandler(DataSinkHandler):
                 self.resultValues(self.template, h5obj, results)
         except BlockingIOError:
             session.log.warning(
-                "Other process is accessing NeXus file " "while saving results"
+                "Other process is accessing NeXus file while saving results"
             )
 
     def addSubset(self, subset):
@@ -290,7 +290,7 @@ class NexusSink(FileSink):
 
     parameters = {
         "templateclass": Param(
-            "Python class implementing " "NexusTemplateProvider",
+            "Python class implementing NexusTemplateProvider",
             type=str,
             mandatory=True,
         ),
