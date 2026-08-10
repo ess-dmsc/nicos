@@ -18,7 +18,7 @@ class IntegralNormaliser:
         if not np.any(y):
             # if all entries are zero return the original array
             return y
-        integ = np.trapz(y, x)
+        integ = np.trapezoid(y, x)
         if integ == 0:
             # Don't normalize if area under curve is zero.
             return y
