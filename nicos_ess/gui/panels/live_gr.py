@@ -822,7 +822,7 @@ class LiveDataPanel(PlotPanel):
             return
 
         # determine 1D array size
-        arraysize = numpy.product(shape)
+        arraysize = numpy.prod(shape)
 
         # check and split the input array `entry` into `count` arrays of size
         # `arraysize`
@@ -1205,7 +1205,7 @@ def processDataArrays(index, params, data):
     shape = datadesc["shape"]
 
     # determine 1D array size
-    arraysize = numpy.product(shape)
+    arraysize = numpy.prod(shape)
     arrays = numpy.split(data[: count * arraysize], count)
 
     # reshape every array in the list
