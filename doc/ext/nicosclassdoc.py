@@ -90,7 +90,7 @@ def new_handle_signature(self, sig, signode):
     ret = orig_handle_signature(self, sig, signode)
     for node in signode.children[:]:
         if node.tagname == "desc_addname" and node.astext().startswith(
-            "nicos.commands."
+            ("nicos.commands.", "nicos_ess.commands.")
         ):
             signode.remove(node)
     return ret
@@ -184,6 +184,9 @@ class NicosClassDocumenter(ClassDocumenter):
                 not attach.description.endswith(".") and "." or ""
             )
             self.add_line(".. parameter:: %s" % adev, "<autodoc>")
+            if adev in getattr(self.object, "parameters", {}):
+                # same name is also a parameter; avoid a duplicate xref target
+                self.add_line("   :no-index:", "<autodoc>")
             self.add_line("", "<autodoc>")
             self.add_line("   %s Type: %s." % (descr, atype), "<autodoc>")
         self.add_line("", "<autodoc>")
@@ -339,7 +342,9 @@ def process_signature(app, objtype, fullname, obj, options, args, retann):
     # for user commands, fix the signature:
     # a) use original function for functions wrapped by decorators
     # b) use designated "helparglist" for functions that have it
-    if objtype == "function" and fullname.startswith("nicos.commands."):
+    if objtype == "function" and fullname.startswith(
+        ("nicos.commands.", "nicos_ess.commands.")
+    ):
         while hasattr(obj, "real_func"):
             obj = obj.real_func
         if hasattr(obj, "help_arglist"):
@@ -388,7 +393,7 @@ def resolve_devindex(app, doctree, fromdocname):
         group.append(body)
 
         for entry in sorted(env.nicos_all_devices.values(), key=lambda v: v["name"]):
-            if not entry["module"].startswith("nicos.devices."):
+            if not entry["module"].startswith(("nicos.devices.", "nicos_ess.")):
                 continue
             row = nodes.row("")
 
@@ -435,11 +440,19 @@ def merge_devindex(app, env, docnames, other):
     env.nicos_all_devices.update(other.nicos_all_devices)
 
 
+def _register_documenter(app, config):
+    app.add_autodocumenter(NicosClassDocumenter, override=True)
+
+
 def setup(app):
     app.add_directive("deviceindex", DeviceIndex)
     app.add_directive_to_domain("py", "parameter", PyParameter)
     app.add_directive_to_domain("py", "derivedparameter", PyDerivedParameter)
-    app.add_autodocumenter(NicosClassDocumenter)
+    # Since Sphinx 9 this extension requires ``autodoc_use_legacy_class_based
+    # = True`` in conf.py, and autodoc registers its built-in documenters at
+    # config-inited time, i.e. *after* extension setup.  Registering ours with
+    # a later priority ensures it overrides the built-in ClassDocumenter.
+    app.connect("config-inited", _register_documenter, priority=800)
     app.add_node(device_index)
     app.connect("autodoc-process-signature", process_signature)
     app.connect("doctree-resolved", resolve_devindex)

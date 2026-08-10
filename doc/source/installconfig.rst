@@ -16,4 +16,6 @@ For a full overview over available classes and their functions check
    services/index
    gui/config
    classes/index
-   instrumentsetups/index
+
+.. instrumentsetups/index is only built with the "customdoc" tag; it cannot
+   be referenced here unconditionally without a warning in normal builds.

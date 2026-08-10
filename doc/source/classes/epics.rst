@@ -10,35 +10,10 @@ EPICS classes
    be accessed by any device.
    This can be achieved by adding the following line::
 
-      import nicos.devices.epics.pyepics
+      nicos.devices.epics.pva
 
    to the :ref:`startupcode <setup-startupcode>` section of the
    :ref:`daemon <daemon>` and :ref:`poller <poller>` setups.
-
-
-.. module:: nicos.devices.epics.pyepics
-
-Basic EPICS binding mixin (pyepics)
------------------------------------
-
-.. autoclass:: EpicsDevice()
-
-Specific classes using one or more PVs
---------------------------------------
-
-.. autoclass:: EpicsReadable()
-
-.. autoclass:: EpicsMoveable()
-
-.. autoclass:: EpicsStringReadable()
-
-.. autoclass:: EpicsStringMoveable()
-
-.. autoclass:: EpicsAnalogMoveable()
-
-.. autoclass:: EpicsDigitalMoveable()
-
-.. autoclass:: EpicsWindowTimeoutDevice()
 
 
 Dual protocol bindings

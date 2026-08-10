@@ -1,8 +1,15 @@
-ESS specific classes
---------------------
+.. _ess-api:
 
-.. toctree::
-   :maxdepth: 1
-   :glob:
+ESS classes and commands
+========================
 
-   ../../nicos_ess/*/classes
+Automatically generated API documentation for the :mod:`nicos_ess` package:
+common device classes, user commands and the instrument-specific modules.
+New modules, classes and commands added to ``nicos_ess`` appear here without
+any changes to the documentation.
+
+.. autosummary::
+   :toctree: nicos_ess_api
+   :recursive:
+
+   nicos_ess

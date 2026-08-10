@@ -80,7 +80,7 @@ def attached_transformer_devices(device_harness, fake_backend):
         shared={
             "readpv": CHOPPER_SPEED_READPV,
             "writepv": CHOPPER_SPEED_WRITEPV,
-            "mapping": {"0 Hz": 0.0, "14 Hz": 14.0, "70 Hz": 70.0},
+            "mapping": {"0": 0.0, "14": 14.0, "70": 70.0},
             "monitor": True,
             "pva": True,
         },

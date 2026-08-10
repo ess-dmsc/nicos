@@ -3,15 +3,15 @@
 The ``nicos.conf`` configuration file
 =====================================
 
-At startup, all NICOS processes read a file called ``nicos.conf``; it should be
-located in the "root" directory of the NICOS installation, i.e. the directory
-containing the ``nicos`` package directory.
+At startup, all NICOS processes read a file called ``nicos.conf``. NICOS first
+checks the repository or installation root, followed by the platform site and
+user configuration directories.
 
 Additionally, a file with specific settings for an instrument is expected in
-``nicos_<facility>/<instrument>/nicos.conf`` and will be loaded automatically.
+``<setup_package>/<instrument>/nicos.conf`` and will be loaded automatically.
 
-The facility and instrument can either be specified by an ``INSTRUMENT``
-environment variable (for example, ``INSTRUMENT=nicos_demo.demo``), or in the
+The setup package and instrument can either be specified by an ``INSTRUMENT``
+environment variable (for example, ``INSTRUMENT=nicos_ess.ymir``), or in the
 "root" ``nicos.conf`` file (see below).
 
 The file ``nicos.conf`` is an `TOML`_ configuration file.  It contains only
@@ -25,16 +25,15 @@ The possible entries are:
 Section ``[nicos]``
 -------------------
 
-  * ``setup_package`` -- a Python package to look for the facility-specific
+  * ``setup_package`` -- a Python package to look for the instrument-specific
     setup directories; the package will be searched for in ``PYTHONPATH``.
 
   * ``instrument`` -- the instrument name inside the ``setup_package`` to find
     the instrument specific ``nicos.conf``.  Note: when ``setup_package`` is
-    known, it may provide a way to autodetect the instrument (e.g. at MLZ, the
-    instrument can be found from the middle part of the hostname).
+    known, it may provide a way to autodetect the instrument.
 
   * ``setup_subdirs`` -- the subdirectories of the ``setup_package`` with setups
-    to use, as a list (e.g. ``["panda", "frm2"]``).
+    to use, as a list (e.g. ``["ymir"]``).
 
   * ``user`` -- system user to use when becoming a daemon.
   * ``group`` -- system group to use when becoming a daemon.

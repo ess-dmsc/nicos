@@ -64,36 +64,23 @@ Count command
 
 If the user calls the :func:`~count` command in NICOS the following happens:
 
-.. seqdiag::
-   :caption: Interaction of count command, data manager, and data sink
+Interaction of count command, data manager, and data sink:
 
-   seqdiag {
-        autonumber = True;
-
-        "count command" => "Data manager" [label="beginPoint", rightnote="initialize PointDataset"]{
-            "Data manager" => "Data sink" [label="prepare"];
-            "Data manager" => "Data sink" [label="begin"];
-        }
-
-        "count command" => "Data manager" [label="updateMetainfo", rightnote="collect metainfo"]{
-            "Data manager" => "Data sink" [label="putMetainfo"];
-        }
-
-        "count command" -> "count command" [label="start\ndetectors", leftnote="start detectors\nand wait until\nfinshed or stopped"]{
-            "Cache" => "Data manager" [label="update value", note="new value found"];
-            "Data manager" => "Data sink" [label="putValues"];
-        }
-
-        "count command" -> "count command" [label="read detector\ndata", leftnote="detectors\nfinished or stopped"];
-
-        "count command" => "Data manager" [label="putResults"]{
-            "Data manager" => "Data sink" [label="putResults"];
-        }
-
-        "count command" => "Data manager" [label="finishPoint"]{
-            "Data manager" => "Data sink" [label="end"];
-        }
-   }
+#. The count command calls ``beginPoint`` on the data manager, which
+   initializes a ``PointDataset`` and calls ``prepare`` and ``begin`` on the
+   data sinks.
+#. The count command calls ``updateMetainfo`` on the data manager, which
+   collects the metainfo and forwards it to the data sinks via
+   ``putMetainfo``.
+#. The count command starts the detectors and waits until they are finished
+   or stopped.  Whenever the cache sends an updated value to the data
+   manager, it is forwarded to the data sinks via ``putValues``.
+#. When the detectors are finished or stopped, the count command reads the
+   detector data.
+#. The count command calls ``putResults`` on the data manager, which forwards
+   the results to the data sinks via ``putResults``.
+#. The count command calls ``finishPoint`` on the data manager, which calls
+   ``end`` on the data sinks.
 
 Scan command
 ~~~~~~~~~~~~~
@@ -104,44 +91,26 @@ Scan command
 In case of calling the :func:`~scan` or related command there is the following
 interaction between the components:
 
-.. seqdiag::
-   :caption: Interaction of a scan command, data manager, and data sink
+Interaction of a scan command, data manager, and data sink:
 
-   seqdiag {
-        autonumber = True;
+#. The scan command calls ``beginScan`` on the data manager, which
+   initializes a ``ScanDataset`` and calls ``prepare`` and ``begin`` on the
+   data sinks.
+#. For every scan point, the scan command:
 
-        "scan command" => "Data manager" [label="beginScan", note="initialize ScanDataset"]{
-            "Data manager" => "Data sink" [label="prepare", note="ScanDataset"];
-            "Data manager" => "Data sink" [label="begin"];
-        }
-
-        "scan command" => "Data manager" [label="beginPoint", note="initialize PointDataset"]
-        {
-            "Data manager" => "Data sink" [label="prepare", note="PointDataset"];
-            "Data manager" => "Data sink" [label="begin"];
-        }
-        "scan command" => "scan command" [label="move devices", note="read new positions"];
-
-        "scan command" => "Data manager" [label="putValues", note="updated positions"]{
-            "Data manager" => "Data sink" [label="putValues", note="updated positions"];
-        }
-
-        "scan command" => "scan command" [label="start count"];
-
-        "scan command" => "Data manager" [label="updateMetainfo"]{
-            "Data manager" => "Data sink" [label="putMetainfo", note="PointDataset"];
-        }
-
-        "scan command" => "scan command" [label="count finished"];
-
-        "scan command" => "Data manager" [label="finishPoint"] {
-            "Data manager" => "Data sink" [label="end", note="PointDataset"];
-        }
-
-        "scan command" => "Data manager" [label="finishScan"] {
-            "Data manager" => "Data sink" [label="end", note="ScanDataset"];
-        }
-   }
+   #. calls ``beginPoint`` on the data manager, which initializes a
+      ``PointDataset`` and calls ``prepare`` and ``begin`` on the data sinks,
+   #. moves the devices and reads the new positions,
+   #. calls ``putValues`` on the data manager with the updated positions,
+      which are forwarded to the data sinks via ``putValues``,
+   #. starts counting,
+   #. calls ``updateMetainfo`` on the data manager, which forwards the
+      metainfo of the point dataset to the data sinks via ``putMetainfo``,
+   #. waits until counting is finished,
+   #. calls ``finishPoint`` on the data manager, which calls ``end`` on the
+      data sinks for the point dataset.
+#. The scan command calls ``finishScan`` on the data manager, which calls
+   ``end`` on the data sinks for the scan dataset.
 
 ----------
 Components

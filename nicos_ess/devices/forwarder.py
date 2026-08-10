@@ -1,3 +1,5 @@
+"""Configure EPICS streams and build their run-specific NeXus fragments."""
+
 import time
 from collections import defaultdict
 
@@ -31,7 +33,7 @@ DEFAULT_NEXUS_PATH = "/entry/instrument"
 
 
 class EpicsKafkaForwarder(KafkaStatusHandler):
-    """Monitor the status of the EPICS to Kafka forwarder"""
+    """Publish dynamic EPICS Forwarder configuration and track its status."""
 
     parameters = {
         "config_topic": Param(

@@ -9,37 +9,38 @@ devices = dict(
     chpsy4_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
-        readpv="{}ConnectedR".format(chpsy4_chic_pv_root),
+        readpv=f"{chpsy4_chic_pv_root}ConnectedR",
         visibility=(),
         pva=True,
     ),
     foc5_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
-        readpv="{}ChopState_R".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}ChopState_R",
         visibility=(),
     ),
     foc5_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_ExecuteUser".format(foc5_pv_root),
-        writepv="{}C_ExecuteUser".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}C_ExecuteUser",
+        writepv=f"{foc5_pv_root}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
     foc5_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",  # Should be EpicsAnalogMoveable later
+        # Should be EpicsAnalogMoveable later
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
-        readpv="{}Spd_R".format(foc5_pv_root),
-        writepv="{}Spd_S".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}Spd_R",
+        writepv=f"{foc5_pv_root}Spd_S",
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0},
+        mapping={"14": 14, "7": 7, "0": 0},
     ),
     foc5_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
-        readpv="{}ChopDly-S".format(foc5_pv_root),
-        writepv="{}ChopDly-S".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}ChopDly-S",
+        writepv=f"{foc5_pv_root}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
     foc5_chopper_phase=device(
@@ -53,7 +54,7 @@ devices = dict(
     foc5_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
-        readpv="{}DiffTSSamples".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}DiffTSSamples",
         unit="ns",
         visibility=(
             "metadata",
@@ -63,13 +64,13 @@ devices = dict(
     foc5_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhaseTS-R".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}InPhaseTS-R",
     ),
     foc5_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
-        readpv="{}Pos_R".format(foc5_pv_root),
-        writepv="{}Park_S".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}Pos_R",
+        writepv=f"{foc5_pv_root}Park_S",
         visibility=(),
         mapping={
             "park pos 0": 0,
@@ -81,13 +82,13 @@ devices = dict(
     foc5_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The park status for the WLS1 chopper.",
-        readpv="{}ParkStatus_R".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}ParkStatus_R",
     ),
     foc5_chopper_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the WLS1 chopper.",
-        readpv="{}C_Park".format(foc5_pv_root),
-        writepv="{}C_Park".format(foc5_pv_root),
+        readpv=f"{foc5_pv_root}C_Park",
+        writepv=f"{foc5_pv_root}C_Park",
     ),
     foc5_chopper_alarms=device(
         "nicos_ess.devices.epics.chopper.NewChopperAlarms",
@@ -120,7 +121,7 @@ devices = dict(
     foc5_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The vacuum pressure",
-        readpv="{}200:PrsR".format(vacuum_pv_root),
+        readpv=f"{vacuum_pv_root}200:PrsR",
         fmtstr="%.2e",
     ),
 )

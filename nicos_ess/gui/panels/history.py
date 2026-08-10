@@ -3,6 +3,7 @@
 import json
 import pickle
 import sys
+import time
 from collections import OrderedDict
 from time import localtime, mktime, time as currenttime
 
@@ -115,6 +116,7 @@ class View(QObject):
         self.yfrom = yfrom
         self.yto = yto
         self.window = window
+        self.client = widget.client
 
         self._key_exprs = {}
         self.uniq_keys = set()
@@ -145,16 +147,19 @@ class View(QObject):
                 if key not in hist_cache:
                     history = query_func(key, self.fromtime, hist_totime, interval)
                     if not history:
-                        QMessageBox.warning(
-                            widget,
-                            "Error",
-                            "Could not get history for %s, "
-                            "there are no values to show." % key,
-                        )
-                        history = []
+                        history = self._generate_history_from_device(key)
                     hist_cache[key] = history
                 else:
                     history = hist_cache[key]
+
+                if not history:
+                    QMessageBox.warning(
+                        widget,
+                        "Error",
+                        "Could not get history for %s, "
+                        "there are no values to show." % key,
+                    )
+
                 # if the value is a list/tuple and we don't have an index
                 # specified, add a plot for each item
                 if history:
@@ -193,6 +198,25 @@ class View(QObject):
             self.timer.start()
 
         self.timeSeriesUpdate.connect(self.on_timeSeriesUpdate)
+
+    def _generate_history_from_device(self, key):
+        dev, k = key.split("/")
+        try:
+            if k == "value":
+                value = self.client.eval("%s.read()" % dev, None)
+            else:
+                value = self.client.eval("%s.%s" % (dev, k), None)
+        except:
+            # If something goes wrong just return no history.
+            return []
+
+        timestamp = time.time()
+
+        # The history plot will automatically append a point at the current time,
+        # so add the read value a little in the past so we get an immediate plot.
+        # If there is no value in the cache it is reasonable to assume
+        # that the value hasn't changed in a long time.
+        return [(timestamp - 30, value)]
 
     def cleanup(self):
         self.plot.cleanup()
@@ -754,6 +778,7 @@ class BaseHistoryWindow:
                 return
         else:
             yfrom = yto = None
+
         view = View(
             self,
             name,

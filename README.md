@@ -163,7 +163,7 @@ vim nicos_ess/<instrument>/setups/special/cache.py
 No changes needed if you are using the default `MemoryCacheDatabase`:
 ```python
 DB=device(
-    "nicos.services.cache.server.MemoryCacheDatabase",
+    "nicos.services.cache.database.MemoryCacheDatabase",
     loglevel="info",
 )
 ```
@@ -172,7 +172,7 @@ DB=device(
 To use `FlatfileCacheDatabase`, update the setup file as follows:
 ```python
 DB=device(
-    "nicos.services.cache.server.FlatfileCacheDatabase",
+    "nicos.services.cache.database.FlatfileCacheDatabase",
     storepath="/opt/nicos-data/cache",
     loglevel="info",
 )
@@ -182,10 +182,33 @@ DB=device(
 For Redis-based caching, `RedisCacheDatabase`, configure as follows:
 ```python
 DB=device(
-    "nicos.services.cache.server.RedisCacheDatabase",
+    "nicos.services.cache.database.RedisCacheDatabase",
+    historydays=14,
+    # Flat numeric tuples, lists and dictionaries up to this size use native
+    # RedisTimeSeries component series.
+    maxnativecomponents=50,
+    # Serialized text and mixed or larger structures are not archived by
+    # default. Set a short retention period here to opt in.
+    arbitraryhistorydays=None,
     loglevel="info",
 )
 ```
+
+`historydays` controls native RedisTimeSeries retention for scalar numbers and
+flat, fully numeric tuples, lists and dictionaries. `maxnativecomponents` limits
+how many component series one value may create. Device status is treated
+separately: its numeric status code is archived natively while its descriptive
+text remains part of the current value. If a native structure changes shape or
+container type at runtime, its existing component history is replaced so that
+older samples cannot be reconstructed with the wrong layout.
+
+The separate `arbitraryhistorydays` setting controls serialized history for
+text, mixed structures and numeric structures above the native component limit;
+`None` disables it, `0` keeps it indefinitely, and a positive value retains
+that many days. Current values are stored regardless of the history setting.
+When arbitrary history is disabled, its old history keys are removed the next
+time that value is reported. Each report with a new timestamp is archived even
+if its value is unchanged.
 
 In the case of `RedisCacheDatabase`, you need to set up Redis and RedisTimeSeries. See section [Redis Setup](#redis-setup) for instructions.
 
@@ -208,7 +231,7 @@ pre-commit install
 # Redis Setup
 
 This section guides you through installing Redis, an in-memory data store, and RedisTimeSeries, a module for time-series data processing.
-The RedisTimeSeries module is mandatory.
+With Redis versions lower than version 8, the RedisTimeSeries module is mandatory.
 
 The instructions are for Linux systems (tested on ubuntu 22.04 and CentOS 7). For other operating systems, refer to the Redis and RedisTimeSeries documentation.
 
@@ -328,6 +351,10 @@ redis-cli ping
 ```
 
 ## Installing RedisTimeSeries
+
+*Note:* Starting with Redis 8, the Time Series data structure is integral to Redis.
+If you have installed a Redis version equal or higher to 8, you don't need
+to install this module separately.
 
 ### Step 1: Clone and Set Up RedisTimeSeries
 

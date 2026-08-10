@@ -3,7 +3,7 @@ group = "special"
 
 devices = dict(
     DB=device(
-        "nicos.services.cache.server.MemoryCacheDatabase",
+        "nicos.services.cache.database.MemoryCacheDatabase",
         loglevel="info",
     ),
     Server=device(

@@ -605,7 +605,8 @@ class EditorPanel(Panel):
         del self.editors[index]
         del self.filenames[editor]
         del self.watchers[editor]
-        del self.error_messages[editor]
+        if editor in self.error_messages:
+            del self.error_messages[editor]
         self.tabber.removeTab(index)
 
     def setDirty(self, editor, dirty):
@@ -1029,7 +1030,7 @@ class EditorPanel(Panel):
 
     @pyqtSlot()
     def on_actionOpen_triggered(self):
-        if self.currentEditor is not None and self.filenames[self.currentEditor]:
+        if self.currentEditor is not None and self.filenames.get(self.currentEditor):
             initialdir = os.path.dirname(self.filenames[self.currentEditor])
         else:
             initialdir = self.client.eval("session.experiment.scriptpath", "")

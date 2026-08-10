@@ -28,6 +28,8 @@ from nicos_ess.devices.datamanager import DataManager
 
 
 class EssExperiment(Device):
+    """Hold proposal, user, sample and counter context for ESS runs."""
+
     parameters = {
         "proposal": Param(
             "Current proposal number or proposal string",
@@ -244,12 +246,14 @@ class EssExperiment(Device):
         self._pollParam("localcontact")
 
     def proposalpath_of(self, proposal):
-        """deviate from default of <dataroot>/<year>/<proposal>"""
+        """Return the File Writer path for *proposal*.
+
+        ``fixed_proposal_path`` takes precedence. Otherwise the path is
+        ``<instrument-device>/<proposal>/raw``.
+        """
         if self.fixed_proposal_path is not None:
             return self.fixed_proposal_path
-        return path.join(
-            session.instrument.name.lower(), proposal, "raw"
-        )
+        return path.join(session.instrument.name.lower(), proposal, "raw")
 
     def _check_users(self, users):
         if not users:

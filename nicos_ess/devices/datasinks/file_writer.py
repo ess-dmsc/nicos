@@ -1,3 +1,5 @@
+"""Devices that control and monitor the external File Writer through Kafka."""
+
 import copy
 import json
 import threading
@@ -45,6 +47,8 @@ from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
 
 
 class AlreadyWritingException(Exception):
+    """Raised when a new job is requested while another job is active."""
+
     pass
 
 
@@ -132,7 +136,7 @@ class JobRecord:
 
 
 class FileWriterStatus(KafkaStatusHandler):
-    """Monitors Kafka for the status of any file-writing jobs."""
+    """Track File Writer acknowledgements, status and completed jobs."""
 
     parameters = {
         "job_history": Param(
@@ -417,9 +421,7 @@ class FileWriterController:
         file_num_str = f"{file_num:0>6}"
         command_str = "".join(
             c for c in command_str.lower() if c in "0123456789abcdef"
-        )[
-            :11
-        ]  # truncate command_str to leave 4 random bytes
+        )[:11]  # truncate command_str to leave 4 random bytes
         # set version to name-based SHA1 hash (constructed)
         # nb; version 8 not recognised by stduuid!
         prefix = f"{proposal_str}{file_num_str}5{command_str}"
@@ -434,7 +436,9 @@ class FileWriterController:
     def request_stop(self, job_id, stop_time, service_id):
         message = serialise_6s4t(
             job_id=job_id,
-            command_id=self._generate_uuid(f"{job_id[6:8]}{job_id[9:13]}", "0000000000000000"),
+            command_id=self._generate_uuid(
+                f"{job_id[6:8]}{job_id[9:13]}", "0000000000000000"
+            ),
             service_id=service_id,
             stop_time=stop_time,
             run_name="",
@@ -445,7 +449,13 @@ class FileWriterController:
 
 
 class FileWriterControlSink(Device):
-    """Sink for the NeXus file-writer"""
+    """Submit start and stop requests to the external File Writer.
+
+    This class is a :class:`~nicos.core.Device` rather than a core
+    :class:`~nicos.core.data.sink.DataSink`. It builds a run request from NICOS
+    metadata and a NeXus structure provider, then sends it through Kafka. The
+    File Writer process consumes the data streams and writes HDF5.
+    """
 
     parameters = {
         "brokers": Param(
@@ -614,11 +624,11 @@ class FileWriterControlSink(Device):
                     "number is required to start writing."
                 )
             else:
-                raise RuntimeError("cannot start writing as proposal number not " "set")
+                raise RuntimeError("cannot start writing as proposal number not set")
         active_jobs = self.get_active_jobs()
         if active_jobs:
             raise AlreadyWritingException(
-                "cannot start writing as writing " "already in progress"
+                "cannot start writing as writing already in progress"
             )
 
     def get_active_jobs(self):
@@ -630,7 +640,7 @@ class FileWriterControlSink(Device):
         active_jobs = self._attached_status.marked_for_stop.symmetric_difference(jobs)
         return active_jobs
 
-    def list_jobs(self):
+    def list_jobs(self, n=None):
         dt_format = "%Y-%m-%d %H:%M:%S"
         headers = ["job", "status", "start time", "stop time", "replay of", "error"]
         funcs = [
@@ -644,8 +654,16 @@ class FileWriterControlSink(Device):
         if session.daemon_device.current_script().user.level == ADMIN:
             headers.insert(1, "job  GUID")
             funcs.insert(1, lambda job: job.job_id)
+
+        jobs = list(self._attached_status._jobs_in_order.values())
+        if n is not None:
+            n = int(n)
+            if n > 0:
+                jobs = jobs[-n:]
+
         items = []
-        for job in self._attached_status._jobs_in_order.values():
+
+        for job in jobs:
             items.append([func(job) for func in funcs])
         printTable(headers, items, self.log.info)
 
@@ -660,12 +678,10 @@ class FileWriterControlSink(Device):
                 job_to_replay = job
                 break
         if not job_to_replay:
-            raise RuntimeError(
-                "Could not replay job as that job number was " "not found"
-            )
+            raise RuntimeError("Could not replay job as that job number was not found")
         if not job_to_replay:
             raise RuntimeError(
-                "Could not replay job as no stop time defined " "for that job"
+                "Could not replay job as no stop time defined for that job"
             )
 
         partition, offset = job_to_replay.kafka_offset

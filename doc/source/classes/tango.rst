@@ -10,13 +10,9 @@ Basic Tango binding (PyTango)
 
 .. autoclass:: PyTangoDevice()
 
-MLZ interface bindings (Entangle)
----------------------------------
-These classes only support devices which fulfill the official MLZ TANGO
-interface.
-
-For more information about the interfaces, please have a look at:
-https://forge.frm2.tum.de/entangle/defs/entangle-master/
+Entangle interface bindings
+---------------------------
+These classes support devices that implement the Entangle TANGO interfaces.
 
 .. module:: nicos.devices.entangle
 
@@ -69,4 +65,3 @@ https://forge.frm2.tum.de/entangle/defs/entangle-master/
 .. autoclass:: TOFChannel()
 
 .. autoclass:: TimerChannel()
-

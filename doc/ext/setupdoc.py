@@ -27,7 +27,7 @@ from pathlib import Path
 
 from docutils import nodes
 from docutils.parsers.rst import Directive
-from docutils.statemachine import ViewList
+from docutils.statemachine import StringList
 from sphinx.util import logging
 from sphinx.util.docstrings import prepare_docstring
 from sphinx.util.nodes import nested_parse_with_titles
@@ -128,7 +128,7 @@ class SetupDirective(Directive):
         node = nodes.paragraph()
         if info:
             content = self._buildSetupRst(info)
-            content = ViewList(content.splitlines(), self._absSetupPath)
+            content = StringList(content.splitlines(), self._absSetupPath)
             nested_parse_with_titles(self.state, content, node)
 
         return node.children

@@ -43,14 +43,13 @@ A small example configuration file looks like this:
    tools = [
        tool('Calculator', 'nicos.clients.gui.tools.calculator.CalculatorTool'),
        tool('Report NICOS bug', 'nicos.clients.gui.tools.website.WebsiteTool',
-            url='http://forge.frm2.tum.de/redmine/projects/nicos/issues/new'),
+            url='https://gitlab.esss.lu.se/ecdc/ess-dmsc/nicos/-/issues/new'),
    ]
 
    options = {
-       'reader_classes': ['nicos_demo.demo.demo_file.DemoReader'],
+       'facility': 'ess',
        'connection_presets': {
-           'WONI': 'woni.example.my',
-           'INST': 'instrument.facility.my',
+           'Local development': 'localhost',
        }
    }
 
@@ -269,8 +268,10 @@ Nicos includes a comprehensive set of Panels for most general use cases:
      :alt: editor panel
      :align: center
 
-.. autoclass:: nicos.clients.gui.panels.elog.ELogPanel()
-     :no-members:
+.. class:: nicos.clients.gui.panels.elog.ELogPanel()
+
+   Provides an HTML widget for the electronic logbook. This panel is available
+   when the optional Qt webview component is installed.
 
 .. figure:: elogpanel.png
      :alt: electronic logbook panel
@@ -473,8 +474,10 @@ Tools that come with NICOS are:
      :alt: emergency stop tool
      :align: center
 
-.. autoclass:: nicos.clients.gui.tools.website.WebsiteTool()
-     :no-members:
+.. class:: nicos.clients.gui.tools.website.WebsiteTool()
+
+   Displays a website in a Qt HTML view. This tool is available when the
+   optional Qt webview component is installed.
 
 .. figure:: websitetool.png
      :scale: 50%

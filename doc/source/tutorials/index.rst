@@ -7,6 +7,3 @@ Tutorials
    newinstrument
    newdevice
    newcommand
-   newdatasink
-
-   nexus

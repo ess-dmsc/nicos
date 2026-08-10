@@ -1,3 +1,5 @@
+"""Forward selected NICOS cache value and status events to Kafka."""
+
 import threading
 import time
 from collections import deque
@@ -44,6 +46,12 @@ def to_f144(dev_name, dev_value, timestamp_ns):
 
 
 class CacheKafkaForwarder(ForwarderBase, Device):
+    """Publish cache values as ``f144`` and statuses as ``al00`` messages.
+
+    The forwarder republishes its latest values at ``update_interval`` so a
+    consumer can receive a current snapshot after joining the topic.
+    """
+
     parameters = {
         "brokers": Param(
             "List of kafka brokers to connect to",

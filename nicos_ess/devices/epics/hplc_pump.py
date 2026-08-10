@@ -191,6 +191,7 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
 
     @usermethod
     def start_pump(self):
+        """Start the pump in continuous mode."""
         if self._mode == SIMULATION:
             return
         self._setROParam("run_started", True)
@@ -199,12 +200,14 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
 
     @usermethod
     def stop_pump(self):
+        """Stop the pump."""
         if self._mode == SIMULATION:
             return
         self._epics.put_channel_value("stop_pump", 1)
 
     @usermethod
     def volume_start(self):
+        """Start the pump until the set volume has been pumped."""
         if self._mode == SIMULATION:
             return
         self._setROParam("run_started", True)
@@ -213,6 +216,7 @@ class HPLCPumpController(EpicsDeviceBase, MappedMoveable):
 
     @usermethod
     def time_start(self):
+        """Start the pump for the set amount of time."""
         if self._mode == SIMULATION:
             return
         self._setROParam("run_started", True)

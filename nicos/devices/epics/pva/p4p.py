@@ -241,7 +241,7 @@ class P4pWrapper:
         """
         Create a monitor subscription to the specified PV.
 
-        Callback signatures:
+        Callback signatures::
 
           change_callback(
               pvname,
@@ -262,7 +262,8 @@ class P4pWrapper:
           )
 
         Notes:
-          - On disconnect, connection_callback may receive reason=<str> in kwargs.
+          On disconnect, connection_callback may receive ``reason=<str>`` in
+          kwargs.
         """
         request = "field(value,timeStamp,alarm,control,display)"
 

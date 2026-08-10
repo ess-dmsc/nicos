@@ -1,46 +1,51 @@
 description = "The Vinci high pressure syringe pump"
 
-pv_root = "SE-SEE:SE-VINP-001:"
+pv_root = "SE-PS:SE-VINCIP-001:"
 
 devices = dict(
     vinci_pressure=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Pressure",
-        readpv="{}Pressure-R".format(pv_root),
-        writepv="{}PM_Pressure-S".format(pv_root),
+        readpv=f"{pv_root}Pressure-R",
+        writepv=f"{pv_root}PM_Pressure-S",
     ),
     vinci_pressure_SP=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Pressure setpoint",
-        readpv="{}PM_Pressure-S".format(pv_root),
-        writepv="{}PM_Pressure-S".format(pv_root),
+        readpv=f"{pv_root}PM_Pressure-S",
+        writepv=f"{pv_root}PM_Pressure-S",
     ),
     vinci_volume=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Pump volume",
-        readpv="{}Volume-R".format(pv_root),
+        readpv=f"{pv_root}Volume-R",
+    ),
+    transductor_pressure=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Transductor pressure",
+        readpv="SE-PS:SE-PTRANS-001:Pressure-R",
     ),
     vinci_flowrate=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Pump flow-rate",
-        readpv="{}Flow-R".format(pv_root),
+        readpv=f"{pv_root}Flow-R",
     ),
     vinci_process_valve=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Status of the process valve",
-        readpv="{}ProcValveOpened-RB".format(pv_root),
-        writepv="{}ProcValveOpen-S".format(pv_root),
+        readpv=f"{pv_root}ProcValveOpened-RB",
+        writepv=f"{pv_root}ProcValveOpen-S",
     ),
     vinci_tank_valve=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Status of the tank valve",
-        readpv="{}TankValveOpened-RB".format(pv_root),
-        writepv="{}TankValveOpen-S".format(pv_root),
+        readpv=f"{pv_root}TankValveOpened-RB",
+        writepv=f"{pv_root}TankValveOpen-S",
     ),
     vinci_pump=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Status of the pump",
-        readpv="{}Stopped-RB".format(pv_root),
-        writepv="{}Start-S".format(pv_root),
+        readpv=f"{pv_root}Start-S",
+        writepv=f"{pv_root}Start-S",
     ),
 )

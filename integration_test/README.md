@@ -4,8 +4,8 @@ This directory contains the smoke integration path for NICOS-owned behavior:
 daemon startup, setup/session commands, EPICS PVA device interaction, scans,
 Kafka filewriter control, and local NICOS side effects.
 
-The `integration_test` package is shipped with `nicos-fork`, so the supported
-entry point works from both a checkout and an installed wheel:
+The `integration_test` package is installed with NICOS, so the supported entry
+point works from both a checkout and an installed wheel:
 `python -m integration_test.smoke.run_smoke_stack`.
 
 It does not run the real downstream ESS stack. The real `kafka-to-nexus`

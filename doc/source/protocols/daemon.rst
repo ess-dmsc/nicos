@@ -271,6 +271,7 @@ protocols.
         exception has been raised, but not yet propagated to toplevel)
 
 .. daemonevt:: watch
+   :no-index:
 
    Watch expressions have changed.
 
@@ -439,9 +440,10 @@ protocols.
 
 .. daemonevt:: plugplay
 
-   A plug-and-play event has occurred.
+   A plug-and-play setup became available or unavailable.
 
-   :arg: A tuple of (event type, data, ...)
+   :arg: A tuple containing ``'added'`` or ``'removed'``, the setup name and
+         its description.
 
 .. daemonevt:: setup
 

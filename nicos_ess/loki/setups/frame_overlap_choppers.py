@@ -8,30 +8,30 @@ devices = dict(
     foc1_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
-        readpv="{}ChopState_R".format(pv_root_1),
+        readpv=f"{pv_root_1}ChopState_R",
         visibility=(),
     ),
     foc1_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_ExecuteUser".format(pv_root_1),
-        writepv="{}C_ExecuteUser".format(pv_root_1),
+        readpv=f"{pv_root_1}C_ExecuteUser",
+        writepv=f"{pv_root_1}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
     foc1_speed=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
-        readpv="{}Spd_R".format(pv_root_1),
-        writepv="{}Spd_S".format(pv_root_1),
+        readpv=f"{pv_root_1}Spd_R",
+        writepv=f"{pv_root_1}Spd_S",
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0, "-7 Hz": -7, "-14 Hz": -14},
+        mapping={"14": 14, "7": 7, "0": 0, "-7": -7, "-14": -14},
     ),
     foc1_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
-        readpv="{}ChopDly-S".format(pv_root_1),
-        writepv="{}ChopDly-S".format(pv_root_1),
+        readpv=f"{pv_root_1}ChopDly-S",
+        writepv=f"{pv_root_1}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
     foc1_phase=device(
@@ -45,7 +45,7 @@ devices = dict(
     foc1_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
-        readpv="{}DiffTSSamples".format(pv_root_1),
+        readpv=f"{pv_root_1}DiffTSSamples",
         unit="ns",
         visibility=(
             "metadata",
@@ -55,13 +55,13 @@ devices = dict(
     foc1_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhaseTS-R".format(pv_root_1),
+        readpv=f"{pv_root_1}InPhaseTS-R",
     ),
     foc1_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
-        readpv="{}Pos_R".format(pv_root_1),
-        writepv="{}Park_S".format(pv_root_1),
+        readpv=f"{pv_root_1}Pos_R",
+        writepv=f"{pv_root_1}Park_S",
         visibility=(),
         mapping={
             "park pos 0": 0,
@@ -73,18 +73,18 @@ devices = dict(
     foc1_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The park status for the SFOC1 chopper.",
-        readpv="{}ParkStatus_R".format(pv_root_1),
+        readpv=f"{pv_root_1}ParkStatus_R",
     ),
     foc1_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the SFOC1 chopper.",
-        readpv="{}C_Park".format(pv_root_1),
-        writepv="{}C_Park".format(pv_root_1),
+        readpv=f"{pv_root_1}C_Park",
+        writepv=f"{pv_root_1}C_Park",
     ),
     foc1_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
-        readpv="{}ConnectedR".format(chic_root),
+        readpv=f"{chic_root}ConnectedR",
         visibility=(),
         pva=True,
     ),
@@ -110,30 +110,30 @@ devices = dict(
     foc2_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
-        readpv="{}ChopState_R".format(pv_root_2),
+        readpv=f"{pv_root_2}ChopState_R",
         visibility=(),
     ),
     foc2_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv="{}C_ExecuteUser".format(pv_root_2),
-        writepv="{}C_ExecuteUser".format(pv_root_2),
+        readpv=f"{pv_root_2}C_ExecuteUser",
+        writepv=f"{pv_root_2}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
     foc2_speed=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
-        readpv="{}Spd_R".format(pv_root_2),
-        writepv="{}Spd_S".format(pv_root_2),
+        readpv=f"{pv_root_2}Spd_R",
+        writepv=f"{pv_root_2}Spd_S",
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0, "-7 Hz": -7, "-14 Hz": -14},
+        mapping={"14": 14, "7": 7, "0": 0, "-7": -7, "-14": -14},
     ),
     foc2_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
-        readpv="{}ChopDly-S".format(pv_root_2),
-        writepv="{}ChopDly-S".format(pv_root_2),
+        readpv=f"{pv_root_2}ChopDly-S",
+        writepv=f"{pv_root_2}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
     foc2_phase=device(
@@ -147,7 +147,7 @@ devices = dict(
     foc2_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
-        readpv="{}DiffTSSamples".format(pv_root_2),
+        readpv=f"{pv_root_2}DiffTSSamples",
         unit="ns",
         visibility=(
             "metadata",
@@ -157,13 +157,13 @@ devices = dict(
     foc2_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv="{}InPhaseTS-R".format(pv_root_2),
+        readpv=f"{pv_root_2}InPhaseTS-R",
     ),
     foc2_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
-        readpv="{}Pos_R".format(pv_root_2),
-        writepv="{}Park_S".format(pv_root_2),
+        readpv=f"{pv_root_2}Pos_R",
+        writepv=f"{pv_root_2}Park_S",
         visibility=(),
         mapping={
             "park pos 0": 0,
@@ -175,18 +175,18 @@ devices = dict(
     foc2_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The park status for the SFOC2 chopper.",
-        readpv="{}ParkStatus_R".format(pv_root_2),
+        readpv=f"{pv_root_2}ParkStatus_R",
     ),
     foc2_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the SFOC2 chopper.",
-        readpv="{}C_Park".format(pv_root_2),
-        writepv="{}C_Park".format(pv_root_2),
+        readpv=f"{pv_root_2}C_Park",
+        writepv=f"{pv_root_2}C_Park",
     ),
     foc2_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
-        readpv="{}ConnectedR".format(chic_root),
+        readpv=f"{chic_root}ConnectedR",
         visibility=(),
     ),
     foc2_alarms=device(

@@ -4,7 +4,6 @@ HOWTOs
 .. toctree::
    :maxdepth: 1
 
-   plugplay
+   gettingstarted
    restrictaccess
-   influxdb
    testscripts

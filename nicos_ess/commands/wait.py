@@ -4,6 +4,8 @@ from nicos import session
 from nicos.commands import helparglist, usercommand
 from nicos.core import SIMULATION
 
+__all__ = ["waitfor_stable"]
+
 
 @usercommand
 @helparglist("device, target, accuracy, time_stable, [timeout]")

@@ -17,12 +17,11 @@ Preparations
 
 * Install NICOS and all pre-requisites (see: :ref:`install-nicos`).
 
-* Check if ``bin/nicos-demo`` works.  On a machine without a desktop environment
-  (e.g. a Linux server), use ``bin/nicos-demo -MT``.  If something fails here,
-  you might have missed a dependency.
+* Check if ``uv run nicos-demo`` works. On a machine without a desktop
+  environment, use ``uv run nicos-demo -MT``. If something fails here, you
+  might have missed a dependency.
 
-* If you want to be thorough, run ``make test`` and make sure any failures are
-  reported.
+* Run ``uv run pytest`` and make sure any failures are reported.
 
 Setting up the new instrument customization
 -------------------------------------------
@@ -67,7 +66,7 @@ To test your configured instrument you can set the environment variable
 
 Run::
 
-    INSTRUMENT=nicos_hynes.woni bin/nicos-demo -MO
+    INSTRUMENT=nicos_hynes.woni uv run nicos-demo -MO
 
 This starts NICOS and the NICOS GUI should look like:
 
@@ -109,7 +108,7 @@ Before starting NICOS again perform a check the syntax of the changed
 setup file.  The script :ref:`check-setups <check-setups>` tool is designed
 to check your newly written or modified setups::
 
-    INSTRUMENT=nicos_hynes.woni tools/check_setups nicos_hynes/woni/setups/system.py
+    INSTRUMENT=nicos_hynes.woni uv run tools/check-setups nicos_hynes/woni/setups/system.py
 
 If you don't get any error messages you may start NICOS again, otherwise you
 have to fix the problem(s) and try the check again.
@@ -119,7 +118,7 @@ device is visible:
 
 .. figure:: images/nicos-step2.png
 
-Now to complete the basic system setup in ``nicos_hynes/wone/setups/system.py``
+Now to complete the basic system setup in ``nicos_hynes/woni/setups/system.py``
 make sure the ``dataroot`` parameter on the ``Exp`` device is set correctly,
 since the data of the measurement commands will be stored there.
 
@@ -216,7 +215,8 @@ rotation device is mounted on the sample table.
 
 .. note::
 
-   Do not hesitate to refer to other instruments' setup files for that!
+   The setups under ``nicos_ess`` provide examples for current ESS device
+   classes.
 
 GUI configuration
 -----------------
@@ -244,33 +244,12 @@ Modules like ``nicos_hynes/woni/devices/foo.py`` can be imported as
 Building and installing
 -----------------------
 
-Now you can do an installation with::
+Build the workspace packages with::
 
-    make install PREFIX=<installation_path> INSTRUMENT=nicos_<facility>.<instrument>
+    uv build --all-packages
 
-Check the generated ``$PREFIX/nicos.conf`` for obvious errors and adapt it.
-See :ref:`nicosconf` for a description.
-
-Starting/Stopping of services
------------------------------
-
-Systemd integration
-^^^^^^^^^^^^^^^^^^^
-
-If you want to integrate with systemd create a symlink to
-``$PREFIX/etc/nicos-late-generator`` in ``/lib/systemd/scripts`` and symlinks to
-``$PREFIX/etc/nicos-late-generator.service`` and ``$PREFIX/etc/nicos.target``
-in ``/lib/systemd/system``.  Then, run ``systemctl enable
-nicos-late-generator.service``.  See :ref:`sys-startup`.
-
-Init V integration
-^^^^^^^^^^^^^^^^^^
-
-If you want the init script to be recognized by the system, create a symlink
-to ``$PREFIX/etc/nicos-system`` in ``/etc/init.d``.  Similarly, you can add
-``$PREFIX/bin`` to ``$PATH``, or create links to them somewhere in ``$PATH``,
-e.g. ``/usr/local/bin``.  Check if the init script works with
-``/etc/init.d/nicos-system start``.
+The source distributions and wheels are written to ``dist``. See
+:ref:`nicosconf` for the configuration file used by an installed system.
 
 Push back code to repository
 ----------------------------
@@ -286,10 +265,7 @@ repository for two reasons:
    to see possible conflicts or problems very early and may make the necessary
    adaptions of your settings for you
 
-Commit your code changes and push to gerrit (or use ``git format-patch
-origin/master`` or ``origin/release-X.Y`` and commit/push the patches on a
-machine where you have your public key).  Instruct instrument people to always
-change the files in the checkout and commit them.
-
-.. _git: https://git-scm.com
-.. _using-mlz-gerrit: https://forge.frm2.tum.de/wiki/services:gerrit:using_git_gerrit
+Commit the configuration changes and submit a merge request to the `ESS NICOS
+project <https://gitlab.esss.lu.se/ecdc/ess-dmsc/nicos>`_. Instrument
+configuration changes should be made in a checkout and reviewed like other
+source changes.
