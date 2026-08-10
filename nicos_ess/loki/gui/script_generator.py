@@ -31,7 +31,7 @@ class Script:
         return f'do_sans({sans_duration}, "{sans_duration_type}")\n'
 
     def _do_simultaneous(self, sans_duration, sans_duration_type):
-        return f'do_simultaneous({sans_duration}, "{sans_duration_type}")\n'
+        return f'do_sans_trans({sans_duration}, "{sans_duration_type}")\n'
 
     def _start_sample(self, row_values):
         script = f"# Sample = {row_values['sample']['name']}\n"
