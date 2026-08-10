@@ -536,8 +536,8 @@ class LokiScriptBuilderPanel(PanelBase):
 
             template = ScriptFactory.from_trans_order(trans_setting).generate_script(
                 table_data,
-                self.comboTransDurationType.currentText(),
-                self.comboSansDurationType.currentText(),
+                self.comboTransDurationType.currentText().lower(),
+                self.comboSansDurationType.currentText().lower(),
                 self.sbTransTimes.value(),
                 self.sbSansTimes.value(),
             )

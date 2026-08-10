@@ -15,7 +15,7 @@ JBI_DETECTOR = "jbi_detector"
 
 
 @usercommand
-def do_trans(duration, duration_type=None, monitor="monitor1_data"):
+def do_trans(duration, duration_type, monitor="monitor1_data"):
     if duration_type not in DURATION_TYPES:
         raise RuntimeError(f"duration type must be one of {DURATION_TYPES}")
 
@@ -44,7 +44,7 @@ def do_trans(duration, duration_type=None, monitor="monitor1_data"):
 
 
 @usercommand
-def do_sans(duration, duration_type=None, monitor="monitor1_data"):
+def do_sans(duration, duration_type, monitor="monitor1_data"):
     if duration_type not in DURATION_TYPES:
         raise RuntimeError(f"duration type must be one of {DURATION_TYPES}")
 
@@ -74,7 +74,7 @@ def do_sans(duration, duration_type=None, monitor="monitor1_data"):
 
 
 @usercommand
-def do_sans_trans(duration, duration_type=None, monitor="monitor1_data"):
+def do_sans_trans(duration, duration_type, monitor="monitor1_data"):
     if duration_type not in DURATION_TYPES:
         raise RuntimeError(f"duration type must be one of {DURATION_TYPES}")
 
