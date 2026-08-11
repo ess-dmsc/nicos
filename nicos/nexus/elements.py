@@ -321,10 +321,7 @@ class DetectorDataset(NexusElementBase):
         dset = h5parent[name]
         if self.nicosname == "mode":
             m = list(sinkhandler.startdataset.preset.keys())[0]
-            if m == "t":
-                mode = "timer"
-            else:
-                mode = "monitor"
+            mode = "timer" if m == "t" else "monitor"
             dset[0] = np.bytes_(mode)
         elif self.nicosname == "preset":
             mp = sinkhandler.startdataset.preset.values()
@@ -449,9 +446,8 @@ class NamedImageDataset(ImageDataset):
         ImageDataset.__init__(self, -1, -1, **attrs)
 
     def create(self, name, h5parent, sinkhandler):
-        detID = 0
         imageID = 0
-        for det in sinkhandler.dataset.detectors:
+        for detID, det in enumerate(sinkhandler.dataset.detectors):
             arList = det.arrayInfo()
             for ar in arList:
                 if ar.name == self._image_name:
@@ -459,7 +455,6 @@ class NamedImageDataset(ImageDataset):
                     self.imageIDX = imageID
                     break
                 imageID += 1
-            detID += 1
         if self.detectorIDX == -1 or self.imageIDX == -1:
             self.log.warning("Cannot find named image %s", self._image_name)
             self.valid = False
