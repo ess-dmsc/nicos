@@ -609,12 +609,10 @@ class LiveDataCollector(Detector):
                 try:
                     rk = parse_result_key(da.source_name)
                     self._registry.note_output(
-                        rk.workflow_id, rk.job_id, rk.output_name
+                        rk.workflow_id, rk.source_name, rk.output_name
                     )
                     try:
-                        self._registry.mark_seen(
-                            rk.job_id.source_name, rk.job_id.job_number
-                        )
+                        self._registry.mark_seen(rk.source_name)
                     except Exception:
                         pass
                 except (json.JSONDecodeError, KeyError, TypeError):

@@ -34,7 +34,6 @@ class JobId:
 @dataclass(frozen=True)
 class ResultKey:
     workflow_id: WorkflowId
-    job_id: JobId
     output_name: Optional[str]
 
 
@@ -42,16 +41,11 @@ def parse_result_key(source_name_json: str) -> ResultKey:
     """Parse DA00 source_name JSON => ResultKey."""
     raw = json.loads(source_name_json)
     wf = raw["workflow_id"]
-    job = raw["job_id"]
     return ResultKey(
         workflow_id=WorkflowId(
             instrument=wf["instrument"],
             name=wf["name"],
             version=int(wf["version"]),
-        ),
-        job_id=JobId(
-            source_name=job["source_name"],
-            job_number=job["job_number"],
         ),
         output_name=raw.get("output_name"),
     )
@@ -60,7 +54,6 @@ def parse_result_key(source_name_json: str) -> ResultKey:
 @dataclass
 class JobInfo:
     workflow_path: str
-    job_number: str
     source_name: str
     state: str
     start_time_ns: Optional[int] = None
@@ -77,7 +70,7 @@ class JobRegistry:
     """
 
     def __init__(self) -> None:
-        self._jobs: Dict[Tuple[str, str], JobInfo] = {}
+        self._jobs: Dict[str, JobInfo] = {}
 
     @staticmethod
     def _key(source_name: str, job_number: str) -> Tuple[str, str]:
@@ -87,7 +80,6 @@ class JobRegistry:
         self,
         wf: WorkflowId | str,
         job_source_name: str,
-        job_number: str,
         state: str,
         start_time_ns: Optional[int] = None,
         end_time_ns: Optional[int] = None,
@@ -98,12 +90,11 @@ class JobRegistry:
         else:
             wf_path = str(wf)
 
-        key = self._key(job_source_name, job_number)
+        key = job_source_name
         ji = self._jobs.get(key)
         if ji is None:
             ji = JobInfo(
                 workflow_path=wf_path,
-                job_number=job_number,
                 source_name=job_source_name,
                 state=state,
                 start_time_ns=start_time_ns,
@@ -122,17 +113,16 @@ class JobRegistry:
             ji.heartbeat_ms = int(heartbeat_ms)
 
     def note_output(
-        self, wf: WorkflowId, job: JobId, output_name: Optional[str]
+        self, wf: WorkflowId, source_name: str, output_name: Optional[str]
     ) -> None:
         if not output_name:
             return
-        key = self._key(job.source_name, job.job_number)
+        key = source_name
         ji = self._jobs.get(key)
         if ji is None:
             ji = JobInfo(
                 workflow_path=str(wf),
-                job_number=job.job_number,
-                source_name=job.source_name,
+                source_name=source_name,
                 state="active",
             )
             self._jobs[key] = ji
@@ -165,15 +155,15 @@ class JobRegistry:
             candidates, key=lambda j: (order.get(j.state, 99), -(j.start_time_ns or 0))
         )[0]
 
-    def mark_seen(self, job_source_name: str, job_number: str) -> None:
+    def mark_seen(self, job_source_name: str) -> None:
         """Touch a job when we observe DA00 for it."""
-        ji = self._jobs.get(self._key(job_source_name, job_number))
+        ji = self._jobs.get(job_source_name)
         if ji:
             ji.last_seen_s = time.time()
 
-    def remove_job(self, job_source_name: str, job_number: str) -> None:
+    def remove_job(self, job_source_name: str) -> None:
         """Explicitly remove a job (e.g. when a response says 'removed')."""
-        self._jobs.pop(self._key(job_source_name, job_number), None)
+        self._jobs.pop(job_source_name)
 
     def expire_stale(self, now: Optional[float] = None, grace_mult: float = 3.0) -> int:
         """
