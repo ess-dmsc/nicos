@@ -27,7 +27,7 @@ from nicos.devices.sample import Sample
 from nicos.utils import createThread, readFileCounter
 from nicos_ess.devices.datamanager import DataManager
 
-DEFAULT_SCRIPT_ROOT="/tmp/nicos"
+DEFAULT_SCRIPT_ROOT = "/tmp/nicos"
 
 
 class EssExperiment(Device):
@@ -284,26 +284,22 @@ class EssExperiment(Device):
         self.sample.set_samples({})
 
     def list_server_directory(self, directory="") -> list[str]:
-        """document me!
-        """
+        """document me!"""
         # TODO sanitize input to prevent access to upper dirs
         return os.listdir(os.path.join(DEFAULT_SCRIPT_ROOT, directory))
 
     def read_server_file(self, fn="") -> str:
-        """document me!
-        """
+        """document me!"""
         # TODO sanitize input to prevent access to upper dirs
         print(f"🎇 Now opening file '{fn}'")
         with open(os.path.join(DEFAULT_SCRIPT_ROOT, fn), encoding="utf-8") as f:
             return f.read()
 
     def write_server_file(self, fn="") -> str:
-        """document me!
-        """
+        """document me!"""
         print(f"🎇 Now writing file '{fn}'")
         return "done!"
 
-        
     def _canQueryProposals(self):
         if self._yuos_client:
             return True

@@ -2,7 +2,6 @@
 
 import os
 import subprocess
-import sys
 import time
 from logging import WARNING
 from uuid import uuid1
@@ -50,7 +49,6 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, findResource, formatDuration, formatEndtime
-
 from nicos_ess.gui.utils import get_icon
 
 has_scintilla = QsciScintilla is not None
@@ -81,7 +79,7 @@ def find_all_nicos_commands():
         for file in files:
             if file == "__init__.py":
                 continue
-            with open(os.path.join(root, file), "r", encoding=LOCALE_ENCODING) as f:
+            with open(os.path.join(root, file), encoding=LOCALE_ENCODING) as f:
                 lines = f.readlines()
                 found_usercommand = False
                 for line in lines:
@@ -869,7 +867,7 @@ class EditorPanel(Panel):
             printer = QPrinter()
             printer.setOutputFileName("")
             if QPrintDialog(printer, self).exec() == QDialog.DialogCode.Accepted:
-                getattr(self.currentEditor, "print")(printer)
+                self.currentEditor.print(printer)
 
     def validateScript(self):
         script = self.currentEditor.text()
@@ -1052,7 +1050,7 @@ class EditorPanel(Panel):
         if not self.checkDirty(self.currentEditor):
             return
         try:
-            with open(fn, "r", encoding=LOCALE_ENCODING) as f:
+            with open(fn, encoding=LOCALE_ENCODING) as f:
                 text = f.read()
         except Exception as err:
             return self.showError("Opening file failed: %s" % err)
@@ -1065,10 +1063,12 @@ class EditorPanel(Panel):
     def openFile(self, fn, quiet=False):
         try:
             print(f"read_server_file('{fn}')")
-            text = self.client.eval(f"session.experiment.read_server_file('{fn}')", "💣")
+            text = self.client.eval(
+                f"session.experiment.read_server_file('{fn}')", "💣"
+            )
             print(f"🪓 {text}")
         except Exception as err:
-            #if quiet:
+            # if quiet:
             #    return
             return self.showError("Opening file failed: %s" % err)
 
