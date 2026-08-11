@@ -129,6 +129,7 @@ gui = [
     "qscintilla>=2.12 ; sys_platform == 'win32'",
     "toml>=0.10.2",
     "urllib3==1.26.20",
+    "flake8",
 ]
 
 gui_qt6 = [
@@ -148,6 +149,7 @@ gui_qt6 = [
     "python-redmine>=2.0.0",
     "toml>=0.10.2",
     "urllib3==1.26.20",
+    "flake8",
 ]
 
 [dependency-groups]

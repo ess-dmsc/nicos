@@ -1030,13 +1030,15 @@ class EditorPanel(Panel):
 
     @pyqtSlot()
     def on_actionOpen_triggered(self):
-        if self.currentEditor is not None and self.filenames.get(self.currentEditor):
-            initialdir = os.path.dirname(self.filenames[self.currentEditor])
-        else:
-            initialdir = self.client.eval("session.experiment.scriptpath", "")
-        fn = QFileDialog.getOpenFileName(
-            self, "Open script", initialdir, "Script files (*.py *.txt)"
-        )[0]
+        # if self.currentEditor is not None and self.filenames.get(self.currentEditor):
+        #     initialdir = os.path.dirname(self.filenames[self.currentEditor])
+        # else:
+        #     initialdir = self.client.eval("session.experiment.scriptpath", "")
+        # fn = QFileDialog.getOpenFileName(
+        #     self, "Open script", initialdir, "Script files (*.py *.txt)"
+        # )[0]
+        # TODO add a dialog allowing to pick a file from a list of files/dirs
+        fn = "simple.py"
         if not fn:
             return
         self.openFile(fn)
@@ -1062,13 +1064,12 @@ class EditorPanel(Panel):
 
     def openFile(self, fn, quiet=False):
         try:
-            with open(
-                fn.encode(sys.getfilesystemencoding()), encoding=LOCALE_ENCODING
-            ) as f:
-                text = f.read()
+            print(f"read_server_file('{fn}')")
+            text = self.client.eval(f"session.experiment.read_server_file('{fn}')", "💣")
+            print(f"🪓 {text}")
         except Exception as err:
-            if quiet:
-                return
+            #if quiet:
+            #    return
             return self.showError("Opening file failed: %s" % err)
 
         editor = self.createEditor()
