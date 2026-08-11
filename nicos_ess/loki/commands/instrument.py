@@ -2,9 +2,17 @@ from nicos import session
 from nicos.commands import usercommand
 from nicos.commands.basic import sleep
 from nicos.commands.device import maw
+from nicos.commands.measure import SetDetectors, count
 from nicos_ess.commands.filewriter import start_filewriting, stop_filewriting
 
-__all__ = ["check_run_conditions", "start_run", "stop_run"]
+__all__ = [
+    "check_run_conditions",
+    "start_run",
+    "stop_run",
+    "do_trans",
+    "do_sans",
+    "do_sans_trans",
+]
 
 GATE_VALVE = "gate_valve"
 HEAVY_SHUTTER = "heavy_shutter"
@@ -12,6 +20,11 @@ WINDOW_GUARD = "window_guard"
 ALIGNMENT_LASER_MIRROR = "alignment_laser_mirror"
 ALIGNMENT_LASER_MIRROR_POSITIONER = "alignment_laser_mirror_positioner"
 EXPERIMENT_SHUTTER = "experiment_shutter"
+M2_BM_POSITIONER = "m2_beam_monitor_positioner"
+BEAMSTOP1_POSITIONER = "beamstop1_positioner"
+JBI_DETECTOR = "jbi_detector"
+
+DURATION_TYPES = {"seconds", "mevents", "frames"}
 
 
 @usercommand
@@ -126,3 +139,92 @@ def stop_run():
     maw(experiment_shutter, "Closed")
 
     print("Run complete")
+
+
+@usercommand
+def do_trans(duration, duration_type, monitor="monitor1_data"):
+    if duration_type not in DURATION_TYPES:
+        raise RuntimeError(f"duration type must be one of {DURATION_TYPES}")
+
+    m2_beam_monitor_positioner = session.devices[M2_BM_POSITIONER]
+    beamstop1_positioner = session.devices[BEAMSTOP1_POSITIONER]
+    jbi_detector = session.devices[JBI_DETECTOR]
+
+    print("Configuring beam path for TRANS measurement")
+    maw(m2_beam_monitor_positioner, "in-beam")
+    maw(beamstop1_positioner, "Parked")
+    print("TRANS beam path configured")
+
+    SetDetectors(jbi_detector)
+
+    start_run()
+
+    if duration_type == "seconds":
+        count(t=duration)
+    elif duration_type == "mevents":
+        count(**{monitor: duration})
+    else:
+        raise NotImplementedError("frames/pulses not supported yet")
+
+    print("TRANS measurement complete.")
+    stop_run()
+
+
+@usercommand
+def do_sans(duration, duration_type, monitor="monitor1_data"):
+    if duration_type not in DURATION_TYPES:
+        raise RuntimeError(f"duration type must be one of {DURATION_TYPES}")
+
+    m2_beam_monitor_positioner = session.devices[M2_BM_POSITIONER]
+    beamstop1_positioner = session.devices[BEAMSTOP1_POSITIONER]
+    jbi_detector = session.devices[JBI_DETECTOR]
+
+    print("Configuring beam path for SANS measurement")
+    maw(m2_beam_monitor_positioner, "in-beam")
+    maw(beamstop1_positioner, "Parked")
+    print("SANS beam path configured")
+
+    SetDetectors(jbi_detector)
+
+    start_run()
+
+    if duration_type == "seconds":
+        count(t=duration)
+    elif duration_type == "mevents":
+        count(**{monitor: duration})
+    else:
+        raise NotImplementedError("frames/pulses not supported yet")
+
+    print("SANS measurement complete.")
+
+    stop_run()
+
+
+@usercommand
+def do_sans_trans(duration, duration_type, monitor="monitor1_data"):
+    if duration_type not in DURATION_TYPES:
+        raise RuntimeError(f"duration type must be one of {DURATION_TYPES}")
+
+    m2_beam_monitor_positioner = session.devices[M2_BM_POSITIONER]
+    beamstop1_positioner = session.devices[BEAMSTOP1_POSITIONER]
+    jbi_detector = session.devices[JBI_DETECTOR]
+
+    print("Configuring beam path for SANS + TRANS measurement")
+    maw(m2_beam_monitor_positioner, "in-beam")
+    maw(beamstop1_positioner, "In beam")
+    print("SANS + transmission beam path configured")
+
+    SetDetectors(jbi_detector)
+
+    start_run()
+
+    if duration_type == "seconds":
+        count(t=duration)
+    elif duration_type == "mevents":
+        count(**{monitor: duration})
+    else:
+        raise NotImplementedError("frames/pulses not supported yet")
+
+    print("SANSTRANS measurement complete.")
+
+    stop_run()
