@@ -24,8 +24,8 @@ def do_trans(duration, duration_type, monitor="monitor1_data"):
     jbi_detector = session.devices[JBI_DETECTOR]
 
     print("Configuring beam path for TRANS measurement")
-    maw(m2_beam_monitor_positioner, 'in-beam')
-    maw(beamstop1_positioner, 'Parked')
+    maw(m2_beam_monitor_positioner, "in-beam")
+    maw(beamstop1_positioner, "Parked")
     print("TRANS beam path configured")
 
     SetDetectors(jbi_detector)
@@ -53,8 +53,8 @@ def do_sans(duration, duration_type, monitor="monitor1_data"):
     jbi_detector = session.devices[JBI_DETECTOR]
 
     print("Configuring beam path for SANS measurement")
-    maw(m2_beam_monitor_positioner, 'in-beam')
-    maw(beamstop1_positioner, 'Parked')
+    maw(m2_beam_monitor_positioner, "in-beam")
+    maw(beamstop1_positioner, "Parked")
     print("SANS beam path configured")
 
     SetDetectors(jbi_detector)
@@ -69,7 +69,7 @@ def do_sans(duration, duration_type, monitor="monitor1_data"):
         raise NotImplementedError("frames/pulses not supported yet")
 
     print("SANS measurement complete.")
-    
+
     stop_run()
 
 
@@ -83,8 +83,8 @@ def do_sans_trans(duration, duration_type, monitor="monitor1_data"):
     jbi_detector = session.devices[JBI_DETECTOR]
 
     print("Configuring beam path for SANS + TRANS measurement")
-    maw(m2_beam_monitor_positioner, 'in-beam')
-    maw(beamstop1_positioner, 'In beam')
+    maw(m2_beam_monitor_positioner, "in-beam")
+    maw(beamstop1_positioner, "In beam")
     print("SANS + transmission beam path configured")
 
     SetDetectors(jbi_detector)

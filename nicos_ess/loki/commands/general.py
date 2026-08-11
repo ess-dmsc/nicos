@@ -19,7 +19,7 @@ def check_run_conditions():
     """Verify that all required conditions are satisfied before data
     acquisition.
 
-    Blocks untils run conditions are satisfied.
+    Blocks until run conditions are satisfied.
 
     Conditions checked:
       - Gate valve open
@@ -30,7 +30,7 @@ def check_run_conditions():
       - Hardware preparation is handled by start_run().
     """
     print("Checking run conditions before data acquisition")
-    
+
     gate_valve = session.devices[GATE_VALVE]
     heavy_shutter = session.devices[HEAVY_SHUTTER]
 
@@ -89,7 +89,9 @@ def start_run():
 
     # Move alignment mirror out of beam
     alignment_laser_mirror = session.devices[ALIGNMENT_LASER_MIRROR]
-    alignment_laser_mirror_positioner = session.devices[ALIGNMENT_LASER_MIRROR_POSITIONER]
+    alignment_laser_mirror_positioner = session.devices[
+        ALIGNMENT_LASER_MIRROR_POSITIONER
+    ]
     if (
         alignment_laser_mirror.read()
         != alignment_laser_mirror_positioner.mapping["out-of-beam"]
