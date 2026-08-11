@@ -6,7 +6,7 @@ NICOS data source devices for consuming ESSLivedata and sending light commands.
     * Tails X5F2 status/heartbeat topics
     * (optional) Tails responses topics
     * Maintains a JobRegistry and publishes it into NICOS cache
-    * Routes DA00 to DataChannel(s) by Selector or DeviceSelector
+    * Routes DA00 to DataChannel(s) by DeviceSelector
     * Provides job_command helpers (reset/stop/remove)
 
 - DataChannel:
@@ -40,14 +40,12 @@ from nicos.core import (
     POLLER,
     SIMULATION,
     ArrayDesc,
-    HasMapping,
     Moveable,
     Override,
     Param,
     floatrange,
     host,
     listof,
-    oneof,
     status,
     tupleof,
 )
@@ -57,7 +55,6 @@ from nicos_ess.devices.datasources.livedata_utils import (
     DeviceSelector,
     JobInfo,
     JobRegistry,
-    Selector,
     WorkflowId,
     parse_result_key,
 )
@@ -69,30 +66,16 @@ INIT_MESSAGE = "Initializing LiveDataCollector…"
 
 
 class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
-    """Channel for a particular workflow/source/job/output or a derived device.
+    """Channel for a particular derived device.
 
     Forwards DA00 'signal' arrays to NICOS live data.
     Supports 1D, 2D, and N-D.
 
-    Can be configured in two modes:
-    1. Selector mode (default): Uses a selector string to match messages from
-       regular data topics (with job_number)
-    2. Device mode: Uses a device_name to match messages from the
-       LIVEDATA_NICOS_DATA topic (without job_number)
-
-    For device mode, set the device_name and workflow_id parameters instead
-    of selector. The device_name should match an entry in the ESSlivedata
-    device contract.
+    Uses a device_name to match messages from the
+    LIVEDATA_NICOS_DATA topic (without job_number)
     """
 
     parameters = {
-        "selector": Param(
-            "Selector '<instr>/<ns>/<name>/<ver>@<source>#<job>[/<output>]'",
-            type=str,
-            userparam=True,
-            settable=True,
-            default="",
-        ),
         "device_name": Param(
             "Device name (from ESSlivedata device contract, for NICOS_DATA topic)",
             type=str,
@@ -132,7 +115,6 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
         "unit": Override(default="events", settable=False, mandatory=False),
         "fmtstr": Override(default="%d"),
         "pollinterval": Override(default=None, userparam=False, settable=False),
-        # "mapping": Override(settable=True),
     }
 
     arraydesc = ArrayDesc("", shape=(), dtype=np.int32)
@@ -145,9 +127,6 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
             self._update_status(status.OK, "")
 
     def doInit(self, mode):
-        # self._selector_obj: Optional[Selector] = (
-        #     Selector.parse_selector_str(self.selector) if self.selector else None
-        # )
         self._device_selector_obj: Optional[DeviceSelector] = (
             DeviceSelector.parse_device_name(self.device_name, self.workflow_id)
             if self.device_name
@@ -166,9 +145,6 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
     def doStatus(self, maxage=0):
         return self.curstatus
 
-    # def doWriteSelector(self, value):
-    #     self._selector_obj = Selector.parse_selector_str(value)
-
     def doWriteDeviceName(self, value):
         self._device_selector_obj = DeviceSelector.parse_device_name(
             value, self.workflow_id
@@ -181,14 +157,6 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
             self._device_selector_obj = DeviceSelector(
                 device_name=self._device_selector_obj.device_name, workflow_id=value
             )
-
-    # def doWriteMapping(self, mapping):
-    #     self.valuetype = oneof(*sorted(mapping, key=num_sort))
-
-    # def doReadMapping(self):
-    #     if not self._collector:
-    #         return {}
-    #     return self._collector.get_current_mapping()
 
     def start(self, target=None, **preset):
         # DataChannel is both a Moveable (selector changes) and a PassiveChannel
@@ -212,7 +180,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
             self._update_status(status.WARN, "No workflow channel selected")
             return
 
-        self._collector.send_workflow_reset_command()
+        self._collector.send_workflow_reset_command(self.workflow_id)
         sleep(0.5)  # give backend time to process reset
         self._update_status(status.OK, "")
 
@@ -240,12 +208,6 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
             self.running = True
             self._update_status(status.BUSY, "Counting started")
             return
-
-        # moveable path
-        # target_value = self.mapping.get(target, "")
-        # if not target_value:
-        #     raise ValueError(f"Unknown selection '{target}' in mapping")
-        # self.selector = target_value
 
     def _update_status(self, new_status, message):
         self.curstatus = (new_status, message)
@@ -475,6 +437,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
         )
 
     def _resolve_job(self) -> Optional[JobInfo]:
+        """Clean this up and the rest in livedata utils."""
         if not self._collector or not self._selector_obj:
             return None
         sel = self._selector_obj
@@ -493,10 +456,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
     def reset_job(self):
         job = self._resolve_job()
         if job:
-            self._collector.send_job_command(
-                job_id={"source_name": job.source_name, "job_number": job.job_number},
-                action="reset",
-            )
+            self._collector.send_workflow_reset_command(self.workflow_id)
         else:
             self.log.warning("Could not resolve job to reset")
 
@@ -662,13 +622,12 @@ class LiveDataCollector(Detector):
                     rk = None
 
                 # Route to matching channels
-                self._dispatch_to_channels(timestamp_ns, rk, da)
+                self._dispatch_to_channels(timestamp_ns, da)
             except Exception as exc:
                 self.log.warning(f"Could not decode/route DA00: {exc}")
 
         try:
             self._registry.expire_stale()
-            # self._push_mapping_to_channels()
         except Exception as e:
             self.log.warning(f"Error expiring stale jobs: {e}")
 
@@ -732,8 +691,6 @@ class LiveDataCollector(Detector):
 
                 self._registry.expire_stale()
 
-                # self._push_mapping_to_channels()
-
             except Exception as exc:
                 self.log.warning(f"Bad status message: {exc}")
             finally:
@@ -775,71 +732,23 @@ class LiveDataCollector(Detector):
 
                     if remove_hint and src and jn:
                         self._registry.remove_job(src, jn)
-                        # self._push_mapping_to_channels()
 
             except Exception:
                 pass
             finally:
                 self._resp_consumer._consumer.commit(msg, asynchronous=False)
 
-    def _dispatch_to_channels(self, timestamp_ns: int, rk, da):
+    def _dispatch_to_channels(self, timestamp_ns: int, da):
         for ch in self._channels:
-            sel: Optional[Selector] = getattr(ch, "_selector_obj", None)
             dev_sel: Optional[DeviceSelector] = getattr(
                 ch, "_device_selector_obj", None
             )
-
-            # Try Selector first (for regular data topics)
-            if sel and rk:
-                if sel.selector_matches(rk):
-                    ch.update_data_from_da00(da, timestamp_ns)
-                    continue
 
             # Try DeviceSelector (for NICOS_DATA topic)
             if dev_sel and da.source_name:
                 if dev_sel.matches_da00_source(da.source_name):
                     ch.update_data_from_da00(da, timestamp_ns)
                     continue
-
-    def send_job_command(
-        self,
-        *,
-        job_id: dict | None = None,
-        workflow_id: dict | None = None,
-        action: str,
-    ):
-        """
-        Publish a JobCommand value JSON to the commands topic.
-        Only 'reset' | 'stop' | 'remove' are supported by the backend today.
-        """
-        if not self._producer or not self.commands_topic:
-            self.log.warning("No producer or commands_topic configured")
-            return
-        payload = {"job_id": job_id, "workflow_id": workflow_id, "action": action}
-        # Build a key the backend expects: "<service>/<source|*>/job_command"
-        # If we know a job_id with source_name we include it; else '*'.
-        src = job_id.get("source_name") if job_id else "*"
-        key = f"{self.service_name}/{src}/job_command"
-        wait_for_delivery_event = threading.Event()
-
-        def _on_delivery(err, msg):
-            if err:
-                self.log.warning(f"Job command delivery failed: {err}.")
-            wait_for_delivery_event.set()
-
-        try:
-            self.log.info(f"Sending job_command: {payload}")
-            self._producer.produce(
-                self.commands_topic,
-                message=json.dumps(payload).encode("utf-8"),
-                key=key,
-                on_delivery_callback=_on_delivery,
-            )
-            # Wait for delivery confirmation or timeout
-            if not wait_for_delivery_event.wait(timeout=5.0):
-                self.log.warning("Job command delivery timed out")
-        except Exception as exc:
-            self.log.warning(f"Error sending job_command: {exc}")
 
     def send_workflow_reset_command(self, workflow_id: str):
         """
@@ -886,114 +795,11 @@ class LiveDataCollector(Detector):
         except Exception as exc:
             self.log.warning(f"Error sending workflow reset command: {exc}")
 
-    # Optionally expose workflow_config sender for rare cases
-    def send_workflow_config(self, *, key_source: str, config_json: dict):
-        """
-        Send a workflow_config message (rare; the expert UI usually does this).
-        key_source is the Kafka 'key' source_name part used by the backend.
-        """
-        if not self._producer or not self.commands_topic:
-            self.log.warning("No producer or commands_topic configured")
-            return
-        key = f"{self.service_name}/{key_source}/workflow_config"
-        try:
-            self._producer.produce(
-                self.commands_topic,
-                message=json.dumps(config_json).encode("utf-8"),
-                key=key,
-            )
-        except Exception as exc:
-            self.log.warning(f"Error sending workflow_config: {exc}")
-
-    def list_plot_selection_items(self) -> list[dict]:
-        """Return a list of simple, user-friendly plot selections discovered so far.
-
-        Each item looks like:
-            {
-                "label": "panel_0_xy/current",     # simple for users
-                "workflow_name": "panel_0_xy",
-                "output": "current",
-                "source_name": "panel_0",
-                "workflow_path": "dummy/detector_data/panel_0_xy/1",
-                "job_number": "<uuid>",
-                "selector": "dummy/detector_data/panel_0_xy/1@panel_0#<uuid>/current"
-            }
-        """
-
-        def split_workflow_path(path: str) -> tuple[str, str, int]:
-            i, n, v = path.split("/")
-            return i, n, int(v)
-
-        # Preferred output ordering first
-        prefer = ("current", "cumulative")
-
-        def out_sort_key(o: str) -> tuple[int, str]:
-            try:
-                idx = prefer.index(o)
-            except ValueError:
-                idx = len(prefer)
-            return (idx, o)
-
-        items: list[dict] = []
-
-        for ji in sorted(
-            self._registry.list_jobs(),
-            key=lambda j: (j.workflow_path, j.source_name, j.job_number),
-        ):
-            # If we haven't seen any DA00 yet for this job, we won't know outputs.
-            outputs = sorted(ji.outputs, key=out_sort_key)
-            if not outputs:
-                continue
-
-            _, wf_name, _ = split_workflow_path(ji.workflow_path)
-            for out in outputs:
-                label = f"{ji.source_name} ({ji.job_number.split('-')[0]}) {out}"
-
-                selector = f"{ji.workflow_path}@{ji.source_name}#{ji.job_number}/{out}"
-                items.append(
-                    {
-                        "label": label,
-                        "workflow_name": wf_name,
-                        "output": out,
-                        "source_name": ji.source_name,
-                        "workflow_path": ji.workflow_path,
-                        "job_number": ji.job_number,
-                        "selector": selector,
-                    }
-                )
-
-        return items
-
-    def list_plot_selections(self) -> list[str]:
-        """Return a flat list of simple labels like 'panel_0_xy/current'.
-
-        This is a convenience wrapper around list_plot_selection_items() and also
-        refreshes the cache keys.
-        """
-        items = self.list_plot_selection_items()
-        return [i["label"] for i in items]
-
     def _bump_expected_status(self, update_interval_ms: int):
         interval_s = max(1, int(update_interval_ms // 1000))
         next_due = time.time() + interval_s
         if next_due > self._last_expected_status_time:
             self._last_expected_status_time = next_due
-
-    def _push_mapping_to_channels(self):
-        """Build a label->selector mapping and write it to every channel's 'mapping'."""
-        # build label->selector mapping from the registry
-        mapping = self.get_current_mapping()
-        for ch in self._channels:
-            if isinstance(ch, DataChannel):
-                try:
-                    ch.mapping = mapping
-                except Exception:
-                    self.log.warning(f"Could not update mapping for channel {ch.name}")
-
-    def get_current_mapping(self) -> dict:
-        """Return the current label->selector mapping as built for channels."""
-        items = self.list_plot_selection_items()
-        return {it["label"]: it["selector"] for it in items}
 
     def _check_disconnect(self):
         if time.time() > (self._last_expected_status_time + self.status_timeout):
