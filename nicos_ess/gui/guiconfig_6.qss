@@ -56,7 +56,7 @@ MainWindow > QToolBar QWidget {
     background: transparent;
 }
 
-/* ------ The main tab on the left ------ */
+/* ------ The main tab selector on the left ------ */
 
 /* Sets the overall shape of the tab buttons and spacing */
 QTabBar::tab:left {
@@ -118,12 +118,17 @@ QTabBar::tab:top:selected {
     color: #F0F0F0;
 }
 
+QTabBar::tab:top:!selected {
+    border: 1px solid darkgrey;
+}
+
 QTabBar::tab:top:!selected:hover {
     background-color: #6b7784;
     border-color: #1f5366;
     padding: 0px;
 }
 
+/* ----- Hides ugly line we get under some tab headers ----- */
 QTabBar {
     background-color: transparent;
     qproperty-drawBase:0;
