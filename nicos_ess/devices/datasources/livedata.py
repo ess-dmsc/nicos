@@ -52,7 +52,7 @@ from nicos.core import (
     tupleof,
 )
 from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
-from nicos.utils import byteBuffer, createThread, num_sort
+from nicos.utils import byteBuffer, createThread, num_sort, sleep
 from nicos_ess.devices.datasources.livedata_utils import (
     DeviceSelector,
     JobInfo,
@@ -212,8 +212,8 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
             self._update_status(status.WARN, "No workflow channel selected")
             return
 
-        # self.reset_job()
-        # sleep(0.5)  # give backend time to process reset
+        self._collector.send_workflow_reset_command()
+        sleep(0.5)  # give backend time to process reset
         self._update_status(status.OK, "")
 
     def doStop(self):
@@ -840,6 +840,51 @@ class LiveDataCollector(Detector):
                 self.log.warning("Job command delivery timed out")
         except Exception as exc:
             self.log.warning(f"Error sending job_command: {exc}")
+
+    def send_workflow_reset_command(self, workflow_id: str):
+        """
+        Send a workflow-level reset command (for NICOS-derived devices).
+
+        This sends a reset command with only workflow_id (no job_id), which
+        resets all jobs of that workflow. Used by device-based channels that
+        don't track individual job_numbers.
+
+        Parameters
+        ----------
+        workflow_id : str
+            The workflow ID in format "instrument/name/version"
+        """
+        if not self._producer or not self.commands_topic:
+            self.log.warning("No producer or commands_topic configured")
+            return
+
+        # Build payload according to ADR 0006
+        payload = {
+            "kind": "job_command",
+            "action": "reset",
+            "workflow_id": workflow_id,
+            "message_id": str(uuid4()),
+        }
+
+        wait_for_delivery_event = threading.Event()
+
+        def _on_delivery(err, msg):
+            if err:
+                self.log.warning(f"Workflow reset command delivery failed: {err}.")
+            wait_for_delivery_event.set()
+
+        try:
+            self.log.info(f"Sending workflow reset command for {workflow_id}")
+            self._producer.produce(
+                self.commands_topic,
+                message=json.dumps(payload).encode("utf-8"),
+                on_delivery_callback=_on_delivery,
+            )
+            # Wait for delivery confirmation or timeout
+            if not wait_for_delivery_event.wait(timeout=5.0):
+                self.log.warning("Workflow reset command delivery timed out")
+        except Exception as exc:
+            self.log.warning(f"Error sending workflow reset command: {exc}")
 
     # Optionally expose workflow_config sender for rare cases
     def send_workflow_config(self, *, key_source: str, config_json: dict):
