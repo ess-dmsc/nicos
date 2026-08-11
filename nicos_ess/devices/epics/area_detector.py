@@ -35,6 +35,7 @@ from nicos_ess.devices.epics.pva.epics_common import (
     EpicsDeviceBase,
     command_channel,
     readback_channel,
+    setpoint_channel,
     status_channel,
 )
 
@@ -191,21 +192,6 @@ class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
 
     _default_pv_prefix_attr = "pv_root"
     _primary_channel = "readpv"
-    _epics_channels = {
-        "readpv": readback_channel(
-            "NumImagesCounter_RBV", cache_key="value", primary=True
-        ),
-        "max_size_x": readback_channel("MaxSizeX_RBV"),
-        "max_size_y": readback_channel("MaxSizeY_RBV"),
-        "data_type": readback_channel("DataType_RBV"),
-        "detector_state": readback_channel("DetectorState_RBV"),
-        "detector_state.STAT": status_channel("DetectorState_RBV.STAT"),
-        "detector_state.SEVR": status_channel("DetectorState_RBV.SEVR"),
-        "array_rate_rbv": readback_channel("ArrayRate_RBV"),
-        "acquire": command_channel("Acquire"),
-        "acquire_status": status_channel("AcquireBusy"),
-        "image": readback_channel("", pv_prefix_attr="image_pv"),
-    }
 
     def _init_area_detector_state(self):
         self._image_processing_lock = threading.Lock()
@@ -219,6 +205,24 @@ class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
         if mode == SIMULATION:
             return
         EpicsDeviceBase.doPreinit(self, mode)
+
+    def _build_epics_channels(self):
+        epics_channels = {
+            "readpv": readback_channel(
+                "NumImagesCounter_RBV", cache_key="value", primary=True
+            ),
+            "max_size_x": readback_channel("MaxSizeX_RBV"),
+            "max_size_y": readback_channel("MaxSizeY_RBV"),
+            "data_type": readback_channel("DataType_RBV"),
+            "detector_state": readback_channel("DetectorState_RBV"),
+            "detector_state.STAT": status_channel("DetectorState_RBV.STAT"),
+            "detector_state.SEVR": status_channel("DetectorState_RBV.SEVR"),
+            "array_rate_rbv": readback_channel("ArrayRate_RBV"),
+            "acquire": command_channel("Acquire"),
+            "acquire_status": status_channel("AcquireBusy"),
+            "image": readback_channel("", pv_prefix_attr="image_pv"),
+        }
+        return epics_channels
 
     def doInit(self, mode):
         EpicsDeviceBase.doInit(self, mode)
@@ -311,10 +315,12 @@ class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
     def doStatus(self, maxage=0):
         detector_state = self._epics.get_channel_value("acquire_status", True)
         alarm_status = STAT_TO_STATUS.get(
-            self._epics.get_channel_value("detector_state.STAT"), status.UNKNOWN
+            self._read_channel_cached("detector_state.STAT", maxage=maxage),
+            status.UNKNOWN,
         )
         alarm_severity = SEVERITY_TO_STATUS.get(
-            self._epics.get_channel_value("detector_state.SEVR"), status.UNKNOWN
+            self._read_channel_cached("detector_state.SEVR", maxage=maxage),
+            status.UNKNOWN,
         )
         if detector_state != "Done" and alarm_severity < status.BUSY:
             alarm_severity = status.BUSY
@@ -388,35 +394,39 @@ class TimepixDetector(AreaDetector):
         ),
     }
 
+    def _build_epics_channels(self):
+        epics_channels = super()._build_epics_channels()
+        epics_channels.update(self._set_custom_record_fields())
+        return epics_channels
+
     def doPreinit(self, mode):
         self._init_area_detector_state()
         if mode == SIMULATION:
             return
-
-        self._control_pvs = {
-            "acquire_time": "AcquireTime",
-            "acquire_period": "AcquirePeriod",
-            "threshold_fine": "CHIP0_Vth_fine",
-            "threshold_coarse": "CHIP0_Vth_coarse",
-            "folder_path": "RawFilePath",
-        }
-        self._record_fields = {
-            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
-        }
-        self._record_fields.update(self._control_pvs)
-        self._set_custom_record_fields()
-        EpicsDevice.doPreinit(self, mode)
+        EpicsDeviceBase.doPreinit(self, mode)
 
     def _set_custom_record_fields(self):
-        AreaDetector._set_custom_record_fields(self)
-        self._record_fields["write_data"] = "WriteData"
-        self._record_fields["num_processing"] = "N_Processing"
-        self._record_fields["path_to_add"] = "PathToAdd"
-        self._record_fields["path_last_added"] = "PathLastAdded"
-        self._record_fields["min_photons"] = "EvFlit_PhMin"
-        self._record_fields["min_psd"] = "EvFlit_PsdMin"
-        self._record_fields["first_trigger"] = "FirstTrigger"
-        self._record_fields["ts_ready"] = "TSReady"
+        record_fields = {
+            "write_data": setpoint_channel("WriteData"),
+            "num_processing": setpoint_channel("N_Processing"),
+            "path_to_add": setpoint_channel("PathToAdd"),
+            "path_last_added": setpoint_channel("PathLastAdded"),
+            "min_photons": setpoint_channel("EvFlit_PhMin"),
+            "min_psd": setpoint_channel("EvFlit_PsdMin"),
+            "first_trigger": setpoint_channel("FirstTrigger"),
+            "ts_ready": setpoint_channel("TSReady"),
+            # Control PVs
+            "acquire_time": setpoint_channel("AcquireTime"),
+            "acquire_time_rbv": readback_channel("AcquireTime_RBV"),
+            "acquire_period": setpoint_channel("AcquirePeriod"),
+            "acquire_period_rbv": readback_channel("AcquirePeriod_RBV"),
+            "threshold_fine": setpoint_channel("CHIP0_Vth_fine"),
+            "threshold_fine_rbv": readback_channel("CHIP0_Vth_fine_RBV"),
+            "threshold_coarse": setpoint_channel("CHIP0_Vth_coarse"),
+            "threshold_coarse_rbv": readback_channel("CHIP0_Vth_coarse_RBV"),
+            "folder_path": setpoint_channel("RawFilePath"),
+        }
+        return record_fields
 
     def to_str(self, int_list):
         """Convert list of ints to string, ignoring trailing nulls."""
@@ -426,7 +436,7 @@ class TimepixDetector(AreaDetector):
         """Convert string to list of ints with a trailing null."""
         return list(s.encode("utf-8")) + [0]
 
-    def _wait_until(self, pv_name, expected_value, precision=None, timeout=5.0):
+    def _wait_until(self, channel_name, expected_value, precision=None, timeout=5.0):
         """Set up a subscription and wait until the PV reaches the expected value."""
         event = threading.Event()
 
@@ -438,15 +448,14 @@ class TimepixDetector(AreaDetector):
                 if value == expected_value:
                     event.set()
 
-        sub = self._epics_wrapper.subscribe(
-            f"{self.pv_root}{self._record_fields[pv_name]}",
-            pv_name,
+        sub = self._epics.subscribe_channel(
+            channel_name,
             callback,
         )
         try:
             # already done? exit immediately
-            current_value = self._get_pv(
-                pv_name,
+            current_value = self._epics.get_channel_value(
+                channel_name,
                 as_string=not isinstance(expected_value, (int, float)),
             )
             if precision is not None and isinstance(current_value, (int, float)):
@@ -458,10 +467,10 @@ class TimepixDetector(AreaDetector):
             # wait for callback to signal completion
             if not event.wait(timeout):
                 raise TimeoutError(
-                    f"Timeout waiting for {pv_name} to become {expected_value}"
+                    f"Timeout waiting for {channel_name} to become {expected_value}"
                 )
         finally:
-            self._epics_wrapper.close_subscription(sub)
+            self._epics.close_subscription(sub)
 
     def doStart(self):
         foldername = f"raw_tpx_{time.time_ns()}"
@@ -469,13 +478,13 @@ class TimepixDetector(AreaDetector):
         ascii_path_name = self.to_int_list(path_name)
 
         # first we need to set the output folder path. use time_ns to make it unique
-        self._put_pv("folder_path", ascii_path_name)
+        self._epics.put_channel_value("folder_path", ascii_path_name)
 
         # we then need to set write_data to 1 to actually update the path
-        self._put_pv("write_data", 1)
+        self._epics.put_channel_value("write_data", 1)
 
         # force ts_ready to 0 so we can wait for it to become 1 after triggering
-        self._put_pv("ts_ready", 0)
+        self._epics.put_channel_value("ts_ready", 0)
 
         # we then start the acquisition as normal
         self.doAcquire()
@@ -484,48 +493,48 @@ class TimepixDetector(AreaDetector):
 
         # we then need to set the path_toAdd to the same filename
         # for empir to look for the new folder
-        self._put_pv("path_to_add", foldername)
+        self._epics.put_channel_value("path_to_add", foldername)
         # wait until EMPIR has confirmed it has queued the new folder for processing
         self._wait_until("path_last_added", foldername)
 
     def doReadNprocessing(self):
-        return self._get_pv("num_processing")
+        return self._read_channel_cached("num_processing")
 
     def doReadMin_Photons(self):
-        return self._get_pv("min_photons")
+        return self._read_channel_cached("min_photons")
 
     def doWriteMin_Photons(self, value):
-        self._put_pv("min_photons", value)
+        self._epics.put_channel_value("min_photons", value)
 
     def doReadMin_Psd(self):
-        return self._get_pv("min_psd")
+        return self._read_channel_cached("min_psd")
 
     def doWriteMin_Psd(self, value):
-        self._put_pv("min_psd", value)
+        self._epics.put_channel_value("min_psd", value)
 
     def doReadAcquiretime(self):
-        return self._get_pv("acquire_time_rbv")
+        return self._read_channel_cached("acquire_time_rbv")
 
     def doWriteAcquiretime(self, value):
-        self._put_pv("acquire_time", value)
+        self._epics.put_channel_value("acquire_time", value)
 
     def doReadAcquireperiod(self):
-        return self._get_pv("acquire_period_rbv")
+        return self._read_channel_cached("acquire_period_rbv")
 
     def doWriteAcquireperiod(self, value):
-        self._put_pv("acquire_period", value)
+        self._epics.put_channel_value("acquire_period", value)
 
     def doReadThreshold_Fine(self):
-        return self._get_pv("threshold_fine_rbv")
+        return self._read_channel_cached("threshold_fine_rbv")
 
     def doWriteThreshold_Fine(self, value):
-        self._put_pv("threshold_fine", value)
+        self._epics.put_channel_value("threshold_fine", value)
 
     def doReadThreshold_Coarse(self):
-        return self._get_pv("threshold_coarse_rbv")
+        return self._read_channel_cached("threshold_coarse_rbv")
 
     def doWriteThreshold_Coarse(self, value):
-        self._put_pv("threshold_coarse", value)
+        self._epics.put_channel_value("threshold_coarse", value)
 
 
 class ADSimDetector(AreaDetector):
