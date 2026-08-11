@@ -575,41 +575,56 @@ class ADSimDetector(AreaDetector):
         ),
     }
 
+    def _build_epics_channels(self):
+        epics_channels = super()._build_epics_channels()
+        epics_channels.update(self._set_custom_record_fields())
+        return epics_channels
+
     def doPreinit(self, mode):
         self._init_area_detector_state()
         if mode == SIMULATION:
             return
+        EpicsDeviceBase.doPreinit(self, mode)
 
-        self._control_pvs = {
-            "size_x": "SizeX",
-            "size_y": "SizeY",
-            "min_x": "MinX",
-            "min_y": "MinY",
-            "bin_x": "BinX",
-            "bin_y": "BinY",
-            "acquire_time": "AcquireTime",
-            "acquire_period": "AcquirePeriod",
-            "num_images": "NumImages",
-            "num_exposures": "NumExposures",
-            "image_mode": "ImageMode",
+    def _set_custom_record_fields(self):
+        record_fields = {
+            "size_x": setpoint_channel("SizeX"),
+            "size_x_rbv": readback_channel("SizeX_RBV"),
+            "size_y": setpoint_channel("SizeY"),
+            "size_y_rbv": setpoint_channel("SizeY_RBV"),
+            "min_x": setpoint_channel("MinX"),
+            "min_x_rbv": setpoint_channel("MinX_RBV"),
+            "min_y": setpoint_channel("MinY"),
+            "min_y_rbv": setpoint_channel("MinY_RBV"),
+            "bin_x": setpoint_channel("BinX"),
+            "bin_x_rbv": setpoint_channel("BinX_RBV"),
+            "bin_y": setpoint_channel("BinY"),
+            "bin_y_rbv": setpoint_channel("BinY_RBV"),
+            "acquire_time": setpoint_channel("AcquireTime"),
+            "acquire_time_rbv": setpoint_channel("AcquireTime_RBV"),
+            "acquire_period": setpoint_channel("AcquirePeriod"),
+            "acquire_period_rbv": setpoint_channel("AcquirePeriod_RBV"),
+            "num_images": setpoint_channel("NumImages"),
+            "num_images_rbv": setpoint_channel("NumImages_RBV"),
+            "num_exposures": setpoint_channel("NumExposures"),
+            "num_exposures_rbv": setpoint_channel("NumExposures_RBV"),
+            "image_mode": setpoint_channel("ImageMode"),
         }
-        self._record_fields = {
-            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
-        }
-        self._record_fields.update(self._control_pvs)
-        AreaDetector._set_custom_record_fields(self)
-        EpicsDevice.doPreinit(self, mode)
+        return record_fields
 
     def _get_pv_parameters(self):
-        return set(self._record_fields) | set(["image_pv"])
+        return set(self._epics_channels) | set(["image_pv"])
 
     def _get_array_shape(self):
-        shape = self._get_pv("size_y"), self._get_pv("size_x")
+        shape = (
+            self._epics.get_channel_value("size_y"),
+            self._epics.get_channel_value("size_x"),
+        )
         binning_factor = int(self.binning[0])
         return (shape[0] // binning_factor, shape[1] // binning_factor)
 
     def _get_array_dtype(self):
-        return data_type_t[self._get_pv("data_type", as_string=True)]
+        return data_type_t[self._epics.get_channel_value("data_type", as_string=True)]
 
     def _write_alarm_to_log(self, pv_value, severity, stat):
         msg_format = "%s (%s)"
@@ -619,7 +634,7 @@ class ADSimDetector(AreaDetector):
             self.log.warning(msg_format, pv_value, stat)
 
     def _limit_size(self, value, max_pv):
-        max_value = self._get_pv(max_pv)
+        max_value = self._epics.get_channel_value(max_pv)
         if value > max_value:
             value = max_value
         elif value < max_value:
@@ -635,8 +650,8 @@ class ADSimDetector(AreaDetector):
 
     def check_if_max_size(self):
         if (
-            self.sizex == self._get_pv("max_size_x")
-            and self.sizey == self._get_pv("max_size_y")
+            self.sizex == self._epics.get_channel_value("max_size_x")
+            and self.sizey == self._epics.get_channel_value("max_size_y")
             and self.startx == 0
             and self.starty == 0
         ):
@@ -658,72 +673,72 @@ class ADSimDetector(AreaDetector):
         self.doAcquire()
 
     def doReadSizex(self):
-        return self._get_pv("size_x_rbv")
+        return self._read_channel_cached("size_x_rbv")
 
     def doWriteSizex(self, value):
-        self._put_pv("size_x", self._limit_size(value, "max_size_x"))
+        self._epics.put_channel_value("size_x", self._limit_size(value, "max_size_x"))
         self.check_if_max_size()
 
     def doReadSizey(self):
-        return self._get_pv("size_y_rbv")
+        return self._read_channel_cached("size_y_rbv")
 
     def doWriteSizey(self, value):
-        self._put_pv("size_y", self._limit_size(value, "max_size_y"))
+        self._epics.put_channel_value("size_y", self._limit_size(value, "max_size_y"))
         self.check_if_max_size()
 
     def doReadStartx(self):
-        return self._get_pv("min_x_rbv")
+        return self._read_channel_cached("min_x_rbv")
 
     def doWriteStartx(self, value):
-        self._put_pv("min_x", self._limit_start(value))
+        self._epics.put_channel_value("min_x", self._limit_start(value))
 
     def doReadStarty(self):
-        return self._get_pv("min_y_rbv")
+        return self._read_channel_cached("min_y_rbv")
 
     def doWriteStarty(self, value):
-        self._put_pv("min_y", self._limit_start(value))
+        self._epics.put_channel_value("min_y", self._limit_start(value))
 
     def doReadBinx(self):
-        return self._get_pv("bin_x_rbv")
+        return self._read_channel_cached("bin_x_rbv")
 
     def doWriteBinx(self, value):
-        self._put_pv("bin_x", value)
+        self._epics.put_channel_value("bin_x", value)
 
     def doReadBiny(self):
-        return self._get_pv("bin_y_rbv")
+        return self._read_channel_cached("bin_y_rbv")
 
     def doWriteBiny(self, value):
-        self._put_pv("bin_y", value)
+        self._epics.put_channel_value("bin_y", value)
 
     def doReadAcquiretime(self):
-        return self._get_pv("acquire_time")
+        return self._read_channel_cached("acquire_time")
 
     def doWriteAcquiretime(self, value):
-        self._put_pv("acquire_time", value)
+        self._epics.put_channel_value("acquire_time", value)
 
     def doReadAcquireperiod(self):
-        return self._get_pv("acquire_period")
+        return self._read_channel_cached("acquire_period")
 
     def doWriteAcquireperiod(self, value):
-        return self._put_pv("acquire_period", value)
+        return self._epics.put_channel_value("acquire_period", value)
 
     def doReadNumimages(self):
-        return self._get_pv("num_images_rbv")
+        return self._read_channel_cached("num_images_rbv")
 
     def doWriteNumimages(self, value):
-        self._put_pv("num_images", value)
+        self._epics.put_channel_value("num_images", value)
 
     def doReadNumexposures(self):
-        return self._get_pv("num_exposures_rbv")
+        return self._read_channel_cached("num_exposures_rbv")
 
     def doWriteNumexposures(self, value):
-        self._put_pv("num_exposures", value)
+        self._epics.put_channel_value("num_exposures", value)
 
     def doWriteImagemode(self, value):
-        self._put_pv("image_mode", ImageMode[value.upper()].value)
+        self._epics.put_channel_value("image_mode", ImageMode[value.upper()].value)
 
     def doReadImagemode(self):
-        return ImageMode(self._get_pv("image_mode")).name.lower()
+        return ImageMode(self._read_channel_cached("image_mode")).name.lower()
 
 
 class OrcaFlash4(AreaDetector):
