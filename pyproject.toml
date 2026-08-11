@@ -203,7 +203,9 @@ lint.select = [
     "E741", # Ambiguous variable name
     "E731", # Do not assign a lambda expression, use a def
     "F841", # Local variable is assigned to but never used
-    "F405"  # Name may be undefined, or defined from star imports
+    "F405",  # Name may be undefined, or defined from star imports
+    "UP031", # Use format specifiers instead of percent format
+    "B905", # `zip()` without an explicit `strict=` parameter
 ]
 
 [tool.ruff-format]
