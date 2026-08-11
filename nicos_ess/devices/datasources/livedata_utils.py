@@ -57,53 +57,6 @@ def parse_result_key(source_name_json: str) -> ResultKey:
     )
 
 
-@dataclass(frozen=True)
-class Selector:
-    """
-    A concrete binding to a workflow/source (and optionally a specific job/output).
-
-    Format (string):
-        "<instrument>/<name>/<version>@<source_name>#<job_number>/<output_name>"
-
-    - '#<job_number>' is optional => will bind to the latest active job.
-    - '/<output_name>' is optional => channel may choose a default (e.g. "current").
-    """
-
-    workflow_path: str
-    source_name: str
-    job_number: Optional[str] = None
-    output_name: Optional[str] = None
-
-    @classmethod
-    def parse_selector_str(cls, s: str) -> Selector:
-        """
-        Parse the selector string. Minimal validation; keeps things permissive for UIs.
-        """
-        wf_part, rest = s.split("@", 1)
-        job_part, slash, out = rest.partition("/")
-        src, hashmark, job = job_part.partition("#")
-        job_num = job if hashmark else None
-        out_name = out if slash else None
-        return cls(
-            workflow_path=wf_part,
-            source_name=src,
-            job_number=job_num,
-            output_name=out_name,
-        )
-
-    def selector_matches(self, rk: ResultKey) -> bool:
-        """Check if a DA00 ResultKey matches a channel selector."""
-        if str(rk.workflow_id) != self.workflow_path:
-            return False
-        if rk.job_id.source_name != self.source_name:
-            return False
-        if self.job_number and rk.job_id.job_number != self.job_number:
-            return False
-        if self.output_name and rk.output_name != self.output_name:
-            return False
-        return True
-
-
 @dataclass
 class JobInfo:
     workflow_path: str
