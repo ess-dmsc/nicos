@@ -169,7 +169,7 @@ class LiveDataPanel(Panel):
             datacount = len(params["datadescs"])
             for index, datadesc in enumerate(params["datadescs"]):
                 labels, _ = process_axis_labels(datadesc, blobs[datacount:])
-                for i, blob in enumerate(blobs[:datacount]):
+                for _i, blob in enumerate(blobs[:datacount]):
                     self._process_livedata(params, blob, index, labels)
 
                 if not datacount:
@@ -186,7 +186,9 @@ class LiveDataPanel(Panel):
 
     def _query_detectorskey(self):
         try:
-            return ("%s/detlist" % self.client.eval("session.experiment.name")).lower()
+            return (
+                "{}/detlist".format(self.client.eval("session.experiment.name"))
+            ).lower()
         except AttributeError:
             pass
 
@@ -251,7 +253,7 @@ def process_axis_labels(datadesc, blobs, offset=0):
     CLASSIC = {"define": "classic"}
     labels = {}
     titles = {}
-    for size, axis in zip(reversed(datadesc["shape"]), AXES):
+    for size, axis in zip(reversed(datadesc["shape"]), AXES, strict=False):
         # if the 'labels' key does not exist or does not have the right
         # axis key set default to 'classic'.
         label = datadesc.get("labels", {"x": CLASSIC, "y": CLASSIC}).get(axis, CLASSIC)
@@ -330,7 +332,7 @@ class DetContainer:
             return
 
         self._blobs_to_index[name] = [self._previews_to_index[name]]
-        for idx, datadesc in enumerate(self._params_cache["datadescs"]):
+        for _idx, datadesc in enumerate(self._params_cache["datadescs"]):
             transferred_label_count = self._previews_to_index[name]
             for axis in datadesc["labels"].values():
                 if axis["define"] != "classic":
@@ -510,7 +512,7 @@ class MultiLiveDataPanel(LiveDataPanel):
         )
 
     def update_previews(self, action, widget_name):
-        for name, preview in self._previews.items():
+        for _name, preview in self._previews.items():
             if preview.widget.name == widget_name:
                 action(preview)
 

@@ -86,7 +86,7 @@ def readDataFromFile(filename, filetype):
     try:
         return ReaderRegistry.getReaderCls(filetype).fromfile(filename)
     except KeyError:
-        raise NicosError("Unsupported file format %r" % filetype) from None
+        raise NicosError(f"Unsupported file format {filetype!r}") from None
 
 
 class LiveDataPanel(PlotPanel):
@@ -336,7 +336,7 @@ class LiveDataPanel(PlotPanel):
                 self._livechannel = 0 if n > 0 else None
         else:
             for i in range(nitems, n):
-                item = QListWidgetItem("<Live #%d>" % (i + 1))
+                item = QListWidgetItem(f"<Live #{i + 1}>")
                 item.setData(FILENAME, i)
                 item.setData(FILETYPE, "")
                 item.setData(FILETAG, LIVE)
@@ -611,7 +611,9 @@ class LiveDataPanel(PlotPanel):
 
     def _query_detectorskey(self):
         try:
-            return ("%s/detlist" % self.client.eval("session.experiment.name")).lower()
+            return (
+                "{}/detlist".format(self.client.eval("session.experiment.name"))
+            ).lower()
         except AttributeError:
             pass
 
@@ -647,7 +649,7 @@ class LiveDataPanel(PlotPanel):
         for i, datadesc in enumerate(params["datadescs"]):
             labels = {}
             titles = {}
-            for size, axis in zip(reversed(datadesc["shape"]), AXES):
+            for size, axis in zip(reversed(datadesc["shape"]), AXES, strict=False):
                 # if the 'labels' key does not exist or does not have the right
                 # axis key set default to 'classic'.
                 label = datadesc.get("labels", {"x": CLASSIC, "y": CLASSIC}).get(
@@ -765,10 +767,7 @@ class LiveDataPanel(PlotPanel):
 
     def _initLiveWidget(self, array):
         """Initialize livewidget based on array's shape"""
-        if len(array.shape) == 1:
-            widgetcls = LiveWidget1D
-        else:
-            widgetcls = IntegralLiveWidget
+        widgetcls = LiveWidget1D if len(array.shape) == 1 else IntegralLiveWidget
         self.initLiveWidget(widgetcls)
 
     def setData(self, arrays, labels=None, titles=None, uid=None, display=True):
@@ -800,7 +799,7 @@ class LiveDataPanel(PlotPanel):
             self.setData([array], uid=uid, display=display)
             return array.shape
         else:
-            raise NicosError("Cannot read file %r" % filename)
+            raise NicosError(f"Cannot read file {filename!r}")
 
     def processDataArrays(self, params, index, entry):
         """Check if the input 1D array has the expected amount of values.
@@ -910,7 +909,7 @@ class LiveDataPanel(PlotPanel):
                 rawdata = readDataFromFile(filename, filetype)
                 labels = {}
                 titles = {}
-                for axis, entry in zip(AXES, reversed(rawdata.shape)):
+                for axis, entry in zip(AXES, reversed(rawdata.shape), strict=False):
                     labels[axis] = numpy.arange(entry)
                     titles[axis] = axis
                 data = {"labels": labels, "titles": titles, "dataarrays": [rawdata]}
@@ -1039,7 +1038,7 @@ class LiveDataPanel(PlotPanel):
             try:
                 self.setDataFromFile(fn, filetype, uid, display=False)
             except Exception as err:
-                errors.append("%s: %s" % (fn, err))
+                errors.append(f"{fn}: {err}")
             else:
                 return self.add_to_flist(fn, filetype, FILE, uid)
 
@@ -1175,7 +1174,7 @@ def process_axis_labels(datadesc, blobs, offset=0):
     CLASSIC = {"define": "classic"}
     labels = {}
     titles = {}
-    for size, axis in zip(reversed(datadesc["shape"]), AXES):
+    for size, axis in zip(reversed(datadesc["shape"]), AXES, strict=False):
         # if the 'labels' key does not exist or does not have the right
         # axis key set default to 'classic'.
         label = datadesc.get("labels", {"x": CLASSIC, "y": CLASSIC}).get(axis, CLASSIC)
