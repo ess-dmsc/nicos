@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
 
 
 @dataclass(frozen=True)
@@ -34,8 +33,8 @@ class JobId:
 @dataclass(frozen=True)
 class ResultKey:
     workflow_id: WorkflowId
-    output_name: Optional[str]
-    source_name: Optional[str]
+    output_name: str | None
+    source_name: str | None
 
 
 def parse_result_key(source_name_json: str) -> ResultKey:
@@ -58,9 +57,9 @@ class JobInfo:
     workflow_path: str
     source_name: str
     state: str
-    start_time_ns: Optional[int] = None
-    end_time_ns: Optional[int] = None
-    outputs: Set[str] = field(default_factory=set)
+    start_time_ns: int | None = None
+    end_time_ns: int | None = None
+    outputs: set[str] = field(default_factory=set)
     last_seen_s: float = field(default_factory=lambda: time.time())
     heartbeat_ms: int = 1000
 
@@ -72,10 +71,10 @@ class JobRegistry:
     """
 
     def __init__(self) -> None:
-        self._jobs: Dict[str, JobInfo] = {}
+        self._jobs: dict[str, JobInfo] = {}
 
     @staticmethod
-    def _key(source_name: str, job_number: str) -> Tuple[str, str]:
+    def _key(source_name: str, job_number: str) -> tuple[str, str]:
         return (source_name, job_number)
 
     def jobinfo_from_status(
@@ -83,14 +82,12 @@ class JobRegistry:
         wf: WorkflowId | str,
         job_source_name: str,
         state: str,
-        start_time_ns: Optional[int] = None,
-        end_time_ns: Optional[int] = None,
-        heartbeat_ms: Optional[int] = None,
+        start_time_ns: int | None = None,
+        end_time_ns: int | None = None,
+        heartbeat_ms: int | None = None,
     ) -> None:
-        if isinstance(wf, str):
-            wf_path = wf
-        else:
-            wf_path = str(wf)
+
+        wf_path = wf if isinstance(wf, str) else str(wf)
 
         key = job_source_name
         ji = self._jobs.get(key)
@@ -115,7 +112,7 @@ class JobRegistry:
             ji.heartbeat_ms = int(heartbeat_ms)
 
     def note_output(
-        self, wf: WorkflowId, source_name: str, output_name: Optional[str]
+        self, wf: WorkflowId, source_name: str, output_name: str | None
     ) -> None:
         if not output_name:
             return
@@ -130,10 +127,10 @@ class JobRegistry:
             self._jobs[key] = ji
         ji.outputs.add(output_name)
 
-    def list_jobs(self) -> List[JobInfo]:
+    def list_jobs(self) -> list[JobInfo]:
         return list(self._jobs.values())
 
-    def resolve_latest(self, workflow_path: str, source_name: str) -> Optional[JobInfo]:
+    def resolve_latest(self, workflow_path: str, source_name: str) -> JobInfo | None:
         """
         Pick the most relevant job: prefer active, then scheduled, then finishing,
         then newest start time.
@@ -167,7 +164,7 @@ class JobRegistry:
         """Explicitly remove a job (e.g. when a response says 'removed')."""
         self._jobs.pop(job_source_name)
 
-    def expire_stale(self, now: Optional[float] = None, grace_mult: float = 3.0) -> int:
+    def expire_stale(self, now: float | None = None, grace_mult: float = 3.0) -> int:
         """
         Remove jobs that missed several heartbeats.
         A job is stale if (now - last_seen) > grace_mult * heartbeat interval.
@@ -206,11 +203,11 @@ class DeviceSelector:
     """
 
     device_name: str
-    workflow_id: Optional[str] = None
+    workflow_id: str | None = None
 
     @classmethod
     def parse_device_name(
-        cls, s: str, workflow_id: Optional[str] = None
+        cls, s: str, workflow_id: str | None = None
     ) -> DeviceSelector:
         """Create a DeviceSelector from a device name."""
         return cls(device_name=s, workflow_id=workflow_id)
