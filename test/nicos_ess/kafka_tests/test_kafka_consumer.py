@@ -3,10 +3,13 @@ import json
 import pytest
 
 import nicos_ess.devices.kafka.consumer as mod
-
 from test.nicos_ess.kafka_tests.doubles.consumer import (
     ConsumerStub,
+)
+from test.nicos_ess.kafka_tests.doubles.consumer import (
     PartitionMetadata as PartitionMetadataStub,
+)
+from test.nicos_ess.kafka_tests.doubles.consumer import (
     TopicPartition as TopicPartitionStub,
 )
 from test.nicos_ess.test_devices.doubles import FakeKafkaError
