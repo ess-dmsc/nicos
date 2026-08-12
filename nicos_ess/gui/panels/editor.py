@@ -533,9 +533,6 @@ class EditorPanel(Panel):
 
     def enableFileActions(self, on):
         for action in [
-            self.actionSave,
-            self.actionSaveAs,
-            self.actionReload,
             self.actionPrint,
             self.actionUndo,
             self.actionRedo,
@@ -544,18 +541,28 @@ class EditorPanel(Panel):
             self.actionPaste,
         ]:
             action.setEnabled(on)
-        self.enableExecuteActions(self.client.isconnected)
+        self.enableRemoteActions()
         for action in [self.actionComment]:
             action.setEnabled(on and has_scintilla)
 
-    def enableExecuteActions(self, on):
+    def enableRemoteActions(self):
         for action in [
+            self.actionOpen,
+            self.actionSaveAs,
+            self.actionReload,
             self.actionRun,
             self.actionSimulate,
             self.actionGet,
             self.actionUpdate,
         ]:
             action.setEnabled(self.client.isconnected)
+
+        if self.client.isconnected:
+            # Enable save only if modified
+            editor = self.editors[self.tabber.currentIndex()]
+            self.actionSave.setEnabled(editor.isModified())
+        else:
+            self.actionSave.setEnabled(False)
 
     def on_codeGenerated(self, code):
         if self.currentEditor:
@@ -581,7 +588,7 @@ class EditorPanel(Panel):
             self.parent_window.setWindowTitle("%s editor" % self.mainwindow.instrument)
             return
         editor = self.editors[index]
-        self.actionSave.setEnabled(editor.isModified())
+        self.actionSave.setEnabled(editor.isModified() and self.client.isconnected)
         self.actionUndo.setEnabled(editor.isModified())
         self.currentEditor = editor
 
@@ -609,7 +616,7 @@ class EditorPanel(Panel):
 
     def setDirty(self, editor, dirty):
         if editor is self.currentEditor:
-            self.actionSave.setEnabled(dirty)
+            self.actionSave.setEnabled(dirty and self.client.isconnected)
             self.actionUndo.setEnabled(dirty)
             index = self.tabber.currentIndex()
             tt = self.tabber.tabText(index).rstrip("*")
@@ -808,11 +815,11 @@ class EditorPanel(Panel):
 
     def on_client_connected(self):
         self.loaded_devices = list(self.client.eval("session.devices", {}).keys())
-        self.enableExecuteActions(True)
+        self.enableRemoteActions()
         self._set_scriptdir()
 
     def on_client_disconnected(self):
-        self.enableExecuteActions(False)
+        self.enableRemoteActions()
 
     def _set_scriptdir(self):
         initialdir = self.client.eval("session.experiment.scriptpath", "")
@@ -1117,7 +1124,6 @@ class EditorPanel(Panel):
         # The content must be sent as bytes because eval cannot handle strings
         # containing \n, \t, etc.
         content = editor.text().encode()
-        print("SAVING", filename, content)
         try:
             self.client.eval(
                 f"session.experiment.write_server_file('{filename}', {content})",
