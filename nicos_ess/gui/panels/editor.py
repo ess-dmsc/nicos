@@ -417,11 +417,7 @@ class EditorPanel(Panel):
         client.cache.connect(self.on_client_cache)
         client.experiment.connect(self.on_client_experiment)
 
-        if self.openfiles:
-            for fn in self.openfiles:
-                self.openFile(fn, quiet=True)
-        else:
-            self.newFile()
+        self.newFile()
 
         self.layout().setMenuBar(self.createPanelToolbar())
         self.get_icons()
