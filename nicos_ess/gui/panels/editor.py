@@ -19,7 +19,6 @@ from nicos.guisupport.qt import (
     QColor,
     QDialog,
     QFileSystemModel,
-    QFileSystemWatcher,
     QFont,
     QFontMetrics,
     QHBoxLayout,
@@ -369,7 +368,6 @@ class EditorPanel(Panel):
 
         self.editors = []  # tab index -> editor
         self.filenames = {}  # editor -> filename
-        self.watchers = {}  # editor -> QFileSystemWatcher
         self.currentEditor = None
 
         self.saving = False  # True while saving
@@ -491,11 +489,6 @@ class EditorPanel(Panel):
     def getToolbars(self):
         return []
 
-    def __del__(self):
-        # On some systems the  QFilesystemWatchers deadlock on application exit
-        # so destroy them explicitly
-        self.watchers.clear()
-
     def setViewOnly(self, viewonly):
         self.activeGroup.setEnabled(not viewonly)
 
@@ -559,8 +552,10 @@ class EditorPanel(Panel):
 
         if self.client.isconnected:
             # Enable save only if modified
-            editor = self.editors[self.tabber.currentIndex()]
-            self.actionSave.setEnabled(editor.isModified())
+            index = self.tabber.currentIndex()
+            if 0 <= index < len(self.tabber):
+                editor = self.editors[index]
+                self.actionSave.setEnabled(editor.isModified())
         else:
             self.actionSave.setEnabled(False)
 
@@ -609,7 +604,6 @@ class EditorPanel(Panel):
         index = self.editors.index(editor)
         del self.editors[index]
         del self.filenames[editor]
-        del self.watchers[editor]
         if editor in self.error_messages:
             del self.error_messages[editor]
         self.tabber.removeTab(index)
@@ -983,39 +977,6 @@ class EditorPanel(Panel):
             return True
         return False
 
-    def on_fileSystemWatcher_fileChanged(self, filename):
-        if self.saving:
-            return
-        editor = watcher = None
-        for editor, watcher in self.watchers.items():
-            if watcher is self.sender():
-                break
-        else:
-            return
-        if editor.isModified():
-            # warn the user
-            self.warnText.setText(
-                "The file %r has changed on disk, but has also been edited"
-                " here.\nPlease use either File-Reload to load the"
-                " version on disk or File-Save to save this version."
-                % self.filenames[editor]
-            )
-            self.warnWidget.show()
-        else:
-            # reload without asking
-            try:
-                with open(self.filenames[editor], encoding=LOCALE_ENCODING) as f:
-                    text = f.read()
-            except Exception:
-                return
-            if text != editor.text():
-                editor.setText(text)
-            editor.setModified(False)
-        # re-add the filename to the watcher if it was deleted
-        # (happens for programs that do delete-write on save)
-        if not watcher.files():
-            watcher.addPath(self.filenames[editor])
-
     @pyqtSlot()
     def on_actionNew_triggered(self):
         self.newFile()
@@ -1025,8 +986,6 @@ class EditorPanel(Panel):
         editor.setModified(False)
         self.editors.append(editor)
         self.filenames[editor] = ""
-        self.watchers[editor] = QFileSystemWatcher(self)
-        self.watchers[editor].fileChanged.connect(self.on_fileSystemWatcher_fileChanged)
         self.tabber.addTab(editor, "(New script)")
         self.tabber.setCurrentWidget(editor)
         self.simFrame.clear()
@@ -1081,9 +1040,6 @@ class EditorPanel(Panel):
 
         self.editors.append(editor)
         self.filenames[editor] = fn
-        self.watchers[editor] = QFileSystemWatcher(self)
-        self.watchers[editor].fileChanged.connect(self.on_fileSystemWatcher_fileChanged)
-        self.watchers[editor].addPath(fn)
         self.tabber.addTab(editor, os.path.basename(fn))
         self.tabber.setCurrentWidget(editor)
         self.simFrame.clear()
