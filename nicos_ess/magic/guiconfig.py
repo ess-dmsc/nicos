@@ -60,7 +60,6 @@ main_window = docked(
                 ("Log files", panel("nicos_ess.gui.panels.logviewer.LogViewerPanel")),
             ),
         ),
-        position="left",
         margins=(0, 0, 0, 0),
         textpadding=(30, 20),
     ),  # tabbed
