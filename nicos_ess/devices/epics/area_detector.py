@@ -180,7 +180,7 @@ class ImageType(ManualSwitch):
         self.move(INVALID)
 
 
-class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
+class AreaDetector(EpicsDeviceBase, ImageChannelMixin, ActiveChannel):
     parameters = {
         "pv_root": Param("Area detector EPICS prefix", type=pvname, mandatory=True),
         "image_pv": Param("Image PV name", type=pvname, mandatory=True),
@@ -747,14 +747,14 @@ class OrcaFlash4(AreaDetector):
     """
 
     parameters = {
-        "topicpv": Param(
+        "topic_pv": Param(
             "Topic pv name where the image is.",
             type=str,
             mandatory=True,
             settable=False,
             default=False,
         ),
-        "sourcepv": Param(
+        "source_pv": Param(
             "Source pv name for the image data on the topic.",
             type=str,
             mandatory=True,
@@ -840,107 +840,126 @@ class OrcaFlash4(AreaDetector):
         ),
     }
 
+    def _build_epics_channels(self):
+        epics_channels = super()._build_epics_channels()
+        epics_channels.update(self._set_custom_record_fields())
+        return epics_channels
+
     def doPreinit(self, mode):
         self._init_area_detector_state()
         if mode == SIMULATION:
             return
-
-        self._control_pvs = {
-            "size_x": "SizeX",
-            "size_y": "SizeY",
-            "min_x": "MinX",
-            "min_y": "MinY",
-            "bin_x": "BinX",
-            "bin_y": "BinY",
-            "acquire_time": "AcquireTime",
-            "acquire_period": "AcquirePeriod",
-            "num_images": "NumImages",
-            "num_exposures": "NumExposures",
-            "image_mode": "ImageMode",
-        }
-        self._record_fields = {
-            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
-        }
-        self._record_fields.update(self._control_pvs)
-        self._set_custom_record_fields()
-        EpicsDevice.doPreinit(self, mode)
+        EpicsDeviceBase.doPreinit(self, mode)
 
     def doPrepare(self):
         AreaDetector.doPrepare(self)
 
         # Set up external trigger
-        self._put_pv("trigger_source", TriggerSource.EXTERNAL.value)
-        self._put_pv("trigger_mode", TriggerMode.NORMAL.value)
-        self._put_pv("trigger_active", TriggerActive.SYNC_READOUT.value)
-        self._put_pv("trigger_global_exposure", TriggerGlobalExposure.DELAYED.value)
-        self._put_pv("trigger_polarity", TriggerPolarity.POSITIVE.value)
-        self._put_pv("trigger_connector", TriggerConnector.BNC.value)
-        self._put_pv(
+        self._epics.put_channel_value("trigger_source", TriggerSource.EXTERNAL.value)
+        self._epics.put_channel_value("trigger_mode", TriggerMode.NORMAL.value)
+        self._epics.put_channel_value(
+            "trigger_active", TriggerActive.SYNC_READOUT.value
+        )
+        self._epics.put_channel_value(
+            "trigger_global_exposure", TriggerGlobalExposure.DELAYED.value
+        )
+        self._epics.put_channel_value(
+            "trigger_polarity", TriggerPolarity.POSITIVE.value
+        )
+        self._epics.put_channel_value("trigger_connector", TriggerConnector.BNC.value)
+        self._epics.put_channel_value(
             "internal_trigger_handling", TriggerInternalHandling.SHORT_EXPOSURE.value
         )
 
     def _set_custom_record_fields(self):
-        AreaDetector._set_custom_record_fields(self)
-        self._record_fields["subarray_mode"] = "SubarrayMode-S"
-        self._record_fields["subarray_mode_rbv"] = "SubarrayMode-RB"
-        self._record_fields["binning_factor"] = "Binning-S"
-        self._record_fields["binning_factor_rbv"] = "Binning-RB"
-        self._record_fields["chip_temperature"] = "Temperature-R"
-        self._record_fields["cooling_mode"] = "SensorCooler-S"
-        self._record_fields["cooling_mode_rbv"] = "SensorCooler-RB"
-        self._record_fields["trigger_source"] = "TriggerSource-S"
-        self._record_fields["trigger_source_rbv"] = "TriggerSource-RB"
-        self._record_fields["trigger_mode"] = "TriggerMode-S"
-        self._record_fields["trigger_mode_rbv"] = "TriggerMode-RB"
-        self._record_fields["trigger_active"] = "TriggerActive-S"
-        self._record_fields["trigger_active_rbv"] = "TriggerActive-RB"
-        self._record_fields["trigger_global_exposure"] = "TriggerGlobalExposure-S"
-        self._record_fields["trigger_global_exposure_rbv"] = "TriggerGlobalExposure-RB"
-        self._record_fields["trigger_polarity"] = "TriggerPolarity-S"
-        self._record_fields["trigger_polarity_rbv"] = "TriggerPolarity-RB"
-        self._record_fields["trigger_connector"] = "TriggerConnector-S"
-        self._record_fields["trigger_connector_rbv"] = "TriggerConnector-RB"
-        self._record_fields["num_triggers"] = "TriggerTimes-S"
-        self._record_fields["num_triggers_rbv"] = "TriggerTimes-RB"
-        self._record_fields["trigger_delay"] = "TriggerDelay-S"
-        self._record_fields["trigger_delay_rbv"] = "TriggerDelay-RB"
-        self._record_fields["internal_trigger_handling"] = "InternalTriggerHandling-S"
-        self._record_fields["internal_trigger_handling_rbv"] = (
-            "InternalTriggerHandling-RB"
-        )
-        self._record_fields["topicpv"] = self.topicpv
-        self._record_fields["sourcepv"] = self.sourcepv
+        record_fields = {
+            "subarray_mode": setpoint_channel("SubarrayMode-S"),
+            "subarray_mode_rbv": readback_channel("SubarrayMode-RB"),
+            "binning_factor": setpoint_channel("Binning-S"),
+            "binning_factor_rbv": readback_channel("Binning-RB"),
+            "chip_temperature": readback_channel("Temperature-R"),
+            "cooling_mode": setpoint_channel("SensorCooler-S"),
+            "cooling_mode_rbv": readback_channel("SensorCooler-RB"),
+            "trigger_source": setpoint_channel("TriggerSource-S"),
+            "trigger_source_rbv": readback_channel("TriggerSource-RB"),
+            "trigger_mode": setpoint_channel("TriggerMode-S"),
+            "trigger_mode_rbv": readback_channel("TriggerMode-RB"),
+            "trigger_active": setpoint_channel("TriggerActive-S"),
+            "trigger_active_rbv": readback_channel("TriggerActive-RB"),
+            "trigger_global_exposure": setpoint_channel("TriggerGlobalExposure-S"),
+            "trigger_global_exposure_rbv": readback_channel("TriggerGlobalExposure-RB"),
+            "trigger_polarity": setpoint_channel("TriggerPolarity-S"),
+            "trigger_polarity_rbv": readback_channel("TriggerPolarity-RB"),
+            "trigger_connector": setpoint_channel("TriggerConnector-S"),
+            "trigger_connector_rbv": readback_channel("TriggerConnector-RB"),
+            "num_triggers": setpoint_channel("TriggerTimes-S"),
+            "num_triggers_rbv": readback_channel("TriggerTimes-RB"),
+            "trigger_delay": setpoint_channel("TriggerDelay-S"),
+            "trigger_delay_rbv": readback_channel("TriggerDelay-RB"),
+            "internal_trigger_handling": setpoint_channel("InternalTriggerHandling-S"),
+            "internal_trigger_handling_rbv": readback_channel(
+                "InternalTriggerHandling-RB"
+            ),
+            "topicpv": readback_channel("", pv_prefix_attr="topic_pv"),
+            "sourcepv": readback_channel("", pv_prefix_attr="source_pv"),
+            # control channels
+            "size_x": setpoint_channel("SizeX"),
+            "size_x_rbv": readback_channel("SizeX_RBV"),
+            "size_y": setpoint_channel("SizeY"),
+            "size_y_rbv": setpoint_channel("SizeY_RBV"),
+            "min_x": setpoint_channel("MinX"),
+            "min_x_rbv": setpoint_channel("MinX_RBV"),
+            "min_y": setpoint_channel("MinY"),
+            "min_y_rbv": setpoint_channel("MinY_RBV"),
+            "bin_x": setpoint_channel("BinX"),
+            "bin_x_rbv": setpoint_channel("BinX_RBV"),
+            "bin_y": setpoint_channel("BinY"),
+            "bin_y_rbv": setpoint_channel("BinY_RBV"),
+            "acquire_time": setpoint_channel("AcquireTime"),
+            "acquire_time_rbv": setpoint_channel("AcquireTime_RBV"),
+            "acquire_period": setpoint_channel("AcquirePeriod"),
+            "acquire_period_rbv": setpoint_channel("AcquirePeriod_RBV"),
+            "num_images": setpoint_channel("NumImages"),
+            "num_images_rbv": setpoint_channel("NumImages_RBV"),
+            "num_exposures": setpoint_channel("NumExposures"),
+            "num_exposures_rbv": setpoint_channel("NumExposures_RBV"),
+            "image_mode": setpoint_channel("ImageMode"),
+        }
+        return record_fields
 
     def _get_pv_parameters(self):
-        return set(self._record_fields) | set(["image_pv", "topicpv", "sourcepv"])
+        return set(self._epics_channels) | set(["image_pv", "topic_pv", "sourcepv"])
 
     def _get_pv_name(self, pvparam):
-        pv_name = self._record_fields.get(pvparam)
+        pv_name = self._epics_channels.get(pvparam)
         if pvparam == "image_pv":
             return self.image_pv
-        if pvparam == "topicpv":
+        if pvparam == "topic_pv":
             return self.topicpv
-        if pvparam == "sourcepv":
+        if pvparam == "source_pv":
             return self.sourcepv
         if pv_name:
             return self.pv_root + pv_name
         return getattr(self, pvparam)
 
     def _get_array_shape(self):
-        shape = self._get_pv("size_y"), self._get_pv("size_x")
+        shape = (
+            self._epics.get_channel_value("size_y"),
+            self._epics.get_channel_value("size_x"),
+        )
         binning_factor = int(self.binning[0])
         return (shape[0] // binning_factor, shape[1] // binning_factor)
 
     def _get_array_dtype(self):
-        return data_type_t[self._get_pv("data_type", as_string=True)]
+        return data_type_t[self._epics.get_channel_value("data_type", as_string=True)]
 
     def doStatus(self, maxage=0):
-        detector_state = self._get_pv("acquire_status", True)
+        detector_state = self._epics.get_channel_value("acquire_status", True)
         alarm_status = STAT_TO_STATUS.get(
-            self._get_pv("detector_state.STAT"), status.UNKNOWN
+            self._epics.get_channel_value("detector_state.STAT"), status.UNKNOWN
         )
         alarm_severity = SEVERITY_TO_STATUS.get(
-            self._get_pv("detector_state.SEVR"), status.UNKNOWN
+            self._epics.get_channel_value("detector_state.SEVR"), status.UNKNOWN
         )
         if detector_state != "Done" and alarm_severity < status.BUSY:
             alarm_severity = status.BUSY
@@ -955,7 +974,7 @@ class OrcaFlash4(AreaDetector):
             self.log.warning(msg_format, pv_value, stat)
 
     def _limit_size(self, value, max_pv):
-        max_value = self._get_pv(max_pv)
+        max_value = self._epics.get_channel_value(max_pv)
         if value > max_value:
             value = max_value
         elif value < max_value:
@@ -971,8 +990,8 @@ class OrcaFlash4(AreaDetector):
 
     def check_if_max_size(self):
         if (
-            self.sizex == self._get_pv("max_size_x")
-            and self.sizey == self._get_pv("max_size_y")
+            self.sizex == self._epics.get_channel_value("max_size_x")
+            and self.sizey == self._epics.get_channel_value("max_size_y")
             and self.startx == 0
             and self.starty == 0
         ):
@@ -994,92 +1013,98 @@ class OrcaFlash4(AreaDetector):
         self.doAcquire()
 
     def doReadSizex(self):
-        return self._get_pv("size_x_rbv")
+        return self._epics.get_channel_value("size_x_rbv")
 
     def doWriteSizex(self, value):
-        self._put_pv("size_x", self._limit_size(value, "max_size_x"))
+        self._epics.put_channel_value("size_x", self._limit_size(value, "max_size_x"))
         self.check_if_max_size()
 
     def doReadSizey(self):
-        return self._get_pv("size_y_rbv")
+        return self._epics.get_channel_value("size_y_rbv")
 
     def doWriteSizey(self, value):
-        self._put_pv("size_y", self._limit_size(value, "max_size_y"))
+        self._epics.put_channel_value("size_y", self._limit_size(value, "max_size_y"))
         self.check_if_max_size()
 
     def doReadStartx(self):
-        return self._get_pv("min_x_rbv")
+        return self._epics.get_channel_value("min_x_rbv")
 
     def doWriteStartx(self, value):
-        self._put_pv("min_x", self._limit_start(value))
+        self._epics.put_channel_value("min_x", self._limit_start(value))
 
     def doReadStarty(self):
-        return self._get_pv("min_y_rbv")
+        return self._epics.get_channel_value("min_y_rbv")
 
     def doWriteStarty(self, value):
-        self._put_pv("min_y", self._limit_start(value))
+        self._epics.put_channel_value("min_y", self._limit_start(value))
 
     def doReadBinx(self):
-        return self._get_pv("bin_x_rbv")
+        return self._epics.get_channel_value("bin_x_rbv")
 
     def doWriteBinx(self, value):
-        self._put_pv("bin_x", value)
+        self._epics.put_channel_value("bin_x", value)
 
     def doReadBiny(self):
-        return self._get_pv("bin_y_rbv")
+        return self._epics.get_channel_value("bin_y_rbv")
 
     def doWriteBiny(self, value):
-        self._put_pv("bin_y", value)
+        self._epics.put_channel_value("bin_y", value)
 
     def doReadNumimages(self):
-        return self._get_pv("num_images_rbv")
+        return self._epics.get_channel_value("num_images_rbv")
 
     def doWriteNumimages(self, value):
-        self._put_pv("num_images", value)
+        self._epics.put_channel_value("num_images", value)
 
     def doReadNumexposures(self):
-        return self._get_pv("num_exposures_rbv")
+        return self._epics.get_channel_value("num_exposures_rbv")
 
     def doWriteNumexposures(self, value):
-        self._put_pv("num_exposures", value)
+        self._epics.put_channel_value("num_exposures", value)
 
     def doWriteImagemode(self, value):
-        self._put_pv("image_mode", ImageMode[value.upper()].value)
+        self._epics.put_channel_value("image_mode", ImageMode[value.upper()].value)
 
     def doReadImagemode(self):
-        return ImageMode(self._get_pv("image_mode")).name.lower()
+        return ImageMode(self._epics.get_channel_value("image_mode")).name.lower()
 
     def doReadSubarraymode(self):
-        return self._get_pv("subarray_mode_rbv")
+        return self._epics.get_channel_value("subarray_mode_rbv")
 
     def doWriteSubarraymode(self, value):
-        self._put_pv("subarray_mode", value)
+        self._epics.put_channel_value("subarray_mode", value)
 
     def doReadBinning(self):
-        return binning_factor_map[self._get_pv("binning_factor_rbv")]
+        return binning_factor_map[self._epics.get_channel_value("binning_factor_rbv")]
 
     def doWriteBinning(self, value):
-        self._put_pv("binning_factor", value)
+        self._epics.put_channel_value("binning_factor", value)
 
     def doReadNumtriggers(self):
-        return self._get_pv("num_triggers_rbv")
+        return self._epics.get_channel_value("num_triggers_rbv")
 
     def doWriteNumtriggers(self, value):
-        self._put_pv("num_triggers", value)
+        self._epics.put_channel_value("num_triggers", value)
 
     def doReadTriggeractive(self):
-        return TriggerActive(self._get_pv("trigger_active_rbv")).name.lower()
+        return TriggerActive(
+            self._epics.get_channel_value("trigger_active_rbv")
+        ).name.lower()
 
     def doWriteTriggeractive(self, value):
-        self._put_pv("trigger_active", TriggerActive[value.upper()].value)
-
-    def get_topic_and_source(self):
-        return self._get_pv("topicpv", as_string=True), self._get_pv(
-            "sourcepv", as_string=True
+        self._epics.put_channel_value(
+            "trigger_active", TriggerActive[value.upper()].value
         )
 
+    def get_topic_and_source(self):
+        return self._epics.get_channel_value(
+            "topicpv", as_string=True
+        ), self._epics.get_channel_value("sourcepv", as_string=True)
+
     def doReadChip_Coolingmode(self):
-        return CoolingMode(self._get_pv("cooling_mode_rbv")).name.lower()
+        return CoolingMode(
+            self._epics.get_channel_value("cooling_mode_rbv")
+        ).name.lower()
 
     def doWriteChip_Coolingmode(self, value):
         if self.watercooler_mode.upper() == "OFF" and value.upper() != "OFF":
@@ -1095,10 +1120,10 @@ class OrcaFlash4(AreaDetector):
             )
             return
 
-        self._put_pv("cooling_mode", CoolingMode[value.upper()].value)
+        self._epics.put_channel_value("cooling_mode", CoolingMode[value.upper()].value)
 
     def doReadChip_Temperature(self):
-        return self._get_pv("chip_temperature")
+        return self._epics.get_channel_value("chip_temperature")
 
     def doReadWatercooler_Mode(self):
         if self._attached_watercooler_mode is not None:
@@ -1151,7 +1176,7 @@ class OrcaFlash4(AreaDetector):
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        return self.pulses2time(self._get_pv("num_triggers_rbv"))
+        return self.pulses2time(self._epics.get_channel_value("num_triggers_rbv"))
 
     def doWriteAcquiretime(self, value):
         """
@@ -1159,7 +1184,7 @@ class OrcaFlash4(AreaDetector):
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        self._put_pv("num_triggers", self.time2pulses(value))
+        self._epics.put_channel_value("num_triggers", self.time2pulses(value))
 
     def doReadAcquireperiod(self):
         """
@@ -1167,7 +1192,7 @@ class OrcaFlash4(AreaDetector):
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        return self.pulses2time(self._get_pv("num_triggers_rbv"))
+        return self.pulses2time(self._epics.get_channel_value("num_triggers_rbv"))
 
     def doWriteAcquireperiod(self, value):
         """
@@ -1175,7 +1200,7 @@ class OrcaFlash4(AreaDetector):
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        self._put_pv("num_triggers", self.time2pulses(value))
+        self._epics.put_channel_value("num_triggers", self.time2pulses(value))
 
 
 class AreaDetectorCollector(Detector):
