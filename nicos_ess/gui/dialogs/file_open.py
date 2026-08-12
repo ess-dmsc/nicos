@@ -52,6 +52,7 @@ class FileOpenDialog(QDialog):
         self.file_table.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows
         )
+        self.file_table.setShowGrid(False)
 
         if files:
             first = self.table_model.index(0, 0)
