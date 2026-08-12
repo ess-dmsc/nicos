@@ -7,8 +7,10 @@ from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsCompo
 
 session_setup = None
 
+
 class FakeAreaDetector(AreaDetector):
     """Area detector faking a connection."""
+
     @classmethod
     def _initial_channel_values(cls):
         return {
