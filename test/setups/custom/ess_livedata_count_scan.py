@@ -9,13 +9,15 @@ devices = dict(
     channel_1=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Livedata channel 1",
-        selector="test/data_reduction/monitor_data/1@monitor/current",
+        device_name="monitor",
+        workflow_id="test/monitor_histogram/1",
         type="counter",
     ),
     channel_2=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Livedata channel 2",
-        selector="test/data_reduction/monitor_data/1@monitor/cumulative",
+        device_name="monitor",
+        workflow_id="test/monitor_histogram/2",
         type="counter",
     ),
     livedata_collector=device(

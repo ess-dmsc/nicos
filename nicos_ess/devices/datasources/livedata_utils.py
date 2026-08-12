@@ -35,6 +35,7 @@ class JobId:
 class ResultKey:
     workflow_id: WorkflowId
     output_name: Optional[str]
+    source_name: Optional[str]
 
 
 def parse_result_key(source_name_json: str) -> ResultKey:
@@ -48,6 +49,7 @@ def parse_result_key(source_name_json: str) -> ResultKey:
             version=int(wf["version"]),
         ),
         output_name=raw.get("output_name"),
+        source_name=raw.get("source_name"),
     )
 
 

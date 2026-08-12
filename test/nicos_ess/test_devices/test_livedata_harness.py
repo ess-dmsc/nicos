@@ -36,8 +36,9 @@ _SOURCE_NAME = json.dumps(
             "name": "monitor_data",
             "version": 1,
         },
-        "job_id": {"source_name": "monitor", "job_number": "job-1"},
+        "source_name": "monitor",
         "output_name": "current",
+        "device_name": "monitor",
     }
 )
 
@@ -57,7 +58,8 @@ def _create_channel(daemon_device_harness, name="channel"):
     return daemon_device_harness.create_master(
         livedata.DataChannel,
         name=name,
-        selector="test/monitor_data/1@monitor/current",
+        workflow_id="test/monitor_data/1",
+        device_name="monitor",
         type="counter",
     )
 
@@ -96,29 +98,6 @@ def _var(name, data, axes=None, unit="", label=None):
 
 
 class TestLiveDataHarness:
-    def test_selector_move_updates_channel_selector(
-        self, daemon_device_harness, livedata_stubs
-    ):
-        """Moving the channel via its mapping should rewrite the stored selector."""
-        channel = _create_channel(daemon_device_harness)
-        collector = _create_collector(daemon_device_harness, ["channel"])
-        workflow = WorkflowId("test", "monitor_data", 1)
-
-        collector._registry.jobinfo_from_status(
-            workflow,
-            job_source_name="monitor",
-            job_number="job-1",
-            state="active",
-        )
-        collector._registry.note_output(workflow, JobId("monitor", "job-1"), "current")
-        mapping = collector.get_current_mapping()
-        label, selector = next(iter(mapping.items()))
-
-        channel.mapping = mapping
-        channel.move(label)
-
-        assert channel.selector == selector
-
     def test_prepare_keeps_backend_reset_behavior(
         self, daemon_device_harness, livedata_stubs
     ):
@@ -131,7 +110,6 @@ class TestLiveDataHarness:
             collector._registry.jobinfo_from_status(
                 WorkflowId("test", "monitor_data", 1),
                 job_source_name="monitor",
-                job_number="job-1",
                 state="active",
             )
             channel.prepare()
@@ -140,10 +118,8 @@ class TestLiveDataHarness:
 
         payload = json.loads(livedata_stubs.messages[0]["message"].decode("utf-8"))
         assert payload["action"] == "reset"
-        assert payload["job_id"] == {
-            "source_name": "monitor",
-            "job_number": "job-1",
-        }
+        assert payload["kind"] == "job_command"
+        assert payload["workflow_id"] == "test/monitor_data/1"
 
     def test_da00_routing_updates_scalar_value_and_live_payload(
         self, daemon_device_harness, livedata_stubs, monkeypatch
@@ -163,7 +139,7 @@ class TestLiveDataHarness:
         channel.start()
 
         raw = serialise_da00(
-            source_name=_SOURCE_NAME,
+            source_name="monitor",
             timestamp_ns=123456789,
             data=[
                 Variable(
