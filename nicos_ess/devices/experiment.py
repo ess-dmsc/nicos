@@ -300,14 +300,12 @@ class EssExperiment(Device):
     def read_server_file(self, filename) -> str:
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        print(f"🎇 Now opening file '{filename}'")
         with open(os.path.join(DEFAULT_SCRIPT_ROOT, filename), encoding="utf-8") as f:
             return f.read()
 
     def write_server_file(self, filename, contents):
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        print(f"🎇 Now writing file '{filename}': {contents}")
         with open(os.path.join(DEFAULT_SCRIPT_ROOT, filename), "w", encoding="utf-8") as f:
             # NOTE: contents are received as bytes, so must be decoded!
             f.write(contents.decode())
