@@ -286,7 +286,16 @@ class EssExperiment(Device):
     def list_server_directory(self, directory="") -> list[str]:
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        return os.listdir(os.path.join(DEFAULT_SCRIPT_ROOT, directory))
+        directory = os.path.join(DEFAULT_SCRIPT_ROOT, directory)
+        files = []
+        for file in os.listdir(directory):
+            path = os.path.join(directory, file)
+            if not os.path.isfile(path):
+                # Only list actual files
+                continue
+            last_modified = int(os.path.getmtime(path))
+            files.append((file, last_modified))
+        return files
 
     def read_server_file(self, fn="") -> str:
         """document me!"""
