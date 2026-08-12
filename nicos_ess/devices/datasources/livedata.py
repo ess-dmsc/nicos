@@ -26,7 +26,6 @@ from __future__ import annotations
 import json
 import threading
 import time
-from typing import List, Optional, Tuple
 from uuid import uuid4
 
 import numpy as np
@@ -50,7 +49,7 @@ from nicos.core import (
     tupleof,
 )
 from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
-from nicos.utils import byteBuffer, createThread, num_sort, sleep
+from nicos.utils import byteBuffer, createThread, sleep
 from nicos_ess.devices.datasources.livedata_utils import (
     DeviceSelector,
     JobInfo,
@@ -121,13 +120,13 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
 
     def doPreinit(self, mode):
         self._collector = None  # set by LiveDataCollector
-        self._signal: Optional[np.ndarray] = None
+        self._signal: np.ndarray | None = None
         self.arraydesc = ArrayDesc(self.name, shape=(), dtype=np.int32)
         if session.sessiontype != POLLER:
             self._update_status(status.OK, "")
 
     def doInit(self, mode):
-        self._device_selector_obj: Optional[DeviceSelector] = (
+        self._device_selector_obj: DeviceSelector | None = (
             DeviceSelector.parse_device_name(self.device_name, self.workflow_id)
             if self.device_name
             else None
@@ -395,13 +394,13 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
     def _push_to_nicos(
         self,
         plot_type: str,
-        label_arrays: List[np.ndarray],
+        label_arrays: list[np.ndarray],
         timestamp: int,
         *,
-        axis_names: Optional[List[str]] = None,
-        axis_units: Optional[List[str]] = None,
-        title: Optional[str] = None,
-        signal_unit: Optional[str] = None,
+        axis_names: list[str] | None = None,
+        axis_units: list[str] | None = None,
+        title: str | None = None,
+        signal_unit: str | None = None,
         x_is_time: bool = False,
     ):
         if self._signal is None:
@@ -436,7 +435,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
             labelbuffers,
         )
 
-    def _resolve_job(self) -> Optional[JobInfo]:
+    def _resolve_job(self) -> JobInfo | None:
         """Clean this up and the rest in livedata utils."""
         if not self._collector or not self._selector_obj:
             return None
@@ -537,10 +536,10 @@ class LiveDataCollector(Detector):
     }
 
     # internals
-    _data_subscriber: Optional[KafkaSubscriber] = None
-    _status_consumer: Optional[KafkaConsumer] = None
-    _resp_consumer: Optional[KafkaConsumer] = None
-    _producer: Optional[KafkaProducer] = None
+    _data_subscriber: KafkaSubscriber | None = None
+    _status_consumer: KafkaConsumer | None = None
+    _resp_consumer: KafkaConsumer | None = None
+    _producer: KafkaProducer | None = None
 
     def doPreinit(self, mode):
         Detector.doPreinit(self, mode)
@@ -597,7 +596,7 @@ class LiveDataCollector(Detector):
         base = self.cfg_group_id or "nicos-livedata"
         return f"{base}-{label}-{uuid4().hex}"
 
-    def _on_data_messages(self, messages: List[Tuple[int, bytes]]):
+    def _on_data_messages(self, messages: list[tuple[int, bytes]]):
         for timestamp_ns, raw in messages:
             try:
                 if get_schema(raw) != "da00":
@@ -613,8 +612,8 @@ class LiveDataCollector(Detector):
                     )
                     try:
                         self._registry.mark_seen(rk.source_name)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        self.log.warning(f"Could not refresh workflow in registry: {e}")
                 except (json.JSONDecodeError, KeyError, TypeError):
                     # Not a ResultKey JSON, must be a device name from NICOS_DATA topic
                     rk = None
@@ -737,15 +736,16 @@ class LiveDataCollector(Detector):
 
     def _dispatch_to_channels(self, timestamp_ns: int, da):
         for ch in self._channels:
-            dev_sel: Optional[DeviceSelector] = getattr(
-                ch, "_device_selector_obj", None
-            )
+            dev_sel: DeviceSelector | None = getattr(ch, "_device_selector_obj", None)
 
             # Try DeviceSelector (for NICOS_DATA topic)
-            if dev_sel and da.source_name:
-                if dev_sel.matches_da00_source(da.source_name):
-                    ch.update_data_from_da00(da, timestamp_ns)
-                    continue
+            if (
+                dev_sel
+                and da.source_name
+                and dev_sel.matches_da00_source(da.source_name)
+            ):
+                ch.update_data_from_da00(da, timestamp_ns)
+                continue
 
     def send_workflow_reset_command(self, workflow_id: str):
         """
@@ -802,8 +802,8 @@ class LiveDataCollector(Detector):
         if time.time() > (self._last_expected_status_time + self.status_timeout):
             try:
                 self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.warning(f"Could not update disconnected status: {e}")
 
     def doShutdown(self):
         # Best-effort cleanup; Kafka wrappers usually are resilient to late close.
