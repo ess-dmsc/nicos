@@ -35,7 +35,7 @@ class RemoteFileDialog(QDialog):
 
     def __init__(self, parent, client, directory, save):
         QDialog.__init__(self, parent)
-        loadUi(self, findResource("nicos_ess/gui/dialogs/file_open.ui"))
+        loadUi(self, findResource("nicos_ess/gui/dialogs/remote_file_dialog.ui"))
 
         self.client = client
         self.save = save

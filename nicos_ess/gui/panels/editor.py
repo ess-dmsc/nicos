@@ -8,7 +8,6 @@ from uuid import uuid1
 
 from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
-from nicos_ess.gui.dialogs.file_open import RemoteFileDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.clients.gui.widgets.qscintillacompat import QScintillaCompatible
@@ -19,7 +18,6 @@ from nicos.guisupport.qt import (
     QByteArray,
     QColor,
     QDialog,
-    QFileDialog,
     QFileSystemModel,
     QFileSystemWatcher,
     QFont,
@@ -50,6 +48,7 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, findResource, formatDuration, formatEndtime
+from nicos_ess.gui.dialogs.remote_file_dialog import RemoteFileDialog
 from nicos_ess.gui.utils import get_icon
 
 has_scintilla = QsciScintilla is not None
@@ -1029,14 +1028,7 @@ class EditorPanel(Panel):
 
     @pyqtSlot()
     def on_actionOpen_triggered(self):
-        # if self.currentEditor is not None and self.filenames.get(self.currentEditor):
-        #     initialdir = os.path.dirname(self.filenames[self.currentEditor])
-        # else:
-        #     initialdir = self.client.eval("session.experiment.scriptpath", "")
-        # fn = QFileDialog.getOpenFileName(
-        #     self, "Open script", initialdir, "Script files (*.py *.txt)"
-        # )[0]
-        # TODO add a dialog allowing to pick a file from a list of files/dirs
+        # TODO: choose a directory. E.g. proposal number
         file = RemoteFileDialog.get_file(self, self.client)
         if file:
             self.openFile(file)
