@@ -20,7 +20,7 @@ from streaming_data_types.dataarray_da00 import Variable, serialise_da00
 
 from nicos import session as nicos_session
 from nicos_ess.devices.datasources import livedata
-from nicos_ess.devices.datasources.livedata_utils import JobId, WorkflowId
+from nicos_ess.devices.datasources.livedata_utils import WorkflowId
 from nicos_ess.devices.timer import TimerChannel
 from test.nicos_ess.test_devices.doubles import (
     StubKafkaProducer,
@@ -101,7 +101,7 @@ class TestLiveDataHarness:
     def test_prepare_keeps_backend_reset_behavior(
         self, daemon_device_harness, livedata_stubs
     ):
-        """Preparing a channel should still send a backend reset for its resolved job."""
+        """Preparing a channel should still send a backend reset for its resolved job"""
         channel = _create_channel(daemon_device_harness)
         collector = _create_collector(daemon_device_harness, ["channel"])
 
