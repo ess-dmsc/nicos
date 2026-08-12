@@ -1,20 +1,19 @@
 import time
+
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
-    Qt,
-    QDialog,
-    pyqtSlot,
-    QHeaderView,
     QAbstractItemView,
+    QDialog,
+    QHeaderView,
+    Qt,
+    pyqtSlot,
 )
-from nicos.utils import findResource
 from nicos.guisupport.tablemodel import TableModel
+from nicos.utils import findResource
 
 
 class FileTableModel(TableModel):
     def sort(self, column, order):
-        print("SORTING", column, order)
-        print(self._table_data)
         if column == 0 and order == Qt.SortOrder.DescendingOrder:
             self._table_data.sort(key=lambda x: x[0])
         elif column == 0 and order == Qt.SortOrder.AscendingOrder:
@@ -23,7 +22,6 @@ class FileTableModel(TableModel):
             self._table_data.sort(key=lambda x: x[2])
         elif column == 1 and order == Qt.SortOrder.AscendingOrder:
             self._table_data.sort(key=lambda x: x[2], reverse=True)
-        print("AFTER", self._table_data)
         self._emit_update()
 
 
