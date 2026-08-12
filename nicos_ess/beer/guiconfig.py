@@ -5,7 +5,6 @@ main_window = docked(
             panel("nicos_ess.gui.panels.exp_panel.ExpPanel", hide_sample=True),
         ),
         ("Instrument Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
-        ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
         (
             "Instrument Interaction",
             hsplit(
