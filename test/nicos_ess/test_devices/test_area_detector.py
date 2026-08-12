@@ -1,7 +1,9 @@
 import pytest
 import numpy as np
+
 from nicos.core.params import ArrayDesc
 from nicos_ess.devices.epics.area_detector import AreaDetector
+
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsComponent
 
 session_setup = None
@@ -52,7 +54,7 @@ class TestAreaDetector:
         """Test that doIsCompleted() returns correct value."""
         self.area_detector._epics.values["acquire_status"] = "Done"
         ret = self.area_detector.isCompleted()
-        assert ret == True
+        assert ret
         self.area_detector._epics.values["acquire_status"] = "Busybusybusy"
         ret = self.area_detector.isCompleted()
-        assert ret == False
+        assert not ret
