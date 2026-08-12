@@ -1036,11 +1036,13 @@ class EditorPanel(Panel):
         #     self, "Open script", initialdir, "Script files (*.py *.txt)"
         # )[0]
         # TODO add a dialog allowing to pick a file from a list of files/dirs
-        fn = "simple.py"
-        if not fn:
-            return
-        self.openFile(fn)
-        self.addToRecentf(fn)
+
+        from nicos_ess.gui.dialogs.file_open import FileOpenDialog
+
+        file = FileOpenDialog.get_file(self, self.client)
+        if file:
+            self.openFile(file)
+            self.addToRecentf(file)
 
     @pyqtSlot()
     def on_actionReload_triggered(self):
