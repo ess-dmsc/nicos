@@ -8,6 +8,7 @@ from uuid import uuid1
 
 from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
+from nicos_ess.gui.dialogs.file_open import RemoteFileDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.clients.gui.widgets.qscintillacompat import QScintillaCompatible
@@ -1036,10 +1037,7 @@ class EditorPanel(Panel):
         #     self, "Open script", initialdir, "Script files (*.py *.txt)"
         # )[0]
         # TODO add a dialog allowing to pick a file from a list of files/dirs
-
-        from nicos_ess.gui.dialogs.file_open import FileOpenDialog
-
-        file = FileOpenDialog.get_file(self, self.client)
+        file = RemoteFileDialog.get_file(self, self.client)
         if file:
             self.openFile(file)
             self.addToRecentf(file)
@@ -1064,14 +1062,10 @@ class EditorPanel(Panel):
 
     def openFile(self, fn, quiet=False):
         try:
-            print(f"read_server_file('{fn}')")
             text = self.client.eval(
                 f"session.experiment.read_server_file('{fn}')", "💣"
             )
-            print(f"🪓 {text}")
         except Exception as err:
-            # if quiet:
-            #    return
             return self.showError("Opening file failed: %s" % err)
 
         editor = self.createEditor()
@@ -1113,10 +1107,6 @@ class EditorPanel(Panel):
     @pyqtSlot()
     def on_actionSave_triggered(self):
         self.saveFile(self.currentEditor)
-        self.parent_window.setWindowTitle(
-            "%s[*] - %s editor"
-            % (self.filenames[self.currentEditor], self.mainwindow.instrument)
-        )
 
     @pyqtSlot()
     def on_actionSaveAs_triggered(self):
@@ -1131,39 +1121,31 @@ class EditorPanel(Panel):
             return self.saveFileAs(editor)
 
         self.saving = True
+        filename = self.filenames[editor]
+        # The content must be sent as bytes because eval cannot handle strings
+        # containing \n, \t, etc.
+        content = editor.text().encode()
+        print("SAVING", filename, content)
         try:
-            with open(self.filenames[editor], "w", encoding=LOCALE_ENCODING) as f:
-                f.write(editor.text())
+            self.client.eval(
+                f"session.experiment.write_server_file('{filename}', {content})",
+            )
         except Exception as err:
-            self.showError("Writing file failed: %s" % err)
+            self.showError("Saving file failed: %s" % err)
             return False
         finally:
             self.saving = False
 
-        self.watchers[editor].addPath(self.filenames[editor])
         editor.setModified(False)
         return True
 
     def saveFileAs(self, editor):
-        if self.filenames[editor]:
-            initialdir = os.path.dirname(self.filenames[editor])
-        else:
-            initialdir = self.client.eval("session.experiment.scriptpath", "")
-        if self.client.eval("session.spMode", False):
-            defaultext = ".txt"
-            flt = "Script files (*.txt *.py)"
-        else:
-            defaultext = ".py"
-            flt = "Script files (*.py *.txt)"
-        fn = QFileDialog.getSaveFileName(self, "Save script", initialdir, flt)[0]
-        if not fn:
-            return False
-        if not fn.endswith((".py", ".txt")):
-            fn += defaultext
-        self.addToRecentf(fn)
-        self.watchers[editor].removePath(self.filenames[editor])
-        self.filenames[editor] = fn
-        self.tabber.setTabText(self.editors.index(editor), os.path.basename(fn))
+        file = RemoteFileDialog.get_file(self, self.client, save=True)
+        if not file:
+            return
+        self.addToRecentf(file)
+        self.filenames[editor] = file
+        self.tabber.setTabText(self.editors.index(editor), os.path.basename(file))
         return self.saveFile(editor)
 
     @pyqtSlot()

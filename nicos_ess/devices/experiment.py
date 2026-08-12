@@ -297,17 +297,20 @@ class EssExperiment(Device):
             files.append((file, last_modified))
         return files
 
-    def read_server_file(self, fn="") -> str:
+    def read_server_file(self, filename) -> str:
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        print(f"🎇 Now opening file '{fn}'")
-        with open(os.path.join(DEFAULT_SCRIPT_ROOT, fn), encoding="utf-8") as f:
+        print(f"🎇 Now opening file '{filename}'")
+        with open(os.path.join(DEFAULT_SCRIPT_ROOT, filename), encoding="utf-8") as f:
             return f.read()
 
-    def write_server_file(self, fn="") -> str:
+    def write_server_file(self, filename, contents):
         """document me!"""
-        print(f"🎇 Now writing file '{fn}'")
-        return "done!"
+        # TODO sanitize input to prevent access to upper dirs
+        print(f"🎇 Now writing file '{filename}': {contents}")
+        with open(os.path.join(DEFAULT_SCRIPT_ROOT, filename), "w", encoding="utf-8") as f:
+            # NOTE: contents are received as bytes, so must be decoded!
+            f.write(contents.decode())
 
     def _canQueryProposals(self):
         if self._yuos_client:

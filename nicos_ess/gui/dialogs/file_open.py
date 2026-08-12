@@ -27,19 +27,20 @@ class FileTableModel(TableModel):
         self._emit_update()
 
 
-class FileOpenDialog(QDialog):
+class RemoteFileDialog(QDialog):
     @classmethod
-    def get_file(cls, parent, client, directory=""):
-        dialog = cls(parent, client, directory)
+    def get_file(cls, parent, client, directory="", save=False):
+        dialog = cls(parent, client, directory, save)
         if dialog.exec() == 1:
             return dialog.get_selected_file()
         return None
 
-    def __init__(self, parent, client, directory=""):
+    def __init__(self, parent, client, directory, save):
         QDialog.__init__(self, parent)
         loadUi(self, findResource("nicos_ess/gui/dialogs/file_open.ui"))
 
         self.client = client
+        self.save = save
 
         files = self.client.eval(
             f"session.experiment.list_server_directory('{directory}')", None
@@ -77,12 +78,20 @@ class FileOpenDialog(QDialog):
         self.file_table.setShowGrid(False)
         self.file_table.setSortingEnabled(True)
 
-        if files:
+        if files and not save:
             first = self.table_model.index(0, 0)
             self.file_table.setCurrentIndex(first)
 
+        if save:
+            self.setWindowTitle("Save Script File As")
+            self.btn_ok.setText("Save")
+        else:
+            self.setWindowTitle("Open Script File")
+            self.txt_filename.hide()
+            self.lbl_name.hide()
+
     @pyqtSlot()
-    def on_btn_open_pressed(self):
+    def on_btn_ok_pressed(self):
         self.accept()
 
     @pyqtSlot()
@@ -90,6 +99,11 @@ class FileOpenDialog(QDialog):
         self.reject()
 
     def get_selected_file(self):
+        print("HERE!")
+        if self.save:
+            print("HERE!")
+            return self.txt_filename.text()
+
         indexes = self.file_table.selectedIndexes()
         if indexes:
             return self.table_model.data(
