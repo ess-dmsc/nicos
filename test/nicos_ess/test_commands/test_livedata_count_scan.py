@@ -53,8 +53,8 @@ def _publish_livedata_when_running(channel, total):
                 "name": "monitor_data",
                 "version": 1,
             },
-            "job_id": {"source_name": "monitor", "job_number": "job-1"},
             "output_name": "current",
+            "source_name": "monitor",
         }
     )
     signal = SimpleNamespace(

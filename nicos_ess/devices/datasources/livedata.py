@@ -673,7 +673,6 @@ class LiveDataCollector(Detector):
                     self._registry.jobinfo_from_status(
                         wf,
                         job_source_name=job.get("source_name", ""),
-                        job_number=job.get("job_number", ""),
                         state=payload.get("state", "unknown"),
                         start_time_ns=payload.get("start_time"),
                         end_time_ns=payload.get("end_time"),
