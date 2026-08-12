@@ -1,9 +1,8 @@
-import pytest
 import numpy as np
+import pytest
 
 from nicos.core.params import ArrayDesc
 from nicos_ess.devices.epics.area_detector import AreaDetector
-
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsComponent
 
 session_setup = None
