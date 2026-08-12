@@ -22,7 +22,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QListView" name="file_list"/>
+    <widget class="QTableView" name="file_table"/>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">

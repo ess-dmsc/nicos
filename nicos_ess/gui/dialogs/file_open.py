@@ -2,26 +2,12 @@ from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
     Qt,
     QDialog,
-    QPixmap,
-    QSize,
-    QAbstractListModel,
     pyqtSlot,
+    QHeaderView,
+    QAbstractItemView,
 )
 from nicos.utils import findResource
-
-
-class FileModel(QAbstractListModel):
-    def __init__(self, files=None):
-        super().__init__()
-        self.files = files or []
-
-    def data(self, index, role):
-        if role == Qt.ItemDataRole.DisplayRole:
-            text = self.files[index.row()]
-            return text
-
-    def rowCount(self, index):
-        return len(self.files)
+from nicos.guisupport.tablemodel import TableModel
 
 
 class FileOpenDialog(QDialog):
@@ -46,11 +32,30 @@ class FileOpenDialog(QDialog):
             print("TODO: something went wrong")
             return
 
-        self.model = FileModel(files)
-        self.file_list.setModel(self.model)
+        self.table_model = TableModel(["Name", "Size", "Modified"])
+        self.table_model.raw_data = [
+            {"Name": name, "Size": "128 kB", "Modified": "yesterday"} for name in files
+        ]
+        self.file_table.setModel(self.table_model)
+        self.file_table.verticalHeader().setVisible(False)
+        self.file_table.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.Stretch
+        )
+        self.file_table.horizontalHeader().setSectionResizeMode(
+            1,
+            QHeaderView.ResizeMode.ResizeToContents,
+        )
+        self.file_table.horizontalHeader().setSectionResizeMode(
+            2,
+            QHeaderView.ResizeMode.ResizeToContents,
+        )
+        self.file_table.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
+
         if files:
-            first = self.model.index(0, 0)
-            self.file_list.setCurrentIndex(first)
+            first = self.table_model.index(0, 0)
+            self.file_table.setCurrentIndex(first)
 
     @pyqtSlot()
     def on_btn_open_pressed(self):
@@ -61,7 +66,10 @@ class FileOpenDialog(QDialog):
         self.reject()
 
     def get_selected_file(self):
-        indexes = self.file_list.selectedIndexes()
+        indexes = self.file_table.selectedIndexes()
         if indexes:
-            return self.model.files[indexes[0].row()]
+            return self.table_model.data(
+                indexes[0],
+                Qt.ItemDataRole.DisplayRole,
+            )
         return None
