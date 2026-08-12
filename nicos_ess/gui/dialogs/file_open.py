@@ -85,10 +85,20 @@ class RemoteFileDialog(QDialog):
         if save:
             self.setWindowTitle("Save Script File As")
             self.btn_ok.setText("Save")
+            self.file_table.selectionModel().currentRowChanged.connect(
+                self.on_selection_changed
+            )
         else:
             self.setWindowTitle("Open Script File")
             self.txt_filename.hide()
             self.lbl_name.hide()
+
+    def on_selection_changed(self, current, _previous):
+        filename = self.table_model.data(
+            current,
+            Qt.ItemDataRole.DisplayRole,
+        )
+        self.txt_filename.setText(filename)
 
     @pyqtSlot()
     def on_btn_ok_pressed(self):
@@ -99,9 +109,7 @@ class RemoteFileDialog(QDialog):
         self.reject()
 
     def get_selected_file(self):
-        print("HERE!")
         if self.save:
-            print("HERE!")
             return self.txt_filename.text()
 
         indexes = self.file_table.selectedIndexes()
