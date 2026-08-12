@@ -16,9 +16,7 @@ pytest.importorskip("streaming_data_types")
 
 from nicos.commands.measure import count
 from nicos.commands.scan import scan
-
 from nicos_ess.devices.datasources import livedata
-
 from test.nicos_ess.command_helpers import (
     loaded_setup,
     scan_positions,
