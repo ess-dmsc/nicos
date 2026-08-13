@@ -77,6 +77,8 @@ class RemoteFileDialog(QDialog):
         self.file_table.setSortingEnabled(True)
         self.file_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
+        self.btn_ok.setDefault(True)
+
         if files and not save:
             first = self.table_model.index(0, 0)
             self.file_table.setCurrentIndex(first)

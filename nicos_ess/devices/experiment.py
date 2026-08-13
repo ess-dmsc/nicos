@@ -27,8 +27,6 @@ from nicos.devices.sample import Sample
 from nicos.utils import createThread, readFileCounter
 from nicos_ess.devices.datamanager import DataManager
 
-DEFAULT_SCRIPT_ROOT = "/tmp/nicos"
-
 
 class EssExperiment(Device):
     """Hold proposal, user, sample and counter context for ESS runs."""
@@ -144,6 +142,14 @@ class EssExperiment(Device):
             type=listof(str),
             settable=True,
             internal=True,
+        ),
+        "userscripts_filepath": Param(
+            "Path to the top directory where user scripts live",
+            type=str,
+            category="experiment",
+            default="/opt/user_scripts",
+            mandatory=False,
+            userparam=False,
         ),
     }
 
@@ -286,7 +292,7 @@ class EssExperiment(Device):
     def list_server_directory(self, directory="") -> list[str]:
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        directory = os.path.join(DEFAULT_SCRIPT_ROOT, directory)
+        directory = os.path.join(self.userscripts_filepath, directory)
         files = []
         for file in os.listdir(directory):
             path = os.path.join(directory, file)
@@ -300,13 +306,15 @@ class EssExperiment(Device):
     def read_server_file(self, filename) -> str:
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        with open(os.path.join(DEFAULT_SCRIPT_ROOT, filename), encoding="utf-8") as f:
+        filepath = os.path.join(self.userscripts_filepath, filename)
+        with open(filepath, encoding="utf-8") as f:
             return f.read()
 
     def write_server_file(self, filename, contents):
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        with open(os.path.join(DEFAULT_SCRIPT_ROOT, filename), "w", encoding="utf-8") as f:
+        filepath = os.path.join(self.userscripts_filepath, filename)
+        with open(filepath, "w", encoding="utf-8") as f:
             # NOTE: contents are received as bytes, so must be decoded!
             f.write(contents.decode())
 
