@@ -5,6 +5,8 @@ from nicos.guisupport.qt import (
     QAbstractItemView,
     QDialog,
     QHeaderView,
+    QRegularExpression,
+    QRegularExpressionValidator,
     Qt,
     pyqtSlot,
 )
@@ -83,12 +85,19 @@ class RemoteFileDialog(QDialog):
             first = self.table_model.index(0, 0)
             self.file_table.setCurrentIndex(first)
 
+        # Limit what chars are acceptable in a file name
+        self.txt_filename.setValidator(
+            QRegularExpressionValidator(QRegularExpression(r"[A-Za-z0-9._=+-]+"), self)
+        )
+
         if save:
             self.setWindowTitle("Save Script File As")
             self.btn_ok.setText("Save")
+            self.btn_ok.setEnabled(False)
             self.file_table.selectionModel().currentRowChanged.connect(
                 self.on_selection_changed
             )
+            self.txt_filename.textChanged.connect(self.on_filename_changed)
         else:
             self.setWindowTitle("Open Script File")
             self.txt_filename.hide()
@@ -100,6 +109,9 @@ class RemoteFileDialog(QDialog):
             Qt.ItemDataRole.DisplayRole,
         )
         self.txt_filename.setText(filename)
+
+    def on_filename_changed(self, name):
+        self.btn_ok.setEnabled(name.strip() != "")
 
     @pyqtSlot()
     def on_btn_ok_pressed(self):
