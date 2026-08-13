@@ -454,6 +454,17 @@
     <string>Ctrl+Shift+Return</string>
    </property>
   </action>
+  <action name="actionImport">
+   <property name="icon">
+    <iconset theme="QIcon::ThemeIcon::ListAdd"/>
+   </property>
+   <property name="text">
+    <string>Import</string>
+   </property>
+   <property name="toolTip">
+    <string>Import a file from the client machine</string>
+   </property>
+  </action>
  </widget>
  <resources>
   <include location="../../../../resources/nicos-gui.qrc"/>

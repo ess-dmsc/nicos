@@ -18,6 +18,7 @@ from nicos.guisupport.qt import (
     QByteArray,
     QColor,
     QDialog,
+    QFileDialog,
     QFileSystemModel,
     QFont,
     QFontMetrics,
@@ -432,6 +433,8 @@ class EditorPanel(Panel):
         showToolText(bar, self.actionNew)
         bar.addAction(self.actionOpen)
         showToolText(bar, self.actionOpen)
+        bar.addAction(self.actionImport)
+        showToolText(bar, self.actionImport)
         bar.addAction(self.actionSave)
         showToolText(bar, self.actionSave)
         bar.addAction(self.actionSaveAs)
@@ -468,6 +471,7 @@ class EditorPanel(Panel):
     def get_icons(self):
         self.actionNew.setIcon(get_icon("add_circle_outline-24px.svg"))
         self.actionOpen.setIcon(get_icon("folder_open-24px.svg"))
+        self.actionImport.setIcon(get_icon("get-24px.svg"))
         self.actionSave.setIcon(get_icon("save-24px.svg"))
         self.actionSaveAs.setIcon(get_icon("save_as-24px.svg"))
         self.actionPrint.setIcon(get_icon("print-24px.svg"))
@@ -1178,3 +1182,12 @@ class EditorPanel(Panel):
             else:
                 self.currentEditor.insertAt(COMMENT_STR, line, 0)
             self.currentEditor.endUndoAction()
+
+    @pyqtSlot()
+    def on_actionImport_triggered(self):
+        filename = QFileDialog.getOpenFileName(
+            self, "Import Script", "", "Python (*.py)"
+        )[0]
+        if not filename:
+            return
+        self.openFile(filename)
