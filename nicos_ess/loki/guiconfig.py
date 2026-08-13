@@ -9,7 +9,6 @@ main_window = docked(
             "Sample Configuration",
             panel("nicos_ess.loki.gui.sample_holder_config.LokiSampleHolderPanel"),
         ),
-        
         (
             "Instrument Interaction",
             hsplit(
