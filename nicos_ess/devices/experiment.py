@@ -292,6 +292,7 @@ class EssExperiment(Device):
     def list_server_directory(self, directory="") -> list[str]:
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
+        # TODO only return .py files
         directory = os.path.join(self.userscripts_filepath, directory)
         files = []
         for file in os.listdir(directory):
