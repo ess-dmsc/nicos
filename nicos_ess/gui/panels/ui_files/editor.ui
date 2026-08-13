@@ -256,7 +256,7 @@
     <string>&amp;Save</string>
    </property>
    <property name="toolTip">
-    <string>Save script to disk</string>
+    <string>Save script</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
