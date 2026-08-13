@@ -623,9 +623,21 @@ class EditorPanel(Panel):
             "openfiles", [self.filenames[e] for e in self.editors if self.filenames[e]]
         )
 
+    def check_dirty_on_close(self, editor):
+        if not editor.isModified():
+            return True
+        message = "There are unsaved script files, are you sure you want to close?"
+        buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        rc = QMessageBox.question(
+            self, "Script Editor - Unsaved Files", message, buttons
+        )
+        if rc in (QMessageBox.StandardButton.Discard, QMessageBox.StandardButton.No):
+            return False
+        return True
+
     def requestClose(self):
         for editor in self.editors:
-            if not self.checkDirty(editor):
+            if not self.check_dirty_on_close(editor):
                 return False
         return True
 
