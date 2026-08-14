@@ -45,6 +45,17 @@ QMenu::item:disabled {
      color:#959ea7;
 }
 
+/* -------------------- QCheckBox -------------------- */
+QCheckBox::indicator {
+     width: 21px;
+     height: 21px;
+}
+
+QListView::indicator {
+     width: 21px;
+     height: 21px;
+}
+
 /* -------------------- QToolBar -------------------- */
 
 QToolBar {
