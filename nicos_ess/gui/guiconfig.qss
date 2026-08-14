@@ -416,6 +416,7 @@ QTreeView {
 
 QTreeView::item {
     color: black;
+    min-height: 30px;
 }
 
 QTreeView::item:!selected:hover,
