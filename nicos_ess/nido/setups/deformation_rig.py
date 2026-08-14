@@ -43,10 +43,11 @@ devices = dict(
         targetpv=f"{pv_root}LoadLowLimit-SP",
     ),
     rig_load_limit_control=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="Move load high and low limit to selected values",
         readpv=f"{pv_root}LoadSetpoint-Cmd",
         writepv=f"{pv_root}LoadSetpoint-Cmd",
+        mapping={"Set values": 1},
     ),
     rig_load_sensor=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
@@ -58,6 +59,7 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Stroke reading after conversion",
         readpv=f"{pv_root}StrokeValue-Mon",
+        fmtstr="%.6f",
     ),
     rig_stroke_conversion_factor=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -95,10 +97,11 @@ devices = dict(
         targetpv=f"{pv_root}StrokeLowLimit-SP",
     ),
     rig_stroke_limit_control=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="Move stroke high and low limit to selected values",
         readpv=f"{pv_root}StrokeSetpoint-Cmd",
         writepv=f"{pv_root}StrokeSetpoint-Cmd",
+        mapping={"Set values": 1},
     ),
     rig_turbine_meter=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
@@ -192,10 +195,11 @@ devices = dict(
         targetpv=f"{pv_root}PidParam3-SP",
     ),
     rig_PID_control=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="Move PID parameters to selected values",
         readpv=f"{pv_root}PidParam-Cmd",
         writepv=f"{pv_root}PidParam-Cmd",
+        mapping={"Set values": 1},
     ),
     rig_profile_mode=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
