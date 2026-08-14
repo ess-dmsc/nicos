@@ -401,6 +401,10 @@ QLineEdit {
     padding: 3px 6px;
 }
 
+QListView::item {
+    min-height: 30px;
+}
+
 QLineEdit:read-only {
     background-color: gainsboro;
     color: black;
