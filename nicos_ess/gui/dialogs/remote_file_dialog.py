@@ -83,6 +83,10 @@ class RemoteFileDialog(QDialog):
 
         self.btn_ok.setDefault(True)
 
+        self.file_table.selectionModel().currentRowChanged.connect(
+            self.on_selection_changed
+        )
+
         if files_info and not save:
             first = self.table_model.index(0, 0)
             self.file_table.setCurrentIndex(first)
@@ -96,9 +100,6 @@ class RemoteFileDialog(QDialog):
             self.setWindowTitle("Save Script File As")
             self.btn_ok.setText("Save")
             self.btn_ok.setEnabled(False)
-            self.file_table.selectionModel().currentRowChanged.connect(
-                self.on_selection_changed
-            )
             self.txt_filename.textChanged.connect(self.on_filename_changed)
         else:
             self.setWindowTitle("Open Script File")
@@ -118,12 +119,10 @@ class RemoteFileDialog(QDialog):
     @pyqtSlot()
     def on_btn_ok_pressed(self):
         if self.save:
-            entered_name = self.txt_filename.text()
-            if not entered_name.endswith(".py"):
-                entered_name += ".py"
+            filename = self._get_sanitise_filename()
 
-            if entered_name in self.filenames:
-                message = f'A file named "{entered_name}" already exists.\nDo you want to replace it?'
+            if filename in self.filenames:
+                message = f'A file named "{filename}" already exists.\nDo you want to replace it?'
                 buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 rc = QMessageBox.question(self, "Replace File?", message, buttons)
                 if rc == QMessageBox.StandardButton.No:
@@ -135,14 +134,11 @@ class RemoteFileDialog(QDialog):
     def on_btn_cancel_pressed(self):
         self.reject()
 
-    def get_selected_file(self):
-        if self.save:
-            return self.txt_filename.text()
+    def _get_sanitise_filename(self):
+        filename = self.txt_filename.text().strip()
+        if not filename.endswith(".py"):
+            filename += ".py"
+        return filename
 
-        indexes = self.file_table.selectedIndexes()
-        if indexes:
-            return self.table_model.data(
-                indexes[0],
-                Qt.ItemDataRole.DisplayRole,
-            )
-        return None
+    def get_selected_file(self):
+        return self._get_sanitise_filename()
