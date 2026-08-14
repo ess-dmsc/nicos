@@ -37,8 +37,8 @@ QMenuBar::item:pressed {
 QMenu {
      background-color: #ececec;
      color: black;
-     margin: 0px;
-     border-radius: 5px;
+     margin: 2px;
+     border-radius: 6px;
 }
 
 QMenu::item:disabled {
