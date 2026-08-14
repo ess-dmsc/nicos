@@ -336,17 +336,8 @@ class EditorPanel(Panel):
         self.menus = None
         self.bar = None
         self.current_status = None
-        self.recentf_actions = []
-        self.menuRecent = QMenu("Recent files")
 
         self.menuToolsActions = []
-
-        for fn in self.recentf:
-            action = QAction(fn.replace("&", "&&"), self)
-            action.setData(fn)
-            action.triggered.connect(self.openRecentFile)
-            self.recentf_actions.append(action)
-            self.menuRecent.addAction(action)
 
         self.tabber = QTabWidget(self, tabsClosable=True, documentMode=True)
         self.tabber.currentChanged.connect(self.on_tabber_currentChanged)
@@ -617,7 +608,6 @@ class EditorPanel(Panel):
             self.tabber.setTabText(index, tt + (dirty and "*" or ""))
 
     def loadSettings(self, settings):
-        self.recentf = settings.value("recentf") or []
         self.splitterstate = settings.value("splitter", "", QByteArray)
         self.openfiles = settings.value("openfiles") or []
 
@@ -1010,7 +1000,6 @@ class EditorPanel(Panel):
         file = RemoteFileDialog.get_file(self, self.client)
         if file:
             self.openFile(file)
-            self.addToRecentf(file)
 
     @pyqtSlot()
     def on_actionReload_triggered(self):
@@ -1026,9 +1015,6 @@ class EditorPanel(Panel):
             return self.showError("Opening file failed: %s" % err)
         self.currentEditor.setText(text)
         self.simFrame.clear()
-
-    def openRecentFile(self):
-        self.openFile(self.sender().data())
 
     def openFile(self, fn, quiet=False):
         try:
@@ -1056,20 +1042,6 @@ class EditorPanel(Panel):
         self.tabber.setCurrentWidget(editor)
         self.simFrame.clear()
         editor.setFocus()
-
-    def addToRecentf(self, fn):
-        new_action = QAction(fn.replace("&", "&&"), self)
-        new_action.setData(fn)
-        new_action.triggered.connect(self.openRecentFile)
-        if self.recentf_actions:
-            self.menuRecent.insertAction(self.recentf_actions[0], new_action)
-            self.recentf_actions.insert(0, new_action)
-            del self.recentf_actions[10:]
-        else:
-            self.menuRecent.addAction(new_action)
-            self.recentf_actions.append(new_action)
-        with self.sgroup as settings:
-            settings.setValue("recentf", [a.data() for a in self.recentf_actions])
 
     @pyqtSlot()
     def on_actionSave_triggered(self):
@@ -1109,7 +1081,6 @@ class EditorPanel(Panel):
         file = RemoteFileDialog.get_file(self, self.client, save=True)
         if not file:
             return
-        self.addToRecentf(file)
         self.filenames[editor] = file
         self.tabber.setTabText(self.editors.index(editor), os.path.basename(file))
         return self.saveFile(editor)
