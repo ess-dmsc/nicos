@@ -296,13 +296,13 @@ QTabBar::tab:left:!selected:hover {
 QTabBar::tab:top {
     background-color: #1f5366;
     color: #e9ebed;
-    margin-left: 2px;
-    padding-left: 4px;
-    padding-right: 4px;
-    padding-top: 2px;
-    padding-bottom: 2px;
-    min-width: 90px;
-    min-height:24px;
+    margin-left: 6px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    min-width: 81px;
+    min-height: 27px;
     border-bottom: 3px solid #273748;
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
