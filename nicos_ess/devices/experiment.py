@@ -143,6 +143,14 @@ class EssExperiment(Device):
             settable=True,
             internal=True,
         ),
+        "instrument_scripts_filepath": Param(
+            "Path to the top directory where instrument scripts live",
+            type=str,
+            category="experiment",
+            default="/opt/instrument_scripts",
+            mandatory=False,
+            userparam=False,
+        ),
         "userscripts_filepath": Param(
             "Path to the top directory where user scripts live",
             type=str,
