@@ -100,7 +100,7 @@
     <file alias="cancel">material/icons/cancel-24px.svg</file>
     <file alias="cancel_red">material/icons/cancel_red-24px.svg</file>
     <file alias="check_circle_green">material/icons/check_circle_green-24px.svg</file>
-    <file alias="cut">material/icons/cut-24px.svg</file>
+    <file alias="cut">material/icons/cut_24px.svg</file>
     <file alias="device_unknown">material/icons/device_unknown-24px.svg</file>
     <file alias="done">material/icons/done-24px.svg</file>
     <file alias="edit">material/icons/edit-24px.svg</file>
@@ -115,7 +115,7 @@
     <file alias="lock">material/icons/lock-24px.svg</file>
     <file alias="menu">material/icons/menu-24px.svg</file>
     <file alias="not_interested">material/icons/not_interested-24px.svg</file>
-    <file alias="paste">material/icons/paste-24px.svg</file>
+    <file alias="paste">material/icons/paste_24px.svg</file>
     <file alias="pause">material/icons/pause-24px.svg</file>
     <file alias="pause_red">material/icons/pause_red-24px.svg</file>
     <file alias="play_arrow">material/icons/play_arrow-24px.svg</file>
