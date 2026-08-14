@@ -28,7 +28,6 @@ from test.nicos_ess.gui.helpers import (
     get_panel_by_class,
     resolve_guiconfig_path,
 )
-from test.runtime_resources import link_or_copy_runtime_resources
 
 TEST_ROOT = Path(__file__).resolve().parents[2] / "root"
 RESOURCES_DIR = Path(__file__).resolve().parents[3] / "resources"
@@ -120,7 +119,7 @@ def fake_daemon():
 @pytest.fixture(scope="session", autouse=True)
 def gui_runtime_resources():
     """Expose repository resources under the GUI test NICOS root."""
-    link_or_copy_runtime_resources(RESOURCES_DIR, TEST_ROOT / "resources")
+    return
 
 
 @pytest.fixture
