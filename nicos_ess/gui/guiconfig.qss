@@ -550,6 +550,7 @@ CommandLineEdit[state="DEFAULT"] {
     background-color: white;
     margin: 0;
     padding: 0;
+    padding-left: 6px;
 }
 
 CommandLineEdit[state="BUSY"] {
@@ -558,6 +559,7 @@ CommandLineEdit[state="BUSY"] {
     border: 2px solid #0094ca;
     border-radius: 5px;
     background-color: #ffdddd;
+    padding-left: 6px;
 }
 
 
