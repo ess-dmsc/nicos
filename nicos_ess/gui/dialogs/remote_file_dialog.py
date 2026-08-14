@@ -5,6 +5,7 @@ from nicos.guisupport.qt import (
     QAbstractItemView,
     QDialog,
     QHeaderView,
+    QMessageBox,
     QRegularExpression,
     QRegularExpressionValidator,
     Qt,
@@ -42,13 +43,14 @@ class RemoteFileDialog(QDialog):
         self.client = client
         self.save = save
 
-        files = self.client.eval(
+        files_info = self.client.eval(
             f"session.experiment.list_server_directory('{directory}')", None
         )
-        if files is None:
+        if files_info is None:
             print("TODO: something went wrong")
             return
-        files.sort(key=lambda x: x[0])
+        files_info.sort(key=lambda x: x[0])
+        self.filenames = {x[0] for x in files_info}
 
         # We store the raw modification time but don't show it.
         # When we sort on modification time we use the raw value
@@ -60,7 +62,7 @@ class RemoteFileDialog(QDialog):
                 "Modified": time.ctime(modified),
                 "Raw modified": int(modified),
             }
-            for name, modified in files
+            for name, modified in files_info
         ]
         self.file_table.setModel(self.table_model)
         self.file_table.verticalHeader().setVisible(False)
@@ -81,7 +83,7 @@ class RemoteFileDialog(QDialog):
 
         self.btn_ok.setDefault(True)
 
-        if files and not save:
+        if files_info and not save:
             first = self.table_model.index(0, 0)
             self.file_table.setCurrentIndex(first)
 
@@ -115,6 +117,18 @@ class RemoteFileDialog(QDialog):
 
     @pyqtSlot()
     def on_btn_ok_pressed(self):
+        if self.save:
+            entered_name = self.txt_filename.text()
+            if not entered_name.endswith(".py"):
+                entered_name += ".py"
+
+            if entered_name in self.filenames:
+                message = f'A file named "{entered_name}" already exists.\nDo you want to replace it?'
+                buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                rc = QMessageBox.question(self, "Replace File?", message, buttons)
+                if rc == QMessageBox.StandardButton.No:
+                    return
+
         self.accept()
 
     @pyqtSlot()

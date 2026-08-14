@@ -635,7 +635,7 @@ class EditorPanel(Panel):
         rc = QMessageBox.question(
             self, "Script Editor - Unsaved Files", message, buttons
         )
-        if rc in (QMessageBox.StandardButton.Discard, QMessageBox.StandardButton.No):
+        if rc == QMessageBox.StandardButton.No:
             return False
         return True
 
