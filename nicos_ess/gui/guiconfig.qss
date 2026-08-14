@@ -544,15 +544,17 @@ Panel[panel='CommandPanel'] * {
 
 CommandLineEdit[state="DEFAULT"] {
     font-size: 20;
-    min-height: 22px;
+    min-height: 24px;
     border: 2px solid #0094ca;
     border-radius: 5px;
     background-color: white;
+    margin: 0;
+    padding: 0;
 }
 
 CommandLineEdit[state="BUSY"] {
     font-size: 20;
-    min-height: 22px;
+    min-height: 24px;
     border: 2px solid #0094ca;
     border-radius: 5px;
     background-color: #ffdddd;
