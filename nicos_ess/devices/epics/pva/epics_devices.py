@@ -289,25 +289,23 @@ class EpicsMappedMoveable(
         MappedMoveable.doInit(self, mode)
 
 
-class EpicsManualMappedAnalogMoveable(
-    EpicsReadWriteBase, HasPrecision, HasLimits, MappedMoveable
-):
+class EpicsManualMappedMoveable(EpicsReadWriteBase, MappedMoveable):
     """
     Acts as a moveable device, which reads and writes to EPICS PVs but it
-    has a configurable mapping. Used for example to map allowed chopper speeds
-    instead of allowing all values in a range.
+    has a configurable mapping. Can be used for, e.g., map sample names in a
+    string PV for sample loading, instead of mapping them in the PV itself
+    (which may change according to the experiment) or requiring precise
+    sample names as user input.
     """
 
     parameter_overrides = {
-        "abslimits": Override(mandatory=False, volatile=True),
-        "unit": Override(mandatory=False, settable=False, volatile=True),
         "mapping": Override(settable=True),
     }
 
     valuetype = anytype
 
     _epics_channels = make_rw_channels(
-        write_refresh_status=True, write_limits_cache_key="abslimits"
+        write_refresh_status=True,
     )
 
     def _after_subscribe(self, mode):
@@ -350,7 +348,7 @@ class EpicsManualMappedAnalogMoveable(
         try:
             raw_pos = self._readRaw(maxage)
             raw_tgt = self._raw_target(maxage)
-            at_target = HasPrecision.doIsAtTarget(self, raw_pos, raw_tgt)
+            at_target = raw_pos == raw_tgt
         except Exception:
             at_target = False
 
@@ -365,9 +363,58 @@ class EpicsManualMappedAnalogMoveable(
             pos = self.read(0)
         raw_target = self.mapping.get(target, target)
         try:
-            return HasPrecision.doIsAtTarget(self, pos, raw_target)
+            return pos == raw_target
         except Exception:
             return False
 
     def doIsCompleted(self):
         return self.isAtTarget()
+
+
+class EpicsManualMappedAnalogMoveable(
+    HasPrecision, HasLimits, EpicsManualMappedMoveable
+):
+    """
+    Acts as a EpicsManualMappedMoveable, but supports analog devices with
+    limits and precision. Used for, e.g., map allowed chopper speeds
+    instead of allowing all values in a range.
+    """
+
+    parameter_overrides = {
+        "abslimits": Override(mandatory=False, volatile=True),
+        "unit": Override(mandatory=False, settable=False, volatile=True),
+    }
+
+    valuetype = anytype
+
+    _epics_channels = make_rw_channels(
+        write_refresh_status=True, write_limits_cache_key="abslimits"
+    )
+
+    def _compute_status(self, maxage=0):
+        """Overwrite parent method to consider precision when checking if
+        device is at target."""
+        candidates = []
+        try:
+            raw_pos = self._readRaw(maxage)
+            raw_tgt = self._raw_target(maxage)
+            at_target = HasPrecision.doIsAtTarget(self, raw_pos, raw_tgt)
+        except Exception:
+            at_target = False
+
+        if not at_target:
+            candidates.append((status.BUSY, f"moving to {self.target}"))
+        return worst_status(self._read_primary_alarm(maxage=maxage), *candidates)
+
+    def doIsAtTarget(self, pos=None, target=None):
+        """Overwrite parent method to consider precision when checking if
+        device is at target."""
+        if target is None:
+            target = self.target
+        if pos is None:
+            pos = self.read(0)
+        raw_target = self.mapping.get(target, target)
+        try:
+            return HasPrecision.doIsAtTarget(self, pos, raw_target)
+        except Exception:
+            return False
