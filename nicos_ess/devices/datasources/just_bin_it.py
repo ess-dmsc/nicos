@@ -508,10 +508,16 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         while not (acknowledged or self._exit_thread):
             message = self._response_consumer.poll(timeout_ms=50)
             if message:
-                msg = json.loads(message.value())
-                if "msg_id" in msg and msg["msg_id"] == identifier:
-                    acknowledged = self._handle_message(msg)
-                    break
+                try:
+                    msg = json.loads(message.value())
+                except json.decoder.JSONDecodeError as e:
+                    self.log.warning(
+                        f"Could not decode '{message.value()}' as JSON: {repr(e)}"
+                    )
+                else:
+                    if "msg_id" in msg and msg["msg_id"] == identifier:
+                        acknowledged = self._handle_message(msg)
+                        break
             # Check for timeout
             if not acknowledged and int(time.time()) > timeout:
                 err_msg = (
