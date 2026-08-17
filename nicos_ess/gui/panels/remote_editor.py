@@ -1091,7 +1091,7 @@ class EditorPanel(Panel):
         return True
 
     def saveFileAs(self, editor):
-        file = RemoteFileDialog.get_file(self, self.client, save=True)
+        file, _ = RemoteFileDialog.get_file(self, self.client, save=True)
         if not file:
             return
         self.filenames[editor] = file
