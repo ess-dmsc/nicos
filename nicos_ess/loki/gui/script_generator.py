@@ -2,8 +2,6 @@
 
 from enum import Enum
 
-INDENT = " " * 4
-
 
 class TransOrder(Enum):
     TRANSFIRST = 0

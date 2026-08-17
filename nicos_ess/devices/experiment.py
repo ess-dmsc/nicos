@@ -297,7 +297,24 @@ class EssExperiment(Device):
         self.new(0, "Service mode")
         self.sample.set_samples({})
 
-    def list_server_directory(self, directory="") -> list[str]:
+    def list_instrument_scripts_directory(self) -> (str, list[str]):
+        """document me!"""
+        # TODO only return .py files
+        instrument = session.instrument.name.lower()
+        directory = os.path.join(self.instrument_scripts_directory, instrument)
+        print(directory)
+        files = []
+        for file in os.listdir(directory):
+            path = os.path.join(directory, file)
+            if not os.path.isfile(path):
+                # Only list actual files
+                continue
+            last_modified = int(os.path.getmtime(path))
+            files.append((file, last_modified))
+        print(files)
+        return directory, files
+
+    def list_user_scripts_directory(self, directory="") -> (str, list[str]):
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
         # TODO only return .py files
@@ -310,19 +327,17 @@ class EssExperiment(Device):
                 continue
             last_modified = int(os.path.getmtime(path))
             files.append((file, last_modified))
-        return files
+        return directory, files
 
-    def read_server_file(self, filename) -> str:
+    def read_server_file(self, filepath) -> str:
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        filepath = os.path.join(self.userscripts_directory, filename)
         with open(filepath, encoding="utf-8") as f:
             return f.read()
 
-    def write_server_file(self, filename, contents):
+    def write_server_file(self, filepath, contents):
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        filepath = os.path.join(self.userscripts_directory, filename)
         with open(filepath, "w", encoding="utf-8") as f:
             # NOTE: contents are received as bytes, so must be decoded!
             f.write(contents.decode())

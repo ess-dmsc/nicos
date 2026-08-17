@@ -5,7 +5,9 @@ import subprocess
 import time
 from logging import WARNING
 from uuid import uuid1
+from collections import defaultdict
 
+from nicos.core.utils import ADMIN
 from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
 from nicos.clients.gui.panels import Panel
@@ -360,6 +362,7 @@ class EditorPanel(Panel):
 
         self.editors = []  # tab index -> editor
         self.filenames = {}  # editor -> filename
+        self.is_instrument_script = defaultdict(lambda: False)  # editor -> bool
         self.currentEditor = None
 
         self.saving = False  # True while saving
@@ -967,10 +970,7 @@ class EditorPanel(Panel):
             | QMessageBox.StandardButton.Cancel
         )
         if askonly:
-            buttons = (
-                QMessageBox.StandardButton.Yes
-                | QMessageBox.StandardButton.No
-            )
+            buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         rc = QMessageBox.question(self, "Script Editor", message, buttons)
         if rc in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Yes):
             return self.saveFile(editor)
@@ -993,12 +993,16 @@ class EditorPanel(Panel):
         editor.setFocus()
         return editor
 
+    def is_admin_account(self):
+        return self.client.user_level is not None and self.client.user_level >= ADMIN
+
     @pyqtSlot()
     def on_actionOpen_triggered(self):
-        # TODO: choose a directory. E.g. proposal number
-        file = RemoteFileDialog.get_file(self, self.client)
+        file, is_inst_script = RemoteFileDialog.get_file(
+            self, self.client, admin=self.is_admin_account()
+        )
         if file:
-            self.openFile(file)
+            self.openFile(file, is_inst_script)
 
     @pyqtSlot()
     def on_actionReload_triggered(self):
@@ -1015,7 +1019,7 @@ class EditorPanel(Panel):
         self.currentEditor.setText(text)
         self.simFrame.clear()
 
-    def openFile(self, fn, quiet=False):
+    def openFile(self, fn, is_inst_script=False):
         try:
             text = self.client.eval(
                 f"session.experiment.read_server_file('{fn}')", "💣"
@@ -1037,22 +1041,32 @@ class EditorPanel(Panel):
 
         self.editors.append(editor)
         self.filenames[editor] = fn
+        self.is_instrument_script[editor] = is_inst_script
         self.tabber.addTab(editor, os.path.basename(fn))
         self.tabber.setCurrentWidget(editor)
         self.simFrame.clear()
         editor.setFocus()
 
+    def check_okay_to_save(self):
+        if (
+            self.is_instrument_script[self.currentEditor]
+            and not self.is_admin_account()
+        ):
+            QMessageBox.warning(
+                self, "Error", "Only an admin account can save instrument scripts"
+            )
+            return False
+        return True
+
     @pyqtSlot()
     def on_actionSave_triggered(self):
-        self.saveFile(self.currentEditor)
+        if self.check_okay_to_save():
+            self.saveFile(self.currentEditor)
 
     @pyqtSlot()
     def on_actionSaveAs_triggered(self):
-        self.saveFileAs(self.currentEditor)
-        self.parent_window.setWindowTitle(
-            "%s[*] - %s editor"
-            % (self.filenames[self.currentEditor], self.mainwindow.instrument)
-        )
+        if self.check_okay_to_save():
+            self.saveFileAs(self.currentEditor)
 
     def saveFile(self, editor):
         if not self.filenames[editor]:
