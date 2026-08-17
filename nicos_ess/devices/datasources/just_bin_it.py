@@ -504,6 +504,15 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         while not (acknowledged or self._exit_thread):
             message = self._response_consumer.poll(timeout_ms=50)
             if message:
+                # check for kafka errors, ignore any expected otherwise log them:
+                if message.error() is not None:
+                    # _PARTITION_EOF: Broker: No more messages
+                    if message.error().name() != "_PARTITION_EOF":
+                        err = message.error()
+                        self.log.warning(
+                            f"Encountered Kafka error: {err.str()}, ({err.code()}/{err.name()})"
+                        )
+                    continue
                 try:
                     msg = json.loads(message.value())
                 except json.decoder.JSONDecodeError as e:
