@@ -23,7 +23,7 @@ def _import_instrument_scripts(instrument):
 
     # Hackery to import the instrument commands into the same namespace as
     # the NICOS commands.
-    file_loc = os.path.join(session.experiment.instrument_scripts_filepath, instrument, FILENAME)
+    file_loc = os.path.join(session.experiment.instrument_scripts_directory, instrument, FILENAME)
     exec(compile(open(file_loc).read(), file_loc, "exec"), globs)
     print(f"File loc {file_loc}")
 

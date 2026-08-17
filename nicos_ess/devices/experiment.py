@@ -143,7 +143,7 @@ class EssExperiment(Device):
             settable=True,
             internal=True,
         ),
-        "instrument_scripts_filepath": Param(
+        "instrument_scripts_directory": Param(
             "Path to the top directory where instrument scripts live",
             type=str,
             category="experiment",
@@ -151,7 +151,7 @@ class EssExperiment(Device):
             mandatory=False,
             userparam=False,
         ),
-        "userscripts_filepath": Param(
+        "userscripts_directory": Param(
             "Path to the top directory where user scripts live",
             type=str,
             category="experiment",
@@ -301,7 +301,7 @@ class EssExperiment(Device):
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
         # TODO only return .py files
-        directory = os.path.join(self.userscripts_filepath, directory)
+        directory = os.path.join(self.userscripts_directory, directory)
         files = []
         for file in os.listdir(directory):
             path = os.path.join(directory, file)
@@ -315,14 +315,14 @@ class EssExperiment(Device):
     def read_server_file(self, filename) -> str:
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        filepath = os.path.join(self.userscripts_filepath, filename)
+        filepath = os.path.join(self.userscripts_directory, filename)
         with open(filepath, encoding="utf-8") as f:
             return f.read()
 
     def write_server_file(self, filename, contents):
         """document me!"""
         # TODO sanitize input to prevent access to upper dirs
-        filepath = os.path.join(self.userscripts_filepath, filename)
+        filepath = os.path.join(self.userscripts_directory, filename)
         with open(filepath, "w", encoding="utf-8") as f:
             # NOTE: contents are received as bytes, so must be decoded!
             f.write(contents.decode())
