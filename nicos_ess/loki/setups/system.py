@@ -82,5 +82,5 @@ startupcode = """
 printinfo("============================================================")
 printinfo("Loading instrument specific commands.")
 printinfo("============================================================")
-import_instrument_scripts()
+import_instrument_commands()
 """

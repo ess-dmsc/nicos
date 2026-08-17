@@ -5,13 +5,13 @@ import os
 
 
 __all__ = [
-    "import_instrument_scripts",
+    "import_instrument_commands",
 ]
 
 FILENAME = "commands.py"
 
 
-def _import_instrument_scripts(instrument):
+def _import_instrument_commands(file_location):
     # NOTE: currently we can only import one file.
 
     # Find the frame we want to add the commands to.
@@ -23,11 +23,13 @@ def _import_instrument_scripts(instrument):
 
     # Hackery to import the instrument commands into the same namespace as
     # the NICOS commands.
-    file_loc = os.path.join(session.experiment.instrument_scripts_directory, instrument, FILENAME)
-    exec(compile(open(file_loc).read(), file_loc, "exec"), globs)
-    print(f"File loc {file_loc}")
+    exec(compile(open(file_location).read(), file_location, "exec"), globs)
 
 
 @usercommand
-def import_instrument_scripts():
-    _import_instrument_scripts(session.instrument.name.lower())
+def import_instrument_commands():
+    file = os.path.join(session.experiment.instrument_scripts_directory, session.instrument.name.lower(), FILENAME)
+    if not os.path.isfile(file):
+        raise RuntimeError(f"Instrument command file does not exist. Expected path is {file}")
+
+    _import_instrument_commands(file)
