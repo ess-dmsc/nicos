@@ -256,7 +256,7 @@
     <string>&amp;Save</string>
    </property>
    <property name="toolTip">
-    <string>Save script to disk</string>
+    <string>Save script</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
@@ -452,6 +452,17 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+Return</string>
+   </property>
+  </action>
+  <action name="actionImport">
+   <property name="icon">
+    <iconset theme="QIcon::ThemeIcon::ListAdd"/>
+   </property>
+   <property name="text">
+    <string>Import</string>
+   </property>
+   <property name="toolTip">
+    <string>Import a file from the client machine</string>
    </property>
   </action>
  </widget>
