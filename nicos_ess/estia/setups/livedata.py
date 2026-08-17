@@ -4,6 +4,8 @@ devices = dict(
     channel_1=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="An estia livedata channel",
+        device_name="cbm1_counts_total",
+        workflow_id="estia/monitor_histogram/1",
         type="counter",
     ),
     channel_collector=device(
