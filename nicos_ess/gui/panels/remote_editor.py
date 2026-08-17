@@ -970,7 +970,6 @@ class EditorPanel(Panel):
             buttons = (
                 QMessageBox.StandardButton.Yes
                 | QMessageBox.StandardButton.No
-                | QMessageBox.StandardButton.Cancel
             )
         rc = QMessageBox.question(self, "Script Editor", message, buttons)
         if rc in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Yes):
