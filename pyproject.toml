@@ -177,6 +177,10 @@ dev = [
 ]
 
 [tool.ruff]
+# The formatter wraps lines at a length of 88.
+line-length = 88
+# E501 reports lines that exceed the length of 120.
+lint.pycodestyle.max-line-length = 120
 exclude = [
     "nicos_mlz/",
     "nicos_sinq/",
