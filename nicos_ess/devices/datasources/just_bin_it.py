@@ -318,11 +318,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             if info["state"] in ["COUNTING", "INITIALISED"]:
                 self._update_status(status.BUSY, "Counting")
             elif info["state"] == "ERROR":
-                error_msg = (
-                    info["error_message"]
-                    if "error_message" in info
-                    else "unknown error"
-                )
+                error_msg = info.get("error_message", "unknown error")
                 self._update_status(status.WARN, error_msg)
             elif info["state"] == "FINISHED":
                 self._kafka_subscriber.stop_consuming()
@@ -361,7 +357,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 
     def get_configuration(self):
         # Generate a unique-ish id
-        self._unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
+        self._unique_id = f"nicos-{self.name}-{int(time.time())}"
 
         config = {
             "type": hist_type_by_name[self.hist_type].name,
@@ -487,7 +483,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     def doStart(self):
         # Generate a unique-ish id
-        unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
+        unique_id = f"nicos-{self.name}-{int(time.time())}"
         self.log.debug("set unique id = %s", unique_id)
 
         config = self._create_config(unique_id)
@@ -508,10 +504,25 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         while not (acknowledged or self._exit_thread):
             message = self._response_consumer.poll(timeout_ms=50)
             if message:
-                msg = json.loads(message.value())
-                if "msg_id" in msg and msg["msg_id"] == identifier:
-                    acknowledged = self._handle_message(msg)
-                    break
+                # check for kafka errors, ignore any expected otherwise log them:
+                if message.error() is not None:
+                    # _PARTITION_EOF: Broker: No more messages
+                    if message.error().name() != "_PARTITION_EOF":
+                        err = message.error()
+                        self.log.warning(
+                            f"Encountered Kafka error: {err.str()}, ({err.code()}/{err.name()})"
+                        )
+                    continue
+                try:
+                    msg = json.loads(message.value())
+                except json.decoder.JSONDecodeError as e:
+                    self.log.warning(
+                        f"Could not decode '{message.value()}' as JSON: {repr(e)}"
+                    )
+                else:
+                    if "msg_id" in msg and msg["msg_id"] == identifier:
+                        acknowledged = self._handle_message(msg)
+                        break
             # Check for timeout
             if not acknowledged and int(time.time()) > timeout:
                 err_msg = (
@@ -600,9 +611,11 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     def _status_update_callback(self, messages):
         # Called on heartbeat received
-        if self._mode == MASTER:
-            if self._cache.get(self, "status") == DISCONNECTED_STATE:
-                self._cache.put(self, "status", (status.OK, ""), time.time())
+        if (
+            self._mode == MASTER
+            and self._cache.get(self, "status") == DISCONNECTED_STATE
+        ):
+            self._cache.put(self, "status", (status.OK, ""), time.time())
 
     def no_messages_callback(self):
         if self._mode == MASTER and not self.is_process_running():
