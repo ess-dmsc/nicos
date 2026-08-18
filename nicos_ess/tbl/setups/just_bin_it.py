@@ -20,7 +20,7 @@ devices = dict(
             "ngem_det",
         ],
         timers=["timer"],
-        counters=["pulse_counter"],
+        # counters=["pulse_counter"],
     ),
     timer=device(
         "nicos_ess.devices.timer.TimerChannel",
