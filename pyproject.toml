@@ -184,6 +184,7 @@ exclude = [
     "tools/",
     "bin/",
     "nicos/guisupport/gui_rc_qt*.py",
+    "tests/utils.py"
 ]
 
 # Configure global rules to apply; see https://docs.astral.sh/ruff/rules/ for details.
