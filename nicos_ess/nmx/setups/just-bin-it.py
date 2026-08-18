@@ -1,5 +1,3 @@
-from nicos_ess.devices.datasources.just_bin_it import input_schemas
-
 description = "The just-bin-it histogrammer."
 
 devices = dict(
