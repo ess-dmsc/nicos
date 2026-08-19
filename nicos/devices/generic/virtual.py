@@ -192,7 +192,37 @@ class VirtualMotor(HasOffset, CanDisable, Motor):
             if self.curstatus[0] == status.DISABLED:
                 self.curstatus = (status.OK, "idle")
 
+class FilterMenu(Moveable):
+    '''Lets the user choose a filter'''
 
+    parameters = {
+        "curstatus" : Param(
+                    "Current status",
+                    type=tupleof(int, str),
+                    settable=True,
+                    default=(status.OK, "idle"),
+                ),
+        "curvalue": Param("Current value", type=str),
+    }
+
+    parameter_overrides = {
+        "maxage": Override(default=0),
+        "pollinterval": Override(default=None, userparam=False, settable=False),
+        "unit": Override(mandatory=False),
+    }
+
+    hardware_access = False
+
+    def doStart(self, target):
+        self._setROParam("curvalue", target)
+
+    def doStatus(self, maxage=0):
+        return self.curstatus
+
+    def doRead(self, maxage=0):
+        return self.curvalue
+
+    
 class VirtualReferenceMotor(CanReference, VirtualMotor):
     """Virtual motor device with reference capability."""
 
