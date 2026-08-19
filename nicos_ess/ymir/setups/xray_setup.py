@@ -156,5 +156,12 @@ devices = dict(
         curvalue=0,
         unit="mm",
         speed=5.0,
+    ),
+
+    # Filter menu
+    filter_menu=device(
+        "nicos.devices.generic.virtual.FilterMenu",
+        description="Filter Menu",
+        states=0
     )
 )

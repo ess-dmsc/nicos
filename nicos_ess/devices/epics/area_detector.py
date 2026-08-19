@@ -630,21 +630,6 @@ class ADSimDetector(AreaDetector):
         ):
             self.subarraymode = False
 
-    def doStart(self):
-        num_images = self.preselection if self.iscontroller else None
-
-        if num_images == 0:
-            return
-        elif not num_images or num_images < 0:
-            self.imagemode = "continuous"
-        elif num_images == 1:
-            self.imagemode = "single"
-        elif num_images > 1:
-            self.imagemode = "multiple"
-            self.numimages = num_images
-
-        self.doAcquire()
-
     def doReadSizex(self):
         return self._get_pv("size_x_rbv")
 
