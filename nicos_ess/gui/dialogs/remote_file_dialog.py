@@ -81,6 +81,9 @@ class RemoteFileDialog(QDialog):
         self.txt_filename.setValidator(
             QRegularExpressionValidator(QRegularExpression(r"[A-Za-z0-9._=+-]+"), self)
         )
+
+        self.file_table.doubleClicked.connect(self.on_file_double_clicked)
+
         if self.save:
             self.setWindowTitle("Save Script File As")
             self.btn_ok.setText("Save")
@@ -178,3 +181,11 @@ class RemoteFileDialog(QDialog):
             raise RuntimeError("Could not retrieve files from NICOS server")
 
         self._update_files_list(files_info)
+
+    def on_file_double_clicked(self, index):
+        filename = self.table_model.data(
+            self.table_model.index(index.row(), 0),
+            Qt.ItemDataRole.DisplayRole,
+        )
+        self.txt_filename.setText(filename)
+        self.on_btn_ok_pressed()
