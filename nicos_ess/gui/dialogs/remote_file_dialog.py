@@ -123,6 +123,7 @@ class RemoteFileDialog(QDialog):
         if files_info and not self.save:
             first = self.table_model.index(0, 0)
             self.file_table.setCurrentIndex(first)
+            self.on_selection_changed(first, None)
 
     def on_selection_changed(self, current, _previous):
         filename = self.table_model.data(

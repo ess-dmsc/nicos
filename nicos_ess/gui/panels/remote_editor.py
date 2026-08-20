@@ -1022,7 +1022,7 @@ class EditorPanel(Panel):
     def openFile(self, fn, is_inst_script=False):
         try:
             text = self.client.eval(
-                f"session.experiment.read_server_file('{fn}')", "💣"
+                f"session.experiment.read_server_file('{fn}')", None
             )
         except Exception as err:
             return self.showError("Opening file failed: %s" % err)
