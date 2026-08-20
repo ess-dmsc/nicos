@@ -363,6 +363,7 @@ class EditorPanel(Panel):
         self.editors = []  # tab index -> editor
         self.filenames = {}  # editor -> filename
         self.is_instrument_script = defaultdict(lambda: False)  # editor -> bool
+        self.is_imported_script = defaultdict(lambda: False)  # editor -> bool
         self.currentEditor = None
 
         self.saving = False  # True while saving
@@ -876,15 +877,7 @@ class EditorPanel(Panel):
                 self.currentEditor.print(printer)
 
     def validateScript(self):
-        script = self.currentEditor.text()
-        # XXX: this does not apply to .txt (SPM) scripts
-        # try:
-        #    compile(script, 'script', 'exec')
-        # except SyntaxError as err:
-        #    self.showError('Syntax error in script: %s' % err)
-        #    self.currentEditor.setCursorPosition(err.lineno - 1, err.offset)
-        #    return
-        return script
+        return self.currentEditor.text()
 
     @pyqtSlot()
     def on_actionRun_triggered(self):
@@ -1019,7 +1012,7 @@ class EditorPanel(Panel):
         self.currentEditor.setText(text)
         self.simFrame.clear()
 
-    def openFile(self, fn, is_inst_script=False):
+    def openFile(self, fn, is_inst_script=False, is_import=False):
         try:
             text = self.client.eval(
                 f"session.experiment.read_server_file('{fn}')", None
@@ -1042,6 +1035,7 @@ class EditorPanel(Panel):
         self.editors.append(editor)
         self.filenames[editor] = fn
         self.is_instrument_script[editor] = is_inst_script
+        self.is_imported_script[editor] = is_import
         self.tabber.addTab(editor, os.path.basename(fn))
         self.tabber.setCurrentWidget(editor)
         self.simFrame.clear()
@@ -1072,6 +1066,11 @@ class EditorPanel(Panel):
         if not self.filenames[editor]:
             return self.saveFileAs(editor)
 
+        if self.is_imported_script[editor]:
+            # Suggest the same name as it was imported as.
+            name = os.path.basename(self.filenames[editor])
+            return self.saveFileAs(editor, name=name)
+
         self.saving = True
         filename = self.filenames[editor]
         # The content must be sent as bytes because eval cannot handle strings
@@ -1090,8 +1089,8 @@ class EditorPanel(Panel):
         editor.setModified(False)
         return True
 
-    def saveFileAs(self, editor):
-        file, _ = RemoteFileDialog.get_file(self, self.client, save=True)
+    def saveFileAs(self, editor, name=None):
+        file, _ = RemoteFileDialog.get_file(self, self.client, save=True, name=name)
         if not file:
             return
         self.filenames[editor] = file
@@ -1175,4 +1174,5 @@ class EditorPanel(Panel):
         if not filenames:
             return
         for f in filenames:
-            self.openFile(f)
+            self.openFile(f, is_import=True)
+            self.setDirty(self.editors[~0], True)

@@ -34,13 +34,13 @@ class FileTableModel(TableModel):
 
 class RemoteFileDialog(QDialog):
     @classmethod
-    def get_file(cls, parent, client, directory="", save=False, admin=False):
-        dialog = cls(parent, client, directory, save, admin)
+    def get_file(cls, parent, client, directory="", save=False, admin=False, name=None):
+        dialog = cls(parent, client, directory, save, admin, name)
         if dialog.exec() == 1:
             return dialog.get_selected_file(), dialog.is_inst_script
         return None, False
 
-    def __init__(self, parent, client, directory, save, admin):
+    def __init__(self, parent, client, directory, save, admin, name):
         QDialog.__init__(self, parent)
         loadUi(self, findResource("nicos_ess/gui/dialogs/remote_file_dialog.ui"))
 
@@ -89,6 +89,8 @@ class RemoteFileDialog(QDialog):
             self.btn_ok.setText("Save")
             self.btn_ok.setEnabled(False)
             self.txt_filename.textChanged.connect(self.on_filename_changed)
+            if name is not None:
+                self.txt_filename.setText(name.strip())
         else:
             self.setWindowTitle("Open Script File")
             self.txt_filename.hide()
