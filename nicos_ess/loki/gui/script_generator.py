@@ -63,18 +63,12 @@ class TransFirst(Script):
             if i < trans_times:
                 for row_values in table_data:
                     script += self._start_sample(row_values)
-                    script += f"{
-                        self._do_trans(
-                            row_values['trans_duration'], trans_duration_type
-                        )
-                    }"
+                    script += f"{self._do_trans(row_values['trans_duration'], trans_duration_type)}"
                     script += self._finish_sample(row_values)
             if i < sans_times:
                 for row_values in table_data:
                     script += self._start_sample(row_values)
-                    script += f"{
-                        self._do_sans(row_values['sans_duration'], sans_duration_type)
-                    }"
+                    script += f"{self._do_sans(row_values['sans_duration'], sans_duration_type)}"
                     script += self._finish_sample(row_values)
         return script
 
@@ -93,18 +87,12 @@ class SansFirst(Script):
             if i < sans_times:
                 for row_values in table_data:
                     script += self._start_sample(row_values)
-                    script += f"{
-                        self._do_sans(row_values['sans_duration'], sans_duration_type)
-                    }"
+                    script += f"{self._do_sans(row_values['sans_duration'], sans_duration_type)}"
                     script += self._finish_sample(row_values)
             if i < trans_times:
                 for row_values in table_data:
                     script += self._start_sample(row_values)
-                    script += f"{
-                        self._do_trans(
-                            row_values['trans_duration'], trans_duration_type
-                        )
-                    }"
+                    script += f"{self._do_trans(row_values['trans_duration'], trans_duration_type)}"
                     script += self._finish_sample(row_values)
         return script
 
@@ -123,15 +111,9 @@ class TransThenSans(Script):
             for row_values in table_data:
                 script += self._start_sample(row_values)
                 if i < trans_times:
-                    script += f"{
-                        self._do_trans(
-                            row_values['trans_duration'], trans_duration_type
-                        )
-                    }"
+                    script += f"{self._do_trans(row_values['trans_duration'], trans_duration_type)}"
                 if i < sans_times:
-                    script += f"{
-                        self._do_sans(row_values['trans_duration'], sans_duration_type)
-                    }"
+                    script += f" self._do_sans(row_values['trans_duration'], sans_duration_type)}"
                 script += self._finish_sample(row_values)
         return script
 
@@ -150,14 +132,9 @@ class SansThenTrans(Script):
             for row_values in table_data:
                 script += self._start_sample(row_values)
                 if i < sans_times:
-                    script += f"{
-                        self._do_sans(row_values['sans_duration'], sans_duration_type)
-                    }"
+                    script += f"{self._do_sans(row_values['sans_duration'], sans_duration_type)}"
                 if i < trans_times:
-                    script += f"{
-                        self._do_trans(
-                            row_values['trans_duration'], trans_duration_type
-                        )
+                    script += f"{self._do_trans(row_values['trans_duration'], trans_duration_type)
                     }"
                 script += self._finish_sample(row_values)
         return script
@@ -176,11 +153,7 @@ class Simultaneous(Script):
         for _ in range(sans_times):
             for row_values in table_data:
                 script += self._start_sample(row_values)
-                script += f"{
-                    self._do_simultaneous(
-                        row_values['sans_duration'], sans_duration_type
-                    )
-                }"
+                script += f"{self._do_simultaneous(row_values['sans_duration'], sans_duration_type)}"
                 script += self._finish_sample(row_values)
         return script
 
