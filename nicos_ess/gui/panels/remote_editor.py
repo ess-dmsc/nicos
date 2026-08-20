@@ -1169,9 +1169,10 @@ class EditorPanel(Panel):
 
     @pyqtSlot()
     def on_actionImport_triggered(self):
-        filename = QFileDialog.getOpenFileName(
+        filenames = QFileDialog.getOpenFileNames(
             self, "Import Script", "", "Python (*.py)"
         )[0]
-        if not filename:
+        if not filenames:
             return
-        self.openFile(filename)
+        for f in filenames:
+            self.openFile(f)
