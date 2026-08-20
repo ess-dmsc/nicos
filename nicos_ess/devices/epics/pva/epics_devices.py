@@ -289,6 +289,27 @@ class EpicsMappedMoveable(
         MappedMoveable.doInit(self, mode)
 
 
+class EpicsManualMappedMoveable(
+    EpicsReadWriteBase,
+    MappedMoveable,
+):
+    """
+    Simple moveable device with configurable mapping from the setup (instead
+    of reading it from EPICS) that allows any values and doesn't read or require
+    limits.
+    """
+
+    parameter_overrides = {
+        # Mapping values are read from the setup file
+        "mapping": Override(internal=False, mandatory=True, settable=True),
+    }
+
+    _epics_channels = make_rw_channels(as_string=True)
+
+    def _after_subscribe(self, mode):
+        MappedMoveable.doInit(self, mode)
+
+
 class EpicsManualMappedAnalogMoveable(
     EpicsReadWriteBase, HasPrecision, HasLimits, MappedMoveable
 ):
