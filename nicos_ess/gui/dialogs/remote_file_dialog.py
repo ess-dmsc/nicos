@@ -141,7 +141,7 @@ class RemoteFileDialog(QDialog):
     @pyqtSlot()
     def on_btn_ok_pressed(self):
         if self.save:
-            filename = self._get_sanitise_filename()
+            filename = self.txt_filename.text().strip()
 
             if filename in self.filenames:
                 message = f'A file named "{filename}" already exists.\nDo you want to replace it?'
