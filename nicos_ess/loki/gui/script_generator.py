@@ -28,8 +28,8 @@ class Script:
     def _do_sans(self, sans_duration, sans_duration_type):
         return f'do_sans({sans_duration}, "{sans_duration_type}")\n'
 
-    def _do_simultaneous(self, sans_duration, sans_duration_type):
-        return f'do_simultaneous({sans_duration}, "{sans_duration_type}")\n'
+    def _do_sans_trans(self, sans_duration, sans_duration_type):
+        return f'do_sans_trans({sans_duration}, "{sans_duration_type}")\n'
 
     def _start_sample(self, row_values):
         script = f"# Sample = {row_values['sample']['name']}\n"
@@ -153,7 +153,7 @@ class Simultaneous(Script):
         for _ in range(sans_times):
             for row_values in table_data:
                 script += self._start_sample(row_values)
-                script += f"{self._do_simultaneous(row_values['sans_duration'], sans_duration_type)}"
+                script += f"{self._do_sans_trans(row_values['sans_duration'], sans_duration_type)}"
                 script += self._finish_sample(row_values)
         return script
 

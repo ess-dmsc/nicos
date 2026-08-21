@@ -48,7 +48,7 @@ class LokiScriptBuilderPanel(PanelBase):
             "All SANS First": TransOrder.SANSFIRST,
             "TRANS then SANS": TransOrder.TRANSTHENSANS,
             "SANS then TRANS": TransOrder.SANSTHENTRANS,
-            "Simultaneous": TransOrder.SIMULTANEOUS,
+            "SANS and TRANS": TransOrder.SIMULTANEOUS,
         }
     )
 
@@ -523,7 +523,7 @@ class LokiScriptBuilderPanel(PanelBase):
             self._check_durations(row_numbers, table_data, trans_setting)
 
             if trans_setting == TransOrder.SIMULTANEOUS and any(
-                row.get("trans_duration", "").strip() for row in table_data
+                row.get("trans_duration", "") for row in table_data
             ):
                 self.showError(
                     "TRANS duration is ignored in SIMULTANEOUS "
