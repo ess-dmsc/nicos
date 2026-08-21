@@ -173,23 +173,23 @@ devices = dict(
         readpv=f"{pv_root}ControlType-RB",
         writepv=f"{pv_root}ControlType-SP",
     ),
-    rig_PID_parameter_1=device(
+    rig_PID_parameter_P=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="PID parameter 1",
+        description="PID parameter P",
         readpv=f"{pv_root}PidParam1-RB",
         writepv=f"{pv_root}PidParam1-SP",
         targetpv=f"{pv_root}PidParam1-SP",
     ),
-    rig_PID_parameter_2=device(
+    rig_PID_parameter_I=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="PID parameter 2",
+        description="PID parameter I",
         readpv=f"{pv_root}PidParam2-RB",
         writepv=f"{pv_root}PidParam2-SP",
         targetpv=f"{pv_root}PidParam2-SP",
     ),
-    rig_PID_parameter_3=device(
+    rig_PID_parameter_D=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="PID parameter 3",
+        description="PID parameter D",
         readpv=f"{pv_root}PidParam3-RB",
         writepv=f"{pv_root}PidParam3-SP",
         targetpv=f"{pv_root}PidParam3-SP",
