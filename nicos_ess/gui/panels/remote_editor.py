@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 import time
 from logging import WARNING
 from uuid import uuid1
@@ -621,22 +622,17 @@ class EditorPanel(Panel):
             "openfiles", [self.filenames[e] for e in self.editors if self.filenames[e]]
         )
 
-    def check_dirty_on_close(self, editor):
-        if not editor.isModified():
-            return True
-        message = "There are unsaved script files, are you sure you want to close?"
-        buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        rc = QMessageBox.question(
-            self, "Script Editor - Unsaved Files", message, buttons
-        )
-        if rc == QMessageBox.StandardButton.No:
-            return False
-        return True
-
     def requestClose(self):
-        for editor in self.editors:
-            if not self.check_dirty_on_close(editor):
+        any_modified = any(e.isModified() for e in self.editors)
+        if any_modified:
+            message = "There are unsaved script files, are you sure you want to close?"
+            buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            rc = QMessageBox.question(
+                self, "Script Editor - Unsaved Files", message, buttons
+            )
+            if rc == QMessageBox.StandardButton.No:
                 return False
+
         return True
 
     def createEditor(self):
@@ -1013,16 +1009,24 @@ class EditorPanel(Panel):
         self.simFrame.clear()
 
     def openFile(self, fn, is_inst_script=False, is_import=False):
-        try:
-            text = self.client.eval(
+        def _open_local(filename):
+            with open(
+                fn.encode(sys.getfilesystemencoding()), encoding=LOCALE_ENCODING
+            ) as f:
+                return f.read()
+
+        def _open_remote(filename):
+            return self.client.eval(
                 f"session.experiment.read_server_file('{fn}')", None
             )
+
+        try:
+            text = _open_local(fn) if is_import else _open_remote(fn)
         except Exception as err:
             return self.showError("Opening file failed: %s" % err)
 
         editor = self.createEditor()
         editor.setText(text)
-        editor.setModified(False)
 
         # replace tab if it's a single new file
         if (
@@ -1040,6 +1044,11 @@ class EditorPanel(Panel):
         self.tabber.setCurrentWidget(editor)
         self.simFrame.clear()
         editor.setFocus()
+
+        # When importing a local file, we mark it as modified to
+        # encourage the user to save it.
+        editor.setModified(is_import)
+        self.setDirty(editor, is_import)
 
     def check_okay_to_save(self):
         if (
@@ -1094,6 +1103,7 @@ class EditorPanel(Panel):
         if not file:
             return
         self.filenames[editor] = file
+        self.is_imported_script[editor] = False
         self.tabber.setTabText(self.editors.index(editor), os.path.basename(file))
         return self.saveFile(editor)
 
@@ -1175,4 +1185,3 @@ class EditorPanel(Panel):
             return
         for f in filenames:
             self.openFile(f, is_import=True)
-            self.setDirty(self.editors[~0], True)

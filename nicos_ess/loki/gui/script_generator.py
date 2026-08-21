@@ -113,7 +113,7 @@ class TransThenSans(Script):
                 if i < trans_times:
                     script += f"{self._do_trans(row_values['trans_duration'], trans_duration_type)}"
                 if i < sans_times:
-                    script += f" self._do_sans(row_values['trans_duration'], sans_duration_type)}"
+                    script += f"{self._do_sans(row_values['trans_duration'], sans_duration_type)}"
                 script += self._finish_sample(row_values)
         return script
 
