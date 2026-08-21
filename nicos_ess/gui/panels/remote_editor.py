@@ -965,7 +965,8 @@ class EditorPanel(Panel):
             buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         rc = QMessageBox.question(self, "Script Editor", message, buttons)
         if rc in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Yes):
-            return self.saveFile(editor)
+            if self.check_okay_to_save():
+                return self.saveFile(editor)
         if rc in (QMessageBox.StandardButton.Discard, QMessageBox.StandardButton.No):
             return True
         return False
