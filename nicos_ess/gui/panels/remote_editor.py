@@ -1099,6 +1099,13 @@ class EditorPanel(Panel):
             self.saving = False
 
         editor.setModified(False)
+
+        if self.is_instrument_script[editor]:
+            message = "Run 'import_instrument_commands()' to import changes."
+            QMessageBox.information(
+                self, "Script Editor", message, QMessageBox.StandardButton.Ok
+            )
+
         return True
 
     def saveFileAs(self, editor, name=None):
