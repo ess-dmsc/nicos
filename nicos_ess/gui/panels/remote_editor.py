@@ -537,23 +537,26 @@ class EditorPanel(Panel):
     def enableRemoteActions(self):
         for action in [
             self.actionOpen,
-            self.actionSaveAs,
             self.actionReload,
             self.actionRun,
+            self.actionSaveAs,
             self.actionSimulate,
             self.actionGet,
             self.actionUpdate,
         ]:
             action.setEnabled(self.client.isconnected)
 
-        if self.client.isconnected:
-            # Enable save only if modified
-            index = self.tabber.currentIndex()
-            if 0 <= index < len(self.tabber):
-                editor = self.editors[index]
-                self.actionSave.setEnabled(editor.isModified())
-        else:
+        if not self.client.isconnected:
             self.actionSave.setEnabled(False)
+            return
+
+        index = self.tabber.currentIndex()
+        if 0 <= index < len(self.tabber):
+            editor = self.editors[index]
+            # Enable save only if modified
+            self.actionSave.setEnabled(editor.isModified())
+            # Disable save as if it is an instrument script
+            self.actionSaveAs.setEnabled(not self.is_instrument_script[editor])
 
     def on_codeGenerated(self, code):
         if self.currentEditor:
