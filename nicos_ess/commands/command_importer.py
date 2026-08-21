@@ -29,8 +29,14 @@ def _import_instrument_commands(file_location):
 
 @usercommand
 def import_instrument_commands():
-    file = os.path.join(session.experiment.instrument_scripts_directory, session.instrument.name.lower(), FILENAME)
+    file = os.path.join(
+        session.experiment.instrument_scripts_directory,
+        session.instrument.name.lower(),
+        FILENAME,
+    )
     if not os.path.isfile(file):
-        raise RuntimeError(f"Instrument command file does not exist. Expected path is {file}")
+        raise RuntimeError(
+            f"Instrument command file does not exist. Expected path is {file}"
+        )
 
     _import_instrument_commands(file)
