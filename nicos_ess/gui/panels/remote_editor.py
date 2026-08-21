@@ -2,10 +2,13 @@
 
 import os
 import subprocess
+import sys
 import time
 from logging import WARNING
 from uuid import uuid1
+from collections import defaultdict
 
+from nicos.core.utils import ADMIN
 from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
 from nicos.clients.gui.panels import Panel
@@ -360,6 +363,8 @@ class EditorPanel(Panel):
 
         self.editors = []  # tab index -> editor
         self.filenames = {}  # editor -> filename
+        self.is_instrument_script = defaultdict(lambda: False)  # editor -> bool
+        self.is_imported_script = defaultdict(lambda: False)  # editor -> bool
         self.currentEditor = None
 
         self.saving = False  # True while saving
@@ -541,14 +546,17 @@ class EditorPanel(Panel):
         ]:
             action.setEnabled(self.client.isconnected)
 
-        if self.client.isconnected:
-            # Enable save only if modified
-            index = self.tabber.currentIndex()
-            if 0 <= index < len(self.tabber):
-                editor = self.editors[index]
-                self.actionSave.setEnabled(editor.isModified())
-        else:
+        if not self.client.isconnected:
             self.actionSave.setEnabled(False)
+            return
+
+        index = self.tabber.currentIndex()
+        if 0 <= index < len(self.tabber):
+            editor = self.editors[index]
+            # Enable save only if modified
+            self.actionSave.setEnabled(editor.isModified())
+            # Disable save as if it is an instrument script
+            self.actionSaveAs.setEnabled(not self.is_instrument_script[editor])
 
     def on_codeGenerated(self, code):
         if self.currentEditor:
@@ -617,22 +625,17 @@ class EditorPanel(Panel):
             "openfiles", [self.filenames[e] for e in self.editors if self.filenames[e]]
         )
 
-    def check_dirty_on_close(self, editor):
-        if not editor.isModified():
-            return True
-        message = "There are unsaved script files, are you sure you want to close?"
-        buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        rc = QMessageBox.question(
-            self, "Script Editor - Unsaved Files", message, buttons
-        )
-        if rc == QMessageBox.StandardButton.No:
-            return False
-        return True
-
     def requestClose(self):
-        for editor in self.editors:
-            if not self.check_dirty_on_close(editor):
+        any_modified = any(e.isModified() for e in self.editors)
+        if any_modified:
+            message = "There are unsaved script files, are you sure you want to close?"
+            buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            rc = QMessageBox.question(
+                self, "Script Editor - Unsaved Files", message, buttons
+            )
+            if rc == QMessageBox.StandardButton.No:
                 return False
+
         return True
 
     def createEditor(self):
@@ -873,15 +876,7 @@ class EditorPanel(Panel):
                 self.currentEditor.print(printer)
 
     def validateScript(self):
-        script = self.currentEditor.text()
-        # XXX: this does not apply to .txt (SPM) scripts
-        # try:
-        #    compile(script, 'script', 'exec')
-        # except SyntaxError as err:
-        #    self.showError('Syntax error in script: %s' % err)
-        #    self.currentEditor.setCursorPosition(err.lineno - 1, err.offset)
-        #    return
-        return script
+        return self.currentEditor.text()
 
     @pyqtSlot()
     def on_actionRun_triggered(self):
@@ -967,11 +962,7 @@ class EditorPanel(Panel):
             | QMessageBox.StandardButton.Cancel
         )
         if askonly:
-            buttons = (
-                QMessageBox.StandardButton.Yes
-                | QMessageBox.StandardButton.No
-                | QMessageBox.StandardButton.Cancel
-            )
+            buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         rc = QMessageBox.question(self, "Script Editor", message, buttons)
         if rc in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Yes):
             return self.saveFile(editor)
@@ -994,12 +985,16 @@ class EditorPanel(Panel):
         editor.setFocus()
         return editor
 
+    def is_admin_account(self):
+        return self.client.user_level is not None and self.client.user_level >= ADMIN
+
     @pyqtSlot()
     def on_actionOpen_triggered(self):
-        # TODO: choose a directory. E.g. proposal number
-        file = RemoteFileDialog.get_file(self, self.client)
+        file, is_inst_script = RemoteFileDialog.get_file(
+            self, self.client, admin=self.is_admin_account()
+        )
         if file:
-            self.openFile(file)
+            self.openFile(file, is_inst_script)
 
     @pyqtSlot()
     def on_actionReload_triggered(self):
@@ -1016,17 +1011,25 @@ class EditorPanel(Panel):
         self.currentEditor.setText(text)
         self.simFrame.clear()
 
-    def openFile(self, fn, quiet=False):
-        try:
-            text = self.client.eval(
-                f"session.experiment.read_server_file('{fn}')", "💣"
+    def openFile(self, fn, is_inst_script=False, is_import=False):
+        def _open_local(filename):
+            with open(
+                fn.encode(sys.getfilesystemencoding()), encoding=LOCALE_ENCODING
+            ) as f:
+                return f.read()
+
+        def _open_remote(filename):
+            return self.client.eval(
+                f"session.experiment.read_server_file('{fn}')", None
             )
+
+        try:
+            text = _open_local(fn) if is_import else _open_remote(fn)
         except Exception as err:
             return self.showError("Opening file failed: %s" % err)
 
         editor = self.createEditor()
         editor.setText(text)
-        editor.setModified(False)
 
         # replace tab if it's a single new file
         if (
@@ -1038,26 +1041,47 @@ class EditorPanel(Panel):
 
         self.editors.append(editor)
         self.filenames[editor] = fn
+        self.is_instrument_script[editor] = is_inst_script
+        self.is_imported_script[editor] = is_import
         self.tabber.addTab(editor, os.path.basename(fn))
         self.tabber.setCurrentWidget(editor)
         self.simFrame.clear()
         editor.setFocus()
 
+        # When importing a local file, we mark it as modified to
+        # encourage the user to save it.
+        editor.setModified(is_import)
+        self.setDirty(editor, is_import)
+
+    def check_okay_to_save(self):
+        if (
+            self.is_instrument_script[self.currentEditor]
+            and not self.is_admin_account()
+        ):
+            QMessageBox.warning(
+                self, "Error", "Only an admin account can save instrument scripts"
+            )
+            return False
+        return True
+
     @pyqtSlot()
     def on_actionSave_triggered(self):
-        self.saveFile(self.currentEditor)
+        if self.check_okay_to_save():
+            self.saveFile(self.currentEditor)
 
     @pyqtSlot()
     def on_actionSaveAs_triggered(self):
-        self.saveFileAs(self.currentEditor)
-        self.parent_window.setWindowTitle(
-            "%s[*] - %s editor"
-            % (self.filenames[self.currentEditor], self.mainwindow.instrument)
-        )
+        if self.check_okay_to_save():
+            self.saveFileAs(self.currentEditor)
 
     def saveFile(self, editor):
         if not self.filenames[editor]:
             return self.saveFileAs(editor)
+
+        if self.is_imported_script[editor]:
+            # Suggest the same name as it was imported as.
+            name = os.path.basename(self.filenames[editor])
+            return self.saveFileAs(editor, name=name)
 
         self.saving = True
         filename = self.filenames[editor]
@@ -1075,13 +1099,21 @@ class EditorPanel(Panel):
             self.saving = False
 
         editor.setModified(False)
+
+        if self.is_instrument_script[editor]:
+            message = "Run 'import_instrument_commands()' to import changes."
+            QMessageBox.information(
+                self, "Script Editor", message, QMessageBox.StandardButton.Ok
+            )
+
         return True
 
-    def saveFileAs(self, editor):
-        file = RemoteFileDialog.get_file(self, self.client, save=True)
+    def saveFileAs(self, editor, name=None):
+        file, _ = RemoteFileDialog.get_file(self, self.client, save=True, name=name)
         if not file:
             return
         self.filenames[editor] = file
+        self.is_imported_script[editor] = False
         self.tabber.setTabText(self.editors.index(editor), os.path.basename(file))
         return self.saveFile(editor)
 
@@ -1156,9 +1188,10 @@ class EditorPanel(Panel):
 
     @pyqtSlot()
     def on_actionImport_triggered(self):
-        filename = QFileDialog.getOpenFileName(
+        filenames = QFileDialog.getOpenFileNames(
             self, "Import Script", "", "Python (*.py)"
         )[0]
-        if not filename:
+        if not filenames:
             return
-        self.openFile(filename)
+        for f in filenames:
+            self.openFile(f, is_import=True)

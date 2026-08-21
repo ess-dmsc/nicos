@@ -78,3 +78,10 @@ devices = dict(
         nexus="NexusStructure",
     ),
 )
+
+startupcode = """
+printinfo("============================================================")
+printinfo("Loading instrument specific commands.")
+printinfo("============================================================")
+import_instrument_commands()
+"""

@@ -1,3 +1,4 @@
+import os
 import time
 
 from nicos.clients.gui.utils import loadUi
@@ -13,6 +14,9 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.tablemodel import TableModel
 from nicos.utils import findResource
+
+USER_SCRIPT = 0
+INSTRUMENT_SCRIPT = 1
 
 
 class FileTableModel(TableModel):
@@ -30,40 +34,26 @@ class FileTableModel(TableModel):
 
 class RemoteFileDialog(QDialog):
     @classmethod
-    def get_file(cls, parent, client, directory="", save=False):
-        dialog = cls(parent, client, directory, save)
+    def get_file(cls, parent, client, directory="", save=False, admin=False, name=None):
+        dialog = cls(parent, client, directory, save, admin, name)
         if dialog.exec() == 1:
-            return dialog.get_selected_file()
-        return None
+            return dialog.get_selected_file(), dialog.is_inst_script
+        return None, False
 
-    def __init__(self, parent, client, directory, save):
+    def __init__(self, parent, client, directory, save, admin, name):
         QDialog.__init__(self, parent)
         loadUi(self, findResource("nicos_ess/gui/dialogs/remote_file_dialog.ui"))
 
         self.client = client
         self.save = save
-
-        files_info = self.client.eval(
-            f"session.experiment.list_server_directory('{directory}')", None
-        )
-        if files_info is None:
-            print("TODO: something went wrong")
-            return
-        files_info.sort(key=lambda x: x[0])
-        self.filenames = {x[0] for x in files_info}
+        self.admin = admin
+        self.is_inst_script = False
 
         # We store the raw modification time but don't show it.
         # When we sort on modification time we use the raw value
         # which is in seconds since 1970.
         self.table_model = FileTableModel(["Name", "Modified", "Raw modified"])
-        self.table_model.raw_data = [
-            {
-                "Name": name,
-                "Modified": time.ctime(modified),
-                "Raw modified": int(modified),
-            }
-            for name, modified in files_info
-        ]
+
         self.file_table.setModel(self.table_model)
         self.file_table.verticalHeader().setVisible(False)
         self.file_table.horizontalHeader().setSectionResizeMode(
@@ -87,24 +77,58 @@ class RemoteFileDialog(QDialog):
             self.on_selection_changed
         )
 
-        if files_info and not save:
-            first = self.table_model.index(0, 0)
-            self.file_table.setCurrentIndex(first)
-
         # Limit what chars are acceptable in a file name
         self.txt_filename.setValidator(
             QRegularExpressionValidator(QRegularExpression(r"[A-Za-z0-9._=+-]+"), self)
         )
 
-        if save:
+        self.file_table.doubleClicked.connect(self.on_file_double_clicked)
+
+        if self.save:
             self.setWindowTitle("Save Script File As")
             self.btn_ok.setText("Save")
             self.btn_ok.setEnabled(False)
             self.txt_filename.textChanged.connect(self.on_filename_changed)
+            if name is not None:
+                self.txt_filename.setText(name.strip())
         else:
             self.setWindowTitle("Open Script File")
             self.txt_filename.hide()
             self.lbl_name.hide()
+
+        if self.save or not self.admin:
+            self.lbl_script_type.hide()
+            self.combo_script_type.hide()
+
+        self.combo_script_type.currentIndexChanged.connect(
+            self.on_combo_script_type_changed
+        )
+
+        self.directory, files_info = self.client.eval(
+            "session.experiment.list_user_scripts_directory()", (None, None)
+        )
+        if files_info is None:
+            raise RuntimeError("Could not retrieve files from NICOS server")
+
+        self._update_files_list(files_info)
+
+    def _update_files_list(self, files_info):
+        files_info.sort(key=lambda x: x[0])
+        self.filenames = {x[0] for x in files_info}
+
+        self.table_model.raw_data = [
+            {
+                "Name": name,
+                "Modified": time.ctime(modified),
+                "Raw modified": int(modified),
+            }
+            for name, modified in files_info
+        ]
+
+        if files_info and not self.save:
+            first = self.table_model.index(0, 0)
+            self.file_table.setCurrentIndex(first)
+            self.on_selection_changed(first, None)
 
     def on_selection_changed(self, current, _previous):
         filename = self.table_model.data(
@@ -119,7 +143,7 @@ class RemoteFileDialog(QDialog):
     @pyqtSlot()
     def on_btn_ok_pressed(self):
         if self.save:
-            filename = self._get_sanitise_filename()
+            filename = self.txt_filename.text().strip()
 
             if filename in self.filenames:
                 message = f'A file named "{filename}" already exists.\nDo you want to replace it?'
@@ -135,10 +159,35 @@ class RemoteFileDialog(QDialog):
         self.reject()
 
     def _get_sanitise_filename(self):
-        filename = self.txt_filename.text().strip()
+        filename = os.path.join(self.directory, self.txt_filename.text().strip())
         if not filename.endswith(".py"):
             filename += ".py"
         return filename
 
     def get_selected_file(self):
         return self._get_sanitise_filename()
+
+    def on_combo_script_type_changed(self, i):
+        if i == USER_SCRIPT:
+            self.directory, files_info = self.client.eval(
+                "session.experiment.list_user_scripts_directory()", (None, None)
+            )
+            self.is_inst_script = False
+        else:
+            self.directory, files_info = self.client.eval(
+                "session.experiment.list_instrument_scripts_directory()", (None, None)
+            )
+            self.is_inst_script = True
+
+        if files_info is None:
+            raise RuntimeError("Could not retrieve files from NICOS server")
+
+        self._update_files_list(files_info)
+
+    def on_file_double_clicked(self, index):
+        filename = self.table_model.data(
+            self.table_model.index(index.row(), 0),
+            Qt.ItemDataRole.DisplayRole,
+        )
+        self.txt_filename.setText(filename)
+        self.on_btn_ok_pressed()
