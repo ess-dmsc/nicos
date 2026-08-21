@@ -149,7 +149,7 @@ if has_scintilla:
 
 class FindReplaceWidget(QWidget):
     def __init__(self, editor):
-        super().__init__(editor)  # Parent set to editor for overlay
+        super().__init__(editor)
         self.editor = editor
         self.last_search_text = ""
         self.last_selected_position = (0, 0)
@@ -675,7 +675,6 @@ class EditorPanel(Panel):
 
         else:
             editor = QScintillaCompatible(self)
-        # editor.setFrameStyle(0)
         editor.modificationChanged.connect(lambda dirty: self.setDirty(editor, dirty))
         self._updateStyle(editor)
         return editor
@@ -861,7 +860,6 @@ class EditorPanel(Panel):
             printer = Printer()
             printer.setOutputFileName("")
             printer.setDocName(self.filenames[self.currentEditor])
-            # printer.setFullPage(True)
             if QPrintDialog(printer, self).exec() == QDialog.DialogCode.Accepted:
                 lexer = self.currentEditor.lexer()
                 bgcolor = lexer.paper(0)
@@ -1141,7 +1139,6 @@ class EditorPanel(Panel):
     @pyqtSlot()
     def on_actionComment_triggered(self):
         clen = len(COMMENT_STR)
-        # act on selection?
         if self.currentEditor.hasSelectedText():
             # get the selection boundaries
             line1, index1, line2, index2 = self.currentEditor.getSelection()
