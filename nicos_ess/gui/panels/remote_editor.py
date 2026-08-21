@@ -4,16 +4,16 @@ import os
 import subprocess
 import sys
 import time
+from collections import defaultdict
 from logging import WARNING
 from uuid import uuid1
-from collections import defaultdict
 
-from nicos.core.utils import ADMIN
 from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.clients.gui.widgets.qscintillacompat import QScintillaCompatible
+from nicos.core.utils import ADMIN
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
     QAction,
@@ -29,7 +29,6 @@ from nicos.guisupport.qt import (
     QHeaderView,
     QInputDialog,
     QLineEdit,
-    QMenu,
     QMessageBox,
     QPen,
     QPrintDialog,
@@ -579,7 +578,7 @@ class EditorPanel(Panel):
         self.enableFileActions(index >= 0)
         if index == -1:
             self.currentEditor = None
-            self.parent_window.setWindowTitle("%s editor" % self.mainwindow.instrument)
+            self.parent_window.setWindowTitle(f"{self.mainwindow.instrument} editor")
             return
         editor = self.editors[index]
         self.actionSave.setEnabled(editor.isModified() and self.client.isconnected)
@@ -904,12 +903,12 @@ class EditorPanel(Panel):
             self.actionSimulate.setEnabled(False)
             self.simFrame.simuuid = simuuid
             self.simFrame.clear()
-            self.simPane.setWindowTitle("Dry run results - %s" % filename)
+            self.simPane.setWindowTitle(f"Dry run results - {filename}")
             self.simPane.show()
         else:
             if self.sim_window == "multi" or not self.simWindows:
                 window = SimResultFrame(None, self, self.client)
-                window.setWindowTitle("Dry run results - %s" % filename)
+                window.setWindowTitle(f"Dry run results - {filename}")
                 window.layout().setContentsMargins(6, 6, 6, 6)
                 window.simOutView.setFont(self.simFrame.simOutView.font())
                 window.simOutViewErrors.setFont(self.simFrame.simOutView.font())
@@ -918,7 +917,7 @@ class EditorPanel(Panel):
             else:
                 window = self.simWindows[0]
                 window.clear()
-                window.setWindowTitle("Dry run results - %s" % filename)
+                window.setWindowTitle(f"Dry run results - {filename}")
                 window.activateWindow()
             window.simuuid = simuuid
         self.client.tell("simulate", filename, script, simuuid)
@@ -951,7 +950,7 @@ class EditorPanel(Panel):
         if not editor.isModified():
             return True
         if self.filenames[editor]:
-            message = "Save changes in %s before closing?" % self.filenames[editor]
+            message = f"Save changes in {self.filenames[editor]} before closing?"
         else:
             message = "Save changes to new script file before closing?"
         buttons = (
@@ -962,12 +961,12 @@ class EditorPanel(Panel):
         if askonly:
             buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         rc = QMessageBox.question(self, "Script Editor", message, buttons)
-        if rc in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Yes):
-            if self.check_okay_to_save():
-                return self.saveFile(editor)
-        if rc in (QMessageBox.StandardButton.Discard, QMessageBox.StandardButton.No):
-            return True
-        return False
+        if (
+            rc in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Yes)
+            and self.check_okay_to_save()
+        ):
+            return self.saveFile(editor)
+        return rc in (QMessageBox.StandardButton.Discard, QMessageBox.StandardButton.No)
 
     @pyqtSlot()
     def on_actionNew_triggered(self):
@@ -1006,7 +1005,7 @@ class EditorPanel(Panel):
             with open(fn, encoding=LOCALE_ENCODING) as f:
                 text = f.read()
         except Exception as err:
-            return self.showError("Opening file failed: %s" % err)
+            return self.showError(f"Opening file failed: {err}")
         self.currentEditor.setText(text)
         self.simFrame.clear()
 
@@ -1025,7 +1024,7 @@ class EditorPanel(Panel):
         try:
             text = _open_local(fn) if is_import else _open_remote(fn)
         except Exception as err:
-            return self.showError("Opening file failed: %s" % err)
+            return self.showError(f"Opening file failed: {err}")
 
         editor = self.createEditor()
         editor.setText(text)
@@ -1092,7 +1091,7 @@ class EditorPanel(Panel):
                 f"session.experiment.write_server_file('{filename}', {content})",
             )
         except Exception as err:
-            self.showError("Saving file failed: %s" % err)
+            self.showError(f"Saving file failed: {err}")
             return False
         finally:
             self.saving = False
@@ -1142,10 +1141,7 @@ class EditorPanel(Panel):
         if self.currentEditor.hasSelectedText():
             # get the selection boundaries
             line1, index1, line2, index2 = self.currentEditor.getSelection()
-            if index2 == 0:
-                endLine = line2 - 1
-            else:
-                endLine = line2
+            endLine = line2 - 1 if index2 == 0 else line2
             assert endLine >= line1
 
             self.currentEditor.beginUndoAction()

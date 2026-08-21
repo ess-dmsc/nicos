@@ -1,8 +1,8 @@
-from nicos.commands import usercommand
-from nicos import session
 import inspect
 import os
 
+from nicos import session
+from nicos.commands import usercommand
 
 __all__ = [
     "import_instrument_commands",
@@ -24,7 +24,8 @@ def _import_instrument_commands(file_location):
 
     # Hackery to import the instrument commands into the same namespace as
     # the NICOS commands.
-    exec(compile(open(file_location).read(), file_location, "exec"), globs)
+    with open(file_location) as f:
+        exec(compile(f.read(), file_location, "exec"), globs)
 
 
 @usercommand
