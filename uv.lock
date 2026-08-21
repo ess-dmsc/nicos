@@ -1231,7 +1231,6 @@ dependencies = [
 
 [package.optional-dependencies]
 gui = [
-    { name = "flake8" },
     { name = "gr" },
     { name = "html2text" },
     { name = "keyring" },
@@ -1253,7 +1252,6 @@ gui = [
     { name = "urllib3" },
 ]
 gui-qt6 = [
-    { name = "flake8" },
     { name = "gr" },
     { name = "html2text" },
     { name = "keyring" },
@@ -1300,8 +1298,6 @@ gui-test = [
 requires-dist = [
     { name = "caproto", specifier = ">=1.3.0" },
     { name = "ess-streaming-data-types", specifier = ">=0.27.0" },
-    { name = "flake8", marker = "extra == 'gui'" },
-    { name = "flake8", marker = "extra == 'gui-qt6'" },
     { name = "gitpython", specifier = ">=3.1.45" },
     { name = "gr", marker = "extra == 'gui'", specifier = ">=1.23.2" },
     { name = "gr", marker = "extra == 'gui-qt6'", specifier = ">=1.23.2" },
