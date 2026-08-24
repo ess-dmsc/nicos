@@ -148,7 +148,7 @@ class RemoteFileDialog(QDialog):
             if filename in self.filenames:
                 message = (
                     f'A file named "{filename}" already exists.\n'
-                    'Do you want to replace it?'
+                    "Do you want to replace it?"
                 )
                 buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 rc = QMessageBox.question(self, "Replace File?", message, buttons)
