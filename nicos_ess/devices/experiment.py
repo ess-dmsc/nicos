@@ -1,5 +1,6 @@
 """ESS Experiment device."""
 
+import os
 import time
 from os import path
 
@@ -142,6 +143,22 @@ class EssExperiment(Device):
             settable=True,
             internal=True,
         ),
+        "instrument_scripts_directory": Param(
+            "Path to the top directory where instrument scripts live",
+            type=str,
+            category="experiment",
+            default="/opt/instrument_scripts",
+            mandatory=False,
+            userparam=False,
+        ),
+        "user_scripts_directory": Param(
+            "Path to the top directory where user scripts live",
+            type=str,
+            category="experiment",
+            default="/opt/user_scripts",
+            mandatory=False,
+            userparam=False,
+        ),
     }
 
     attached_devices = {
@@ -279,6 +296,54 @@ class EssExperiment(Device):
     def finish(self):
         self.new(0, "Service mode")
         self.sample.set_samples({})
+
+    def list_instrument_scripts_directory(self) -> (str, list[str]):
+        """Fetches a list of files in the instrument scripts directory.
+
+        Note: currently it should only be at most one file (commands.py).
+
+        Returns: (the directory path, a list of files)
+        """
+        instrument = session.instrument.name.lower()
+        directory = os.path.join(self.instrument_scripts_directory, instrument)
+        return directory, self._list_directory_files(directory, extension=".py")
+
+    def list_user_scripts_directory(self, directory="") -> (str, list[str]):
+        """Fetches a list of files in the specified user scripts directory.
+
+        Args:
+            directory: the sub-directory of the user scripts directory.
+
+        Returns: (the directory path, a list of files)
+        """
+        directory = os.path.join(self.user_scripts_directory, directory)
+        return directory, self._list_directory_files(directory, extension=".py")
+
+    def _list_directory_files(self, directory, extension=""):
+        files = []
+        for file in os.listdir(directory):
+            path = os.path.join(directory, file)
+            if os.path.isfile(path) and path.endswith(extension):
+                last_modified = int(os.path.getmtime(path))
+                files.append((file, last_modified))
+        return files
+
+    def read_server_file(self, filepath) -> str | None:
+        """Reads the specified file from the server and returns it."""
+        if ".." in filepath:
+            self.log.error("Relative filepaths are not allowed when reading files.")
+            return None
+        with open(filepath, encoding="utf-8") as f:
+            return f.read()
+
+    def write_server_file(self, filepath, contents):
+        """Write the contents to the specified file."""
+        if ".." in filepath:
+            self.log.error("Relative filepaths are not allowed when writing files.")
+            return
+        with open(filepath, "w", encoding="utf-8") as f:
+            # NOTE: contents are received as bytes, so must be decoded!
+            f.write(contents.decode())
 
     def _canQueryProposals(self):
         if self._yuos_client:
