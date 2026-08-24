@@ -38,7 +38,7 @@ devices = dict(
         maxage=None,
     ),
     # DPU Config
-    detector_config_control=device(
+    detector_config=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX DPU Configuration, control",
         readpv=f"{pv_root}getDPUConfiguration",
@@ -48,7 +48,7 @@ devices = dict(
         maxage=None,
     ),
     # Sample tool
-    tool__current_tool=device(
+    tool_currently_mounted=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="ARINAX SPU current mounted tool, readback",
         readpv=f"{pv_root}getCurrentTool",
@@ -56,7 +56,7 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    tool__load_tool=device(
+    tool_load=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU desired tool loading, control",
         readpv=f"{pv_root}getCurrentTool",
@@ -66,7 +66,7 @@ devices = dict(
         maxage=None,
     ),
     # Sample load
-    sample__load_SS_sample=device(
+    sample_load_from_SS=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU load sample from storage, control",
         readpv=f"{pv_root}LoadSSSample",
@@ -76,7 +76,7 @@ devices = dict(
         maxage=None,
         mapping=SAMPLE_STORAGE,
     ),
-    sample__load_UP_sample=device(
+    sample_load_from_UP=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU load sample from unipucks, control",
         readpv=f"{pv_root}LoadUPSample",
@@ -86,7 +86,7 @@ devices = dict(
         maxage=None,
         mapping=UNIPUCKS,
     ),
-    sample__sample_is_loaded=device(
+    sample_is_loaded=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Whether ARINAX SPU sample is mounted or not, readback",
         readpv=f"{pv_root}getIsSampleLoaded",
@@ -95,7 +95,7 @@ devices = dict(
         maxage=None,
     ),
     # TODO: Still to be solved/included in the proxy IOC!
-    sample__unload_sample=device(
+    sample_unload=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU unload sample, control",
         readpv=f"{pv_root}UnLoadSample",
@@ -109,21 +109,21 @@ devices = dict(
     ),
     # Sample centring motion
     # Using numbers to have the same order from ARINAX GUI
-    sample__centring1_phi=device(
+    sample_centring_1_phi=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample centring motor Phi",
         readpv=f"{pv_root}getPhiPosition",
         writepv=f"{pv_root}setPhiPosition",
         # unit="deg",
     ),
-    sample__centring2_chi=device(
+    sample_centring_2_chi=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample centring motor Chi",
         readpv=f"{pv_root}getChiPosition",
         writepv=f"{pv_root}setChiPosition",
         # unit="mm",
     ),
-    sample__centring3_theta=device(
+    sample_centring_3_theta=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample centring motor Theta",
         readpv=f"{pv_root}getThetaPosition",
