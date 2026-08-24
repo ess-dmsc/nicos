@@ -58,7 +58,14 @@ class LokiScriptBuilderPanel(PanelBase):
 
         self.parent_window = parent
         self.combo_delegate = ComboBoxDelegate()
-        self.duration_options = ["Mevents", "seconds", "frames"]
+        self.duration_options = ["target", "seconds", "frames", "monitor_events"]
+        self.monitor_options = [
+            "monitor0_data",
+            "monitor1_data",
+            "monitor2_data",
+            "monitor3_data",
+            "monitor4_data",
+        ]
 
         self.columns = OrderedDict(
             {
@@ -123,6 +130,10 @@ class LokiScriptBuilderPanel(PanelBase):
 
         # Set up trans order combo-box
         self.comboTransOrder.addItems(self._available_trans_options.keys())
+
+        # Set up the monitors list
+        self.comboMonitor.setEnabled(False)
+        self.comboMonitor.addItems(self.monitor_options)
 
         self.last_save_location = None
         self._init_table_panel()
@@ -268,6 +279,7 @@ class LokiScriptBuilderPanel(PanelBase):
             self.toolbar,
         ]:
             control.setEnabled(not viewonly)
+        self._enable_monitor_choice(viewonly)
 
     def _init_right_click_context_menu(self):
         self.tableView.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -531,12 +543,17 @@ class LokiScriptBuilderPanel(PanelBase):
                     "script."
                 )
 
+            monitor = None
+            if self.comboMonitor.isEnabled():
+                monitor = self.comboMonitor.currentText().lower()
+
             template = ScriptFactory.from_trans_order(trans_setting).generate_script(
                 table_data,
                 self.comboTransDurationType.currentText().lower(),
                 self.comboSansDurationType.currentText().lower(),
                 self.sbTransTimes.value(),
                 self.sbSansTimes.value(),
+                monitor,
             )
 
             self.mainwindow.codeGenerated.emit(template)
@@ -591,6 +608,19 @@ class LokiScriptBuilderPanel(PanelBase):
         self._set_column_title(
             column_number, f"{self.columns[column_name].header}\n({value})"
         )
+        self._enable_monitor_choice(False)
+
+    def _enable_monitor_choice(self, viewonly):
+        if viewonly:
+            self.comboMonitor.setEnabled(False)
+            return
+
+        if self.comboTransDurationType.currentText().startswith(
+            "monitor"
+        ) or self.comboSansDurationType.currentText().startswith("monitor"):
+            self.comboMonitor.setEnabled(True)
+        else:
+            self.comboMonitor.setEnabled(False)
 
     def _set_column_title(self, index, title):
         self.model.setHeaderData(index, Qt.Orientation.Horizontal, title)

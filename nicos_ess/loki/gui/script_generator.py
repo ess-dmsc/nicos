@@ -22,14 +22,17 @@ class Script:
             return ""
         return f"{command}\n"
 
-    def _do_trans(self, trans_duration, trans_duration_type):
-        return f'do_trans({trans_duration}, "{trans_duration_type}")\n'
+    def _do_trans(self, trans_duration, trans_duration_type, monitor):
+        monitor_str = f', "{monitor}"' if monitor else ""
+        return f'do_trans({trans_duration}, "{trans_duration_type}"{monitor_str})\n'
 
-    def _do_sans(self, sans_duration, sans_duration_type):
-        return f'do_sans({sans_duration}, "{sans_duration_type}")\n'
+    def _do_sans(self, sans_duration, sans_duration_type, monitor):
+        monitor_str = f', "{monitor}"' if monitor else ""
+        return f'do_sans({sans_duration}, "{sans_duration_type}"{monitor_str})\n'
 
-    def _do_sans_trans(self, sans_duration, sans_duration_type):
-        return f'do_sans_trans({sans_duration}, "{sans_duration_type}")\n'
+    def _do_sans_trans(self, sans_duration, sans_duration_type, monitor):
+        monitor_str = f', "{monitor}"' if monitor else ""
+        return f'do_sans_trans({sans_duration}, "{sans_duration_type}"{monitor_str})\n'
 
     def _start_sample(self, row_values):
         script = f"# Sample = {row_values['sample']['name']}\n"
@@ -57,6 +60,7 @@ class TransFirst(Script):
         sans_duration_type,
         trans_times,
         sans_times,
+        monitor=None,
     ):
         script = f"{self._define_var_for_positioner()}\n\n"
         for i in range(max(trans_times, sans_times)):
@@ -64,14 +68,14 @@ class TransFirst(Script):
                 for row_values in table_data:
                     script += self._start_sample(row_values)
                     script += self._do_trans(
-                        row_values["trans_duration"], trans_duration_type
+                        row_values["trans_duration"], trans_duration_type, monitor
                     )
                     script += self._finish_sample(row_values)
             if i < sans_times:
                 for row_values in table_data:
                     script += self._start_sample(row_values)
                     script += self._do_sans(
-                        row_values["sans_duration"], sans_duration_type
+                        row_values["sans_duration"], sans_duration_type, monitor
                     )
                     script += self._finish_sample(row_values)
         return script
@@ -85,6 +89,7 @@ class SansFirst(Script):
         sans_duration_type,
         trans_times,
         sans_times,
+        monitor=None,
     ):
         script = f"{self._define_var_for_positioner()}\n\n"
         for i in range(max(trans_times, sans_times)):
@@ -92,14 +97,14 @@ class SansFirst(Script):
                 for row_values in table_data:
                     script += self._start_sample(row_values)
                     script += self._do_sans(
-                        row_values["sans_duration"], sans_duration_type
+                        row_values["sans_duration"], sans_duration_type, monitor
                     )
                     script += self._finish_sample(row_values)
             if i < trans_times:
                 for row_values in table_data:
                     script += self._start_sample(row_values)
                     script += self._do_trans(
-                        row_values["trans_duration"], trans_duration_type
+                        row_values["trans_duration"], trans_duration_type, monitor
                     )
                     script += self._finish_sample(row_values)
         return script
@@ -113,6 +118,7 @@ class TransThenSans(Script):
         sans_duration_type,
         trans_times,
         sans_times,
+        monitor=None,
     ):
         script = f"{self._define_var_for_positioner()}\n\n"
         for i in range(max(trans_times, sans_times)):
@@ -120,11 +126,11 @@ class TransThenSans(Script):
                 script += self._start_sample(row_values)
                 if i < trans_times:
                     script += self._do_trans(
-                        row_values["trans_duration"], trans_duration_type
+                        row_values["trans_duration"], trans_duration_type, monitor
                     )
                 if i < sans_times:
                     script += self._do_sans(
-                        row_values["trans_duration"], sans_duration_type
+                        row_values["trans_duration"], sans_duration_type, monitor
                     )
                 script += self._finish_sample(row_values)
         return script
@@ -138,6 +144,7 @@ class SansThenTrans(Script):
         sans_duration_type,
         trans_times,
         sans_times,
+        monitor=None,
     ):
         script = f"{self._define_var_for_positioner()}\n\n"
         for i in range(max(trans_times, sans_times)):
@@ -145,11 +152,11 @@ class SansThenTrans(Script):
                 script += self._start_sample(row_values)
                 if i < sans_times:
                     script += self._do_sans(
-                        row_values["sans_duration"], sans_duration_type
+                        row_values["sans_duration"], sans_duration_type, monitor
                     )
                 if i < trans_times:
                     script += self._do_trans(
-                        row_values["trans_duration"], trans_duration_type
+                        row_values["trans_duration"], trans_duration_type, monitor
                     )
                 script += self._finish_sample(row_values)
         return script
@@ -163,13 +170,14 @@ class Simultaneous(Script):
         sans_duration_type,
         trans_times,
         sans_times,
+        monitor=None,
     ):
         script = f"{self._define_var_for_positioner()}\n\n"
         for _ in range(sans_times):
             for row_values in table_data:
                 script += self._start_sample(row_values)
                 script += self._do_sans_trans(
-                    row_values["sans_duration"], sans_duration_type
+                    row_values["sans_duration"], sans_duration_type, monitor
                 )
                 script += self._finish_sample(row_values)
         return script
