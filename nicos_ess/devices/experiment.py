@@ -151,7 +151,7 @@ class EssExperiment(Device):
             mandatory=False,
             userparam=False,
         ),
-        "userscripts_directory": Param(
+        "user_scripts_directory": Param(
             "Path to the top directory where user scripts live",
             type=str,
             category="experiment",
@@ -316,8 +316,7 @@ class EssExperiment(Device):
 
         Returns: (the directory path, a list of files)
         """
-        # TODO only return .py files
-        directory = os.path.join(self.userscripts_directory, directory)
+        directory = os.path.join(self.user_scripts_directory, directory)
         return directory, self._list_directory_files(directory, extension=".py")
 
     def _list_directory_files(self, directory, extension=""):
@@ -347,9 +346,7 @@ class EssExperiment(Device):
             f.write(contents.decode())
 
     def _canQueryProposals(self):
-        if self._yuos_client:
-            return True
-        return False
+        bool(self._yuos_client)
 
     def _update_proposal_cache(self):
         while True:
