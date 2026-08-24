@@ -415,7 +415,7 @@ class LokiScriptBuilderPanel(PanelBase):
         table_data = self.model.table_data
         # Remove hidden columns from data
         data = []
-        for row_data in enumerate(table_data):
+        for row_data in table_data:
             relevant_column = []
             for column, column_data in enumerate(row_data):
                 if not self.tableView.isColumnHidden(column):
