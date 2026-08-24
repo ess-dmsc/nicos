@@ -40,7 +40,7 @@ devices = dict(
     # DPU Config
     detector_config=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="ARINAX DPU Configuration, control",
+        description="ARINAX DPU Configuration",
         readpv=f"{pv_root}getDPUConfiguration",
         writepv=f"{pv_root}setDPUConfiguration",
         monitor=True,
@@ -50,7 +50,7 @@ devices = dict(
     # Sample tool
     tool_currently_mounted=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="ARINAX SPU current mounted tool, readback",
+        description="ARINAX SPU current mounted tool",
         readpv=f"{pv_root}getCurrentTool",
         monitor=True,
         pollinterval=0.5,
@@ -58,7 +58,7 @@ devices = dict(
     ),
     tool_load=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="ARINAX SPU desired tool loading, control",
+        description="Select and load an ARINAX SPU tool",
         readpv=f"{pv_root}getCurrentTool",
         writepv=f"{pv_root}LoadTool",
         monitor=True,
@@ -68,7 +68,7 @@ devices = dict(
     # Sample load
     sample_load_from_SS=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
-        description="ARINAX SPU load sample from storage, control",
+        description="Select and load an ARINAX SPU sample from storage",
         readpv=f"{pv_root}LoadSSSample",
         writepv=f"{pv_root}LoadSSSample",
         monitor=True,
@@ -78,7 +78,7 @@ devices = dict(
     ),
     sample_load_from_UP=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
-        description="ARINAX SPU load sample from unipucks, control",
+        description="Select and load an ARINAX SPU sample from unipuck",
         readpv=f"{pv_root}LoadUPSample",
         writepv=f"{pv_root}LoadUPSample",
         monitor=True,
@@ -88,7 +88,7 @@ devices = dict(
     ),
     sample_is_loaded=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="Whether ARINAX SPU sample is mounted or not, readback",
+        description="Whether ARINAX SPU sample is mounted or not",
         readpv=f"{pv_root}getIsSampleLoaded",
         monitor=True,
         pollinterval=0.5,
@@ -97,7 +97,7 @@ devices = dict(
     # TODO: Still to be solved/included in the proxy IOC!
     sample_unload=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
-        description="ARINAX SPU unload sample, control",
+        description="Unload ARINAX SPU sample",
         readpv=f"{pv_root}UnLoadSample",
         writepv=f"{pv_root}UnLoadSample",
         monitor=True,
@@ -186,7 +186,7 @@ devices = dict(
     # TODO: This can possibly be changed to (manual) mapped device once we know its real limits.
     backlight_level=device(
         "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
-        description="ARINAX SPU backlight level, control",
+        description="ARINAX SPU backlight level",
         readpv=f"{pv_root}getBackLightLevel",
         writepv=f"{pv_root}setBackLightLevel",
         monitor=True,
@@ -197,7 +197,7 @@ devices = dict(
     ),
     backlight_position=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
-        description="ARINAX SPU backlight position, control",
+        description="ARINAX SPU backlight position",
         readpv=f"{pv_root}getBackLightPOS",
         writepv=f"{pv_root}setBackLightPOS",
     ),
@@ -205,7 +205,7 @@ devices = dict(
     zoom_level=device(
         # The zoom range is on the :getZoomRange PV.
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
-        description="ARINAX SPU zoom level, control",
+        description="ARINAX SPU zoom level",
         readpv=f"{pv_root}getZoomLevel",
         writepv=f"{pv_root}setZoomLevel",
         monitor=True,
