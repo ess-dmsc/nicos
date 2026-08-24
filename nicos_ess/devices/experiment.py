@@ -346,7 +346,9 @@ class EssExperiment(Device):
             f.write(contents.decode())
 
     def _canQueryProposals(self):
-        bool(self._yuos_client)
+        if self._yuos_client:
+            return True
+        return False
 
     def _update_proposal_cache(self):
         while True:
