@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import random
 import threading
 import time
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable
 
 from confluent_kafka import (
     OFFSET_BEGINNING,
@@ -60,11 +62,11 @@ class _Health:
     """
 
     last_stats_mono: float = time.monotonic()
-    all_down_since: Optional[float] = None
+    all_down_since: float | None = None
     brokers_state: dict = None
-    group_coordinator_state: Optional[str] = None
+    group_coordinator_state: str | None = None
     stats_total_lag: int = 0
-    stats_by_tp: Dict[tuple, dict] = (
+    stats_by_tp: dict[tuple, dict] = (
         None  # (topic, part) -> {'lag': int, 'fetch_state': str}
     )
 
@@ -90,7 +92,7 @@ class KafkaConsumer:
     @staticmethod
     def create(
         brokers: Sequence[str], starting_offset: str = "latest", **options
-    ) -> "KafkaConsumer":
+    ) -> KafkaConsumer:
         """Factory for :class:`KafkaConsumer` with SASL options injected.
 
         Parameters
@@ -123,7 +125,7 @@ class KafkaConsumer:
         now: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
         rand_uniform: Callable[[float, float], float] = random.uniform,
-        on_rebootstrap: Optional[Callable[[str], None]] = None,
+        on_rebootstrap: Callable[[str], None] | None = None,
         **options,
     ):
         """Create a consumer wrapper.
@@ -168,7 +170,10 @@ class KafkaConsumer:
             "bootstrap.servers": ",".join(brokers),
             "group.id": group_id,
             "auto.offset.reset": starting_offset,
-            # temporarily disable callbacks to avoid issues with memory leak in our version of confluent-kafka; we'll re-enable error_cb when we can update to a version with the fix
+            # temporarily disable callbacks to avoid issues with memory leak in
+            # our version of confluent-kafka; we'll re-enable error_cb when we
+            # can update to a version with the fix
+            #
             # "error_cb": self._on_error,
             # "stats_cbstats_cb": self._on_stats,
             # "statistics.interval.ms": 5000,
@@ -187,15 +192,15 @@ class KafkaConsumer:
         self._consumer = consumer_factory(self._conf_effective)
 
         self._health = _Health()
-        self._topics: List[str] = []
-        self._last_assignment: List[TopicPartition] = []
+        self._topics: list[str] = []
+        self._last_assignment: list[TopicPartition] = []
         self._pending_reassign: bool = False
         self._last_rebootstrap_mono: float = 0.0
         self._last_assign_mono: float = 0.0
 
         # Partition change detection
         self._last_meta_probe: float = 0.0
-        self._partitions_known: Dict[str, int] = {}
+        self._partitions_known: dict[str, int] = {}
 
         # After delete+recreate we may need to "prime" fetch with an explicit seek
         self._need_seek_after_assign: bool = False
@@ -206,7 +211,7 @@ class KafkaConsumer:
     def is_partition_eof(err: object) -> bool:
         """Return True if the error is a PARTITION_EOF event."""
         try:
-            return int(getattr(err, "code")()) == ERR_PARTITION_EOF
+            return int(err.code()) == ERR_PARTITION_EOF
         except Exception:
             return False
 
@@ -214,7 +219,7 @@ class KafkaConsumer:
     def is_all_brokers_down(err: object) -> bool:
         """Return True if the error indicates ALL_BROKERS_DOWN."""
         try:
-            return int(getattr(err, "code")()) == ERR_ALL_BROKERS_DOWN
+            return int(err.code()) == ERR_ALL_BROKERS_DOWN
         except Exception:
             return False
 
@@ -222,7 +227,7 @@ class KafkaConsumer:
     def is_offset_out_of_range(err: object) -> bool:
         """Return True if the error indicates OFFSET_OUT_OF_RANGE."""
         try:
-            return int(getattr(err, "code")()) == ERR_OFFSET_OUT_OF_RANGE
+            return int(err.code()) == ERR_OFFSET_OUT_OF_RANGE
         except Exception:
             return False
 
@@ -230,10 +235,10 @@ class KafkaConsumer:
     def is_unknown_topic_or_partition(err: object) -> bool:
         """Return True if the error indicates an unknown topic or partition."""
         try:
-            code = int(getattr(err, "code")())
+            code = int(err.code())
             if code == ERR_UNKNOWN_TOPIC_OR_PART:
                 return True
-            name = str(getattr(err, "name")() or "")
+            name = str(err.name() or "")
             return name in ("UNKNOWN_TOPIC_OR_PART", "_UNKNOWN_PARTITION")
         except Exception:
             return False
@@ -271,7 +276,7 @@ class KafkaConsumer:
         return max(0.0, self._now() - self._health.last_stats_mono)
 
     def _can_fetch_metadata(
-        self, topic: Optional[str] = None, timeout_s: float = 1.0
+        self, topic: str | None = None, timeout_s: float = 1.0
     ) -> bool:
         """Best-effort probe to see if metadata is retrievable."""
         try:
@@ -394,7 +399,7 @@ class KafkaConsumer:
         """Return cluster-wide metadata with a short timeout."""
         return self._consumer.list_topics(None, timeout=2.0)
 
-    def _build_assignment_from_metadata(self, md) -> Tuple[bool, List[TopicPartition]]:
+    def _build_assignment_from_metadata(self, md) -> tuple[bool, list[TopicPartition]]:
         """Collect TopicPartition objects for all subscribed topics.
 
         Returns
@@ -402,7 +407,7 @@ class KafkaConsumer:
         (ok, partitions)
             ok=False indicates metadata not yet ready (keep retrying).
         """
-        topic_partitions: List[TopicPartition] = []
+        topic_partitions: list[TopicPartition] = []
         for topic_name in self._topics:
             tmeta = md.topics.get(topic_name)
             if tmeta is None:
@@ -440,10 +445,8 @@ class KafkaConsumer:
             [(tp.topic, tp.partition) for tp in partitions],
         )
         self._consumer.assign(list(partitions))
-        try:
+        with contextlib.suppress(Exception):
             self._consumer.resume(list(partitions))  # type: ignore[attr-defined]
-        except Exception:
-            pass
 
     def _post_assignment_housekeeping(
         self, partitions: Sequence[TopicPartition], *, context: str
@@ -481,9 +484,8 @@ class KafkaConsumer:
                 self.schedule_reassign()
                 self.schedule_seek_after_assign()
 
-            if err.fatal():
-                if self.reboot_cooldown_passed(REBOOT_COOLDOWN_SECS):
-                    self.rebootstrap("fatal_error:%s" % name)
+            if err.fatal() and self.reboot_cooldown_passed(REBOOT_COOLDOWN_SECS):
+                self.rebootstrap(f"fatal_error:{name}")
         except Exception:
             session.log.warning("[kafka-error] %r", err)
 
@@ -520,7 +522,7 @@ class KafkaConsumer:
 
         topics = data.get("topics") or {}
         total = 0
-        by_tp: Dict[tuple, dict] = {}
+        by_tp: dict[tuple, dict] = {}
         for tname, tinfo in topics.items():
             parts = (tinfo or {}).get("partitions") or {}
             for pstr, pinfo in parts.items():
@@ -555,7 +557,7 @@ class KafkaConsumer:
             except KafkaException as exc:
                 raise ConfigurationError("could not obtain cluster metadata") from exc
 
-        topic_partitions: List[TopicPartition] = []
+        topic_partitions: list[TopicPartition] = []
         for topic_name in topics:
             tmeta = md.topics.get(topic_name)
             if tmeta is None:
@@ -716,7 +718,7 @@ class KafkaConsumer:
             except Exception:
                 pass
 
-    def topics(self, timeout_s: float = 5) -> List[str]:
+    def topics(self, timeout_s: float = 5) -> list[str]:
         """Return the list of known topic names.
 
         Parameters
@@ -753,7 +755,7 @@ class KafkaConsumer:
         """Internal multi-partition seek with retries until the deadline."""
         deadline = self._now() + max(0.0, timeout_s)
         remaining = set((tp.topic, tp.partition, tp.offset) for tp in partitions)
-        last_err: Optional[Exception] = None
+        last_err: Exception | None = None
         while remaining and self._now() < deadline:
             done_now = []
             for topic, part, off in list(remaining):
@@ -776,7 +778,7 @@ class KafkaConsumer:
                 f"failed to seek offsets for: {sorted(remaining)}; last_err={last_err!r}"
             )
 
-    def assignment(self) -> List[TopicPartition]:
+    def assignment(self) -> list[TopicPartition]:
         """Return the current partition assignment.
 
         Returns
@@ -805,15 +807,12 @@ class KafkaConsumer:
 
     def unassign(self):
         """Expose unassign for testing/manual flows (best-effort)."""
-        with self._lock:
-            try:
-                self._consumer.unassign()
-            except Exception:
-                pass
+        with self._lock, contextlib.suppress(Exception):
+            self._consumer.unassign()
 
     def positions(
         self, partitions: Sequence[TopicPartition]
-    ) -> Optional[List[TopicPartition]]:
+    ) -> list[TopicPartition] | None:
         """Return the current positions for the given partitions.
 
         This is a thread-safe wrapper around the underlying consumer's
@@ -842,7 +841,7 @@ class KafkaConsumer:
 
     def watermark_offsets(
         self, tp: TopicPartition, timeout_s: float = 5.0
-    ) -> Tuple[Optional[int], Optional[int]]:
+    ) -> tuple[int | None, int | None]:
         """Return low/high watermark offsets for a partition.
 
         Parameters
@@ -876,7 +875,7 @@ class KafkaConsumer:
         except Exception:
             return 0
 
-    def stats_by_tp(self) -> Dict[Tuple[str, int], Dict[str, object]]:
+    def stats_by_tp(self) -> dict[tuple[str, int], dict[str, object]]:
         """Return a shallow copy of per-partition stats from the stats callback.
 
         Returns
@@ -886,14 +885,14 @@ class KafkaConsumer:
             ``{\"lag\": int}`` and optionally other fields like ``\"fetch_state\"``.
         """
         try:
-            out: Dict[Tuple[str, int], Dict[str, object]] = {}
+            out: dict[tuple[str, int], dict[str, object]] = {}
             for (t, p), info in (self._health.stats_by_tp or {}).items():
                 out[(str(t), int(p))] = dict(info or {})
             return out
         except Exception:
             return {}
 
-    def group_coordinator_state(self) -> Optional[str]:
+    def group_coordinator_state(self) -> str | None:
         """Return the last known consumer-group coordinator state."""
         state = self._health.group_coordinator_state
         return str(state).upper() if state is not None else None
@@ -910,7 +909,7 @@ class KafkaConsumer:
         """Return True if a (re)assignment has been scheduled."""
         return bool(self._pending_reassign)
 
-    def subscribed_topics(self) -> List[str]:
+    def subscribed_topics(self) -> list[str]:
         """Return the topics currently subscribed/assigned (manual-assign)."""
         return list(self._topics)
 
@@ -930,7 +929,7 @@ class KafkaConsumer:
         """Return True if at least ``cooldown_secs`` have elapsed since reboot."""
         return self.time_since_last_rebootstrap() >= float(cooldown_secs)
 
-    def schedule_seek_after_assign(self, policy: Optional[str] = None) -> None:
+    def schedule_seek_after_assign(self, policy: str | None = None) -> None:
         """Schedule a one-time post-(re)assignment seek.
 
         Parameters
@@ -966,10 +965,8 @@ class KafkaConsumer:
                 pos_map = {}
                 if positions:
                     for pt in positions:
-                        try:
+                        with contextlib.suppress(Exception):
                             pos_map[(pt.topic, pt.partition)] = int(pt.offset)
-                        except Exception:
-                            pass
 
                 for tp in assigned:
                     try:
@@ -1041,7 +1038,7 @@ class KafkaSubscriber:
         self,
         brokers: Sequence[str] | None = None,
         *,
-        consumer: Optional[KafkaConsumer] = None,
+        consumer: KafkaConsumer | None = None,
         no_stats_secs: float = NO_STATS_REBOOT_SECS,
         all_down_secs: float = ALL_DOWN_REBOOT_SECS,
         cooldown_secs: float = REBOOT_COOLDOWN_SECS,
@@ -1222,7 +1219,7 @@ class KafkaSubscriber:
             self._pos_progressed = False
             return 0
 
-    def _try_stats_lag(self, assigned: Sequence[TopicPartition]) -> Optional[int]:
+    def _try_stats_lag(self, assigned: Sequence[TopicPartition]) -> int | None:
         """Return total lag from stats if fresh and fully covering the assignment."""
         stats_age = self._consumer.last_stats_age()
         stats_map = self._consumer.stats_by_tp()
@@ -1252,10 +1249,10 @@ class KafkaSubscriber:
 
     def _build_position_map(
         self, assigned: Sequence[TopicPartition]
-    ) -> Tuple[bool, Dict[Tuple[str, int], int]]:
+    ) -> tuple[bool, dict[tuple[str, int], int]]:
         """Build a map of current positions and report whether progress occurred."""
         positions = self._consumer.positions(assigned)
-        pos_map: Dict[Tuple[str, int], int] = {}
+        pos_map: dict[tuple[str, int], int] = {}
         progressed = False
 
         if not positions:
@@ -1276,7 +1273,7 @@ class KafkaSubscriber:
         return progressed, pos_map
 
     def _lag_from_watermarks(
-        self, assigned: Sequence[TopicPartition], pos_map: Dict[Tuple[str, int], int]
+        self, assigned: Sequence[TopicPartition], pos_map: dict[tuple[str, int], int]
     ) -> int:
         """Compute lag using watermarks and the provided position map."""
         total_lag = 0
@@ -1291,7 +1288,7 @@ class KafkaSubscriber:
                 continue
 
             key = (tp.topic, tp.partition)
-            pos = pos_map.get(key, None)
+            pos = pos_map.get(key)
             if pos is None or pos < 0:
                 last = self._last_seen.get(key, OFFSET_END)
                 pos = (int(last) + 1) if last != OFFSET_END else int(low)
@@ -1339,7 +1336,7 @@ class KafkaSubscriber:
             return True
         return False
 
-    def _timers(self, now: float) -> Tuple[float, bool]:
+    def _timers(self, now: float) -> tuple[float, bool]:
         """Compute time since last assign and whether reboot cooldown passed."""
         since_assign = self._consumer.time_since_last_assign()
         since_reboot_ok = self._consumer.reboot_cooldown_passed(self._cooldown_secs)
@@ -1496,9 +1493,9 @@ class KafkaSubscriber:
 
     def _extract_delivery_batch(
         self, msgs: Sequence[object]
-    ) -> Tuple[List[Tuple[Tuple[int, int], bytes]], bool]:
+    ) -> tuple[list[tuple[tuple[int, int], bytes]], bool]:
         """Build the delivery list from raw messages and perform error handling."""
-        deliver: List[Tuple[Tuple[int, int], bytes]] = []
+        deliver: list[tuple[tuple[int, int], bytes]] = []
         had_error = False
 
         for m in msgs:
@@ -1523,7 +1520,7 @@ class KafkaSubscriber:
         return deliver, had_error
 
     def _handle_delivery(
-        self, deliver: List[Tuple[Tuple[int, int], bytes]], now: float
+        self, deliver: list[tuple[tuple[int, int], bytes]], now: float
     ) -> None:
         """Update state and dispatch a non-empty delivery batch."""
         self._idle_backoff = 0.01
@@ -1544,7 +1541,8 @@ class KafkaSubscriber:
         stats_lag = self._consumer.stats_total_lag()
 
         session.log.debug(
-            "[kafka] idle: empty_reads=%d idle_backoff=%.3f stats_lag=%d last_stats_age=%.3f pending_reassign=%s brokers_up=%d cgrp_up=%s",
+            "[kafka] idle: empty_reads=%d idle_backoff=%.3f stats_lag=%d last_stats_age=%.3f "
+            "pending_reassign=%s brokers_up=%d cgrp_up=%s",
             self._empty_reads,
             self._idle_backoff,
             stats_lag,
