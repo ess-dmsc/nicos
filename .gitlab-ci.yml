@@ -214,7 +214,7 @@ lint:ruff_check:
     - echo 'Changed files (to be linted):'
     - echo "$PY_CHANGES"
     - if [ -z "$PY_CHANGES" ]; then echo "No modified Python files to be checked"; exit 100; fi;
-    - uv run ruff check --output-format=gitlab $(echo $PY_CHANGES) | tee code-quality-report.json
+    - uv run ruff check --force-exclude $(echo $PY_CHANGES) --output-format=gitlab $(echo $PY_CHANGES) | tee code-quality-report.json
   artifacts:
     reports:
       codequality: code-quality-report.json
@@ -234,4 +234,4 @@ lint:ruff_format:
     - echo 'Changed files (to be linted):'
     - echo "$PY_CHANGES"
     - if [ -z "$PY_CHANGES" ]; then echo "No modified Python files to be checked"; exit 100; fi;
-    - uv run ruff format --diff $(echo $PY_CHANGES)
+    - uv run ruff format --force-exclude $(echo $PY_CHANGES) --diff $(echo $PY_CHANGES)
