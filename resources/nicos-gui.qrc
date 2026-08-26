@@ -127,6 +127,7 @@
     <file alias="redo">material/icons/redo-24px.svg</file>
     <file alias="refresh">material/icons/refresh-24px.svg</file>
     <file alias="remove">material/icons/remove-24px.svg</file>
+    <file alias="reset_zoom">material/icons/reset_zoom-24px.svg</file>
     <file alias="save">material/icons/save-24px.svg</file>
     <file alias="save_as">material/icons/save_as-24px.svg</file>
     <file alias="settings_applications">material/icons/settings_applications-24px.svg</file>
