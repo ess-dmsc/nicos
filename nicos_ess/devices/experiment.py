@@ -346,9 +346,7 @@ class EssExperiment(Device):
             f.write(contents.decode())
 
     def _canQueryProposals(self):
-        if self._yuos_client:
-            return True
-        return False
+        return self._yuos_client is not None
 
     def _update_proposal_cache(self):
         while True:
@@ -443,7 +441,7 @@ class EssExperiment(Device):
                 dlist.append(det)
         self.detlist = dlist
         # try to create them right now
-        self.detectors  # pylint: disable=pointless-statement
+        self.detectors  # noqa: B018
 
     @property
     def detectors(self):
@@ -532,7 +530,7 @@ class EssExperiment(Device):
                 dlist.append(dev)
         self.envlist = dlist
         # try to create them right now
-        self.sampleenv  # pylint: disable=pointless-statement
+        self.sampleenv  # noqa: B018
         session.elogEvent("environment", dlist)
 
     def doUpdateEnvlist(self, devices):

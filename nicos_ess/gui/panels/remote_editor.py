@@ -120,7 +120,7 @@ if has_scintilla:
             QsciPrinter.formatPage(self, painter, drawing, area, pagenr)
 
             fn = self.docName()
-            header = "File: %s    page %s    %s" % (
+            header = "File: {}    page {}    {}".format(
                 fn,
                 pagenr,
                 time.strftime("%Y-%m-%d %H:%M"),
@@ -882,12 +882,11 @@ class EditorPanel(Panel):
             return
         if not self.checkDirty(self.currentEditor, askonly=True):
             return
-        if self.current_status != "idle":
-            if not self.askQuestion(
-                "A script is currently running, do you want to queue this script?",
-                True,
-            ):
-                return
+        if self.current_status != "idle" and not self.askQuestion(
+            "A script is currently running, do you want to queue this script?",
+            True,
+        ):
+            return
         self.client.run(script, self.filenames[self.currentEditor])
 
     @pyqtSlot()
