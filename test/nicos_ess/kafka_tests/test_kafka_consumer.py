@@ -3,10 +3,13 @@ import json
 import pytest
 
 import nicos_ess.devices.kafka.consumer as mod
-
 from test.nicos_ess.kafka_tests.doubles.consumer import (
     ConsumerStub,
+)
+from test.nicos_ess.kafka_tests.doubles.consumer import (
     PartitionMetadata as PartitionMetadataStub,
+)
+from test.nicos_ess.kafka_tests.doubles.consumer import (
     TopicPartition as TopicPartitionStub,
 )
 from test.nicos_ess.test_devices.doubles import FakeKafkaError
@@ -373,7 +376,9 @@ def test_rebootstrap_sets_pending_reassign_when_topics_missing(consumer):
     assert "test_missing" in reasons
 
 
-@pytest.mark.xfail(reason="code commented out for now due to bad confluent-kafka version")
+@pytest.mark.xfail(
+    reason="code commented out for now due to bad confluent-kafka version"
+)
 def test_subscriber_recovers_after_failed_rebootstrap_then_reassigns(subscriber, clock):
     # Start with a valid subscription
     initial_stub = subscriber.consumer._consumer
@@ -410,7 +415,9 @@ def test_subscriber_recovers_after_failed_rebootstrap_then_reassigns(subscriber,
     assert [v for (_, v) in delivered] == [b"A", b"B"]
 
 
-@pytest.mark.xfail(reason="code commented out for now due to bad confluent-kafka version")
+@pytest.mark.xfail(
+    reason="code commented out for now due to bad confluent-kafka version"
+)
 def test_watchdog_reboots_on_no_stats_heartbeat(subscriber, clock):
     stub = subscriber.consumer._consumer
     stub.create_topic("x", num_partitions=1)
@@ -449,7 +456,9 @@ def test_watchdog_reboots_on_all_brokers_down(subscriber, clock):
     assert "all_brokers_down" in reasons
 
 
-@pytest.mark.xfail(reason="code commented out for now due to bad confluent-kafka version")
+@pytest.mark.xfail(
+    reason="code commented out for now due to bad confluent-kafka version"
+)
 def test_watchdog_respects_reboot_cooldown(subscriber, clock):
     stub = subscriber.consumer._consumer
     stub.create_topic("x", num_partitions=1)

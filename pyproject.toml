@@ -29,7 +29,6 @@ dependencies = [
     "toml>=0.10",
     "urllib3==1.26.20",
     "platformdirs",
-    "nicos-resources",  # package is part of this workspace
     "importlib_metadata>=4.6;python_version<'3.10' and python_version>='3.6'",  # 3.10 brings recent-enough importlib.metadata
 ]
 
@@ -98,10 +97,9 @@ packages = ["nicos", "integration_test"]
 
 [tool.uv.sources]
 nicos_ess = { workspace = true }
-nicos-resources = { workspace = true }
 
 [tool.uv.workspace]
-members = ["nicos_ess", "nicos_demo", "resources"]
+members = ["nicos_ess", "nicos_demo"]
 # members = ["nicos_*"]
 # exclude = ["packages/some_package"]
 
@@ -175,6 +173,10 @@ dev = [
 ]
 
 [tool.ruff]
+# The formatter wraps lines at a length of 88.
+line-length = 88
+# E501 reports lines that exceed the length of 120.
+lint.pycodestyle.max-line-length = 120
 exclude = [
     "nicos_mlz/",
     "nicos_sinq/",
@@ -185,6 +187,8 @@ exclude = [
     "data/",
     "tools/",
     "bin/",
+    "nicos/guisupport/gui_rc_qt*.py",
+    "tests/utils.py"
 ]
 
 # Configure global rules to apply; see https://docs.astral.sh/ruff/rules/ for details.

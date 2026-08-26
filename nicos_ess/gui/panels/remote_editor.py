@@ -120,7 +120,7 @@ if has_scintilla:
             QsciPrinter.formatPage(self, painter, drawing, area, pagenr)
 
             fn = self.docName()
-            header = "File: %s    page %s    %s" % (
+            header = "File: {}    page {}    {}".format(
                 fn,
                 pagenr,
                 time.strftime("%Y-%m-%d %H:%M"),
@@ -472,9 +472,9 @@ class EditorPanel(Panel):
         self.actionPrint.setIcon(get_icon("print-24px.svg"))
         self.actionUndo.setIcon(get_icon("undo-24px.svg"))
         self.actionRedo.setIcon(get_icon("redo-24px.svg"))
-        self.actionCut.setIcon(get_icon("cut_24px.svg"))
+        self.actionCut.setIcon(get_icon("cut-24px.svg"))
         self.actionCopy.setIcon(get_icon("file_copy-24px.svg"))
-        self.actionPaste.setIcon(get_icon("paste_24px.svg"))
+        self.actionPaste.setIcon(get_icon("paste-24px.svg"))
         self.actionRun.setIcon(get_icon("play_arrow-24px.svg"))
         self.actionSimulate.setIcon(get_icon("play_arrow_outline-24px.svg"))
         self.actionGet.setIcon(get_icon("eject-24px.svg"))
@@ -882,12 +882,11 @@ class EditorPanel(Panel):
             return
         if not self.checkDirty(self.currentEditor, askonly=True):
             return
-        if self.current_status != "idle":
-            if not self.askQuestion(
-                "A script is currently running, do you want to queue this script?",
-                True,
-            ):
-                return
+        if self.current_status != "idle" and not self.askQuestion(
+            "A script is currently running, do you want to queue this script?",
+            True,
+        ):
+            return
         self.client.run(script, self.filenames[self.currentEditor])
 
     @pyqtSlot()

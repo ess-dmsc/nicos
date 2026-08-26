@@ -148,7 +148,7 @@ class RemoteFileDialog(QDialog):
             if filename in self.filenames:
                 message = (
                     f'A file named "{filename}" already exists.\n'
-                    'Do you want to replace it?'
+                    "Do you want to replace it?"
                 )
                 buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 rc = QMessageBox.question(self, "Replace File?", message, buttons)
@@ -161,14 +161,14 @@ class RemoteFileDialog(QDialog):
     def on_btn_cancel_pressed(self):
         self.reject()
 
-    def _get_sanitise_filename(self):
+    def _get_sanitised_filename(self):
         filename = os.path.join(self.directory, self.txt_filename.text().strip())
         if not filename.endswith(".py"):
             filename += ".py"
         return filename
 
     def get_selected_file(self):
-        return self._get_sanitise_filename()
+        return self._get_sanitised_filename()
 
     def on_combo_script_type_changed(self, i):
         if i == USER_SCRIPT:
