@@ -58,7 +58,7 @@ class LokiScriptBuilderPanel(PanelBase):
 
         self.parent_window = parent
         self.combo_delegate = ComboBoxDelegate()
-        self.duration_options = ["target", "seconds", "frames", "monitor_events"]
+        self.duration_options = ["target TBD", "seconds", "frames", "monitor_events"]
         self.monitor_options = [
             "monitor0_data",
             "monitor1_data",
