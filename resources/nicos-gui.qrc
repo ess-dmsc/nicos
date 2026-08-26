@@ -109,6 +109,7 @@
     <file alias="exit_to_app">material/icons/exit_to_app-24px.svg</file>
     <file alias="file_copy">material/icons/file_copy-24px.svg</file>
     <file alias="fingerprint">material/icons/fingerprint-24px.svg</file>
+    <file alias="find">material/icons/find-24px.svg</file>
     <file alias="finish_early">material/icons/finish_early-24px.svg</file>
     <file alias="folder_open">material/icons/folder_open-24px.svg</file>
     <file alias="group_work">material/icons/group_work-24px.svg</file>
@@ -127,6 +128,7 @@
     <file alias="refresh">material/icons/refresh-24px.svg</file>
     <file alias="remove">material/icons/remove-24px.svg</file>
     <file alias="save">material/icons/save-24px.svg</file>
+    <file alias="save_as">material/icons/save_as-24px.svg</file>
     <file alias="settings_applications">material/icons/settings_applications-24px.svg</file>
     <file alias="skip_next">material/icons/skip_next-24px.svg</file>
     <file alias="stop">material/icons/stop-24px.svg</file>
