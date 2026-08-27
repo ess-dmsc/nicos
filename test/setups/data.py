@@ -42,23 +42,19 @@ sinklist = [
 # Omit them from the datasinks list in that case.
 
 try:
-
     sinklist.append("tiffsink")
 except Exception:
     pass
 
 try:
-
     sinklist.append("fitssink")
 except Exception:
     try:
-
         sinklist.append("fitssink")
     except Exception:
         pass
 
 try:
-
     sinklist.append("yamlsink")
 except Exception:
     pass

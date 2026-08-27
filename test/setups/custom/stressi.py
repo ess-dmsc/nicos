@@ -28,11 +28,9 @@ includes = ["stdsystem"]
 stressi_sinklist = ["csink"]
 
 try:
-
     stressi_sinklist.append("ysink")
 except Exception:
     try:
-
         stressi_sinklist.append("ysink")
     except Exception:
         pass
