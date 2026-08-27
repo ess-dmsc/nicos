@@ -1,6 +1,6 @@
 description = "Setup for SE-AUX-205 PVs with NICOS mapping."
 
-pv_root = "SE:SE-AUX-205:"
+pv_root = "se-aux-205:"
 
 devices = dict(
     # ------------------------------------------------------------------
@@ -9,7 +9,7 @@ devices = dict(
     pc205_reg_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Lakeshore temperature channel A (regulator)",
-        readpv=f"{pv_root}TempA-r",
+        readpv=f"{pv_root}tempA-r",
     ),
     pc205_sample_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -159,6 +159,14 @@ devices = dict(
         description="Sample heater set point",
         readpv=f"{pv_root}sample-setpoint-s",
         writepv=f"{pv_root}sample-setpoint-s",
+        abslimits=(0, 1000),
+        userlimits=(0, 1000),
+    ),
+    pc205_regulator_heater_setpoint=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Sample heater set point",
+        readpv=f"{pv_root}regulator-setpoint-s",
+        writepv=f"{pv_root}regulator-setpoint-s",
         abslimits=(0, 1000),
         userlimits=(0, 1000),
     ),
