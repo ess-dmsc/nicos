@@ -20,9 +20,9 @@ class LokiBeamstopArmPositioner(MappedController):
         MappedController.doInit(self, mode)
 
     def doWriteMapping(self, mapping):
-        if sorted(mapping.keys()) != ["In beam", "Parked"]:
+        if sorted(mapping.keys()) != ["in-beam", "parked"]:
             raise ConfigurationError(
-                "Only 'In beam' and 'Parked' are allowed as mapped positions"
+                "Only 'in-beam' and 'parked' are allowed as mapped positions"
             )
         for position in mapping.values():
             self._check_limits(position)
@@ -37,11 +37,11 @@ class LokiBeamstopArmPositioner(MappedController):
         mapped_value = inverse_mapping.get(value, None)
         if mapped_value:
             return mapped_value
-        if value > self.mapping["Parked"]:
+        if value > self.mapping["parked"]:
             return "Above park position"
-        if value < self.mapping["In beam"]:
+        if value < self.mapping["in-beam"]:
             return "Below in-beam position"
-        return "In between"
+        return "in between"
 
     def _check_limits(self, position):
         limits = self._attached_controlled_device.userlimits

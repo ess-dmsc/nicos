@@ -30,7 +30,7 @@ devices = dict(
     beamstop_y_positioner=device(
         "nicos_ess.devices.mapped_controller.MappedController",
         controlled_device="beamstop_y",
-        mapping={"In beam": 32.5},
+        mapping={"in-beam": 32.5},
     ),
     beamstop1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
