@@ -22,7 +22,7 @@ devices = dict(
     vti_pressure=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="VTI pressure",
-        readpv=f"{pv_root}VTI-Pressure-r ",
+        readpv=f"{pv_root}VTI-Pressure-r",
     ),
     vti_pressure_setpoint_percent=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
