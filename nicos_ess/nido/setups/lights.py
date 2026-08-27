@@ -6,7 +6,7 @@ devices = dict(
     ch_0=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="Large box shutter",
-        writepv="{}AO0Set".format(pv_root),
+        writepv=f"{pv_root}AO0Set",
         pollinterval=0.5,
         monitor=True,
         pva=True,
@@ -18,8 +18,8 @@ devices = dict(
     ch_3=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Small LED",
-        readpv="{}AO3".format(pv_root),
-        writepv="{}AO3Set".format(pv_root),
+        readpv=f"{pv_root}AO3",
+        writepv=f"{pv_root}AO3Set",
         abslimits=(0, 5),
         userlimits=(0, 5),
     ),

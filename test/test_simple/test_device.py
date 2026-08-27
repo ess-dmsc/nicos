@@ -48,7 +48,6 @@ from nicos.core import (
     usermethod,
 )
 from nicos.core.sessions.utils import MAINTENANCE
-
 from test.utils import raises
 
 session_setup = "device"
@@ -178,7 +177,7 @@ class Dev4(Device):
             "internal parameter with explicit userparam", internal=True, userparam=True
         ),
         "explicit": Param(
-            "non-internal parameter with explicit userparam " "setting", userparam=False
+            "non-internal parameter with explicit userparam setting", userparam=False
         ),
     }
 

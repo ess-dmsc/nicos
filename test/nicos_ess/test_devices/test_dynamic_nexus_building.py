@@ -4,11 +4,8 @@ from pathlib import Path
 import pytest
 
 from nicos.core import MAIN, POLLER
-from nicos_ess.devices.datasinks.file_writer import generateMetainfo
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureJsonFile
-from nicos_ess.devices.sample import EssSample
 from nicos_ess.loki.devices.thermostated_cellholder import ThermoStatedCellHolder
-
 from nicos_ess.utilities.json_utils import (
     build_named_index_map,
     get_by_named_path,

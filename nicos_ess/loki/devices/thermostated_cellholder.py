@@ -8,14 +8,14 @@ from nicos.core import (
     Moveable,
     Override,
     Param,
+    PositionError,
     anytype,
     dictof,
     listof,
-    oneof,
-    tupleof,
-    status,
     multiStatus,
-    PositionError,
+    oneof,
+    status,
+    tupleof,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable
 from nicos.devices.generic import MultiSwitcher

@@ -5,7 +5,6 @@ import re
 from nicos.core import ConfigurationError
 from nicos.guisupport.qt import Qt
 from nicos.guisupport.tablemodel import TableModel
-
 from nicos_ess.gui.tables.table_delegates import LimitsDelegate, ReadOnlyDelegate
 
 SAMPLE_INFO_INDEX = 1
@@ -97,5 +96,5 @@ class OdinMetrologySystemModel(TableModel):
             self._update_sample_info(0, i, position)
         if raise_error and invalid_positions:
             raise ConfigurationError(
-                'invalid position(s) defined ' f'[{", ".join(invalid_positions)}]'
+                f"invalid position(s) defined [{', '.join(invalid_positions)}]"
             )

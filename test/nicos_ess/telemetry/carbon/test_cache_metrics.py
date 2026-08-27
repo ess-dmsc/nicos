@@ -59,8 +59,7 @@ def test_classify_cache_metric_key_covers_the_supported_metric_families():
         == "device_value_updates"
     )
     assert (
-        classify_cache_metric_key(f"motor1{CACHE_STATUS_KEY_SUFFIX}")
-        == "device_status"
+        classify_cache_metric_key(f"motor1{CACHE_STATUS_KEY_SUFFIX}") == "device_status"
     )
     assert classify_cache_metric_key("motor1/target") is None
 
@@ -105,9 +104,7 @@ class TestCacheMetricsEmitter:
         assert metrics["nicosserver.bifrost.session.busy"] == (0, 1710000000)
 
     def test_unrelated_key_produces_no_metrics(self, client, emitter):
-        lines = emitter.process_cache_update(
-            "1710000000", "motor1/target", "42.0"
-        )
+        lines = emitter.process_cache_update("1710000000", "motor1/target", "42.0")
         assert lines == []
         assert client.sent_batches == []
 
@@ -140,9 +137,7 @@ class TestCacheMetricsEmitter:
         assert "nicosserver.bifrost.session.busy" in metrics
 
     def test_timestamp_is_truncated_to_int(self, client, emitter):
-        lines = emitter.process_cache_update(
-            "1710000000.123", SCRIPTS_KEY, "[]"
-        )
+        lines = emitter.process_cache_update("1710000000.123", SCRIPTS_KEY, "[]")
         metrics = _parse_metrics(lines)
         assert metrics["nicosserver.bifrost.session.busy"] == (0, 1710000000)
 
@@ -193,11 +188,15 @@ class TestCacheMetricsEmitter:
             3,
             1710000010,
         )
-        assert metrics["nicosserver.bifrost.device.motor1.cache.value_updates.count"] == (
+        assert metrics[
+            "nicosserver.bifrost.device.motor1.cache.value_updates.count"
+        ] == (
             2,
             1710000010,
         )
-        assert metrics["nicosserver.bifrost.device.detector.cache.value_updates.count"] == (
+        assert metrics[
+            "nicosserver.bifrost.device.detector.cache.value_updates.count"
+        ] == (
             1,
             1710000010,
         )
@@ -220,7 +219,9 @@ class TestCacheMetricsEmitter:
             1,
             1710000020,
         )
-        assert metrics["nicosserver.bifrost.device.motor1.cache.value_updates.count"] == (
+        assert metrics[
+            "nicosserver.bifrost.device.motor1.cache.value_updates.count"
+        ] == (
             1,
             1710000020,
         )
@@ -259,7 +260,9 @@ class TestCacheMetricsEmitter:
             1,
             1710000020,
         )
-        assert metrics["nicosserver.bifrost.device.motor2.cache.value_updates.count"] == (
+        assert metrics[
+            "nicosserver.bifrost.device.motor2.cache.value_updates.count"
+        ] == (
             1,
             1710000020,
         )
@@ -272,23 +275,25 @@ class TestCacheMetricsEmitter:
 
     def test_status_update_emits_correct_ordinal(self, client, emitter):
         status_value = cache_dump((200, "idle"))
-        lines = emitter.process_cache_update("1710000000", "motor1/status", status_value)
+        lines = emitter.process_cache_update(
+            "1710000000", "motor1/status", status_value
+        )
         assert len(lines) == 1
         metrics = _parse_metrics(lines)
         assert metrics["nicosserver.bifrost.device.motor1.status"] == (0, 1710000000)
 
     def test_status_unknown_code_maps_to_6(self, client, emitter):
         status_value = cache_dump((777, "custom"))
-        lines = emitter.process_cache_update("1710000000", "motor1/status", status_value)
+        lines = emitter.process_cache_update(
+            "1710000000", "motor1/status", status_value
+        )
         metrics = _parse_metrics(lines)
         assert metrics["nicosserver.bifrost.device.motor1.status"] == (6, 1710000000)
 
     def test_status_transitions(self, client, emitter):
         for code, expected_ordinal in [(200, 0), (220, 2), (240, 5), (200, 0)]:
             status_value = cache_dump((code, "text"))
-            emitter.process_cache_update(
-                "1710000000", "motor1/status", status_value
-            )
+            emitter.process_cache_update("1710000000", "motor1/status", status_value)
 
         status_values = [
             _parse_metrics(batch)["nicosserver.bifrost.device.motor1.status"][0]

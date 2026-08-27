@@ -49,7 +49,6 @@ from nicos.nexus.elements import (
     NXTime,
 )
 from nicos.utils import updateFileCounter
-
 from test.nexus.TestTemplateProvider import setTemplate
 
 year = time.strftime("%Y")

@@ -1,16 +1,16 @@
-from nicos.core.errors import InvalidValueError
 from nicos.core import (
     Attach,
     Moveable,
     Override,
     Param,
     Value,
+    anytype,
     dictof,
     multiStatus,
     oneof,
     tupleof,
-    anytype,
 )
+from nicos.core.errors import InvalidValueError
 
 
 class VirtualSource(Moveable):

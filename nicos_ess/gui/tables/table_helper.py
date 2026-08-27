@@ -1,7 +1,6 @@
 """Helpers for working with tables."""
 
 from nicos.guisupport.qt import QApplication, Qt
-
 from nicos_ess.utilities.table_utils import (
     convert_table_to_clipboard_text,
     extract_table_from_clipboard_text,

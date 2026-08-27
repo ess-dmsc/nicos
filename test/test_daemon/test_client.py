@@ -29,7 +29,6 @@ from nicos import nicos_version
 from nicos.core import MASTER
 from nicos.core.constants import LIVE
 from nicos.protocols.daemon import STATUS_IDLE
-
 from test.utils import raises
 
 
@@ -167,9 +166,7 @@ def test_dualaccess(client, adminclient):
 
 def test_get_device_list(client):
     load_setup(client, "daemontest")
-    full = client.eval(
-        "[(dn, str(d.classes)) " "for (dn, d) in session.devices.items()]"
-    )
+    full = client.eval("[(dn, str(d.classes)) for (dn, d) in session.devices.items()]")
     assert full
 
     l1 = client.getDeviceList()

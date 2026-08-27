@@ -22,6 +22,7 @@
 # *****************************************************************************
 
 import os
+
 from test.utils import alt_cache_addr
 
 name = "setup for cache stresstest with memory db"

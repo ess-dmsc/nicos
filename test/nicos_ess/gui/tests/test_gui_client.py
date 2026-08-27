@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from nicos.clients.gui.client import NicosGuiClient
-
 from test.nicos_ess.gui.doubles import FakeClientTransport
 
 

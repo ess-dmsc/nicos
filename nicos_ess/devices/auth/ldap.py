@@ -56,12 +56,12 @@ class Authenticator(LDAPAuthenticator):
                 )
                 or len(connection.entries) == 0
             ):
-                raise AuthenticationError("Could not get user details from " "LDAP")
+                raise AuthenticationError("Could not get user details from LDAP")
             if len(connection.entries) == 1:
                 group = connection.entries[0].department.value
                 return group
 
-            raise AuthenticationError("Could not get unique user details from " "LDAP")
+            raise AuthenticationError("Could not get unique user details from LDAP")
         except AuthenticationError:
             raise
         except Exception as err:

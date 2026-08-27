@@ -584,7 +584,7 @@ def format_slit_edges(edge_data):
 
 if __name__ == "__main__":
     json_path = "/home/jonas/code/nexus-json-templates/bifrost/bifrost-dynamic.json"
-    with open(json_path, "r") as file:
+    with open(json_path) as file:
         data = json.load(file)
 
     choppers = find_all_nxdisk_choppers(data)

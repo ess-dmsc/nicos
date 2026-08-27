@@ -90,7 +90,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return json.dumps(structure)
 
     def _load_structure(self):
-        with open(self.nexus_config_path, "r", encoding="utf-8") as file:
+        with open(self.nexus_config_path, encoding="utf-8") as file:
             structure = file.read()
         json_struct = json.loads(structure)
         # Build the initial name→index map (groups only)

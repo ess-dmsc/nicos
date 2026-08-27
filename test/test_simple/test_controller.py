@@ -26,7 +26,6 @@ Test the IsController mixin.
 """
 
 from nicos.core import LimitError
-
 from test.utils import raises
 
 session_setup = "controller"

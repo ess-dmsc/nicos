@@ -27,7 +27,6 @@ from os import path
 
 from nicos.core import ConfigurationError
 from nicos.core.sessions.setups import readSetups
-
 from test.utils import ErrorLogged, module_root, raises
 
 session_setup = "empty"

@@ -28,7 +28,6 @@ import pytest
 
 from nicos.guisupport.qt import QTableView
 from nicos.guisupport.tablemodel import TableModel
-
 from nicos_ess.gui.tables.table_helper import Clipboard, TableHelper
 from nicos_ess.utilities.table_utils import convert_table_to_clipboard_text
 

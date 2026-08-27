@@ -14,11 +14,9 @@ import time
 import pytest
 
 from nicos.core import status
-
 from nicos_ess.devices.datasources import just_bin_it
 from nicos_ess.devices.kafka import status_handler
 from nicos_ess.devices.timer import TimerChannel
-
 from test.nicos_ess.test_devices.doubles import (
     StubKafkaConsumer,
     StubKafkaProducer,

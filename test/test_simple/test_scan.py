@@ -54,13 +54,10 @@ from nicos.core.scan import ContinuousScan
 from nicos.core.sessions.utils import MASTER, SLAVE
 from nicos.core.status import BUSY, OK
 from nicos.core.utils import waitForState
-
 from test.utils import raises
 
 # this can happen during fitting, just don't print it out
-warnings.filterwarnings(
-    "ignore", "Covariance of the parameters could not " "be estimated"
-)
+warnings.filterwarnings("ignore", "Covariance of the parameters could not be estimated")
 
 session_setup = "scanning"
 
@@ -251,7 +248,7 @@ def test_scan_invalidpreset(session, log):
     # invalid preset
     session.experiment.setDetectors([session.getDevice("det")])
     with log.assert_warns(
-        "these preset keys were not recognized by any of " "the detectors: .*"
+        "these preset keys were not recognized by any of the detectors: .*"
     ):
         scan(m, 0, 1, 1, preset=5, t=0.0)
 

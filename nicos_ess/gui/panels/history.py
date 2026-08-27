@@ -5,7 +5,8 @@ import pickle
 import sys
 import time
 from collections import OrderedDict
-from time import localtime, mktime, time as currenttime
+from time import localtime, mktime
+from time import time as currenttime
 
 from nicos.clients.gui.panels.plot import PlotPanel
 from nicos.clients.gui.utils import DlgUtils, enumerateWithProgress, loadUi, split_query
@@ -50,7 +51,6 @@ from nicos.utils import (
     parseKeyExpression,
     safeName,
 )
-
 from nicos_ess.gui.utils import get_icon
 
 
