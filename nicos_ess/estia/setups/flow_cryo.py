@@ -23,18 +23,6 @@ devices = dict(
         readpv=f"{pv_root}TempLimitA-RB",
         writepv=f"{pv_root}TempLimitA-SP",
     ),
-    flow_cryo_high_temp_limit_B=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The temp warning limit",
-        readpv=f"{pv_root}TempLimitB-RB",
-        writepv=f"{pv_root}TempLimitB-SP",
-    ),
-    flow_cryo_high_temp_limit_C=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The temp warning limit",
-        readpv=f"{pv_root}TempLimitC-RB",
-        writepv=f"{pv_root}TempLimitC-SP",
-    ),
     # Set Sensor Temp Units
     flow_cryo_high_units_A=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
@@ -42,16 +30,10 @@ devices = dict(
         readpv=f"{pv_root}InTypeA-Units-RB",
         writepv=f"{pv_root}InTypeA-Units-SP",
     ),
-    flow_cryo_high_units_B=device(
+    mode_input=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The temp warning limit",
-        readpv=f"{pv_root}InTypeB-Units-RB",
-        writepv=f"{pv_root}InTypeB-Units-SP",
-    ),
-    flow_cryo_high_units_C=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="The temp warning limit",
-        readpv=f"{pv_root}InTypeC-Units-RB",
-        writepv=f"{pv_root}InTypeC-Units-SP",
+        readpv=f"{pv_root}OutModeInput1-RB",
+        writepv=f"{pv_root}OutModeInput1-SP",
     ),
 )
