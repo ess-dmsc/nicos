@@ -23,7 +23,7 @@
 
 """NICOS generic devices test suite."""
 
-import mock
+from unittest import mock
 
 from nicos.core import (
     ConfigurationError,
@@ -33,7 +33,6 @@ from nicos.core import (
     PositionError,
     status,
 )
-
 from test.utils import raises
 
 session_setup = "multiswitch"

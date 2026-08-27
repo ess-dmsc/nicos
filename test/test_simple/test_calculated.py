@@ -24,7 +24,6 @@
 """NICOS calculated devices test suite."""
 
 from nicos.core import ConfigurationError
-
 from test.utils import raises
 
 session_setup = "calculated"

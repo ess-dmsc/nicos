@@ -78,7 +78,7 @@ class OceanInsightSpectrometer(EpicsDevice, PassiveChannel):
             userparam=True,
         ),
         "lightvalid": Param(
-            "Whether the light background was collected with the current " "parameters",
+            "Whether the light background was collected with the current parameters",
             type=bool,
             default=False,
             volatile=True,
@@ -87,7 +87,7 @@ class OceanInsightSpectrometer(EpicsDevice, PassiveChannel):
             userparam=False,
         ),
         "darkvalid": Param(
-            "Whether the dark background was collected with the current " "parameters",
+            "Whether the dark background was collected with the current parameters",
             type=bool,
             default=False,
             volatile=True,
@@ -96,14 +96,14 @@ class OceanInsightSpectrometer(EpicsDevice, PassiveChannel):
             userparam=False,
         ),
         "lightsettings": Param(
-            "Stores the settings of the last background measurement " "taken",
+            "Stores the settings of the last background measurement taken",
             type=dictof(str, anytype),
             default={},
             settable=True,
             userparam=False,
         ),
         "darksettings": Param(
-            "Stores the settings of the last dark current measurement " "taken",
+            "Stores the settings of the last dark current measurement taken",
             type=dictof(str, anytype),
             default={},
             settable=True,
@@ -373,12 +373,12 @@ class SpectrometerCollector(Detector):
             if i not in self._presetkeys:
                 valid_keys = ", ".join(self._presetkeys)
                 raise InvalidValueError(
-                    self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
+                    self, f"unrecognised preset {i}, should one of {valid_keys}"
                 )
         if "t" in preset and len(self._presetkeys.intersection(preset.keys())) > 1:
             raise InvalidValueError(
                 self,
-                "Cannot set number of detector counts" " and a time interval together",
+                "Cannot set number of detector counts and a time interval together",
             )
         self._presets = preset.copy()
 

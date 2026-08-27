@@ -1,8 +1,9 @@
 import warnings
+from enum import Enum
 
 import numpy as np
-from enum import Enum
 from scipy.optimize import curve_fit
+
 from nicos.guisupport.qt import QObject
 
 

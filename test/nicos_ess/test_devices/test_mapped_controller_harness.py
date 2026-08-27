@@ -33,7 +33,6 @@ These tests focus on:
 import pytest
 
 from nicos.core import InvalidValueError, LimitError, status
-
 from nicos_ess.devices.epics.pva import motor as epics_motor
 from nicos_ess.devices.mapped_controller import (
     MappedController,
@@ -82,16 +81,20 @@ def fake_backend(monkeypatch):
 class TestMappedControllerHarness:
     """Behavior tests for `MappedController` with attached moveable devices."""
 
-    def test_attached_device_by_name_delegates_start_read_and_status(self, daemon_device_harness):
+    def test_attached_device_by_name_delegates_start_read_and_status(
+        self, daemon_device_harness
+    ):
         # Setup
-        axis = _create_master(daemon_device_harness,
+        axis = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="axis",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=10.0,
         )
-        controller = _create_master(daemon_device_harness,
+        controller = _create_master(
+            daemon_device_harness,
             MappedController,
             name="mapped_ctrl",
             controlled_device="axis",
@@ -109,14 +112,16 @@ class TestMappedControllerHarness:
 
     def test_is_allowed_reports_unknown_mapping_key(self, daemon_device_harness):
         # Setup
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="axis",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=0.0,
         )
-        controller = _create_master(daemon_device_harness,
+        controller = _create_master(
+            daemon_device_harness,
             MappedController,
             name="mapped_ctrl",
             controlled_device="axis",
@@ -132,7 +137,8 @@ class TestMappedControllerHarness:
 
     def test_is_allowed_reflects_limits_of_attached_device(self, daemon_device_harness):
         # Setup
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="axis",
             abslimits=(0.0, 10.0),
@@ -140,7 +146,8 @@ class TestMappedControllerHarness:
             precision=0.1,
             initial_value=0.0,
         )
-        controller = _create_master(daemon_device_harness,
+        controller = _create_master(
+            daemon_device_harness,
             MappedController,
             name="mapped_ctrl",
             controlled_device="axis",
@@ -158,7 +165,8 @@ class TestMappedControllerHarness:
         self, daemon_device_harness
     ):
         # Setup
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="axis",
             abslimits=(0.0, 10.0),
@@ -166,7 +174,8 @@ class TestMappedControllerHarness:
             precision=0.1,
             initial_value=0.0,
         )
-        controller = _create_master(daemon_device_harness,
+        controller = _create_master(
+            daemon_device_harness,
             MappedController,
             name="mapped_ctrl",
             controlled_device="axis",
@@ -177,16 +186,20 @@ class TestMappedControllerHarness:
         with pytest.raises(LimitError):
             controller.mapping = {"ok": 3.0, "bad": 8.0}
 
-    def test_precision_mapping_returns_nearest_key_within_tolerance(self, daemon_device_harness):
+    def test_precision_mapping_returns_nearest_key_within_tolerance(
+        self, daemon_device_harness
+    ):
         # Setup
-        axis = _create_master(daemon_device_harness,
+        axis = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="axis",
             abslimits=(0.0, 100.0),
             precision=0.2,
             initial_value=10.08,
         )
-        controller = _create_master(daemon_device_harness,
+        controller = _create_master(
+            daemon_device_harness,
             MappedController,
             name="mapped_ctrl",
             controlled_device="axis",
@@ -204,14 +217,16 @@ class TestMappedControllerHarness:
         self, daemon_device_harness
     ):
         # Setup
-        axis = _create_master(daemon_device_harness,
+        axis = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="axis",
             abslimits=(0.0, 100.0),
             precision=0.05,
             initial_value=11.2,
         )
-        controller = _create_master(daemon_device_harness,
+        controller = _create_master(
+            daemon_device_harness,
             MappedController,
             name="mapped_ctrl",
             controlled_device="axis",
@@ -229,14 +244,16 @@ class TestMappedControllerHarness:
         self, daemon_device_harness, monkeypatch
     ):
         # Setup
-        axis = _create_master(daemon_device_harness,
+        axis = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="axis",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=10.0,
         )
-        controller = _create_master(daemon_device_harness,
+        controller = _create_master(
+            daemon_device_harness,
             MappedController,
             name="mapped_ctrl",
             controlled_device="axis",
@@ -269,13 +286,15 @@ class TestMappedControllerHarness:
     )
     def test_falsey_mapped_key_is_preserved_on_read(self, daemon_device_harness):
         # Setup
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             HarnessMoveableNoPrecision,
             name="axis",
             abslimits=(-10.0, 10.0),
             initial_value=0.0,
         )
-        controller = _create_master(daemon_device_harness,
+        controller = _create_master(
+            daemon_device_harness,
             MappedController,
             name="mapped_ctrl",
             controlled_device="axis",
@@ -365,23 +384,28 @@ class TestMappedControllerWithEpicsMotor:
 class TestMultiTargetMappingHarness:
     """Behavior tests for `MultiTargetMapping` with attached channel lists."""
 
-    def test_attached_channels_by_name_are_started_with_tuple_targets(self, daemon_device_harness):
+    def test_attached_channels_by_name_are_started_with_tuple_targets(
+        self, daemon_device_harness
+    ):
         # Setup
-        ch0 = _create_master(daemon_device_harness,
+        ch0 = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch0",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=0.0,
         )
-        ch1 = _create_master(daemon_device_harness,
+        ch1 = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch1",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=0.0,
         )
-        mapping = _create_master(daemon_device_harness,
+        mapping = _create_master(
+            daemon_device_harness,
             MultiTargetMapping,
             name="mtm",
             controlled_devices=["ch0", "ch1"],
@@ -397,23 +421,28 @@ class TestMultiTargetMappingHarness:
         assert ch1.read(0) == 2.5
         assert mapping.read(0) == "focus"
 
-    def test_read_uses_per_channel_precision_for_tuple_mapping(self, daemon_device_harness):
+    def test_read_uses_per_channel_precision_for_tuple_mapping(
+        self, daemon_device_harness
+    ):
         # Setup
-        ch0 = _create_master(daemon_device_harness,
+        ch0 = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch0",
             abslimits=(0.0, 100.0),
             precision=0.2,
             initial_value=1.08,
         )
-        ch1 = _create_master(daemon_device_harness,
+        ch1 = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch1",
             abslimits=(0.0, 100.0),
             precision=0.2,
             initial_value=2.05,
         )
-        mapping = _create_master(daemon_device_harness,
+        mapping = _create_master(
+            daemon_device_harness,
             MultiTargetMapping,
             name="mtm",
             controlled_devices=["ch0", "ch1"],
@@ -430,21 +459,24 @@ class TestMultiTargetMappingHarness:
 
     def test_status_aggregates_attached_channel_status(self, daemon_device_harness):
         # Setup
-        ch0 = _create_master(daemon_device_harness,
+        ch0 = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch0",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=0.0,
         )
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch1",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=0.0,
         )
-        mapping = _create_master(daemon_device_harness,
+        mapping = _create_master(
+            daemon_device_harness,
             MultiTargetMapping,
             name="mtm",
             controlled_devices=["ch0", "ch1"],
@@ -460,21 +492,24 @@ class TestMultiTargetMappingHarness:
 
     def test_read_returns_in_between_for_unmapped_tuple(self, daemon_device_harness):
         # Setup
-        ch0 = _create_master(daemon_device_harness,
+        ch0 = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch0",
             abslimits=(0.0, 100.0),
             precision=0.05,
             initial_value=1.6,
         )
-        ch1 = _create_master(daemon_device_harness,
+        ch1 = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch1",
             abslimits=(0.0, 100.0),
             precision=0.05,
             initial_value=2.4,
         )
-        mapping = _create_master(daemon_device_harness,
+        mapping = _create_master(
+            daemon_device_harness,
             MultiTargetMapping,
             name="mtm",
             controlled_devices=["ch0", "ch1"],
@@ -491,21 +526,24 @@ class TestMultiTargetMappingHarness:
 
     def test_falsey_mapped_key_is_preserved_on_read(self, daemon_device_harness):
         # Setup
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch0",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=0.0,
         )
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch1",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=1.0,
         )
-        mapping = _create_master(daemon_device_harness,
+        mapping = _create_master(
+            daemon_device_harness,
             MultiTargetMapping,
             name="mtm",
             controlled_devices=["ch0", "ch1"],
@@ -523,39 +561,45 @@ class TestSelectorComposerHarness:
     """Integration tests for selector/composer/multi-target attach chains."""
 
     def _create_chain(self, daemon_device_harness):
-        ch0 = _create_master(daemon_device_harness,
+        ch0 = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch0",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=0.0,
         )
-        ch1 = _create_master(daemon_device_harness,
+        ch1 = _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch1",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=0.0,
         )
-        out_map = _create_master(daemon_device_harness,
+        out_map = _create_master(
+            daemon_device_harness,
             MultiTargetMapping,
             name="out_map",
             controlled_devices=["ch0", "ch1"],
             mapping={"a,b": (10.0, 20.0), "c,b": (30.0, 20.0)},
         )
-        composer = _create_master(daemon_device_harness,
+        composer = _create_master(
+            daemon_device_harness,
             MultiTargetComposer,
             name="composer",
             out="out_map",
         )
-        sel0 = _create_master(daemon_device_harness,
+        sel0 = _create_master(
+            daemon_device_harness,
             MultiTargetSelector,
             name="sel0",
             composer="composer",
             idx=0,
             mapping={"A": "a", "C": "c"},
         )
-        sel1 = _create_master(daemon_device_harness,
+        sel1 = _create_master(
+            daemon_device_harness,
             MultiTargetSelector,
             name="sel1",
             composer="composer",
@@ -571,7 +615,9 @@ class TestSelectorComposerHarness:
         # Assert
         assert composer._selectors == [sel0, sel1]
 
-    def test_composer_requires_all_registered_selectors_to_be_set(self, daemon_device_harness):
+    def test_composer_requires_all_registered_selectors_to_be_set(
+        self, daemon_device_harness
+    ):
         # Setup
         _, _, _, composer, _, _ = self._create_chain(daemon_device_harness)
 
@@ -579,7 +625,9 @@ class TestSelectorComposerHarness:
         with pytest.raises(InvalidValueError):
             composer.start("ignored")
 
-    def test_selector_composer_mapping_chain_drives_underlying_channels(self, daemon_device_harness):
+    def test_selector_composer_mapping_chain_drives_underlying_channels(
+        self, daemon_device_harness
+    ):
         # Setup
         ch0, ch1, _, composer, sel0, sel1 = self._create_chain(daemon_device_harness)
 
@@ -597,7 +645,9 @@ class TestSelectorComposerHarness:
         assert sel0.read(0) == "C"
         assert sel1.read(0) == "B"
 
-    def test_selector_read_propagates_in_between_from_composer_chain(self, daemon_device_harness):
+    def test_selector_read_propagates_in_between_from_composer_chain(
+        self, daemon_device_harness
+    ):
         # Setup
         ch0, ch1, _, _, sel0, _ = self._create_chain(daemon_device_harness)
         ch0.set_readback(99.0)
@@ -620,39 +670,45 @@ class TestSelectorComposerHarness:
         self, daemon_device_harness
     ):
         # Setup
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch0",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=0.0,
         )
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             HarnessLinearAxis,
             name="ch1",
             abslimits=(0.0, 100.0),
             precision=0.1,
             initial_value=0.0,
         )
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             MultiTargetMapping,
             name="out_map",
             controlled_devices=["ch0", "ch1"],
             mapping={",b": (11.0, 22.0)},
         )
-        _create_master(daemon_device_harness,
+        _create_master(
+            daemon_device_harness,
             MultiTargetComposer,
             name="composer",
             out="out_map",
         )
-        sel0 = _create_master(daemon_device_harness,
+        sel0 = _create_master(
+            daemon_device_harness,
             MultiTargetSelector,
             name="sel0",
             composer="composer",
             idx=0,
             mapping={"EMPTY": ""},
         )
-        sel1 = _create_master(daemon_device_harness,
+        sel1 = _create_master(
+            daemon_device_harness,
             MultiTargetSelector,
             name="sel1",
             composer="composer",

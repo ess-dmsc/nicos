@@ -12,10 +12,7 @@ import pytest
 from nicos.core import FINAL
 from nicos.devices.epics.pva import caproto, p4p
 from nicos.devices.generic import ActiveChannel
-
-from nicos_ess.devices.epics.area_detector import AreaDetector, \
-    AreaDetectorCollector
-
+from nicos_ess.devices.epics.area_detector import AreaDetector, AreaDetectorCollector
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 PV_ROOT = "SIM:AD:"

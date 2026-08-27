@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 
 from nicos.core import MAIN, POLLER
-
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureJsonFile
 
 try:
@@ -42,9 +41,9 @@ def _minimal_metainfo(counter: int = 1) -> dict:
             {0: {"name": "SampleA", "description": "A test sample"}},
             "{0: {'name': 'SampleA', 'description': 'A test sample'}}",
             "",
-            "sample"
+            "sample",
         ),
-        ("Sample", "samplename"): ("SampleA", "SampleA", "", "sample")
+        ("Sample", "samplename"): ("SampleA", "SampleA", "", "sample"),
     }
 
 
@@ -89,7 +88,9 @@ class TestNexusStructureJsonFile(TestCase):
 
         doc = json.loads(raw)
         assert isinstance(doc, dict)
-        assert "children" in doc and isinstance(doc["children"], list) and doc["children"]
+        assert (
+            "children" in doc and isinstance(doc["children"], list) and doc["children"]
+        )
 
         # Entry group should be first-level child in our template
         entry = doc["children"][0]
@@ -101,7 +102,10 @@ class TestNexusStructureJsonFile(TestCase):
         # Check metadata datasets were appended under /entry
         def val_of(name: str):
             for c in entry_children:
-                if c.get("module") == "dataset" and c.get("config", {}).get("name") == name:
+                if (
+                    c.get("module") == "dataset"
+                    and c.get("config", {}).get("name") == name
+                ):
                     return c["config"].get("values")
             return None
 

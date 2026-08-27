@@ -26,10 +26,10 @@ import threading
 import time
 
 from nicos import session
-from nicos.core import SIMULATION, MAIN, POLLER
+from nicos.core import MAIN, POLLER, SIMULATION
+from nicos.core.device import Device, Param
 from nicos.devices.epics.pva.p4p import pvget, pvput
 from nicos.utils import createThread
-from nicos.core.device import Device, Param
 
 
 class UDPHeartbeatsManager(Device):
@@ -69,8 +69,7 @@ class UDPHeartbeatsManager(Device):
                     return
                 except OSError as e:
                     self.log.debug(
-                        f"Failed to bind socket: {e},"
-                        f" retrying in {retry_time} seconds."
+                        f"Failed to bind socket: {e}, retrying in {retry_time} seconds."
                     )
                     time.sleep(retry_time)
             self.log.error("Failed to bind socket after 10 retries.")

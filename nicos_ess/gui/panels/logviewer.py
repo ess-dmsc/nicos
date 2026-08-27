@@ -119,7 +119,7 @@ class LogViewerPanel(Panel):
         result = []
         dateStr = fileDate.toString("yyyy-MM-dd ")
 
-        with open(path, "r", encoding="utf-8", errors="replace") as f:
+        with open(path, encoding="utf-8", errors="replace") as f:
             # store if last line was added,
             # this is used to filter tracebacks etc properly
             lastLineAdded = False

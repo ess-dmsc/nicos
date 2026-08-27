@@ -49,14 +49,13 @@ True
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from typing import (
     Any,
     Dict,
     List,
     Literal,
-    Mapping,
     Optional,
-    Sequence,
     Tuple,
     TypedDict,
     Union,

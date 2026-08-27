@@ -28,9 +28,9 @@ import pytest
 
 pytest.importorskip("epics")
 
-from nicos.core import status
 from nicos.devices.epics.pyepics import EpicsMoveable, EpicsReadable
 
+from nicos.core import status
 from nicos_ess.estia.devices.attocube import IDS3010Axis, IDS3010Control
 
 session_setup = "estia"

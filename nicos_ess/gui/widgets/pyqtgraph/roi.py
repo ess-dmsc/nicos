@@ -1,10 +1,10 @@
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph import Point, mkBrush, mkPen
-from pyqtgraph.graphicsItems.ROI import ROI, LineROI as DefaultLineROI
+from pyqtgraph.graphicsItems.ROI import ROI
+from pyqtgraph.graphicsItems.ROI import LineROI as DefaultLineROI
 
-from nicos.guisupport.qt import QPainter, QPointF, QRectF, Qt, QCursor
-
+from nicos.guisupport.qt import QCursor, QPainter, QPointF, QRectF, Qt
 
 CROSS_COLOR = (255, 165, 0, 150)
 CROSS_HOOVER_COLOR = (255, 165, 0, 255)

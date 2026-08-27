@@ -25,18 +25,17 @@
 
 import os
 import pickle
+import shutil
 import time
 from os import path
 
 import pytest
-import shutil
 
 from nicos import config
 from nicos.commands.scan import scan
 from nicos.core import ScanDataset
 from nicos.devices.datasinks.scan import AsciiScanfileReader
 from nicos.utils import readFile, updateFileCounter
-
 from test.utils import raises
 
 try:

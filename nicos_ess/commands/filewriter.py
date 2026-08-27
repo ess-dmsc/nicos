@@ -5,7 +5,6 @@ from contextlib import contextmanager
 from nicos import session
 from nicos.commands import helparglist, parallel_safe, usercommand
 from nicos.core import ADMIN, SIMULATION, requires
-
 from nicos_ess.devices.datasinks.file_writer import FileWriterControlSink
 
 __all__ = [

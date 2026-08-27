@@ -13,7 +13,6 @@ import pytest
 from nicos.commands.measure import count
 from nicos.commands.scan import scan
 from nicos.devices.epics.pva import caproto, p4p
-
 from test.nicos_ess.command_helpers import (
     loaded_setup,
     scan_positions,

@@ -9,7 +9,6 @@ pytest.importorskip("streaming_data_types")
 from streaming_data_types.logdata_f144 import serialise_f144
 
 from nicos_ess.devices.kafka import readback
-
 from test.nicos_ess.test_devices.doubles.kafka_stubs import StubKafkaSubscriber
 
 LOW_LEVEL_SETUP = "ess_kafka_readback_lowlevel"

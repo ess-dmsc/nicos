@@ -12,7 +12,6 @@ from nicos.core import (
     oneof,
     status,
 )
-from nicos.core.utils import multiWait
 from nicos.devices.abstract import (
     MappedMoveable,
 )
@@ -75,7 +74,7 @@ class MappedController(MappedMoveable):
                 if abs(v - value) < self._attached_controlled_device.precision:
                     return k
         inverse_mapping = {v: k for k, v in self.mapping.items()}
-        mapped_value = inverse_mapping.get(value, None)
+        mapped_value = inverse_mapping.get(value)
         if not mapped_value:
             return "In Between"
         return mapped_value
@@ -107,7 +106,7 @@ class MappedControllerEngageDisengage(MappedController):
                     return k + "d"  # here we return it as past tense
 
         inverse_mapping = {v: k for k, v in self.mapping.items()}
-        mapped_value = inverse_mapping.get(value, None)
+        mapped_value = inverse_mapping.get(value)
         if not mapped_value:
             return "In Between"
         return mapped_value
@@ -183,7 +182,7 @@ class MultiTargetMapping(MappedMoveable):
                     return k
 
         inverse_mapping = {v: k for k, v in self.mapping.items()}
-        mapped_value = inverse_mapping.get(value, None)
+        mapped_value = inverse_mapping.get(value)
         if not mapped_value:
             return "In Between"
         return mapped_value
