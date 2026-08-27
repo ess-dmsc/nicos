@@ -54,7 +54,6 @@ from nicos.core import (
     status,
 )
 from nicos.devices.sxtal.goniometer.posutils import Xrot, Yrot, Zrot
-
 from test.utils import ErrorLogged, approx, raises
 
 session_setup = "tas"

@@ -15,7 +15,6 @@ from nicos_ess.devices.kafka.consumer import (
     ERR_OFFSET_OUT_OF_RANGE,
     ERR_UNKNOWN_TOPIC_OR_PART,
 )
-
 from test.nicos_ess.test_devices.doubles import FakeKafkaError, StubKafkaSubscriber
 
 READBACK_TOPIC = "readbacks"
@@ -155,9 +154,7 @@ class TestKafkaReadbackHarness:
             pytest.param(
                 [
                     alarm_message(3_000_000_000, Severity.OK, ""),
-                    connection_message(
-                        4_000_000_000, ConnectionInfo.DISCONNECTED
-                    ),
+                    connection_message(4_000_000_000, ConnectionInfo.DISCONNECTED),
                 ],
                 (status.ERROR, "Kafka source disconnected (svc)"),
                 id="disconnected-connection",
@@ -230,9 +227,7 @@ class TestKafkaReadbackHarness:
     ):
         """doRead raises CommunicationError when no Kafka messages have arrived yet."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         with pytest.raises(readback.CommunicationError):
             readable.read()
@@ -242,9 +237,7 @@ class TestKafkaReadbackHarness:
     ):
         """doStatus returns UNKNOWN when no Kafka messages have arrived yet."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         assert readable.status() == (status.UNKNOWN, "No status information")
 
@@ -253,9 +246,7 @@ class TestKafkaReadbackHarness:
     ):
         """An alarm-only message does not produce a readable value."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -271,9 +262,7 @@ class TestKafkaReadbackHarness:
     ):
         """A connection-only message does not produce a readable value."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -289,9 +278,7 @@ class TestKafkaReadbackHarness:
     ):
         """f144 alone carries no alarm/connection info → status stays UNKNOWN."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -306,9 +293,7 @@ class TestKafkaReadbackHarness:
     ):
         """Value remains readable after a subsequent alarm-only message."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -334,13 +319,15 @@ class TestKafkaReadbackHarness:
         ],
     )
     def test_alarm_severity_maps_to_nicos_status(
-        self, device_harness, kafka_readback_stubs,
-        severity, expected_status, message,
+        self,
+        device_harness,
+        kafka_readback_stubs,
+        severity,
+        expected_status,
+        message,
     ):
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -354,54 +341,65 @@ class TestKafkaReadbackHarness:
         ("connection", "expected_status", "expected_message"),
         [
             pytest.param(
-                ConnectionInfo.CONNECTED, status.OK, "",
+                ConnectionInfo.CONNECTED,
+                status.OK,
+                "",
                 id="connected",
             ),
             pytest.param(
-                ConnectionInfo.DISCONNECTED, status.ERROR,
+                ConnectionInfo.DISCONNECTED,
+                status.ERROR,
                 "Kafka source disconnected (svc)",
                 id="disconnected",
             ),
             pytest.param(
-                ConnectionInfo.DESTROYED, status.ERROR,
+                ConnectionInfo.DESTROYED,
+                status.ERROR,
                 "Kafka source destroyed (svc)",
                 id="destroyed",
             ),
             pytest.param(
-                ConnectionInfo.CANCELLED, status.ERROR,
+                ConnectionInfo.CANCELLED,
+                status.ERROR,
                 "Kafka source cancelled (svc)",
                 id="cancelled",
             ),
             pytest.param(
-                ConnectionInfo.FINISHED, status.ERROR,
+                ConnectionInfo.FINISHED,
+                status.ERROR,
                 "Kafka source finished (svc)",
                 id="finished",
             ),
             pytest.param(
-                ConnectionInfo.REMOTE_ERROR, status.ERROR,
+                ConnectionInfo.REMOTE_ERROR,
+                status.ERROR,
                 "Kafka source remote_error (svc)",
                 id="remote-error",
             ),
             pytest.param(
-                ConnectionInfo.UNKNOWN, status.UNKNOWN,
+                ConnectionInfo.UNKNOWN,
+                status.UNKNOWN,
                 "Kafka source unknown (svc)",
                 id="unknown",
             ),
             pytest.param(
-                ConnectionInfo.NEVER_CONNECTED, status.UNKNOWN,
+                ConnectionInfo.NEVER_CONNECTED,
+                status.UNKNOWN,
                 "Kafka source never_connected (svc)",
                 id="never-connected",
             ),
         ],
     )
     def test_connection_state_maps_to_nicos_status(
-        self, device_harness, kafka_readback_stubs,
-        connection, expected_status, expected_message,
+        self,
+        device_harness,
+        kafka_readback_stubs,
+        connection,
+        expected_status,
+        expected_message,
     ):
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -415,31 +413,36 @@ class TestKafkaReadbackHarness:
         ("severity", "expected_status", "expected_default"),
         [
             pytest.param(
-                Severity.MINOR, status.WARN,
+                Severity.MINOR,
+                status.WARN,
                 "Kafka alarm severity MINOR",
                 id="minor",
             ),
             pytest.param(
-                Severity.MAJOR, status.ERROR,
+                Severity.MAJOR,
+                status.ERROR,
                 "Kafka alarm severity MAJOR",
                 id="major",
             ),
             pytest.param(
-                Severity.INVALID, status.ERROR,
+                Severity.INVALID,
+                status.ERROR,
                 "Kafka alarm severity INVALID",
                 id="invalid",
             ),
         ],
     )
     def test_alarm_with_empty_message_uses_default_text(
-        self, device_harness, kafka_readback_stubs,
-        severity, expected_status, expected_default,
+        self,
+        device_harness,
+        kafka_readback_stubs,
+        severity,
+        expected_status,
+        expected_default,
     ):
         """Non-OK alarms with no message text fall back to a severity label."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -453,16 +456,12 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
             kafka_readback_stubs,
-            connection_message(
-                1_000_000_000, ConnectionInfo.DISCONNECTED, service=""
-            ),
+            connection_message(1_000_000_000, ConnectionInfo.DISCONNECTED, service=""),
         )
 
         assert readable.status() == (
@@ -474,9 +473,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -505,9 +502,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs, value, expected
     ):
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -522,9 +517,7 @@ class TestKafkaReadbackHarness:
     ):
         """Router silently skips garbage payloads it cannot decode."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -541,9 +534,7 @@ class TestKafkaReadbackHarness:
     ):
         """A corrupt payload does not discard previously received values."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -562,9 +553,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -583,7 +572,9 @@ class TestKafkaReadbackHarness:
             device_harness, "first", "src:first"
         )
         second, _poller_second = create_readable_pair(
-            device_harness, "second", "src:first",
+            device_harness,
+            "second",
+            "src:first",
         )
 
         emit_readback_messages(
@@ -600,9 +591,7 @@ class TestKafkaReadbackHarness:
     ):
         """Verify that an alarm can transition from MAJOR → OK."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -623,9 +612,7 @@ class TestKafkaReadbackHarness:
     ):
         """Verify that a connection can transition from DISCONNECTED → CONNECTED."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -658,9 +645,7 @@ class TestKafkaReadbackHarness:
     ):
         """A kafka subscriber error forces status.ERROR even when alarm is OK."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -686,9 +671,7 @@ class TestKafkaReadbackHarness:
     ):
         """A valid decoded message clears kafka_error for that key."""
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
@@ -733,13 +716,9 @@ class TestKafkaReadbackHarness:
         assert first.status()[0] == status.ERROR
         assert second.status()[0] == status.ERROR
 
-    def test_kafka_error_categorization(
-        self, device_harness, kafka_readback_stubs
-    ):
+    def test_kafka_error_categorization(self, device_harness, kafka_readback_stubs):
         daemon_router, _poller_router = create_router_pair(device_harness)
-        _readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        _readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         cases = [
             (ERR_ALL_BROKERS_DOWN, readback.KafkaReadbackError.BROKERS_DOWN),

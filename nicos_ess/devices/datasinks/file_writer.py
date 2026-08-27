@@ -29,17 +29,16 @@ from nicos.core import (
     ADMIN,
     MASTER,
     Attach,
+    ConfigurationError,
     Param,
     host,
     listof,
     status,
-    ConfigurationError,
 )
 from nicos.core.constants import SIMULATION
 from nicos.core.device import Device
 from nicos.core.params import anytype
 from nicos.utils import printTable, readFileCounter, updateFileCounter
-
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
 from nicos_ess.devices.kafka.producer import KafkaProducer

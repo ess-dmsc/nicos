@@ -5,7 +5,6 @@ from nicos.clients.gui.panels.setup_panel import AliasWidget
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
     QListWidgetItem,
-    QPushButton,
     Qt,
     pyqtSlot,
 )

@@ -31,7 +31,6 @@ import pytest
 from nicos.core import *  # pylint: disable=unused-wildcard-import,wildcard-import
 from nicos.core.sessions.simple import ScriptSession
 from nicos.utils import loggers
-
 from test.utils import module_root, raises, runtime_root
 
 

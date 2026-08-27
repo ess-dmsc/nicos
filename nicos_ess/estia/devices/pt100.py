@@ -1,5 +1,4 @@
 from nicos.core import Param, pvname, status
-
 from nicos.devices.epics.pva import EpicsReadable
 
 error_bits = {

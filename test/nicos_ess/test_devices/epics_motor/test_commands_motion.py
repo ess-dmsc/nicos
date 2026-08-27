@@ -26,7 +26,6 @@ import pytest
 
 from nicos.core import status
 from nicos.core.errors import MoveError, PositionError
-
 from test.nicos_ess.test_devices.epics_motor.helpers import (
     create_motor,
     create_motor_pair,

@@ -35,7 +35,6 @@ from nicos.devices.generic.sequence import (
     SeqParam,
     SeqSleep,
 )
-
 from test.utils import raises
 
 session_setup = "sequencer"

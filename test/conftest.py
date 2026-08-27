@@ -30,10 +30,10 @@ from os import path
 
 import pytest
 
-from nicos import config, session as nicos_session
+from nicos import config
+from nicos import session as nicos_session
 from nicos.core import MASTER
 from nicos.utils import updateFileCounter
-
 from test.utils import (
     TestSession,
     cache_addr,
