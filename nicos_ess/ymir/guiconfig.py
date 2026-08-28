@@ -2,9 +2,6 @@
 
 main_window = docked(
     tabbed(
-        ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
-        ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
-        ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
         (
             "Instrument interaction",
             hsplit(
@@ -13,6 +10,26 @@ main_window = docked(
                         "nicos_ess.gui.panels.cmdbuilder.CommandPanel",
                     ),
                     tabbed(
+                        (
+                            "Output",
+                            panel(
+                                "nicos_ess.gui.panels.console.ConsolePanel",
+                                hasinput=False,
+                            ),
+                        ),
+                        ("Scan Plot", panel("nicos_ess.gui.panels.scans.ScansPanel")),
+                        (
+                            "Detector Image",
+                            panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
+                        ),
+                        (
+                            "Live Data Panel",
+                            panel("nicos_ess.gui.panels.livedata.LiveDataPanel"),
+                        ),
+                        (
+                            "Chopper",
+                            panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
+                        ),
                         (
                             "X-ray",
                             panel(
@@ -36,26 +53,6 @@ main_window = docked(
                             ),
                         ),
                         (
-                            "Output",
-                            panel(
-                                "nicos_ess.gui.panels.console.ConsolePanel",
-                                hasinput=False,
-                            ),
-                        ),
-                        ("Scan Plot", panel("nicos_ess.gui.panels.scans.ScansPanel")),
-                        (
-                            "Detector Image",
-                            panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
-                        ),
-                        (
-                            "Live Data Panel",
-                            panel("nicos_ess.gui.panels.livedata.LiveDataPanel"),
-                        ),
-                        (
-                            "Chopper",
-                            panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
-                        ),
-                        (
                             "Script Status",
                             panel(
                                 "nicos_ess.gui.panels.status.ScriptStatusPanel",
@@ -70,6 +67,16 @@ main_window = docked(
                 ),
             ),  # hsplit
         ),
+        ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
+        (
+            "Logs",
+            tabbed(
+                ("Errors", panel("nicos_ess.gui.panels.errors.ErrorPanel")),
+                ("Log files", panel("nicos_ess.gui.panels.logviewer.LogViewerPanel")),
+            ),
+        ),
+        ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
+        ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
         (
             "Scripting",
             panel("nicos_ess.gui.panels.editor.EditorPanel", tools=None),
@@ -82,13 +89,7 @@ main_window = docked(
             "History(TESTING)",
             panel("nicos_ess.gui.panels.history_pyqt.HistoryPanel"),
         ),
-        (
-            "Logs",
-            tabbed(
-                ("Errors", panel("nicos_ess.gui.panels.errors.ErrorPanel")),
-                ("Log files", panel("nicos_ess.gui.panels.logviewer.LogViewerPanel")),
-            ),
-        ),
+        ("Hello World", panel("nicos_ess.gui.panels.hello_world.HelloWorld")),
         position="left",
         margins=(0, 0, 0, 0),
         textpadding=(30, 20),
