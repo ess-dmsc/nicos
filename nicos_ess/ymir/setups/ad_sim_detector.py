@@ -9,7 +9,7 @@ camera_ndplugin_pv_root = "image1:"
 devices = dict(
     ad_sim_detector=device(
         "nicos_ess.devices.epics.area_detector.ADSimDetector",
-        description="Simulated detector data.",
+        description="Simulated detector data",
         pv_root=f"{camera_system_pv_root}{camera_device_pv_root}",
         image_pv=f"{camera_system_pv_root}{camera_ndplugin_pv_root}ArrayData",
         unit="images",
@@ -18,7 +18,7 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    ad_sim_detector_area_detector_collector=device(
+    ad_sim_detector_collector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
         description="Area detector collector",
         images=["ad_sim_detector"],
