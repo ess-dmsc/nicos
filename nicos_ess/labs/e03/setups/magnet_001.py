@@ -3,17 +3,22 @@ description = "15T magnet MAG-001"
 pv_root = "SE-MAG-001:"
 
 devices = dict(
-    regulation_temp=device(
+    vti_temp=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Regulation temperature",
         readpv=f"{pv_root}VTI-r",
     ),
-    heater_power=device(
+    # vti_temp=device(
+    #     "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+    #     description="VTI temperature",
+    #     readpv=f"{pv_root}VTI-VTITemp-r",
+    # ),
+    vti_heater_power=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Heater output power",
         readpv=f"{pv_root}VTI-HeaterPower-r",
     ),
-    heater_range=device(
+    vti_heater_range=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Heater 1 range",
         readpv=f"{pv_root}VTI-HtrRange-s",
@@ -30,12 +35,7 @@ devices = dict(
         readpv=f"{pv_root}VTI-NVopening-s",
         writepv=f"{pv_root}VTI-NVopening-s",
     ),
-    vti_temp=device(
-        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
-        description="VTI temperature",
-        readpv=f"{pv_root}VTI-VTITemp-r",
-    ),
-    temp_setpoint=device(
+    vti_temp_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Temperature setpoint",
         readpv=f"{pv_root}VTI-tempSetpoint-s",
@@ -65,12 +65,12 @@ devices = dict(
         readpv=f"{pv_root}Magnet-switchHeater-s",
         writepv=f"{pv_root}Magnet-switchHeater-s",
     ),
-    nitrogen_level=device(
+    mag_nitrogen_level=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Nitrogen level",
         readpv=f"{pv_root}Magnet-LN2-r",
     ),
-    helium_level=device(
+    mag_helium_level=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Helium level",
         readpv=f"{pv_root}Magnet-LHe-r",
