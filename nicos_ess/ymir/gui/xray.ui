@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1699</width>
+    <width>1715</width>
     <height>1333</height>
    </rect>
   </property>
@@ -14,17 +14,21 @@
    <string>Dialog</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QPushButton
-{
-   background-color:red;
+   <string notr="true">QPushButton {
+    border-color: rgb(107, 185, 196);
+    background-color: rgb(189, 229, 235);
+}
+
+QPushButton:hover {
+    background-color: rgb(206, 244, 250);
 }</string>
   </property>
   <widget class="QWidget" name="widget" native="true">
    <property name="geometry">
     <rect>
-     <x>190</x>
+     <x>420</x>
      <y>10</y>
-     <width>1061</width>
+     <width>831</width>
      <height>91</height>
     </rect>
    </property>
@@ -35,7 +39,7 @@ background-color: rgb(61, 56, 70);</string>
    <widget class="QLabel" name="label_2">
     <property name="geometry">
      <rect>
-      <x>40</x>
+      <x>290</x>
       <y>20</y>
       <width>51</width>
       <height>19</height>
@@ -48,9 +52,9 @@ background-color: rgb(61, 56, 70);</string>
    <widget class="QLineEdit" name="brstatus">
     <property name="geometry">
      <rect>
-      <x>100</x>
+      <x>360</x>
       <y>20</y>
-      <width>121</width>
+      <width>161</width>
       <height>21</height>
      </rect>
     </property>
@@ -64,7 +68,7 @@ background-color: rgb(61, 56, 70);</string>
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>270</x>
+      <x>180</x>
       <y>50</y>
       <width>161</width>
       <height>19</height>
@@ -77,38 +81,9 @@ background-color: rgb(61, 56, 70);</string>
    <widget class="QLineEdit" name="brbeam_align">
     <property name="geometry">
      <rect>
-      <x>450</x>
+      <x>360</x>
       <y>50</y>
-      <width>121</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="readOnly">
-     <bool>true</bool>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_3">
-    <property name="geometry">
-     <rect>
-      <x>320</x>
-      <y>20</y>
-      <width>111</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Interlock Status</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="brinterlock">
-    <property name="geometry">
-     <rect>
-      <x>450</x>
-      <y>20</y>
-      <width>121</width>
+      <width>161</width>
       <height>21</height>
      </rect>
     </property>
@@ -122,7 +97,7 @@ background-color: rgb(61, 56, 70);</string>
    <widget class="QLabel" name="label_4">
     <property name="geometry">
      <rect>
-      <x>620</x>
+      <x>570</x>
       <y>20</y>
       <width>141</width>
       <height>19</height>
@@ -135,7 +110,7 @@ background-color: rgb(61, 56, 70);</string>
    <widget class="QLabel" name="label_5">
     <property name="geometry">
      <rect>
-      <x>620</x>
+      <x>570</x>
       <y>50</y>
       <width>131</width>
       <height>20</height>
@@ -148,7 +123,7 @@ background-color: rgb(61, 56, 70);</string>
    <widget class="QLineEdit" name="brvacuum">
     <property name="geometry">
      <rect>
-      <x>770</x>
+      <x>730</x>
       <y>20</y>
       <width>41</width>
       <height>21</height>
@@ -164,7 +139,7 @@ background-color: rgb(61, 56, 70);</string>
    <widget class="QLineEdit" name="brtemperature">
     <property name="geometry">
      <rect>
-      <x>770</x>
+      <x>730</x>
       <y>50</y>
       <width>41</width>
       <height>21</height>
@@ -180,7 +155,7 @@ background-color: rgb(61, 56, 70);</string>
    <widget class="QLabel" name="label_6">
     <property name="geometry">
      <rect>
-      <x>820</x>
+      <x>790</x>
       <y>50</y>
       <width>16</width>
       <height>19</height>
@@ -190,34 +165,35 @@ background-color: rgb(61, 56, 70);</string>
      <string>C</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_20">
+   <widget class="QWidget" name="widget_13" native="true">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>50</y>
-      <width>51</width>
-      <height>19</height>
+      <x>0</x>
+      <y>0</y>
+      <width>151</width>
+      <height>91</height>
      </rect>
     </property>
-    <property name="text">
-     <string>Model</string>
+    <property name="styleSheet">
+     <string notr="true">background-color: rgb(125, 83, 162);</string>
     </property>
-   </widget>
-   <widget class="QLineEdit" name="brmodel">
-    <property name="geometry">
-     <rect>
-      <x>100</x>
-      <y>50</y>
-      <width>121</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="readOnly">
-     <bool>true</bool>
-    </property>
+    <widget class="QLabel" name="label_30">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>30</y>
+       <width>101</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font: 75 20pt &quot;Ubuntu Sans Bold&quot;;
+color: rgb(255, 255, 255);</string>
+     </property>
+     <property name="text">
+      <string>Status</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QWidget" name="verticalLayoutWidget">
@@ -235,9 +211,9 @@ background-color: rgb(61, 56, 70);</string>
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>110</y>
+     <y>10</y>
      <width>391</width>
-     <height>561</height>
+     <height>661</height>
     </rect>
    </property>
    <property name="styleSheet">
@@ -247,9 +223,9 @@ background-color: rgb(61, 56, 70);</string>
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>60</y>
+      <y>170</y>
       <width>361</width>
-      <height>491</height>
+      <height>471</height>
      </rect>
     </property>
     <property name="styleSheet">
@@ -517,11 +493,14 @@ background-color: rgb(61, 56, 70);</string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">border-color: rgb(107, 185, 196);
-background-color: rgb(189, 229, 235);
-selection-background-color: rgb(220, 239, 242);
-selection-color: white
-</string>
+      <string notr="true">QPushButton {
+    border-color: rgb(107, 185, 196);
+    background-color: rgb(189, 229, 235);
+}
+
+QPushButton:hover {
+    background-color: rgb(206, 244, 250);
+}</string>
      </property>
      <property name="text">
       <string>Warmup</string>
@@ -530,7 +509,7 @@ selection-color: white
     <widget class="QLabel" name="xray_info">
      <property name="geometry">
       <rect>
-       <x>50</x>
+       <x>80</x>
        <y>360</y>
        <width>91</width>
        <height>19</height>
@@ -550,8 +529,14 @@ selection-color: white
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">border-color: rgb(107, 185, 196);
-background-color: rgb(189, 229, 235);</string>
+      <string notr="true">QPushButton {
+    border-color: rgb(107, 185, 196);
+    background-color: rgb(189, 229, 235);
+}
+
+QPushButton:hover {
+    background-color: rgb(206, 244, 250);
+}</string>
      </property>
      <property name="text">
       <string>Turn ON</string>
@@ -567,24 +552,48 @@ background-color: rgb(189, 229, 235);</string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">border-color: rgb(107, 185, 196);
-background-color: rgb(189, 229, 235);</string>
+      <string notr="true">QPushButton {
+    border-color: rgb(107, 185, 196);
+    background-color: rgb(189, 229, 235);
+}
+
+QPushButton:hover {
+    background-color: rgb(206, 244, 250);
+}</string>
      </property>
      <property name="text">
       <string>Reset Overload Protection</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_34">
+    <widget class="QLabel" name="warmup_info">
      <property name="geometry">
       <rect>
-       <x>50</x>
+       <x>80</x>
        <y>320</y>
-       <width>201</width>
+       <width>171</width>
        <height>20</height>
       </rect>
      </property>
      <property name="text">
-      <string>Placeholder text for warmup</string>
+      <string>Error</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="status_light">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>330</y>
+       <width>40</width>
+       <height>40</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: gray;
+            border-radius: 20px; 
+            border: 2px solid black;</string>
+     </property>
+     <property name="text">
+      <string/>
      </property>
     </widget>
    </widget>
@@ -603,6 +612,71 @@ background-color: rgb(189, 229, 235);</string>
     <property name="text">
      <string>X-Ray</string>
     </property>
+   </widget>
+   <widget class="QWidget" name="widget_9" native="true">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>70</y>
+      <width>361</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <widget class="QProgressBar" name="progress_power">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>201</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="value">
+      <number>24</number>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="brpower">
+     <property name="geometry">
+      <rect>
+       <x>250</x>
+       <y>40</y>
+       <width>61</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>1</string>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_20">
+     <property name="geometry">
+      <rect>
+       <x>330</x>
+       <y>40</y>
+       <width>21</width>
+       <height>19</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>W</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_44">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>66</width>
+       <height>19</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Power</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QWidget" name="widget_4" native="true">
@@ -900,8 +974,14 @@ background-color: rgb(189, 229, 235);</string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">border-color: rgb(107, 185, 196);
-background-color: rgb(189, 229, 235);</string>
+      <string notr="true">QPushButton {
+    border-color: rgb(107, 185, 196);
+    background-color: rgb(189, 229, 235);
+}
+
+QPushButton:hover {
+    background-color: rgb(206, 244, 250);
+}</string>
      </property>
      <property name="text">
       <string>Stop</string>
@@ -917,8 +997,14 @@ background-color: rgb(189, 229, 235);</string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">border-color: rgb(107, 185, 196);
-background-color: rgb(189, 229, 235);</string>
+      <string notr="true">QPushButton {
+    border-color: rgb(107, 185, 196);
+    background-color: rgb(189, 229, 235);
+}
+
+QPushButton:hover {
+    background-color: rgb(206, 244, 250);
+}</string>
      </property>
      <property name="text">
       <string>Start</string>
@@ -1213,8 +1299,14 @@ p, li { white-space: pre-wrap; }
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">border-color: rgb(107, 185, 196);
-background-color: rgb(189, 229, 235);</string>
+      <string notr="true">QPushButton {
+    border-color: rgb(107, 185, 196);
+    background-color: rgb(189, 229, 235);
+}
+
+QPushButton:hover {
+    background-color: rgb(206, 244, 250);
+}</string>
      </property>
      <property name="text">
       <string>Start</string>
@@ -1230,8 +1322,14 @@ background-color: rgb(189, 229, 235);</string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">border-color: rgb(107, 185, 196);
-background-color: rgb(189, 229, 235);</string>
+      <string notr="true">QPushButton {
+    border-color: rgb(107, 185, 196);
+    background-color: rgb(189, 229, 235);
+}
+
+QPushButton:hover {
+    background-color: rgb(206, 244, 250);
+}</string>
      </property>
      <property name="text">
       <string>Start</string>
@@ -1247,8 +1345,14 @@ background-color: rgb(189, 229, 235);</string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">border-color: rgb(107, 185, 196);
-background-color: rgb(189, 229, 235);</string>
+      <string notr="true">QPushButton {
+    border-color: rgb(107, 185, 196);
+    background-color: rgb(189, 229, 235);
+}
+
+QPushButton:hover {
+    background-color: rgb(206, 244, 250);
+}</string>
      </property>
      <property name="text">
       <string>Stop Beam Alignment</string>
@@ -1347,36 +1451,6 @@ background-color: rgb(189, 229, 235);</string>
     </property>
     <property name="text">
      <string>Motion Control</string>
-    </property>
-   </widget>
-  </widget>
-  <widget class="QWidget" name="widget_13" native="true">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>181</width>
-     <height>91</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">background-color: rgb(125, 83, 162);</string>
-   </property>
-   <widget class="QLabel" name="label_30">
-    <property name="geometry">
-     <rect>
-      <x>40</x>
-      <y>30</y>
-      <width>101</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">font: 75 20pt &quot;Ubuntu Sans Bold&quot;;
-color: rgb(255, 255, 255);</string>
-    </property>
-    <property name="text">
-     <string>Status</string>
     </property>
    </widget>
   </widget>

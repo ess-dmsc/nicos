@@ -17,10 +17,8 @@ main_window = docked(
                             "X-ray",
                             panel(
                                 "nicos_ess.gui.panels.xray.XrayPanel",
-                                model="model_r",
                                 status="status_r",
                                 beam_align="beam_align_r",
-                                interlock="interlock_r",
                                 xray="xray",
                                 voltage="voltage",
                                 voltage_r="voltage_r",
