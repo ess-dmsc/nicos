@@ -4,7 +4,7 @@ from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.utils import findResource
 from nicos_ess.gui.panels.live_pyqt import LiveDataPanel
-from nicos.guisupport.qt import QSpinBox
+from nicos.guisupport.qt import QSpinBox, QTimer
 from PyQt5.QtCore import Qt
 
 class XrayPanel(Panel):
@@ -13,10 +13,8 @@ class XrayPanel(Panel):
         loadUi(self, findResource("nicos_ess/ymir/gui/xray.ui"))
 
         # Get devices.
-        self.devmodel = options.get("model")
         self.devstatus = options.get("status")
         self.devbeam_align = options.get("beam_align")
-        self.devinterlock = options.get("interlock")
         self.devxray = options.get("xray")
         self.devvoltage = options.get("voltage")
         self.devvoltage_r = options.get("voltage_r")
@@ -48,9 +46,11 @@ class XrayPanel(Panel):
         for box in spinboxes:
             box.wheelEvent = lambda *event: None
 
+        self.timer = QTimer(self) #for the blinking warmup light
+
         # Start client.
         client.setup.connect(self.on_client_setup) #keeps running until setup is ready
-        client.cache.connect(self.on_client_cache) #update position info
+        client.cache.connect(self.on_client_cache) #update position and status info
 
 
     def _is_live(self):
@@ -77,24 +77,25 @@ class XrayPanel(Panel):
             self.brsource_motor.setText(str(round(float(value), 2)))
         elif devname == self.devflatpanel_motor and pname == "value":
             self.brflatpanel_motor.setText(str(round(float(value), 2)))
+
+        # Update status.
         elif devname == self.devstatus and pname == "value":
-            self.status()
+            self.status_value = self.client.getDeviceParam(self.devstatus, "value")
+            if pname != self.status_value:
+                self.status_value = pname
+                self.status()
 
     def exec_command(self, command):
         self._exec_reqid = self.client.run(command)
 
 
-    # Commands to control the devices.
     def load_data(self):
         # Read parameter values.
-        vmodel = self.client.getDeviceParam(self.devmodel, "value")
-        vstatus = self.client.getDeviceParam(self.devstatus, "value")
         vbeam_align = self.client.getDeviceParam(self.devbeam_align, "value")
-        vinterlock = self.client.getDeviceParam(self.devinterlock, "value")
-
         vxray = self.client.getDeviceParam(self.devxray, "value")
-        self.vvoltage = self.client.getDeviceParam(self.devvoltage, "value")
-        self.vcurrent = self.client.getDeviceParam(self.devcurrent, "value")
+
+        vvoltage = self.client.getDeviceParam(self.devvoltage, "value")
+        vcurrent = self.client.getDeviceParam(self.devcurrent, "value")
         vfocus = self.client.getDeviceParam(self.devfocus, "value")
 
         vvoltage_r = self.client.getDeviceParam(self.devvoltage_r, "value")
@@ -112,11 +113,10 @@ class XrayPanel(Panel):
         vflatpanel_motor = self.client.getDeviceParam(self.devflatpanel_motor, "value")
 
         # Write parameter values.
-        self.brmodel.setText(vmodel)
         self.brbeam_align.setText(vbeam_align)
-        self.brinterlock.setText(vinterlock)
         self.brvacuum.setText(str(vvacuum))
         self.brtemperature.setText(str(vtemperature))
+        self.bwfocus.setValue(vfocus)
 
         if vxray == "XOF":
             self.xray_info.setText("X-ray OFF")
@@ -125,13 +125,15 @@ class XrayPanel(Panel):
             self.xray_info.setText("X-ray ON")
             self.bxray.setText("Turn OFF")
 
-        self.bwvoltage.setValue(self.vvoltage)
+        self.bwvoltage.setValue(vvoltage)
         self.brvoltage.setText(str(vvoltage_r))
-        self.progress_voltage.setValue(self.vvoltage)
-        self.bwcurrent.setValue(self.vcurrent)
+        voltage_percentage = int(round(vvoltage-20)/280*100)
+        self.progress_voltage.setValue(voltage_percentage)
+        
+        self.bwcurrent.setValue(vcurrent)
         self.brcurrent.setText(str(vcurrent_r))
-        self.progress_current.setValue(self.vcurrent)
-        self.bwfocus.setValue(vfocus)
+        current_percentage = int(round(vcurrent/10))
+        self.progress_current.setValue(current_percentage)
 
         self.bwacquire_time.setValue(vacquire_time)
         self.bracquire_time.setText(str(vacquire_time))
@@ -144,35 +146,68 @@ class XrayPanel(Panel):
         self.bwsource_motor.setValue(vsource_motor)
         self.bwflatpanel_motor.setValue(vflatpanel_motor)
 
+        self.status_value = self.client.getDeviceParam(self.devstatus, "value")
         self.status()
+        self.update_power()
 
         # Set start values.
-        self.exec_command(f"move(filter_menu, 'No filter')") #can remove if you want to remember filter choice between sessions
+        self.exec_command(f"move(filter_menu, 'No filter')") # can remove if you want to remember filter choice between sessions 
+                                                             # (but then you have to add reading and setting the choice of filter
+                                                             #  in this function, like with imagemode)
         self.exec_command(f"SetDetectors({self.devcollector})")
 
 
     def status(self):
-        value = self.client.getDeviceParam(self.devstatus, "value")
-        if value == "NOT READY":
-            self.brstatus.setText("ERROR")
-        elif value == "WARMUP YET":
-            self.brstatus.setText("READY FOR WARMUP")
-        elif value == "WARMUP":
-            self.brstatus.setText(value)
-        elif value == "STANDBY":
-            self.brstatus.setText("READY FOR X-RAYS")
-        elif value == "XON":
-            self.brstatus.setText("X-Ray ON")
-        elif value == "OVER":
-            self.brstatus.setText("OVERLOAD")
+        stylesheet = "; border-radius: 20px; border: 3px solid black;"
 
+        if self.status_value != "WARMUP":
+            if self.timer.isActive():
+                self.timer.stop()
+        
+        if self.status_value == "NOT READY":
+            self.brstatus.setText("ERROR")
+            self.warmup_info.setText("Not warmed up")
+            self.status_light.setStyleSheet("background-color: red" + stylesheet)
+        elif self.status_value == "WARMUP YET":
+            self.brstatus.setText("READY FOR WARMUP")
+            self.warmup_info.setText("Not warmed up")
+            self.status_light.setStyleSheet("background-color: gray" + stylesheet)
+        elif self.status_value == "WARMUP":
+            self.brstatus.setText(self.status_value)
+            self.warmup_info.setText("Warming up")
+            self.color = 0
+            self.timer.timeout.connect(self.blink)
+            self.timer.start(500)
+        elif self.status_value == "STANDBY":
+            self.brstatus.setText("READY FOR X-RAYS")
+            self.warmup_info.setText("Warmup complete")
+            self.status_light.setStyleSheet("background-color: orange" + stylesheet)
+        elif self.status_value == "XON":
+            self.brstatus.setText("X-Ray ON")
+            self.warmup_info.setText("Warmup complete")
+            self.status_light.setStyleSheet("background-color: limegreen" + stylesheet)
+        elif self.status_value == "OVER":
+            self.brstatus.setText("OVERLOAD")
+            self.warmup_info.setText("Overload")
+            self.status_light.setStyleSheet("background-color: red" + stylesheet)
+
+    def blink(self):
+        stylesheet = "; border-radius: 20px; border: 3px solid black;"
+        if self.color == 0:
+            self.status_light.setStyleSheet("background-color: orange" + stylesheet)
+            self.color = 1
+        else:
+            self.status_light.setStyleSheet("background-color: gray" + stylesheet)
+            self.color = 0
+
+    # Commands to control the devices.
     def on_bxray_pressed(self):
-        test = self.client.getDeviceParam(self.devxray, "value")
-        if test == "XOF":
+        value = self.client.getDeviceParam(self.devxray, "value")
+        if value == "XOF":
             self.exec_command(f"move(xray, 'XON')")
             self.xray_info.setText('X-ray ON')
             self.bxray.setText('Turn OFF')
-        elif test == "XON":
+        elif value == "XON":
             self.exec_command(f"move(xray, 'XOF')")
             self.xray_info.setText('X-ray OFF')
             self.bxray.setText('Turn ON')
@@ -183,33 +218,55 @@ class XrayPanel(Panel):
     def on_breset_pressed(self):
         self.exec_command(f"move(reset, '')")
 
-    def on_bwvoltage_editingFinished(self): #could do valueChanged instead
+    def on_bwvoltage_editingFinished(self):
         curvalue = self.client.getDeviceParam(self.devvoltage, "value")
         newvalue = self.bwvoltage.value()
         if curvalue != newvalue:
             self.exec_command(f"move(voltage, {newvalue})")
             percentage = int(round(newvalue-20)/280*100)
             self.progress_voltage.setValue(percentage) #change to read-value when x-ray is working
+            self.update_power(voltage=newvalue)
 
+    # When the voltage is 231 kV or more, the voltage can only take on values between 0 and 500 uA. Maybe add this limitation?
     def on_bwcurrent_editingFinished(self):
-        curvalue = self.client.getDeviceParam(self.devvoltage, "value")
+        curvalue = self.client.getDeviceParam(self.devcurrent, "value")
         newvalue = self.bwcurrent.value()
         if curvalue != newvalue:
             self.exec_command(f"move(current, {newvalue})")
             percentage = int(round(newvalue/10))
             self.progress_current.setValue(percentage) #change to read-value when x-ray is working
+            self.update_power(current=newvalue)
+
+    def update_power(self, voltage=-1, current=-1):
+        # It doesn't have time to update the actual values if you just changed them before calling
+        # on this function, so this ensures that the right value is called if it was just changed.
+        # But this should also be event based from the EPICS side in the future.
+        if voltage == -1:
+            voltage = self.client.getDeviceParam(self.devvoltage, "value")
+        if current == -1:
+            current = self.client.getDeviceParam(self.devcurrent, "value")
+        power = voltage * current * 10**(-3)
+        self.brpower.setText(str(round(power)))
+        percentage = int(round(power/230*100))
+        self.progress_power.setValue(percentage)
 
     def on_bwfocus_editingFinished(self): # will not finish due to no focus_r most likely
-        value = self.bwfocus.value()
-        self.exec_command(f"move(focus, {value})")
+        curvalue = self.client.getDeviceParam(self.devfocus, "value")
+        newvalue = self.bwfocus.value()
+        if curvalue != newvalue:
+            self.exec_command(f"move(focus, {newvalue})")
 
     def on_bwalign_x_editingFinished(self): # will not finish due to no align_x_r most likely
-            value = self.bwalign_x.text()
-            self.exec_command(f"move(align_x, {value})")
+        curvalue = self.client.getDeviceParam(self.devalign_x, "value")
+        newvalue = self.bwalign_x.value()
+        if curvalue != newvalue:
+            self.exec_command(f"move(align_x, {newvalue})")
 
     def on_bwalign_y_editingFinished(self): # will not finish due to no align_y_r most likely
-            value = self.bwalign_y.text()
-            self.exec_command(f"move(align_y, {value})")
+        curvalue = self.client.getDeviceParam(self.devalign_y, "value")
+        newvalue = self.bwalign_y.value()
+        if curvalue != newvalue:
+            self.exec_command(f"move(align_y, {newvalue})")
 
     def on_balign_beam_pressed(self):
          self.exec_command(f"move(align_beam, '')")
@@ -227,27 +284,38 @@ class XrayPanel(Panel):
         self.exec_command(f"stop({self.devcamera})")
 
     def on_bwacquire_time_editingFinished(self):
-        value = self.bwacquire_time.text()
-        self.exec_command(f"set({self.devcamera}, 'acquiretime', {value})")
-        self.bracquire_time.setText(str(value))
+        curvalue = self.client.getDeviceParam(self.devcamera, "acquiretime")
+        newvalue = self.bwacquire_time.text()
+        if curvalue != newvalue:
+            self.exec_command(f"set({self.devcamera}, 'acquiretime', {newvalue})")
+            self.bracquire_time.setText(str(newvalue))
 
     def on_bwacquire_period_editingFinished(self):
-        value = self.bwacquire_period.text()
-        self.exec_command(f"set({self.devcamera}, 'acquireperiod', {value})")
-        self.bracquire_period.setText(str(value))
+        curvalue = self.client.getDeviceParam(self.devcamera, "acquireperiod")
+        newvalue = self.bwacquire_period.text()
+        if curvalue != newvalue:
+            self.exec_command(f"set({self.devcamera}, 'acquireperiod', {newvalue})")
+            self.bracquire_period.setText(str(newvalue))
 
     def on_bwnum_images_editingFinished(self):
-        value = self.bwnum_images.text()
-        self.exec_command(f"set({self.devcamera}, 'numimages', {value})")
-        self.brnum_images.setText(str(value))
+        curvalue = self.client.getDeviceParam(self.devcamera, "numimages")
+        newvalue = self.bwnum_images.text()
+        if curvalue != newvalue:
+            self.exec_command(f"set({self.devcamera}, 'numimages', {newvalue})")
+            self.brnum_images.setText(str(newvalue))
 
+    # Placeholder motors.
     def on_bwsource_motor_editingFinished(self):
-        value = self.bwsource_motor.value()
-        self.exec_command(f"move({self.devsource_motor}, {value})")
+        curvalue = self.client.getDeviceParam(self.devsource_motor, "value")
+        newvalue = self.bwsource_motor.value()
+        if curvalue != newvalue:
+            self.exec_command(f"move({self.devsource_motor}, {newvalue})")
 
     def on_bwflatpanel_motor_editingFinished(self):
-        value = self.bwflatpanel_motor.value()
-        self.exec_command(f"move({self.devflatpanel_motor}, {value})")
+        curvalue = self.client.getDeviceParam(self.devflatpanel_motor, "value")
+        newvalue = self.bwflatpanel_motor.value()
+        if curvalue != newvalue:
+            self.exec_command(f"move({self.devflatpanel_motor}, {newvalue})")
 
 
     # Functions for the two menus (image mode and filter).
