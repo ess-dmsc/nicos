@@ -154,7 +154,7 @@ devices = dict(
         readpv=f"{pv_root}Sample-HeaterPower-r",
     ),
     sample_heater_range=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Heater range",
         readpv=f"{pv_root}Sample-HtrRange-s",
         writepv=f"{pv_root}Sample-HtrRange-s",
