@@ -101,7 +101,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 raise MoveError(
                     self,
                     "Cannot start device, sequence is still "
-                    "running (at %s)!" % self._seq_status[1],
+                    f"running (at {self._seq_status[1]})!",
                 )
         self._startSequence(self._generateSequence(target))
 
