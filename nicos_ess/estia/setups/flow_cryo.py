@@ -36,4 +36,10 @@ devices = dict(
         readpv=f"{pv_root}OutModeInput1-RB",
         writepv=f"{pv_root}OutModeInput1-SP",
     ),
+    power_range_setting=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Temp Range Setter",
+        readpv=f"{pv_root}Range1-RB",
+        writepv=f"{pv_root}Range1-SP",
+    ),
 )

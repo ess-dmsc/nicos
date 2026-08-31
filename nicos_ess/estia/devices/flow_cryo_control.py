@@ -13,9 +13,9 @@ from nicos_ess.devices.epics.pva.epics_common import (
 )
 
 
-class FlowCryoInputController(EpicsDeviceBase, Readable):
+class FlowCryoInput(EpicsDeviceBase, Readable):
     """
-    Controller that sends signals to the correct flow cryo channel
+    Controller device to control one input channel of the flow cryo
     """
 
     parameters = {
