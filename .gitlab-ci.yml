@@ -191,9 +191,11 @@ publish:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
     - echo "Running uv with UV_CACHE_DIR=$UV_CACHE_DIR"
     - uv sync --extra gui --all-packages
-    - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA  # Fetching only up to the closest merge-base to save time
-    - export CHANGES=$(git diff-tree --name-only --diff-filter=ACM -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA)  # Diff only changed files within MR
-    - export PY_CHANGES=$(git diff-tree --name-only --diff-filter=ACM -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA | grep -e '\.py$')
+    - export DIFF_BASE_SHA=${CI_MERGE_REQUEST_DIFF_BASE_SHA:-$CI_COMMIT_BEFORE_SHA}
+    - if [ -z "$DIFF_BASE_SHA" ] || [ "$DIFF_BASE_SHA" = "0000000000000000000000000000000000000000" ]; then export DIFF_BASE_SHA=$(git rev-parse "$CI_COMMIT_SHA^1"); fi
+    - git fetch --depth 1 origin $DIFF_BASE_SHA  # Fetching only up to the closest merge-base to save time
+    - export CHANGES=$(git diff-tree --name-only --diff-filter=ACM -r $DIFF_BASE_SHA $CI_COMMIT_SHA)
+    - export PY_CHANGES=$(git diff-tree --name-only --diff-filter=ACM -r $DIFF_BASE_SHA $CI_COMMIT_SHA | grep -e '\.py$')
   allow_failure:
     exit_codes: # User defined exit code
       - 100
@@ -225,6 +227,7 @@ lint:codespell:
   script:
     - echo 'Changed files (to be linted):'
     - echo "$CHANGES"
+    - if [ -z "$CHANGES" ]; then echo "No modified files to be checked"; exit 100; fi;
     - uv run python -m codespell_lib --count $CHANGES
 
 lint:ruff_format:
