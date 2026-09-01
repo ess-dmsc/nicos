@@ -91,6 +91,7 @@ devices = dict(
         hist_type="2-D DET",
         det_width=32,
         det_height=32,
+        det_range=(1, 1024),
     ),
     mon_3_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
