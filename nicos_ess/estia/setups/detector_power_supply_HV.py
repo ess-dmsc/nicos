@@ -12,11 +12,13 @@ BANK_CHANNELS = [
 # Keys to access channel info
 keys = get_channel_keys(BANK_CHANNELS)
 
-devices = {
-    BANK_NAME: device(
-        "nicos_ess.devices.epics.caen_syx527.CaenSyx527ChannelGroup",
-        description="Detector HV power supplies",
-        precision=7.0,
-        sources={key: ALL_CHANNELS[key]["pv_root_channel"] for key in keys},
-    )
-}
+devices = dict()
+
+power_supply_module = device(
+    "nicos_ess.devices.epics.caen_syx527.CaenSyx527ChannelGroup",
+    description="Detector HV Power Supplies",
+    precision=7.0,
+    sources={key: ALL_CHANNELS[key]["pv_root_channel"] for key in keys},
+)
+
+devices[BANK_NAME] = power_supply_module

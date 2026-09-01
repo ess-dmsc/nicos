@@ -15,7 +15,7 @@ class LOKIDetectorMotion(EpicsMotor):
 
     attached_devices = {
         "power_supply": Attach(
-            "Power supply for the detector bank", CaenSyx527ChannelGroup
+            "Power supply for detector bank 0", CaenSyx527ChannelGroup
         ),
     }
 

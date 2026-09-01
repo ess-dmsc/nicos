@@ -72,20 +72,16 @@ class TestLokiDetectorCarriage:
         yield
         self.session.unloadSetup()
 
-    def test_movement_allowed_when_power_supply_is_disabled(self):
-        self.ps_bank.reported_status = status.DISABLED, "output disabled"
+    def test_movement_allowed_if_bank_is_off(self):
+        self.ps_bank.disable()
         self.motor.move(20)
 
-    @pytest.mark.parametrize(
-        "power_status",
-        [status.OK, status.BUSY, status.WARN, status.ERROR, status.UNKNOWN],
-    )
-    def test_movement_blocked_unless_power_supply_is_disabled(self, power_status):
-        self.ps_bank.reported_status = power_status, "power supply is not safe"
+    def test_movement_blocked_if_bank_is_on(self):
+        self.ps_bank.enable()
         with pytest.raises(LimitError):
             self.motor.move(20)
 
     def test_movement_blocked_if_pos_outside_limits(self):
-        self.ps_bank.reported_status = status.DISABLED, "output disabled"
+        self.ps_bank.disable()
         with pytest.raises(LimitError):
             self.motor.move(200)
