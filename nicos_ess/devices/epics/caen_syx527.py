@@ -197,6 +197,11 @@ class CaenSyx527ChannelGroup(
         subscribed = sum(info.subscribe for info in self._epics_channels.values())
         return len(self._seen_updates) == len(self.sources) * subscribed
 
+    def _after_subscribe(self, mode):
+        super()._after_subscribe(mode)
+        if mode != SIMULATION and self.monitor and self._cache is not None:
+            self._refresh_status(time.time())
+
     def _voltages_are_off(self, voltage):
         threshold = self.voltage_off_threshold
         return threshold is None or all(
@@ -259,7 +264,6 @@ class CaenSyx527ChannelGroup(
     def _on_connection_change(self, change):
         super()._on_connection_change(change)
         if not change.is_connected:
-            self._seen_updates.discard((change.source_id, change.channel))
             self._last_status_signature = None
 
     def _status_signature(self):

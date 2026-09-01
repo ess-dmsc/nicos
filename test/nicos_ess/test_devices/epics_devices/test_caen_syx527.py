@@ -117,6 +117,17 @@ def test_group_uses_live_readback_and_status_pvs_with_epics_units(
     assert daemon_device._getParamConfig("current_limits").unit == "uA"
 
 
+def test_initial_status_waits_for_complete_monitor_snapshot(
+    device_harness, power_supply_backend
+):
+    daemon_device, _poller_device = create_group(device_harness)
+
+    assert daemon_device.status() == (
+        status.UNKNOWN,
+        "waiting for EPICS channel data",
+    )
+
+
 def test_group_rejects_mixed_current_units(device_harness, power_supply_backend):
     power_supply_backend.units[f"{SOURCES['module02']}-IMon"] = "A"
 
@@ -577,7 +588,9 @@ def test_value_info_names_each_channel(device_harness, power_supply_backend):
     assert all(value.unit == "V" for value in daemon_device.valueInfo())
 
 
-def test_reconnect_waits_for_fresh_channel_data(device_harness, power_supply_backend):
+def test_reconnect_reuses_the_last_complete_monitor_snapshot(
+    device_harness, power_supply_backend
+):
     daemon_device, _poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
 
@@ -588,10 +601,7 @@ def test_reconnect_waits_for_fresh_channel_data(device_harness, power_supply_bac
     )
 
     power_supply_backend.emit_connection(f"{SOURCES['module02']}-Status-OC", True)
-    assert daemon_device.status() == (
-        status.UNKNOWN,
-        "waiting for EPICS channel data",
-    )
+    assert daemon_device.status() == (status.DISABLED, "output disabled")
 
     power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-OC")
     assert daemon_device.status() == (status.DISABLED, "output disabled")
