@@ -3,7 +3,7 @@ from nicos.core import (
     Moveable,
     status,
 )
-from nicos_ess.devices.epics.power_supply_group import PowerSupplyGroup
+from nicos_ess.devices.epics.caen_syx527 import CaenSyx527ChannelGroup
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 
 
@@ -14,7 +14,9 @@ class LOKIDetectorMotion(EpicsMotor):
     """
 
     attached_devices = {
-        "power_supply": Attach("Power supply for the detector bank", PowerSupplyGroup),
+        "power_supply": Attach(
+            "Power supply for the detector bank", CaenSyx527ChannelGroup
+        ),
     }
 
     def isAllowed(self, pos):

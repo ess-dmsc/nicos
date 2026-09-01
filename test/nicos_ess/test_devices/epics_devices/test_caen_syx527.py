@@ -5,7 +5,7 @@ import pytest
 
 from nicos.core import ADMIN, GUEST, AccessError, ConfigurationError, LimitError, status
 from nicos.devices.generic import ParamDevice, ReadonlyParamDevice
-from nicos_ess.devices.epics.power_supply_group import PowerSupplyGroup
+from nicos_ess.devices.epics.caen_syx527 import CaenSyx527ChannelGroup
 
 SOURCES = {
     "module01": "SIM:HVM-100:Ch00",
@@ -70,7 +70,7 @@ def create_group(device_harness, sources=SOURCES, name="power_group", **config):
     }
     shared.update(config)
     return device_harness.create_pair(
-        PowerSupplyGroup,
+        CaenSyx527ChannelGroup,
         name=name,
         shared=shared,
     )
@@ -163,7 +163,7 @@ def test_current_parameter_units_are_independent_per_instance(
 )
 def test_group_rejects_empty_or_duplicate_sources(device_harness, sources):
     with pytest.raises(ConfigurationError):
-        device_harness.create_daemon(PowerSupplyGroup, sources=sources)
+        device_harness.create_daemon(CaenSyx527ChannelGroup, sources=sources)
 
 
 def test_disabled_output_is_not_busy_when_voltage_differs_from_target(
@@ -195,6 +195,28 @@ def test_off_threshold_waits_for_voltage_then_ignores_safe_ramp_down(
 
     power_supply_backend.emit_update(f"{SOURCES['module01']}-VMon", value=-5.0)
 
+    assert daemon_device.status() == (status.DISABLED, "output disabled")
+
+
+@pytest.mark.parametrize("active_status", ["ON", "RU"])
+def test_requested_off_waits_for_outputs_to_stop(
+    device_harness, power_supply_backend, active_status
+):
+    daemon_device, _poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+
+    power_supply_backend.emit_update(
+        f"{SOURCES['module01']}-Status-{active_status}", value=1
+    )
+
+    assert daemon_device.status() == (
+        status.BUSY,
+        "waiting for outputs to disable",
+    )
+
+    power_supply_backend.emit_update(
+        f"{SOURCES['module01']}-Status-{active_status}", value=0
+    )
     assert daemon_device.status() == (status.DISABLED, "output disabled")
 
 
@@ -514,17 +536,37 @@ def test_one_source_group_has_scalar_value_and_target(
     assert power_supply_backend.values[f"{SOURCES['module01']}-I0Set"] == 50.0
 
 
-def test_decoded_fault_is_reported_with_its_channel(
+def test_status_update_recomputes_from_monitors_without_direct_epics_gets(
     device_harness, power_supply_backend
 ):
     daemon_device, _poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
+    power_supply_backend.get_calls.clear()
 
     power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-OC", value=1)
 
+    assert power_supply_backend.get_calls == []
     assert daemon_device.status() == (
         status.ERROR,
         "output disabled; module02: over current",
+    )
+
+
+@pytest.mark.parametrize(
+    ("record", "message"),
+    [("UV", "under voltage"), ("ED", "externally disabled")],
+)
+def test_decoded_warning_is_reported_with_its_channel(
+    device_harness, power_supply_backend, record, message
+):
+    daemon_device, _poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+
+    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-{record}", value=1)
+
+    assert daemon_device.status() == (
+        status.WARN,
+        f"output disabled; module02: {message}",
     )
 
 

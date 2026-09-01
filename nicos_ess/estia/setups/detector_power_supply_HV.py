@@ -14,7 +14,7 @@ keys = get_channel_keys(BANK_CHANNELS)
 
 devices = {
     BANK_NAME: device(
-        "nicos_ess.devices.epics.power_supply_group.PowerSupplyGroup",
+        "nicos_ess.devices.epics.caen_syx527.CaenSyx527ChannelGroup",
         description="Detector HV power supplies",
         precision=7.0,
         sources={key: ALL_CHANNELS[key]["pv_root_channel"] for key in keys},

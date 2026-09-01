@@ -44,7 +44,7 @@ _STATUS_CHANNELS = {
 }
 
 
-class PowerSupplyGroup(
+class CaenSyx527ChannelGroup(
     EpicsMultiSourceBase, EventDrivenCanDisable, HasPrecision, Moveable
 ):
     """A group of CAEN SYx527 channels operated as one NICOS device."""
@@ -449,7 +449,10 @@ class PowerSupplyGroup(
         device_status = self._output_status(words, power_states, voltage, setpoint)
 
         faults = self._fault_status(words)
-        severity, _ = worst_status(hardware, faults, device_status)
+        hardware_faults = worst_status(hardware, faults)
+        severity = (
+            device_status[0] if hardware_faults[0] == status.OK else hardware_faults[0]
+        )
         details = [device_status[1]]
         details.extend(
             detail

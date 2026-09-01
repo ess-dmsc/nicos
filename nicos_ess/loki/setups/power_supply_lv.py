@@ -13,7 +13,7 @@ devices = {}
 for bank, channels in lv_detector_channels.items():
     bank_name = f"lv_{bank}"
     devices[bank_name] = device(
-        "nicos_ess.devices.epics.power_supply_group.PowerSupplyGroup",
+        "nicos_ess.devices.epics.caen_syx527.CaenSyx527ChannelGroup",
         description="Collection of power supply channels for a detector bank",
         precision=0.1,
         sources={
@@ -25,7 +25,7 @@ for bank, channels in lv_detector_channels.items():
 # Power supplies for beam monitors
 for monitor, channel_info in lv_bm_channels.items():
     devices[f"lv_{monitor}"] = device(
-        "nicos_ess.devices.epics.power_supply_group.PowerSupplyGroup",
+        "nicos_ess.devices.epics.caen_syx527.CaenSyx527ChannelGroup",
         description="A power supply channel",
         precision=0.1,
         sources={
