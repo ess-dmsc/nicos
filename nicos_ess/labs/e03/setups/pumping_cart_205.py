@@ -1,4 +1,4 @@
-description = "Setup for SE-AUX-205 PVs with NICOS mapping."
+description = "Setup for pumping cart 205 (SE-AUX-205)"
 
 pv_root = "se-aux-205:"
 
