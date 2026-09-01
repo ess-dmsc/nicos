@@ -7,25 +7,28 @@ from nicos.core import (
     Attach,
     CanDisable,
     ConfigurationError,
-    HasLimits,
-    Moveable,
     Override,
     Param,
     status,
     usermethod,
 )
 from nicos.devices.abstract import MappedMoveable
-from nicos_ess.devices.epics.pva.epics_devices import (
-    EpicsParameters,
-    RecordInfo,
-    RecordType,
+from nicos_ess.devices.epics.pva.epics_common import (
+    command_channel,
     create_wrapper,
     get_from_cache_or,
+    readback_channel,
+    setpoint_channel,
+    status_channel,
+)
+from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsAnalogMoveable,
+    EpicsMappedMoveable,
 )
 from nicos_ess.devices.mixins import CanReferenceWithWarning
 
 
-class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
+class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
     parameters = {
         "pvroot": Param(
             "The root of the pv",
@@ -69,93 +72,81 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         )
     }
 
-    def doPreinit(self, mode):
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva, context=None)
-        self._record_fields = self._get_record_fields()
-        if mode == SIMULATION:
-            return
-        self._epics_wrapper.connect_pv(self._get_pv_name("enable"))
+    # def doPreinit(self, mode):
+    #     self._epics_subscriptions = []
+    #     self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+    #     self._record_fields = self._get_record_fields()
+    #     if mode == SIMULATION:
+    #         return
+    #     self._epics_wrapper.connect_pv(self._get_pv_name("enable"))
+    #
+    # def doInit(self, mode):
+    #     if mode != SIMULATION:
+    #         self._set_mapping()
+    #         if session.sessiontype == POLLER and self.monitor:
+    #             self._set_up_subscriptions()
+    #     MappedMoveable.doInit(self, mode)
 
-    def doInit(self, mode):
-        if mode != SIMULATION:
-            self._set_mapping()
-            if session.sessiontype == POLLER and self.monitor:
-                self._set_up_subscriptions()
-        MappedMoveable.doInit(self, mode)
-
-    def _get_record_fields(self):
-        return {
-            "flowrate": RecordInfo(
+    def _build_epics_channels(self):
+        epics_channels = {
+            "flowrate": setpoint_channel(
                 cache_key="flowrate",
                 pv_suffix="FlowRate-SP",
-                record_type=RecordType.VALUE,
             ),
-            "flowrate_max": RecordInfo(
+            "flowrate_max": readback_channel(
                 cache_key="flowrate_max",
                 pv_suffix="MaxFlowRate",
-                record_type=RecordType.VALUE,
             ),
-            "flowrate_unit": RecordInfo(
-                cache_key="flowrate_unit",
-                pv_suffix="FlowRate-SP.EGU",
-                record_type=RecordType.VALUE,
-            ),
-            "total_vol": RecordInfo(
+            # "flowrate_unit": readback_channel(
+            #     cache_key="flowrate_unit",
+            #     pv_suffix="FlowRate-SP.EGU",
+            # ),
+            "total_vol": readback_channel(
                 cache_key="total_vol",
                 pv_suffix="TotalVol",
-                record_type=RecordType.VALUE,
             ),
-            "first_fill_syringe": RecordInfo(
+            "first_fill_syringe": setpoint_channel(
                 cache_key="first_fill_syringe",
                 pv_suffix="FillingSyringeIdx-SP",
-                record_type=RecordType.VALUE,
             ),
-            "start": RecordInfo(
-                cache_key="start",
+            "start": command_channel(
                 pv_suffix="Start-Cmd",
-                record_type=RecordType.COMMAND,
             ),
-            "stop": RecordInfo(
-                cache_key="stop",
+            "stop": command_channel(
                 pv_suffix="StopAllPumps-Cmd",
-                record_type=RecordType.COMMAND,
             ),
-            "enable": RecordInfo(
-                cache_key="enable",
+            "enable": command_channel(
                 pv_suffix="Enable-Cmd",
-                record_type=RecordType.COMMAND,
             ),
-            "is_disabled": RecordInfo(
+            "is_disabled": status_channel(
                 cache_key="is_disabled",
                 pv_suffix="Disabled",
-                record_type=RecordType.STATUS,
             ),
-            "is_pumping": RecordInfo(
+            "is_pumping": status_channel(
                 cache_key="is_pumping",
                 pv_suffix="IsPumping",
-                record_type=RecordType.STATUS,
             ),
         }
+        return epics_channels
 
-    def _set_up_subscriptions(self):
-        for key, record_info in self._record_fields.items():
-            if record_info.record_type in [RecordType.VALUE, RecordType.BOTH]:
-                value_subscription = self._epics_wrapper.subscribe(
-                    pvname=self._get_pv_name(key),
-                    pvparam=record_info.cache_key,
-                    change_callback=self._value_change_callback,
-                    connection_callback=self._connection_change_callback,
-                )
-                self._epics_subscriptions.append(value_subscription)
-            if record_info.record_type in [RecordType.STATUS, RecordType.BOTH]:
-                status_subscription = self._epics_wrapper.subscribe(
-                    pvname=self._get_pv_name(key),
-                    pvparam=record_info.cache_key,
-                    change_callback=self._status_change_callback,
-                    connection_callback=self._connection_change_callback,
-                )
-                self._epics_subscriptions.append(status_subscription)
+    # def _set_up_subscriptions(self):
+    #     for key, record_info in self._record_fields.items():
+    #         if record_info.record_type in [RecordType.VALUE, RecordType.BOTH]:
+    #             value_subscription = self._epics_wrapper.subscribe(
+    #                 pvname=self._get_pv_name(key),
+    #                 pvparam=record_info.cache_key,
+    #                 change_callback=self._value_change_callback,
+    #                 connection_callback=self._connection_change_callback,
+    #             )
+    #             self._epics_subscriptions.append(value_subscription)
+    #         if record_info.record_type in [RecordType.STATUS, RecordType.BOTH]:
+    #             status_subscription = self._epics_wrapper.subscribe(
+    #                 pvname=self._get_pv_name(key),
+    #                 pvparam=record_info.cache_key,
+    #                 change_callback=self._status_change_callback,
+    #                 connection_callback=self._connection_change_callback,
+    #             )
+    #             self._epics_subscriptions.append(status_subscription)
 
     def _set_mapping(self):
         new_mapping = {"Start": 0}
@@ -335,9 +326,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             )
 
 
-class CetoniPumpController(
-    EpicsParameters, CanReferenceWithWarning, HasLimits, Moveable
-):
+class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
     parameters = {
         "pvroot": Param(
             "The root of the pv",
@@ -419,138 +408,92 @@ class CetoniPumpController(
         if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._set_up_subscriptions()
 
-    def _get_record_fields(self):
-        return {
-            "value": RecordInfo(
+    def _build_epics_channels(self):
+        epics_channels = {
+            "value": readback_channel(
                 cache_key="value",
                 pv_suffix="FilledVolume",
-                record_type=RecordType.BOTH,
             ),
-            "target": RecordInfo(
+            "target": setpoint_channel(
                 cache_key="target",
                 pv_suffix="FillVol-SP",
-                record_type=RecordType.VALUE,
             ),
-            "flowrate": RecordInfo(
+            "flowrate": setpoint_channel(
                 cache_key="flowrate",
                 pv_suffix="FlowRate-SP",
-                record_type=RecordType.VALUE,
             ),
-            "flowrate_max": RecordInfo(
+            "flowrate_max": readback_channel(
                 cache_key="flowrate_max",
                 pv_suffix="MaxFlowRate",
-                record_type=RecordType.VALUE,
             ),
-            "flowrate_unit": RecordInfo(
-                cache_key="flowrate_unit",
-                pv_suffix="FlowRate.EGU",
-                record_type=RecordType.VALUE,
-            ),
-            "pressure": RecordInfo(
+            # "flowrate_unit": readback_channel(
+            #     cache_key="flowrate_unit",
+            #     pv_suffix="FlowRate.EGU",
+            # ),
+            "pressure": readback_channel(
                 cache_key="pressure",
                 pv_suffix="Pressure",
-                record_type=RecordType.VALUE,
             ),
-            "pressure_max": RecordInfo(
+            "pressure_max": readback_channel(
                 cache_key="pressure_max",
                 pv_suffix="MaxPressure",
-                record_type=RecordType.VALUE,
             ),
-            "pressure_unit": RecordInfo(
-                cache_key="pressure_unit",
-                pv_suffix="Pressure.EGU",
-                record_type=RecordType.VALUE,
-            ),
-            "home": RecordInfo(
-                cache_key="home",
+            # "pressure_unit": readback_channel(
+            #     cache_key="pressure_unit",
+            #     pv_suffix="Pressure.EGU",
+            # ),
+            "home": command_channel(
                 pv_suffix="InitPosition-Cmd",
-                record_type=RecordType.COMMAND,
             ),
-            "innerdiameter": RecordInfo(
+            "innerdiameter": readback_channel(
                 cache_key="innerdiameter",
                 pv_suffix="SyrInnerDiam",
-                record_type=RecordType.VALUE,
             ),
-            "innerdiameter_unit": RecordInfo(
-                cache_key="innerdiameter_unit",
-                pv_suffix="SyrInnerDiam.EGU",
-                record_type=RecordType.VALUE,
-            ),
-            "stroke_max": RecordInfo(
+            # "innerdiameter_unit": readback_channel(
+            #     cache_key="innerdiameter_unit",
+            #     pv_suffix="SyrInnerDiam.EGU",
+            # ),
+            "stroke_max": readback_channel(
                 cache_key="stroke_max",
                 pv_suffix="SyrMaxPstStrk",
-                record_type=RecordType.VALUE,
             ),
-            "stroke_unit": RecordInfo(
-                cache_key="stroke_unit",
-                pv_suffix="SyrMaxPstStrk.EGU",
-                record_type=RecordType.VALUE,
-            ),
-            "max_vol": RecordInfo(
+            # "stroke_unit": readback_channel(
+            #     cache_key="stroke_unit",
+            #     pv_suffix="SyrMaxPstStrk.EGU",
+            # ),
+            "max_vol": readback_channel(
                 cache_key="max_vol",
                 pv_suffix="MaxVol",
-                record_type=RecordType.VALUE,
             ),
-            "stop": RecordInfo(
-                cache_key="stop",
+            "stop": command_channel(
                 pv_suffix="Stop-Cmd",
-                record_type=RecordType.COMMAND,
             ),
-            "fill_syringe": RecordInfo(
-                cache_key="fill_syringe",
+            "fill_syringe": command_channel(
                 pv_suffix="FillSyringe-Cmd",
-                record_type=RecordType.COMMAND,
             ),
-            "empty_syringe": RecordInfo(
-                cache_key="empty_syringe",
+            "empty_syringe": command_channel(
                 pv_suffix="EmptySyringe-Cmd",
-                record_type=RecordType.COMMAND,
             ),
-            "generate_flow": RecordInfo(
-                cache_key="generate_flow",
+            "generate_flow": command_channel(
                 pv_suffix="GenerateFlow-Cmd",
-                record_type=RecordType.COMMAND,
             ),
-            "is_pumping": RecordInfo(
+            "is_pumping": status_channel(
                 cache_key="is_pumping",
                 pv_suffix="IsPumping",
-                record_type=RecordType.STATUS,
             ),
-            "is_homed": RecordInfo(
+            "is_homed": status_channel(
                 cache_key="is_homed",
                 pv_suffix="RefPosInitd",
-                record_type=RecordType.STATUS,
             ),
-            "is_fault": RecordInfo(
+            "is_fault": status_channel(
                 cache_key="is_fault",
                 pv_suffix="FaultState",
-                record_type=RecordType.STATUS,
             ),
-            "reset_fault": RecordInfo(
-                cache_key="reset_fault",
+            "reset_fault": command_channel(
                 pv_suffix="ResetFault-Cmd",
-                record_type=RecordType.COMMAND,
             ),
         }
-
-    def _set_up_subscriptions(self):
-        for key, record_info in self._record_fields.items():
-            if record_info.record_type in [RecordType.VALUE, RecordType.BOTH]:
-                value_subscription = self._epics_wrapper.subscribe(
-                    pvname=self._get_pv_name(key),
-                    pvparam=record_info.cache_key,
-                    change_callback=self._value_change_callback,
-                    connection_callback=self._connection_change_callback,
-                )
-                self._epics_subscriptions.append(value_subscription)
-            if record_info.record_type in [RecordType.STATUS, RecordType.BOTH]:
-                status_subscription = self._epics_wrapper.subscribe(
-                    pvname=self._get_pv_name(key),
-                    pvparam=record_info.cache_key,
-                    change_callback=self._status_change_callback,
-                    connection_callback=self._connection_change_callback,
-                )
-                self._epics_subscriptions.append(status_subscription)
+        return epics_channels
 
     def _get_pv_name(self, pv_param):
         return f"{self.pvroot}{self._record_fields[pv_param].pv_suffix}"
