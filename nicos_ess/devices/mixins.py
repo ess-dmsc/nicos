@@ -132,12 +132,15 @@ class nexusconfiglist:
                 periodic = raw.get("periodic")
                 # accept bool or int 0/1, and strings that cast to 0/1
                 try:
-                    if isinstance(periodic, bool):
-                        periodic = int(bool(periodic))
-                    else:
-                        periodic = int(periodic)
+                    periodic = (
+                        int(bool(periodic))
+                        if isinstance(periodic, bool)
+                        else int(periodic)
+                    )
                 except Exception:
-                    raise ValueError(f"nexus_config[{idx}].periodic must be 0 or 1")
+                    raise ValueError(
+                        f"nexus_config[{idx}].periodic must be 0 or 1"
+                    ) from None
                 if periodic not in (0, 1):
                     raise ValueError(f"nexus_config[{idx}].periodic must be 0 or 1")
                 out["periodic"] = periodic
@@ -207,7 +210,8 @@ class HasNexusConfig(DeviceMixinBase):
         topic (str, optional): Kafka topic to forward data to.
         protocol (str, optional): Protocol used when forwarding data to Kafka. One of ["pva" (default), "ca"].
         periodic (int, optional): Whether data is forwarded periodically (0 or 1).
-        nexus_path (str, optional): Absolute NeXus path to place the group, e.g. "/entry/instrument" (default) or "/entry/sample".
+        nexus_path (str, optional): Absolute NeXus path to place the group,
+            e.g. "/entry/instrument" (default) or "/entry/sample".
     """
 
     parameters = {
