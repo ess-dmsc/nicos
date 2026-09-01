@@ -5,7 +5,6 @@ devices = dict(
         "test.nicos_ess.loki.test_loki_detector_carriage.FakeLokiDetectorMotion",
         motorpv="IOC:m1",
         power_supply="ps_bank_hv",
-        voltage_off_threshold=5.0,
         has_powerauto=False,
         has_msgtxt=False,
         has_errorbit=False,

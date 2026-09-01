@@ -12,6 +12,8 @@ from nicos.core import (
     Override,
     Param,
     Value,
+    floatrange,
+    none_or,
     requires,
     status,
     tupleof,
@@ -20,12 +22,26 @@ from nicos.core import (
 from nicos_ess.devices.epics.pva.epics_common import (
     command_channel,
     readback_channel,
-    setpoint_channel,
     status_channel,
     worst_status,
 )
 from nicos_ess.devices.epics.pva.epics_multisource import EpicsMultiSourceBase
 from nicos_ess.devices.mixins import EventDrivenCanDisable
+
+_STATUS_CHANNELS = {
+    "status_on": (0, "-Status-ON"),
+    "status_ramping_up": (1, "-Status-RU"),
+    "status_ramping_down": (2, "-Status-RD"),
+    "status_over_current": (3, "-Status-OC"),
+    "status_over_voltage": (4, "-Status-OV"),
+    "status_under_voltage": (5, "-Status-UV"),
+    "status_external_trip": (6, "-Status-ET"),
+    "status_max_voltage": (7, "-Status-MV"),
+    "status_external_disable": (8, "-Status-ED"),
+    "status_internal_trip": (9, "-Status-IT"),
+    "status_calibration_error": (10, "-Status-CE"),
+    "status_unplugged": (11, "-Status-UN"),
+}
 
 
 class PowerSupplyGroup(
@@ -51,6 +67,14 @@ class PowerSupplyGroup(
             fmtstr="%.3g",
             chatty=True,
         ),
+        "voltage_off_threshold": Param(
+            "Largest absolute output voltage considered safely off; "
+            "None disables the voltage check",
+            type=none_or(floatrange(0)),
+            default=None,
+            unit="main",
+            fmtstr="main",
+        ),
     }
 
     parameter_overrides = {
@@ -60,11 +84,19 @@ class PowerSupplyGroup(
 
     _epics_channels = {
         "voltage": readback_channel("-VMon"),
-        "setpoint": setpoint_channel("-V0Set"),
+        "setpoint": readback_channel("-V0Set-RB"),
+        "setpoint_command": command_channel("-V0Set"),
         "current": readback_channel("-IMon"),
-        "current_limit": setpoint_channel("-I0Set"),
+        "current_limit": readback_channel("-I0Set-RB"),
+        "current_limit_command": command_channel("-I0Set"),
+        "power_readback": readback_channel("-Pw-RB", connect_on_startup=False),
         "power": command_channel("-Pw"),
-        "status_word": status_channel("-Status", refresh_status=False),
+        **{
+            channel: status_channel(
+                suffix, refresh_status=False, connect_on_startup=False
+            )
+            for channel, (_bit, suffix) in _STATUS_CHANNELS.items()
+        },
     }
 
     _warning_bits = {
@@ -118,17 +150,23 @@ class PowerSupplyGroup(
         self._setpoints = {}
         self._currents = {}
         self._current_limits = {}
+        self._power_states = {}
         self._status_words = {}
         self._alarm_states = {}
         self._last_status_signature = None
         super().doPreinit(mode)
 
         if mode != SIMULATION:
-            current_units = {
-                self._epics.get_source_units(source_id, channel)
-                for source_id in self._source_ids
-                for channel in ("current", "current_limit")
-            }
+            voltage_units = self._units_for("voltage", "setpoint", "setpoint_command")
+            if len(voltage_units) != 1:
+                raise ConfigurationError(
+                    self,
+                    "all voltage readbacks and setpoints must use the same unit; "
+                    f"found {sorted(voltage_units)!r}",
+                )
+            current_units = self._units_for(
+                "current", "current_limit", "current_limit_command"
+            )
             if len(current_units) != 1:
                 raise ConfigurationError(
                     self,
@@ -138,6 +176,13 @@ class PowerSupplyGroup(
             current_unit = current_units.pop()
             self.parameters["currents"].unit = current_unit
             self.parameters["current_limits"].unit = current_unit
+
+    def _units_for(self, *channels):
+        return {
+            self._epics.get_source_units(source_id, channel)
+            for source_id in self._source_ids
+            for channel in channels
+        }
 
     def _as_tuple(self, value):
         if len(self._source_ids) == 1:
@@ -151,6 +196,12 @@ class PowerSupplyGroup(
     def _all_monitors_seen(self):
         subscribed = sum(info.subscribe for info in self._epics_channels.values())
         return len(self._seen_updates) == len(self.sources) * subscribed
+
+    def _voltages_are_off(self, voltage):
+        threshold = self.voltage_off_threshold
+        return threshold is None or all(
+            abs(actual) <= threshold for actual in self._as_tuple(voltage)
+        )
 
     def _on_channel_update(self, update):
         timestamp = time.time()
@@ -166,8 +217,17 @@ class PowerSupplyGroup(
             self._currents[update.source_id] = float(update.value)
         elif update.channel == "current_limit":
             self._current_limits[update.source_id] = float(update.value)
-        elif update.channel == "status_word":
-            self._status_words[update.source_id] = int(update.value)
+        elif update.channel == "power_readback":
+            self._power_states[update.source_id] = bool(int(update.value))
+        elif update.channel in _STATUS_CHANNELS:
+            bit, _suffix = _STATUS_CHANNELS[update.channel]
+            mask = 1 << bit
+            word = self._status_words.get(update.source_id, 0)
+            if int(update.value):
+                word |= mask
+            else:
+                word &= ~mask
+            self._status_words[update.source_id] = word
 
         super()._on_channel_update(update)
 
@@ -209,10 +269,13 @@ class PowerSupplyGroup(
         at_target = powered and self.doIsAtTarget(
             self._as_value(self._voltages), self._as_value(self._setpoints)
         )
+        voltages_are_off = self._voltages_are_off(self._as_value(self._voltages))
         return (
             tuple(self._status_words.items()),
+            tuple(self._power_states.items()),
             tuple(self._alarm_states.items()),
             at_target,
+            voltages_are_off,
         )
 
     def _read_values(self, channel, maxage):
@@ -222,8 +285,18 @@ class PowerSupplyGroup(
         }
 
     def _read_status_words(self, maxage):
+        words = {}
+        for source_id in self._source_ids:
+            word = 0
+            for channel, (bit, _suffix) in _STATUS_CHANNELS.items():
+                if int(self._read_source(source_id, channel, maxage)):
+                    word |= 1 << bit
+            words[source_id] = word
+        return words
+
+    def _read_power_states(self, maxage):
         return {
-            source_id: int(self._read_source(source_id, "status_word", maxage))
+            source_id: bool(int(self._read_source(source_id, "power_readback", maxage)))
             for source_id in self._source_ids
         }
 
@@ -256,7 +329,7 @@ class PowerSupplyGroup(
         return True, ""
 
     def doIsAllowed(self, target):
-        return self._limits_allow("setpoint", target)
+        return self._limits_allow("setpoint_command", target)
 
     def doIsAtTarget(self, pos, target):
         if target is None:
@@ -268,7 +341,7 @@ class PowerSupplyGroup(
 
     def doStart(self, target):
         for source_id, value in zip(self._source_ids, self._as_tuple(target)):
-            self._put_source(source_id, "setpoint", value)
+            self._put_source(source_id, "setpoint_command", value)
 
     def doWriteCurrent_Limits(self, values):
         previous = self.current_limits
@@ -279,11 +352,11 @@ class PowerSupplyGroup(
                 )
             return previous
 
-        allowed, reason = self._limits_allow("current_limit", values)
+        allowed, reason = self._limits_allow("current_limit_command", values)
         if not allowed:
             raise LimitError(self, f"changing current limits is not allowed: {reason}")
         for source_id, value in zip(self._source_ids, self._as_tuple(values)):
-            self._put_source(source_id, "current_limit", value)
+            self._put_source(source_id, "current_limit_command", value)
         return values
 
     def doEnable(self, on):
@@ -320,34 +393,60 @@ class PowerSupplyGroup(
             return status.WARN, "; ".join(warnings)
         return status.OK, ""
 
+    def _output_status(self, words, power_states, voltage, setpoint):
+        channel_count = len(words)
+        requested_on = sum(power_states.values())
+        channels_on = sum(bool(word & 1) for word in words.values())
+        ramping_up = sum(bool(word & 0b010) for word in words.values())
+        ramping_down = sum(bool(word & 0b100) for word in words.values())
+        ramping = ramping_up + ramping_down
+
+        if not requested_on:
+            if channels_on or ramping_up:
+                return status.BUSY, "waiting for outputs to disable"
+            if self.voltage_off_threshold is not None:
+                if not self._voltages_are_off(voltage):
+                    threshold = f"{self.voltage_off_threshold:g}"
+                    if self.unit:
+                        threshold += f" {self.unit}"
+                    return (
+                        status.BUSY,
+                        f"waiting for output voltages to fall to {threshold} or below",
+                    )
+                return status.DISABLED, "output disabled"
+            if ramping_down:
+                return status.BUSY, "waiting for outputs to disable"
+            return status.DISABLED, "output disabled"
+        if requested_on != channel_count:
+            return (
+                status.WARN,
+                f"{requested_on} of {channel_count} outputs requested on",
+            )
+        if channels_on != channel_count:
+            return status.BUSY, f"{channels_on} of {channel_count} outputs enabled"
+        if ramping:
+            return status.BUSY, f"{ramping} of {channel_count} outputs ramping"
+        if not self.doIsAtTarget(voltage, setpoint):
+            return status.BUSY, "voltage readback has not reached target"
+        return status.OK, "output enabled"
+
     def _compute_status(self, maxage=0):
         if maxage is None:
             if not self._all_monitors_seen():
                 return status.UNKNOWN, "waiting for EPICS channel data"
             words = dict(self._status_words)
+            power_states = dict(self._power_states)
             voltage = self._as_value(self._voltages)
             setpoint = self._as_value(self._setpoints)
             hardware = worst_status(*self._alarm_states.values())
         else:
             words = self._read_status_words(maxage)
+            power_states = self._read_power_states(maxage)
             voltage = self.doRead(maxage)
             setpoint = self._as_value(self._read_values("setpoint", maxage))
             hardware = super()._compute_status(maxage)
 
-        channels_on = sum(bool(word & 1) for word in words.values())
-        ramping = sum(bool(word & 0b110) for word in words.values())
-
-        if not channels_on:
-            device_status = status.DISABLED, "output disabled"
-        elif channels_on != len(words):
-            device_status = (
-                status.WARN,
-                f"{channels_on} of {len(words)} outputs enabled",
-            )
-        elif not self.doIsAtTarget(voltage, setpoint):
-            device_status = status.BUSY, "voltage readback has not reached target"
-        else:
-            device_status = status.OK, "output enabled"
+        device_status = self._output_status(words, power_states, voltage, setpoint)
 
         faults = self._fault_status(words)
         severity, _ = worst_status(hardware, faults, device_status)
@@ -357,6 +456,4 @@ class PowerSupplyGroup(
             for candidate_status, detail in (hardware, faults)
             if candidate_status != status.OK and detail
         )
-        if ramping:
-            details.append(f"{ramping} channels ramping")
         return severity, "; ".join(details)

@@ -12,18 +12,49 @@ SOURCES = {
     "module02": "SIM:HVM-101:Ch01",
 }
 
+STATUS_BITS = {
+    "ON": 0,
+    "RU": 1,
+    "RD": 2,
+    "OC": 3,
+    "OV": 4,
+    "UV": 5,
+    "ET": 6,
+    "MV": 7,
+    "ED": 8,
+    "IT": 9,
+    "CE": 10,
+    "UN": 11,
+}
+
+MONITORED_SUFFIXES = (
+    "-VMon",
+    "-V0Set-RB",
+    "-IMon",
+    "-I0Set-RB",
+    "-Pw-RB",
+    *(f"-Status-{record}" for record in STATUS_BITS),
+)
+
 
 @pytest.fixture
 def power_supply_backend(fake_backend):
     for source in SOURCES.values():
         fake_backend.values[f"{source}-VMon"] = 0.22
+        fake_backend.values[f"{source}-V0Set-RB"] = 800.0
         fake_backend.values[f"{source}-V0Set"] = 800.0
         fake_backend.values[f"{source}-IMon"] = 0.1
+        fake_backend.values[f"{source}-I0Set-RB"] = 10.0
         fake_backend.values[f"{source}-I0Set"] = 10.0
         fake_backend.values[f"{source}-Pw"] = 0
-        fake_backend.values[f"{source}-Status"] = 0
+        fake_backend.values[f"{source}-Pw-RB"] = 0
+        for record in STATUS_BITS:
+            fake_backend.values[f"{source}-Status-{record}"] = 0
         fake_backend.units[f"{source}-VMon"] = "V"
+        fake_backend.units[f"{source}-V0Set-RB"] = "V"
+        fake_backend.units[f"{source}-V0Set"] = "V"
         fake_backend.units[f"{source}-IMon"] = "uA"
+        fake_backend.units[f"{source}-I0Set-RB"] = "uA"
         fake_backend.units[f"{source}-I0Set"] = "uA"
         fake_backend.limits[f"{source}-V0Set"] = (0.0, 3000.0)
         fake_backend.limits[f"{source}-I0Set"] = (0.0, 1000.0)
@@ -47,19 +78,40 @@ def create_group(device_harness, sources=SOURCES, name="power_group", **config):
 
 def emit_snapshot(backend, sources=SOURCES):
     for source in sources.values():
-        backend.emit_update(f"{source}-VMon")
-        backend.emit_update(f"{source}-V0Set")
-        backend.emit_update(f"{source}-IMon")
-        backend.emit_update(f"{source}-I0Set")
-        backend.emit_update(f"{source}-Status")
+        for suffix in MONITORED_SUFFIXES:
+            backend.emit_update(f"{source}{suffix}")
 
 
-def test_group_uses_five_monitors_per_source_and_epics_units(
+def emit_status_word(backend, source, word):
+    for record, bit in STATUS_BITS.items():
+        backend.emit_update(f"{source}-Status-{record}", value=(word >> bit) & 1)
+
+
+def emit_powered(backend, source, on=True):
+    backend.emit_update(f"{source}-Pw-RB", value=int(on))
+    emit_status_word(backend, source, int(on))
+
+
+def test_group_uses_live_readback_and_status_pvs_with_epics_units(
     device_harness, power_supply_backend
 ):
     daemon_device, _poller_device = create_group(device_harness)
 
-    assert len(power_supply_backend.subscriptions) == 5 * len(SOURCES)
+    assert len(power_supply_backend.subscriptions) == len(MONITORED_SUFFIXES) * len(
+        SOURCES
+    )
+    subscribed_pvs = {
+        subscription[0] for subscription in power_supply_backend.subscriptions
+    }
+    assert f"{SOURCES['module01']}-V0Set-RB" in subscribed_pvs
+    assert f"{SOURCES['module01']}-I0Set-RB" in subscribed_pvs
+    assert f"{SOURCES['module01']}-Pw-RB" in subscribed_pvs
+    assert f"{SOURCES['module01']}-Status-ON" in subscribed_pvs
+    assert f"{SOURCES['module01']}-Status" not in subscribed_pvs
+    startup_pvs = set(power_supply_backend.connect_calls)
+    assert f"{SOURCES['module01']}-VMon" in startup_pvs
+    assert f"{SOURCES['module01']}-Pw-RB" not in startup_pvs
+    assert f"{SOURCES['module01']}-Status-ON" not in startup_pvs
     assert daemon_device.unit == "V"
     assert daemon_device._getParamConfig("currents").unit == "uA"
     assert daemon_device._getParamConfig("current_limits").unit == "uA"
@@ -67,6 +119,13 @@ def test_group_uses_five_monitors_per_source_and_epics_units(
 
 def test_group_rejects_mixed_current_units(device_harness, power_supply_backend):
     power_supply_backend.units[f"{SOURCES['module02']}-IMon"] = "A"
+
+    with pytest.raises(ConfigurationError, match="same unit"):
+        create_group(device_harness)
+
+
+def test_group_rejects_mixed_voltage_units(device_harness, power_supply_backend):
+    power_supply_backend.units[f"{SOURCES['module02']}-V0Set-RB"] = "kV"
 
     with pytest.raises(ConfigurationError, match="same unit"):
         create_group(device_harness)
@@ -81,6 +140,7 @@ def test_current_parameter_units_are_independent_per_instance(
         name="hv_group",
     )
     power_supply_backend.units[f"{SOURCES['module02']}-IMon"] = "A"
+    power_supply_backend.units[f"{SOURCES['module02']}-I0Set-RB"] = "A"
     power_supply_backend.units[f"{SOURCES['module02']}-I0Set"] = "A"
     lv_group, _lv_poller = create_group(
         device_harness,
@@ -117,6 +177,27 @@ def test_disabled_output_is_not_busy_when_voltage_differs_from_target(
     assert daemon_device.status() == (status.DISABLED, "output disabled")
 
 
+def test_off_threshold_waits_for_voltage_then_ignores_safe_ramp_down(
+    device_harness, power_supply_backend
+):
+    daemon_device, _poller_device = create_group(
+        device_harness, voltage_off_threshold=5.0
+    )
+    emit_snapshot(power_supply_backend)
+
+    power_supply_backend.emit_update(f"{SOURCES['module01']}-VMon", value=-5.1)
+    power_supply_backend.emit_update(f"{SOURCES['module01']}-Status-RD", value=1)
+
+    assert daemon_device.status() == (
+        status.BUSY,
+        "waiting for output voltages to fall to 5 V or below",
+    )
+
+    power_supply_backend.emit_update(f"{SOURCES['module01']}-VMon", value=-5.0)
+
+    assert daemon_device.status() == (status.DISABLED, "output disabled")
+
+
 def test_enabled_output_is_busy_until_voltage_reaches_target(
     device_harness, power_supply_backend
 ):
@@ -124,7 +205,7 @@ def test_enabled_output_is_busy_until_voltage_reaches_target(
     emit_snapshot(power_supply_backend)
 
     for source in SOURCES.values():
-        power_supply_backend.emit_update(f"{source}-Status", value=1)
+        emit_powered(power_supply_backend, source)
 
     assert daemon_device.status() == (
         status.BUSY,
@@ -137,13 +218,43 @@ def test_enabled_output_is_busy_until_voltage_reaches_target(
     assert daemon_device.status() == (status.OK, "output enabled")
 
 
-def test_partial_output_is_warn_not_busy(device_harness, power_supply_backend):
+def test_partial_power_request_is_warn(device_harness, power_supply_backend):
     daemon_device, _poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
 
-    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status", value=1)
+    emit_powered(power_supply_backend, SOURCES["module02"])
 
-    assert daemon_device.status() == (status.WARN, "1 of 2 outputs enabled")
+    assert daemon_device.status() == (
+        status.WARN,
+        "1 of 2 outputs requested on",
+    )
+
+
+def test_requested_power_is_busy_until_all_outputs_report_on(
+    device_harness, power_supply_backend
+):
+    daemon_device, _poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+
+    for source in SOURCES.values():
+        power_supply_backend.emit_update(f"{source}-Pw-RB", value=1)
+    emit_status_word(power_supply_backend, SOURCES["module02"], 1)
+
+    assert daemon_device.status() == (status.BUSY, "1 of 2 outputs enabled")
+
+
+def test_ramping_bit_keeps_an_enabled_group_busy_at_target(
+    device_harness, power_supply_backend
+):
+    daemon_device, _poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+
+    for source in SOURCES.values():
+        emit_powered(power_supply_backend, source)
+        power_supply_backend.emit_update(f"{source}-VMon", value=800.0)
+    power_supply_backend.emit_update(f"{SOURCES['module01']}-Status-RU", value=1)
+
+    assert daemon_device.status() == (status.BUSY, "1 of 2 outputs ramping")
 
 
 def test_current_changes_are_not_movement_but_current_alarms_affect_status(
@@ -152,7 +263,7 @@ def test_current_changes_are_not_movement_but_current_alarms_affect_status(
     daemon_device, _poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
     for source in SOURCES.values():
-        power_supply_backend.emit_update(f"{source}-Status", value=1)
+        emit_powered(power_supply_backend, source)
         power_supply_backend.emit_update(f"{source}-VMon", value=800.0)
 
     power_supply_backend.emit_update(f"{SOURCES['module01']}-IMon", value=0.5)
@@ -177,8 +288,8 @@ def test_cached_status_uses_the_atomic_monitor_snapshot(
 
     poller_device._cache.put(
         poller_device._name,
-        poller_device._epics.source_key("module01", "status_word"),
-        1 << 2,
+        poller_device._epics.source_key("module01", "status_ramping_down"),
+        1,
         time.time(),
     )
 
@@ -195,16 +306,16 @@ def test_explicit_daemon_poll_still_reads_hardware(
     daemon_device, _poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
 
-    power_supply_backend.values[f"{SOURCES['module01']}-Status"] = 1 << 2
+    power_supply_backend.values[f"{SOURCES['module01']}-Status-RD"] = 1
     polled_status, _value = device_harness.run_daemon(daemon_device.poll)
 
     assert polled_status == (
-        status.DISABLED,
-        "output disabled; 1 channels ramping",
+        status.BUSY,
+        "waiting for outputs to disable",
     )
     assert device_harness.run_daemon(daemon_device.status) == (
-        status.DISABLED,
-        "output disabled; 1 channels ramping",
+        status.BUSY,
+        "waiting for outputs to disable",
     )
 
 
@@ -219,8 +330,7 @@ def test_enable_relies_on_monitor_updates_when_polling_is_disabled(
 
     assert power_supply_backend.get_calls == []
     assert all(
-        power_supply_backend.values[f"{source}-Pw"] == 1
-        for source in SOURCES.values()
+        power_supply_backend.values[f"{source}-Pw"] == 1 for source in SOURCES.values()
     )
 
 
@@ -230,12 +340,12 @@ def test_poller_poll_can_refresh_monitor_derived_status(
     daemon_device, poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
 
-    power_supply_backend.values[f"{SOURCES['module01']}-Status"] = 1 << 2
+    power_supply_backend.values[f"{SOURCES['module01']}-Status-RD"] = 1
     device_harness.run_poller(poller_device.poll)
 
     assert device_harness.run_daemon(daemon_device.status) == (
-        status.DISABLED,
-        "output disabled; 1 channels ramping",
+        status.BUSY,
+        "waiting for outputs to disable",
     )
 
 
@@ -252,6 +362,17 @@ def test_start_writes_one_voltage_setpoint_per_channel(
     assert daemon_device.target == (100.0, 200.0)
 
 
+def test_external_setpoint_readbacks_update_the_group_target(
+    device_harness, power_supply_backend
+):
+    daemon_device, _poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+
+    power_supply_backend.emit_update(f"{SOURCES['module01']}-V0Set-RB", value=123.0)
+
+    assert daemon_device.target == (123.0, 800.0)
+
+
 def test_current_readbacks_and_limits_are_monitor_driven_parameters(
     device_harness, power_supply_backend
 ):
@@ -262,7 +383,7 @@ def test_current_readbacks_and_limits_are_monitor_driven_parameters(
     assert daemon_device.current_limits == (10.0, 10.0)
 
     power_supply_backend.emit_update(f"{SOURCES['module01']}-IMon", value=0.25)
-    power_supply_backend.emit_update(f"{SOURCES['module02']}-I0Set", value=20.0)
+    power_supply_backend.emit_update(f"{SOURCES['module02']}-I0Set-RB", value=20.0)
 
     assert daemon_device.currents == (0.25, 0.1)
     assert daemon_device.current_limits == (10.0, 20.0)
@@ -393,13 +514,13 @@ def test_one_source_group_has_scalar_value_and_target(
     assert power_supply_backend.values[f"{SOURCES['module01']}-I0Set"] == 50.0
 
 
-def test_packed_fault_is_reported_with_its_channel(
+def test_decoded_fault_is_reported_with_its_channel(
     device_harness, power_supply_backend
 ):
     daemon_device, _poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
 
-    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status", value=1 << 3)
+    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-OC", value=1)
 
     assert daemon_device.status() == (
         status.ERROR,
@@ -418,17 +539,17 @@ def test_reconnect_waits_for_fresh_channel_data(device_harness, power_supply_bac
     daemon_device, _poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
 
-    power_supply_backend.emit_connection(f"{SOURCES['module02']}-Status", False)
+    power_supply_backend.emit_connection(f"{SOURCES['module02']}-Status-OC", False)
     assert daemon_device.status() == (
         status.UNKNOWN,
         "lost connection to EPICS",
     )
 
-    power_supply_backend.emit_connection(f"{SOURCES['module02']}-Status", True)
+    power_supply_backend.emit_connection(f"{SOURCES['module02']}-Status-OC", True)
     assert daemon_device.status() == (
         status.UNKNOWN,
         "waiting for EPICS channel data",
     )
 
-    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status")
+    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-OC")
     assert daemon_device.status() == (status.DISABLED, "output disabled")

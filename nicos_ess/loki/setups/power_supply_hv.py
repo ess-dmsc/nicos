@@ -16,6 +16,7 @@ for bank, channels in hv_detector_channels.items():
         "nicos_ess.devices.epics.power_supply_group.PowerSupplyGroup",
         description="Collection of power supply channels for a detector bank",
         precision=7.0,
+        voltage_off_threshold=5.0,
         sources={
             f"module{ch['module']}": (f"{pv_root}-HVM-{ch['board']}:Ch{ch['channel']}")
             for ch in channels

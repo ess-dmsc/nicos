@@ -79,7 +79,7 @@ class TestLokiDetectorCarriage:
         self.motor.move(20)
 
     def test_movement_allowed_if_channel_off_and_voltage_below_threshold(self):
-        voltage = self.motor.voltage_off_threshold - 0.1
+        voltage = self.ps_bank.voltage_off_threshold - 0.1
         self.ps_bank.disable()
         self.ps_bank.voltage = voltage
         self.motor.move(20)
@@ -90,14 +90,14 @@ class TestLokiDetectorCarriage:
             self.motor.move(20)
 
     def test_movement_blocked_if_voltage_above_threshold(self):
-        voltage = self.motor.voltage_off_threshold + 0.1
+        voltage = self.ps_bank.voltage_off_threshold + 0.1
         self.ps_bank.disable()
         self.ps_bank.voltage = voltage
         with pytest.raises(LimitError):
             self.motor.move(20)
 
     def test_movement_blocked_if_status_not_ok(self):
-        voltage = self.motor.voltage_off_threshold - 0.1
+        voltage = self.ps_bank.voltage_off_threshold - 0.1
         self.ps_bank.hardware_status = status.ERROR, "some error message"
         self.ps_bank.disable()
         self.ps_bank.voltage = voltage

@@ -72,6 +72,11 @@ class FakePowerSupplyGroup(PowerSupplyGroup):
         if self.hardware_status != (status.OK, ""):
             return self.hardware_status
         if not self.powered:
+            if (
+                self.voltage_off_threshold is not None
+                and abs(self.voltage) > self.voltage_off_threshold
+            ):
+                return status.BUSY, "waiting for output voltage to decay"
             return status.DISABLED, "output disabled"
         return status.OK, "output enabled"
 
