@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -34,7 +34,7 @@ from textwrap import dedent
 
 from nicos import config, session
 
-# import for side-effects
+# import for side effects
 from nicos._vendor import rtfunicode  # pylint: disable=unused-import
 from nicos.core import (
     MASTER,
@@ -76,6 +76,7 @@ from nicos.utils.compression import zipFiles
 from nicos.utils.emails import sendMail
 from nicos.utils.ftp import ftpUpload
 from nicos.utils.loggers import ELogHandler
+from nicos.utils.user import combineUsers, splitUsers
 
 
 class Experiment(Device):
@@ -140,12 +141,12 @@ class Experiment(Device):
             category="experiment",
         ),
         "dataroot": Param(
-            "Root data path under which all proposal " "specific paths are created",
+            "Root data path under which all proposal specific paths are created",
             mandatory=True,
             type=expanded_path,
         ),
         "forcescandata": Param(
-            "If true, force scan datasets to be created " "also for single counts",
+            "If true, force scan datasets to be created also for single counts",
             type=bool,
             default=False,
         ),
@@ -156,25 +157,37 @@ class Experiment(Device):
             internal=True,
         ),
         "envlist": Param(
-            "List of default environment device names to " "read at every scan point",
+            "List of default environment device names to read at every scan point",
             type=listof(str),
             settable=True,
             internal=True,
         ),
         "elog": Param(
-            "True if the electronic logbook should be " "enabled",
+            "True if the electronic logbook should be enabled", type=bool, default=True
+        ),
+        "elog_hidden": Param(
+            "True if the events sent to the electronic "
+            "logbook should be hidden by default",
             type=bool,
-            default=True,
+            default=False,
+            settable=True,
         ),
         "scripts": Param(
-            "Currently executed scripts",
+            "Stack of currently executed scripts",
+            type=listof(str),
+            settable=True,
+            internal=True,
+            no_sim_restore=True,
+        ),
+        "scriptnames": Param(
+            "Stack of filenames of self.scripts",
             type=listof(str),
             settable=True,
             internal=True,
             no_sim_restore=True,
         ),
         "templates": Param(
-            "Name of the directory with script templates " "(relative to dataroot)",
+            "Name of the directory with script templates (relative to dataroot)",
             type=str,
         ),
         "managerights": Param(
@@ -201,12 +214,12 @@ class Experiment(Device):
             userparam=False,
         ),
         "zipdata": Param(
-            "Whether to zip up experiment data after " "experiment finishes",
+            "Whether to zip up experiment data after experiment finishes",
             type=bool,
             default=True,
         ),
         "sendmail": Param(
-            "Whether to send proposal data via email after " "experiment finishes",
+            "Whether to send proposal data via email after experiment finishes",
             type=bool,
             default=False,
         ),
@@ -232,7 +245,7 @@ class Experiment(Device):
             settable=True,
         ),
         "serviceexp": Param(
-            "Name of proposal to switch to after user " "experiment",
+            "Name of proposal to switch to after user experiment",
             type=nonemptystring,
             default="service",
         ),
@@ -240,7 +253,7 @@ class Experiment(Device):
             "Script to run for service time", type=str, default="", settable=True
         ),
         "strictservice": Param(
-            "Only the configured service experiment is " 'considered "service"',
+            'Only the configured service experiment is considered "service"',
             type=bool,
             default=False,
             settable=False,
@@ -272,7 +285,7 @@ class Experiment(Device):
             settable=True,
         ),
         "counterfile": Param(
-            "Name of the file with data counters in " "dataroot and datapath",
+            "Name of the file with data counters in dataroot and datapath",
             default="counters",
             userparam=False,
             type=subdir,
@@ -284,12 +297,12 @@ class Experiment(Device):
             default="report",
         ),
         "lastscan": Param(
-            "Last used value of the scan counter - " "ONLY for display purposes",
+            "Last used value of the scan counter - ONLY for display purposes",
             type=int,
             internal=True,
         ),
         "lastpoint": Param(
-            "Last used value of the point counter - " "ONLY for display purposes",
+            "Last used value of the point counter - ONLY for display purposes",
             type=int,
             internal=True,
         ),
@@ -462,7 +475,7 @@ class Experiment(Device):
         system for information.
 
         This is not a parameter since it may depend for example on the
-        currently logged in user.
+        currently logged-in user.
         """
         return False
 
@@ -496,7 +509,7 @@ class Experiment(Device):
           of the samples in the `samples` dict
         * users: list of dicts with:
           * name: string
-          * email: string
+          * email: string (optional)
           * affiliation: string (optional)
         * localcontacts: list of dicts, with keys same as users
         * samples: optional list of dicts:
@@ -538,11 +551,12 @@ class Experiment(Device):
             ensureDirectory(_dir, **self.managerights)
 
         # tell elog
-        if self.elog:
-            instname = session._instrument and session.instrument.instrument or ""
-            session.elogEvent(
-                "directory", (newproposalpath, instname, path.basename(newproposalpath))
-            )
+        instname = session._instrument and session.instrument.instrument or ""
+        session.elogEvent(
+            "directory",
+            (newproposalpath, instname, path.basename(newproposalpath)),
+            store=True,
+        )
 
     def doWriteSampledir(self, newsampledir):
         # handle current symlink
@@ -606,6 +620,10 @@ class Experiment(Device):
     #
 
     def doInit(self, mode):
+        # need to keep a local cache to avoid recursing cache calls when
+        # querying
+        self._elog_enabled = self.elog
+
         # check that service proposal is actually resolved as service
         if self.propprefix:
             try:
@@ -628,21 +646,24 @@ class Experiment(Device):
                 'named "Sample", please fix your system '
                 "setup",
             )
-        if self.elog and mode != SIMULATION:
+        if mode != SIMULATION:
             if not self.proposalpath:
                 self.log.warning(
-                    "Proposalpath was not set, initiating a " "service experiment."
+                    "Proposalpath was not set, initiating a service experiment."
                 )
                 self._setROParam("proposalpath", self.proposalpath_of(self.serviceexp))
                 self._setROParam("proptype", "service")
-            ensureDirectory(
-                path.join(self.proposalpath, "logbook"), **self.managerights
+            if self.elog:
+                ensureDirectory(
+                    path.join(self.proposalpath, "logbook"), **self.managerights
+                )
+                self._eloghandler = ELogHandler()
+                # only enable in master mode, see below
+                self._eloghandler.disabled = session.mode != MASTER
+                session.addLogHandler(self._eloghandler)
+            session.elogEvent(
+                "directory", (self.proposalpath, instname, self.proposal), store=True
             )
-            session.elogEvent("directory", (self.proposalpath, instname, self.proposal))
-            self._eloghandler = ELogHandler()
-            # only enable in master mode, see below
-            self._eloghandler.disabled = session.mode != MASTER
-            session.addLogHandler(self._eloghandler)
         if not self.templates:
             self._setROParam(
                 "templates", path.abspath(path.join(config.nicos_root, "template"))
@@ -652,26 +673,13 @@ class Experiment(Device):
         return self.propinfo.get("title", "Unknown")
 
     def doReadUsers(self):
-        res = []
-        for user in self.propinfo.get("users", []):
-            userstr = user["name"]
-            if user.get("affiliation"):
-                userstr += " (%s)" % user["affiliation"]
-            res.append(userstr)
-        return ", ".join(res)
+        return combineUsers(self.propinfo.get("users", []))
 
     def doReadLocalcontact(self):
         if not self.propinfo.get("localcontacts"):
             if session._instrument:
-                return session.instrument.responsible
-
-        res = []
-        for user in self.propinfo.get("localcontacts", []):
-            userstr = user["name"]
-            if user.get("email"):
-                userstr += " <%s>" % user["email"]
-            res.append(userstr)
-        return ", ".join(res)
+                return combineUsers(splitUsers(session.instrument.responsible))
+        return combineUsers(self.propinfo.get("localcontacts", []))
 
     def doUpdateManagerights(self, mrinfo):
         """Check the managerights dict into values used later."""
@@ -690,7 +698,7 @@ class Experiment(Device):
                         lookup(value)
                     except Exception as e:
                         self.log.warning(
-                            "managerights: illegal value for key " "%r: %r (%s)",
+                            "managerights: illegal value for key %r: %r (%s)",
                             key,
                             value,
                             e,
@@ -705,9 +713,12 @@ class Experiment(Device):
             if value is not None and not isinstance(value, int):
                 raise ConfigurationError(
                     self,
-                    "managerights: illegal value for key " "%r: not an integer" % key,
+                    "managerights: illegal value for key %r: not an integer" % key,
                     exc=1,
                 )
+
+    def doUpdateElog(self, on):
+        self._elog_enabled = on
 
     #
     # Experiment handling: New&Finish
@@ -741,7 +752,7 @@ class Experiment(Device):
             if not thd.is_alive():
                 del self._proposal_thds[iproposal]
                 self.log.debug(
-                    "delete reference on closed thread for " "proposal %s", iproposal
+                    "delete reference on closed thread for proposal %s", iproposal
                 )
 
     def hasProposalFinishThreads(self):
@@ -756,7 +767,7 @@ class Experiment(Device):
     def new(self, proposal, title=None, localcontact=None, user=None, **kwds):
         """Called by `.NewExperiment`."""
         if self._mode == SIMULATION:
-            raise UsageError("Simulating switching experiments is not " "supported!")
+            raise UsageError("Simulating switching experiments is not supported!")
 
         try:
             # if proposal can be converted to a number, use the canonical form
@@ -790,22 +801,15 @@ class Experiment(Device):
 
         # note: parameter names are singular for backwards compatibility
         if user:
-            if isinstance(user, list):
-                kwds["users"] = user
-            else:
-                kwds.setdefault("users", []).append({"name": user})
+            kwds["users"] = splitUsers(user)
         if localcontact:
-            if isinstance(localcontact, list):
-                kwds["localcontacts"] = localcontact
-            else:
-                kwds.setdefault("localcontacts", []).append({"name": localcontact})
+            kwds["localcontacts"] = splitUsers(localcontact)
         kwds["proposal"] = proposal
 
-        # check whether or not this proposal is finished - a thread is alive
+        # check whether this proposal is finished - a thread is alive
         if self.isProposalFinishThreadAlive(proposal):
             raise NicosError(
-                "cannot switch to proposal %s as this is "
-                "currently closing." % proposal
+                "cannot switch to proposal %s as this is currently closing." % proposal
             )
 
         # clean up
@@ -836,6 +840,7 @@ class Experiment(Device):
 
         # reset all experiment dependent parameters and values to defaults
         self.remark = ""
+        self.elog_hidden = False
         try:
             self.sample.clear()
         except Exception:
@@ -868,7 +873,7 @@ class Experiment(Device):
         self.proposalpath = self.proposalpath_of(proposal)
         # newSample also (re-)creates all needed dirs
         # TODO: apply more properties from the sample if present
-        self.sample.new({"name": propinfo.get("default_sample", "")})
+        self.sample.new({"samplename": propinfo.get("default_sample", "")})
 
         # debug output
         self.log.info("experiment directory is now %s", self.proposalpath)
@@ -876,7 +881,11 @@ class Experiment(Device):
         self.log.info("data directory is now %s", self.datapath)
 
         # notify logbook
-        session.elogEvent("newexperiment", (proposal, self.title))
+        session.elogEvent(
+            "newexperiment",
+            (proposal, self.title, self.users, self.localcontact),
+            store=True,
+        )
         session.elogEvent("setup", list(session.explicit_setups))
 
         # run hook
@@ -911,11 +920,24 @@ class Experiment(Device):
         """
         propinfo = dict(self.propinfo)
         if title is not None:
-            propinfo["title"] = title
+            try:
+                propinfo["title"] = nonemptystring(title)
+            except ValueError as e:
+                raise ValueError(f"title {e}") from e
         if users is not None:
-            propinfo["users"] = users
+            if isinstance(users, list):
+                users = combineUsers(users)
+            try:
+                propinfo["users"] = splitUsers(nonemptystring(users))
+            except ValueError as e:
+                raise ValueError(f"users {e}") from e
         if localcontacts is not None:
-            propinfo["localcontacts"] = localcontacts
+            if isinstance(localcontacts, list):
+                localcontacts = combineUsers(localcontacts)
+            try:
+                propinfo["localcontacts"] = splitUsers(nonemptystring(localcontacts))
+            except ValueError as e:
+                raise ValueError(f"localcontacts {e}") from e
         self._setROParam("propinfo", propinfo)
         # Update cached values of the volatile parameters
         self._pollParam("title")
@@ -956,7 +978,7 @@ class Experiment(Device):
                     stats = self.propinfo.copy()
                 # start separate thread for zipping and disabling old proposal
                 self.log.debug(
-                    "starting separate thread for zipping and " "disabling proposal"
+                    "starting separate thread for zipping and disabling proposal"
                 )
                 if self.isProposalFinishThreadAlive(self.proposal):
                     self.log.error(
@@ -984,7 +1006,7 @@ class Experiment(Device):
                 thd.join(5)
                 if thd.is_alive():
                     self.log.info(
-                        "continuing finishing of proposal %s in " "background",
+                        "continuing finishing of proposal %s in background",
                         self.proposal,
                     )
                     self._proposal_thds[self.proposal] = thd
@@ -1002,7 +1024,7 @@ class Experiment(Device):
         """returns the content of the requested template"""
         for tmpldir in self.templatepath:
             if path.isfile(path.join(tmpldir, tmplname)):
-                with open(path.join(tmpldir, tmplname), "r", encoding="utf-8") as f:
+                with open(path.join(tmpldir, tmplname), encoding="utf-8") as f:
                     return f.read()
         raise OSError("no such template found")
 
@@ -1026,7 +1048,7 @@ class Experiment(Device):
     def checkTemplates(self, proposal, kwargs):
         """try to fill in all templates to see if some keywords are missing"""
         if self._mode == SIMULATION:
-            return  # dont touch fs if in simulation!
+            return  # don't touch fs if in simulation!
         allmissing = []
         alldefaulted = []
         for fn, content in self.iterTemplates(only_dot_template=True):
@@ -1075,7 +1097,7 @@ class Experiment(Device):
 
     def handleTemplates(self, proposal, kwargs):
         if self._mode == SIMULATION:
-            return  # dont touch fs if in simulation!
+            return  # don't touch fs if in simulation!
         for fn, content in self.iterTemplates(only_dot_template=False):
             istemplate = fn.endswith(".template")
             newfn = fn
@@ -1135,7 +1157,7 @@ class Experiment(Device):
         """Send a mail with the experiment data"""
 
         if self._mode == SIMULATION:
-            return  # dont touch fs if in simulation!
+            return  # don't touch fs if in simulation!
         # check parameters
         if not self.mailserver:
             raise NicosError("%s.mailserver parameter is not set" % self)
@@ -1212,7 +1234,7 @@ class Experiment(Device):
                     )
                 except Exception:
                     self.log.warning(
-                        "moving compressed file into proposal " "dir failed", exc=1
+                        "moving compressed file into proposal dir failed", exc=1
                     )
                     # at least withdraw the access rights
                     os.chmod(pzipfile, self.managerights.get("disableFileMode", 0o400))
@@ -1241,7 +1263,7 @@ class Experiment(Device):
             os.symlink(os.path.basename(self.proposalpath), self.customproposalsymlink)
         except OSError:
             self.log.warning(
-                "creation of custom proposal symlink failed, " "already existing?"
+                "creation of custom proposal symlink failed, already existing?"
             )
 
     @usermethod
@@ -1249,13 +1271,19 @@ class Experiment(Device):
         """Called by `.AddUser`."""
         propinfo = dict(self.propinfo)
         users = list(propinfo.get("users", []))
-        users.append(
-            {
-                "name": name,
-                "email": email or "",
-                "affiliation": affiliation or "",
-            }
-        )
+        user = {"email": "", "affiliation": ""}
+        try:
+            user["name"] = nonemptystring(name)
+        except ValueError as e:
+            raise ValueError(f"name {e}") from e
+        if email is not None:
+            user["email"] = mailaddress(email)
+        if affiliation is not None:
+            try:
+                user["affiliation"] = nonemptystring(affiliation)
+            except ValueError as e:
+                raise ValueError(f"affiliation {e}") from e
+        users.extend(splitUsers(combineUsers([user])))
         propinfo["users"] = users
         self._setROParam("propinfo", propinfo)
         self.log.info('User "%s" added', name)
@@ -1320,6 +1348,9 @@ class Experiment(Device):
         if remark:
             session.elogEvent("remark", remark)
 
+    def doWriteElog_Hidden(self, hidden):
+        session.elogEvent("hidden", hidden, store=True)
+
     @property
     def sample(self):
         return self._attached_sample
@@ -1342,7 +1373,7 @@ class Experiment(Device):
             else:
                 if not isinstance(det, Measurable):
                     self.log.warning(
-                        "cannot use device %r as a " "detector: it is not a Measurable",
+                        "cannot use device %r as a detector: it is not a Measurable",
                         det,
                     )
                     all_created = False
@@ -1361,7 +1392,7 @@ class Experiment(Device):
                 dlist.append(det)
         self.detlist = dlist
         # try to create them right now
-        self.detectors  # pylint: disable=pointless-statement
+        self.detectors  # pylint: disable=pointless-statement # noqa: B018
         session.elogEvent("detectors", dlist)
 
     def doUpdateDetlist(self, detectors):
@@ -1392,8 +1423,7 @@ class Experiment(Device):
             else:
                 if not isinstance(dev, (Readable, DevStatistics)):
                     self.log.warning(
-                        "cannot use device %r as " "environment: it is not a Readable",
-                        dev,
+                        "cannot use device %r as environment: it is not a Readable", dev
                     )
                     all_created = False
                 else:
@@ -1413,7 +1443,7 @@ class Experiment(Device):
                 dlist.append(dev)
         self.envlist = dlist
         # try to create them right now
-        self.sampleenv  # pylint: disable=pointless-statement
+        self.sampleenv  # pylint: disable=pointless-statement # noqa: B018
         session.elogEvent("environment", dlist)
 
     def doUpdateEnvlist(self, devices):
@@ -1508,7 +1538,7 @@ class ImagingExperiment(Experiment):
         self._clearImgPaths()
 
     def newSample(self, parameters):
-        self.sampledir = safeName(parameters.get("name", ""))
+        self.sampledir = safeName(parameters.get("samplename", ""))
         Experiment.newSample(self, parameters)
 
         self.log.debug("new sample path: %s", self.samplepath)

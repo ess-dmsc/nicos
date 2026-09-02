@@ -30,6 +30,7 @@ SAMPLE_FIELDS = [
     "magnetic field",
 ]
 SAMPLE_MAPPINGS = {
+    "name": "samplename",
     "number of": "number_of",
     "mass/volume": "mass_volume",
     "electric field": "electric_field",
@@ -57,7 +58,7 @@ class ProposalSettings:
         self.abort_on_error = abort_on_error
 
     def __eq__(self, other):
-        if (
+        return not (
             self.proposal_id != other.proposal_id
             or self.title != other.title
             or self.users != other.users
@@ -65,9 +66,7 @@ class ProposalSettings:
             or self.notifications != other.notifications
             or self.abort_on_error != other.abort_on_error
             or self.samples != other.samples
-        ):
-            return False
-        return True
+        )
 
 
 class ExpPanel(PanelBase):
@@ -297,7 +296,7 @@ class ExpPanel(PanelBase):
             command = "Exp.new(%s)"
         else:
             command = "Exp.update(%s)"
-        code = command % ", ".join("%s=%r" % i for i in exp_args.items())
+        code = command % ", ".join("{}={!r}".format(*i) for i in exp_args.items())
         self.client.eval(code)
 
     def _set_samples(self):
@@ -309,21 +308,21 @@ class ExpPanel(PanelBase):
 
         samples = {}
         for index, sample in enumerate(self.samples_model.raw_data):
-            if not sample.get("name", ""):
-                sample["name"] = f"sample {index + 1}"
+            if not sample.get("samplename", ""):
+                sample["samplename"] = f"sample {index + 1}"
             samples[index] = sample
         self.client.run(f"Exp.sample.set_samples({dict(samples)})")
 
     def _set_abort_on_error(self):
         abort_on_error = self.new_settings.abort_on_error
         if abort_on_error != self.old_settings.abort_on_error:
-            self.client.run("SetErrorAbort(%s)" % abort_on_error)
+            self.client.run(f"SetErrorAbort({abort_on_error})")
 
     def _set_notification_receivers(self):
         notifications = self.new_settings.notifications
         if notifications != self.old_settings.notifications:
             self.client.run(
-                "SetMailReceivers(%s)" % ", ".join(map(repr, notifications))
+                "SetMailReceivers({})".format(", ".join(map(repr, notifications)))
             )
 
     @pyqtSlot()

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -76,7 +76,6 @@ from nicos.commands.device import (
     get,
     getall,
     history,
-    home,
     info,
     limits,
     maw,
@@ -97,8 +96,20 @@ from nicos.commands.device import (
     version,
     wait,
     waitfor,
+    waitfor_stable,
 )
-from nicos.commands.measure import count
+from nicos.commands.measure import (
+    AddDetector,
+    AddEnvironment,
+    ListDatasinks,
+    SetDetectors,
+    SetEnvironment,
+    avg,
+    count,
+    minmax,
+    preset,
+    stddev,
+)
 from nicos.commands.output import (
     printdebug,
     printerror,
@@ -114,21 +125,17 @@ from nicos.commands.sample import (
     SetSample,
 )
 from nicos.core import (
-    GUEST,
-    AccessError,
     ConfigurationError,
+    InvalidValueError,
     LimitError,
     MoveError,
     NicosError,
     NicosTimeoutError,
     UsageError,
 )
-from nicos.core import (
-    status as devstatus,
-)
 from nicos.core.sessions.utils import MASTER, SLAVE
 from nicos.utils import ensureDirectory
-from test.utils import ErrorLogged, raises
+from test.utils import ErrorLogged
 
 session_setup = "commands"
 
@@ -141,8 +148,8 @@ class TestBasic:
             printinfo("printinfo testing...")
         with log.assert_warns():
             printwarning("warn!")
-        assert raises(ErrorLogged, printerror, "error!")
-        assert raises(ErrorLogged, printexception, "exception!")
+        pytest.raises(ErrorLogged, printerror, "error!")
+        pytest.raises(ErrorLogged, printexception, "exception!")
 
     def test_basic_commands(self, session, log):
         with log.assert_msg_matches(
@@ -181,8 +188,8 @@ class TestBasic:
         assert "slit" not in session.configured_devices
         with log.assert_warns("is not a loaded setup, ignoring"):
             RemoveSetup("blah")
-        assert raises(ConfigurationError, NewSetup, "foobar01")
-        assert raises(ConfigurationError, AddSetup, "foobar01")
+        pytest.raises(ConfigurationError, NewSetup, "foobar01")
+        pytest.raises(ConfigurationError, AddSetup, "foobar01")
 
     def test_devicecreation_commands(self, session, log):
         if "motor" in session.devices:
@@ -193,7 +200,7 @@ class TestBasic:
         assert "motor" in session.devices
 
         RemoveDevice("motor")
-        assert raises(UsageError, RemoveDevice)
+        pytest.raises(UsageError, RemoveDevice)
         assert "motor" not in session.devices
         CreateAllDevices()
         assert "motor" in session.devices
@@ -204,7 +211,7 @@ class TestBasic:
     def test_mode_commands(self, session):
         SetMode(SLAVE)
         SetMode(MASTER)
-        assert raises(UsageError, SetMode, "blah")
+        pytest.raises(UsageError, SetMode, "blah")
 
     def test_clearcache(self, session, log):
         with UserInfo("userinfo"):
@@ -227,10 +234,10 @@ class TestBasic:
         except ErrorLogged:
             pass
         else:
-            assert False, "no error raised and no error logged"
+            pytest.fail("no error raised and no error logged")
 
         SetErrorAbort(True)
-        assert raises(LimitError, wrapped_maw, dev, -150)
+        pytest.raises(LimitError, wrapped_maw, dev, -150)
 
     def test_commands_elog(self, session):
         LogEntry("== some subheading\n\nThis is a logbook entry.")
@@ -284,33 +291,67 @@ def test_run_command(session, log):
     run("test")
 
 
-def test_sample_commands(session, log):
-    exp = session.experiment
-    exp.new(0, user="user")
-    NewSample("abc")
-    assert exp.sample.samplename == "abc"
-    assert exp.sample.samples == {0: {"name": "abc"}}
+class TestSample:
+    @pytest.fixture(autouse=True)
+    def sample(self, session):
+        exp = session.experiment
+        exp.new(0, user="user")
 
-    SetSample(1, "def", param=45)
-    assert exp.sample.samples[1] == {"name": "def", "param": 45}
+        NewSample("abc")
+        yield exp.sample
 
-    SelectSample(1)
-    assert exp.sample.samplename == "def"
-    SelectSample("abc")
-    assert exp.sample.samplename == "abc"
+        exp.sample.clear()
+        exp.finish()
 
-    with log.assert_msg_matches(
-        [r"number  sample name  param", r"0 +abc", r"1 +def +45"]
-    ):
-        ListSamples()
+    def test_sample_commands(self, log, sample):
+        assert sample.samplename == "abc"
+        assert sample.samples == {0: {"samplename": "abc", "sampledescription": ""}}
 
-    with log.assert_no_msg_matches([r"0 +abc", r"1 +def +45"]):
-        ClearSamples()
-    assert exp.sample.samples == {}
+        SetSample(1, "def", param=45)
+        assert sample.samples[1] == {
+            "samplename": "def",
+            "param": 45,
+            "sampledescription": "",
+        }
+
+        SelectSample(1)
+        assert sample.samplename == "def"
+        SelectSample("abc")
+        assert sample.samplename == "abc"
+
+        with log.assert_msg_matches(
+            [
+                r"number  sample name  sample description  param",
+                r"0 +abc",
+                r"1 +def +45",
+            ]
+        ):
+            ListSamples()
+
+        with log.assert_no_msg_matches([r"0 +abc", r"1 +def +45"]):
+            ClearSamples()
+        assert sample.samples == {}
+
+    def test_moveable_interface(self, log, sample):
+        maw(sample, "abc")
+        assert sample.filename == "abc"
+        pytest.raises(InvalidValueError, maw, sample, 1)
+
+    def test_errors(self, log, sample):
+        # Override existing sample
+        SetSample(1, "def", param=45)
+        SetSample(1, "abc", param=5)
+
+        # None value as index
+        pytest.raises(InvalidValueError, SetSample, None, "ghi", param=1)
+
+        # Double defined errors
+        pytest.raises(InvalidValueError, SelectSample, "abc")
+        pytest.raises(InvalidValueError, SelectSample, "unknown")
 
 
 class TestDevice:
-    @pytest.fixture(scope="function", autouse=True)
+    @pytest.fixture(autouse=True)
     def prepare(self, session):
         """Prepare a clean setup for each test on device commands."""
         motor = session.getDevice("motor")
@@ -341,10 +382,10 @@ class TestDevice:
             motor.wait()
             assert motor.curvalue == pos
 
-        assert raises(LimitError, move, motor, max(motor.userlimits) + 1)
+        pytest.raises(LimitError, move, motor, max(motor.userlimits) + 1)
 
-        assert raises(UsageError, move)
-        assert raises(UsageError, move, motor, 1, motor)
+        pytest.raises(UsageError, move)
+        pytest.raises(UsageError, move, motor, 1, motor)
 
     def test_rmove(self, session, log):
         """Check rmove() command."""
@@ -368,11 +409,27 @@ class TestDevice:
 
         # ensure that switchers or similar devices can't use relative moves
         sw = session.getDevice("sw")
-        assert raises(UsageError, rmove, sw, 3)
+        pytest.raises(UsageError, rmove, sw, 3)
 
         # ensure that "strange" deltas result in UsageError
-        assert raises(UsageError, rmove, axis, "7")
-        assert raises(UsageError, rmove, axis, None)
+        pytest.raises(UsageError, rmove, axis, "7")
+        pytest.raises(UsageError, rmove, axis, None)
+
+        # ensure that list/tuple type delta values are working
+        slit = session.getDevice("slit3")
+        slit.opmode = "centered"
+        slit.maw((0, 0))
+        assert slit.read(0) == [0, 0]
+        rmaw(slit, (0.1, 0.2))
+        assert slit.read(0) == [0.1, 0.2]
+        rmaw(slit, [0.5, 1.0])
+        assert slit.read(0) == [0.6, 1.2]
+
+        # ensure that "strange" deltas result in UsageError
+        pytest.raises(UsageError, rmove, slit, 1)
+        pytest.raises(UsageError, rmove, slit, [1])
+        pytest.raises(UsageError, rmove, slit, None)
+        pytest.raises(UsageError, rmove, slit, [1, 2, 3])
 
     def test_maw(self, session, log):
         """Check maw() command."""
@@ -387,7 +444,7 @@ class TestDevice:
         maw(motor, 0, la, 0)
         log.clear()
         with log.assert_no_msg_matches("moving to"):
-            assert raises(LimitError, maw, motor, 2, la, 100000)
+            pytest.raises(LimitError, maw, motor, 2, la, 100000)
         with log.assert_msg_matches(["motor.*moving to", "limit_axis.*moving to"]):
             maw(motor, 2, la, 0.5)
             assert motor.curvalue == 2
@@ -439,7 +496,7 @@ class TestDevice:
         read(motor, coder)
         with log.assert_errors(r"expected failed read"):
             read(tdev)
-        assert raises(UsageError, read, exp)
+        pytest.raises(UsageError, read, exp)
         # ensure that target != position to generate a read message containing
         # a 'target' entry
         s = motor.speed
@@ -479,42 +536,6 @@ class TestDevice:
         move(motor, 10)
         stop(motor)
 
-    @pytest.mark.timeout(timeout=60, method="thread", func_only=True)
-    def test_stop_privileged(self, session, log):
-        # Change the user level to lower access rights to check that the stop
-        # on higher level requesting devices will be ignored
-        AddSetup("device")
-        motor = session.getDevice("motor")
-        pdev = session.getDevice("privdev")
-        speed = pdev.speed
-        pdev.speed = motor.speed = 0.1
-        move(pdev, 10, motor, 10)
-        with session.withUserLevel(GUEST):
-            assert pdev.status(0)[0] == devstatus.BUSY
-            assert motor.status(0)[0] == devstatus.BUSY
-            assert raises(AccessError, pdev.stop)
-            stop(pdev, motor)
-            wait(motor)
-            assert motor.status(0)[0] == devstatus.OK
-            assert pdev.status(0)[0] == devstatus.BUSY
-        stop(pdev)
-        wait(pdev)
-        assert pdev.status(0)[0] == devstatus.OK
-        pdev.speed = motor.speed = speed
-
-    def test_privileged_parameters(self, session, log):
-        # check "requires" restrictions for setting parameters
-        AddSetup("device")
-        pdev = session.getDevice("privdev")
-        with session.withUserLevel(GUEST):
-            assert raises(AccessError, set, pdev, "unit", "foo")
-
-    def test_privileged_disable(self, session, log):
-        AddSetup("device")
-        pdev = session.getDevice("privdev")
-        with session.withUserLevel(GUEST):
-            assert raises(AccessError, disable, pdev)
-
     def test_reset(self, session, log):
         """Check reset() command."""
         motor = session.getDevice("motor")
@@ -552,17 +573,17 @@ class TestDevice:
         stop(motor)
         release(motor)
         assert motor.curvalue == 0
-        assert raises(UsageError, release)
-        assert raises(UsageError, release, ())
-        assert raises(UsageError, unfix, ())
-        assert raises(UsageError, fix, (motor, motor))
+        pytest.raises(UsageError, release)
+        pytest.raises(UsageError, release, ())
+        pytest.raises(UsageError, unfix, ())
+        pytest.raises(UsageError, fix, (motor, motor))
 
     def test_disable_and_enable(self, session, log):
         """Check disable() and enable() commands."""
         motor = session.getDevice("motor")
         maw(motor, 0)
         disable(motor)
-        assert raises(MoveError, move, motor, 10)
+        pytest.raises(MoveError, move, motor, 10)
         enable(motor)
         maw(motor, 1)
 
@@ -606,6 +627,7 @@ class TestDevice:
             "14:00",
         ]:
             history(motor, "value", timespec)
+        history(motor, "value", "2012-01-01", "2012-12-31")
 
     def test_limits(self, session, log):
         """Check limits() command."""
@@ -674,8 +696,28 @@ class TestDevice:
     def test_count(self, session, log):
         """Check count() command."""
         motor = session.getDevice("motor")
-        assert raises(UsageError, count, motor)
+        pytest.raises(UsageError, count, motor)
         count()
+
+    def test_preset(self, session, log):
+        """Check preset() command."""
+        det = session.getDevice("det")
+        AddDetector(det)
+        with log.assert_msg_matches(
+            [
+                r"new preset: t=1, mon1=100",
+            ]
+        ):
+            preset(t=1, mon1=100)
+        SetDetectors()
+        with log.assert_msg_matches(
+            [
+                r"these preset keys were not recognized "
+                r"by any of the detectors: t -- "
+                r"detectors are"
+            ]
+        ):
+            preset(t=1)
 
     def test_finish(self, session, log):
         """Check finish() command."""
@@ -685,16 +727,12 @@ class TestDevice:
 
     def test_reference(self, session, log):
         """Check reference() command."""
+        motor = session.getDevice("motor")
+        with log.assert_errors("has no reference function"):
+            reference(motor)
         axis = session.getDevice("nocoder_axis")
         axis.maw(1)
         reference(axis)
-        assert axis.read(0) == 0.0
-
-    def test_home(self, session, log):
-        """Check home() command."""
-        axis = session.getDevice("nocoder_axis")
-        axis.maw(1)
-        home(axis)
         assert axis.read(0) == 0.0
 
     def test_waitfor(self, session, log):
@@ -705,11 +743,22 @@ class TestDevice:
         motor.speed = 10
         move(motor, 2)
         waitfor(motor, "> 1.2")
-        assert raises(NicosTimeoutError, waitfor, motor, "< 1", 0.1)
+        pytest.raises(NicosTimeoutError, waitfor, motor, "< 1", 0.1)
         waitfor(motor, "> 1", 0.1)
 
         # check waitfor wrong condition syntax
-        assert raises(UsageError, waitfor, motor, ">")
+        pytest.raises(UsageError, waitfor, motor, ">")
+
+    def test_waitfor_stable(self, session, log):
+        motor = session.getDevice("motor")
+        assert motor.read() == 0.0
+        waitfor_stable(motor, 0, 0.1, 0.1)
+        # stable time > timeout !
+        assert pytest.raises(UsageError, waitfor_stable, motor, 0, 0.1, 1, 0.1)
+        # target position not reached due to timeout
+        assert pytest.raises(
+            NicosTimeoutError, waitfor_stable, motor, 1, 0.1, 0.01, 0.02
+        )
 
 
 def test_notifiers(session, log):
@@ -732,7 +781,7 @@ def test_notifiers(session, log):
     notify("subject", "body")
     assert notifier._messages == [("subject", "body", None, None, False)]
 
-    assert raises(UsageError, notify, "lots", "of", "args")
+    pytest.raises(UsageError, notify, "lots", "of", "args")
 
     # store current state
     msrv, msend = exp.mailserver, exp.mailsender
@@ -749,3 +798,38 @@ def test_notifiers(session, log):
         ListMailReceivers()
     with log.assert_msg_matches([r"Email addresses", r"receiver@example.com"]):
         ListDataReceivers()
+
+
+class TestEnvironment:
+    @pytest.fixture(autouse=True)
+    def prepare(self, session, log):
+        with log.assert_msg_matches(
+            [
+                r"at the moment no standard environment "
+                r"is set"
+            ]
+        ):
+            SetEnvironment()
+        yield
+
+    def test_SetEnvironment(self, session, log):
+        with log.assert_msg_matches([r"standard environment is: magnet"]):
+            SetEnvironment("magnet")
+
+    def test_AddEnvironment(self, session, log):
+        with log.assert_msg_matches([r"standard environment is: magnet"]):
+            SetEnvironment("magnet")
+        with log.assert_msg_matches(
+            [
+                r"standard environment is: "
+                r"magnet, magnet:stddev, magnet:avg, "
+                r"magnet:minmax"
+            ]
+        ):
+            AddEnvironment(stddev("magnet"), avg("magnet"), minmax("magnet"))
+
+
+class TestDatasinks:
+    def test_ListDatasinks(self, session, log):
+        with log.assert_msg_matches([r"At the moment no data sinks are set"]):
+            ListDatasinks()

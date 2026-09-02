@@ -367,7 +367,7 @@ class EssExperiment(Experiment):
         for sample in query_result.samples:
             samples.append(
                 {
-                    "name": sample.name,
+                    "samplename": sample.name,
                     "temperature": "0",
                     "electric_field": "0",
                     "magnetic_field": "0",
