@@ -40,7 +40,16 @@ devices = dict(
             "vertical_adjust",
             "mask_changer_rot",
         ],
-        mapping={"Position 0": (0, 0, 176.5)},
+        mapping={
+            "M1 - Scintillator": (-0.1335, 12.3329, 138.1799),
+            "M2 - Pinhole": (-0.1335, 12.3329, 183.1903),
+            "M3 - Horizontal Slit": (-0.1335, 12.3329, 228.1803),
+            "M4 - Vertical Slit": (-0.1335, 12.3329, 273.1803),
+            "M5 - Empty": (-0.1335, 12.3329, 318.1803),
+            "M6 - Crosshair": (-0.1335, 12.3729, 3.1799),
+            "M7 - Mirror": (-0.1335, 12.3729, 48.1799),
+            "M8 - Empty": (-0.1335, 12.3329, 93.1799),
+        },
     ),
     # Temperature Readouts
     mask_changer_temp=device(
