@@ -14,9 +14,12 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.tablemodel import TableModel
 from nicos.utils import findResource
+from nicos_ess.gui.utils import get_icon
 
 USER_SCRIPT = 0
 INSTRUMENT_SCRIPT = 1
+FOLDER_ICON = get_icon("folder_open-24px.svg")
+FILE_ICON = get_icon("document-24px.svg")
 
 
 class FileTableModel(TableModel):
@@ -31,6 +34,22 @@ class FileTableModel(TableModel):
             self._table_data.sort(key=lambda x: x[2], reverse=True)
         self._emit_update()
 
+    def data(self, index, role):
+        row, column = self._get_row_and_column(index)
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+            return self._table_data[row][column]
+
+        if role == Qt.ItemDataRole.DecorationRole and column == 0:
+            # All table data is stored as strings
+            if self._table_data[row][3] == "True":
+                return FOLDER_ICON
+            return FILE_ICON
+
+    def get_row(self, row_index):
+        if row_index < len(self._table_data):
+            return self._table_data[row_index]
+        return None
+        
 
 class RemoteFileDialog(QDialog):
     @classmethod
@@ -48,11 +67,12 @@ class RemoteFileDialog(QDialog):
         self.save = save
         self.admin = admin
         self.is_inst_script = False
+        self.rel_directory = []
 
         # We store the raw modification time but don't show it.
         # When we sort on modification time we use the raw value
         # which is in seconds since 1970.
-        self.table_model = FileTableModel(["Name", "Modified", "Raw modified"])
+        self.table_model = FileTableModel(["Name", "Modified", "Raw modified", "is_dir"])
 
         self.file_table.setModel(self.table_model)
         self.file_table.verticalHeader().setVisible(False)
@@ -64,8 +84,12 @@ class RemoteFileDialog(QDialog):
             QHeaderView.ResizeMode.ResizeToContents,
         )
         self.file_table.setColumnHidden(2, True)
+        self.file_table.setColumnHidden(3, True)
         self.file_table.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.file_table.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection
         )
         self.file_table.setShowGrid(False)
         self.file_table.setSortingEnabled(True)
@@ -104,26 +128,41 @@ class RemoteFileDialog(QDialog):
             self.on_combo_script_type_changed
         )
 
-        self.directory, files_info = self.client.eval(
-            "session.experiment.list_user_scripts_directory()", (None, None)
+        self._update_files_list()
+        self._update_path_controls()
+
+    def _update_files_list(self, directory=""):
+        self.abs_directory, (files_info, directories) = self.client.eval(
+            f"session.experiment.list_user_scripts_directory('{directory}')", (None, None)
         )
         if files_info is None:
             raise RuntimeError("Could not retrieve files from NICOS server")
 
-        self._update_files_list(files_info)
-
-    def _update_files_list(self, files_info):
+        directories.sort()
         files_info.sort(key=lambda x: x[0])
         self.filenames = {x[0] for x in files_info}
 
-        self.table_model.raw_data = [
+        raw_data = [
             {
                 "Name": name,
-                "Modified": time.ctime(modified),
-                "Raw modified": int(modified),
+                "Modified": "",
+                "Raw modified": "",
+                "is_dir": True,
             }
-            for name, modified in files_info
+            for name  in directories
         ]
+
+        for name, modified in files_info:
+            raw_data.append(
+                {
+                    "Name": name,
+                    "Modified": time.ctime(modified),
+                    "Raw modified": int(modified),
+                    "is_dir": False,
+                }
+            )
+
+        self.table_model.raw_data = raw_data
 
         if files_info and not self.save:
             first = self.table_model.index(0, 0)
@@ -142,7 +181,16 @@ class RemoteFileDialog(QDialog):
 
     @pyqtSlot()
     def on_btn_ok_pressed(self):
+        rows = []
+        for row in self.file_table.selectionModel().selectedRows():
+            rows.append(self.table_model.get_row(row.row()))
+
+        assert len(rows) == 1, "not using single selection mode"
+        row = rows[0]
+        print(row)
+
         if self.save:
+            # TODO: save clicked on folder
             filename = self.txt_filename.text().strip()
 
             if filename in self.filenames:
@@ -154,6 +202,16 @@ class RemoteFileDialog(QDialog):
                 rc = QMessageBox.question(self, "Replace File?", message, buttons)
                 if rc == QMessageBox.StandardButton.No:
                     return
+            self.accept()
+
+        # Clicking 'open' on a folder should open the folder.
+        if row[3] == "True":
+            print("Hello")
+            self.rel_directory.append(row[0])
+            path = "/".join(self.rel_directory)
+            self._update_files_list(path)
+            self._update_path_controls()
+            return
 
         self.accept()
 
@@ -162,7 +220,7 @@ class RemoteFileDialog(QDialog):
         self.reject()
 
     def _get_sanitised_filename(self):
-        filename = os.path.join(self.directory, self.txt_filename.text().strip())
+        filename = os.path.join(self.abs_directory, self.txt_filename.text().strip())
         if not filename.endswith(".py"):
             filename += ".py"
         return filename
@@ -172,12 +230,12 @@ class RemoteFileDialog(QDialog):
 
     def on_combo_script_type_changed(self, i):
         if i == USER_SCRIPT:
-            self.directory, files_info = self.client.eval(
+            self.abs_directory, files_info = self.client.eval(
                 "session.experiment.list_user_scripts_directory()", (None, None)
             )
             self.is_inst_script = False
         else:
-            self.directory, files_info = self.client.eval(
+            self.abs_directory, files_info = self.client.eval(
                 "session.experiment.list_instrument_scripts_directory()", (None, None)
             )
             self.is_inst_script = True
@@ -188,9 +246,40 @@ class RemoteFileDialog(QDialog):
         self._update_files_list(files_info)
 
     def on_file_double_clicked(self, index):
+        is_dir = self.table_model.data(
+            self.table_model.index(index.row(), 3),
+            Qt.ItemDataRole.DisplayRole,
+        ) == "True"
         filename = self.table_model.data(
             self.table_model.index(index.row(), 0),
             Qt.ItemDataRole.DisplayRole,
         )
-        self.txt_filename.setText(filename)
-        self.on_btn_ok_pressed()
+
+        if is_dir:
+            self.rel_directory.append(filename)
+            path = "/".join(self.rel_directory)
+            self._update_files_list(path)
+            self._update_path_controls()
+        else:
+            self.txt_filename.setText(filename)
+            self.on_btn_ok_pressed()
+
+    def _update_path_controls(self):
+        path = "/".join(self.rel_directory)
+        if path:
+            self.txt_path.setVisible(True)
+            self.lbl_path.setVisible(True)
+            self.btn_up.setVisible(True)
+
+            self.txt_path.setText(path)
+        else:
+            self.txt_path.setVisible(False)
+            self.lbl_path.setVisible(False)
+            self.btn_up.setVisible(False)
+
+    @pyqtSlot()
+    def on_btn_up_pressed(self):
+        self.rel_directory.pop()
+        path = "/".join(self.rel_directory)
+        self._update_files_list(path)
+        self._update_path_controls()
