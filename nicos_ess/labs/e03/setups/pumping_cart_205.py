@@ -183,8 +183,8 @@ devices = dict(
     pc205_regulation_mode=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Operating mode for regulation",
-        readpv=f"{pv_root}:regulation-mode-s",
-        writepv=f"{pv_root}:regulation-mode-s",
+        readpv=f"{pv_root}regulation-mode-s",
+        writepv=f"{pv_root}regulation-mode-s",
         visibility=(),
     ),
     # ------------------------------------------------------------------
