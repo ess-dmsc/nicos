@@ -193,8 +193,8 @@ devices = dict(
     pc205_sample_mode=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Operating mode for sample",
-        readpv=f"{pv_root}:sample-mode-s",
-        writepv=f"{pv_root}:sample-mode-s",
+        readpv=f"{pv_root}sample-mode-s",
+        writepv=f"{pv_root}sample-mode-s",
         visibility=(),
     ),
 )
