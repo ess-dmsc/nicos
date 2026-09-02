@@ -306,7 +306,10 @@ class EssExperiment(Device):
         """
         instrument = session.instrument.name.lower()
         directory = os.path.join(self.instrument_scripts_directory, instrument)
-        return directory, self._list_directory_files(directory, extension=".py")[0]
+        # Throw away any directories as we don't support directories for
+        # instrument scripts.
+        (files, _) = self._list_directory_files(directory, extension=".py")
+        return directory, (files, [])
 
     def list_user_scripts_directory(self, directory="") -> (str, list[str]):
         """Fetches a list of files in the specified user scripts directory.

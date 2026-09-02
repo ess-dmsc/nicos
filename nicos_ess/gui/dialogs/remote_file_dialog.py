@@ -161,9 +161,15 @@ class RemoteFileDialog(QDialog):
         self._update_path_controls()
 
     def _update_files_list(self, directory=""):
-        self.abs_directory, (files_info, directories) = self.client.eval(
-            f"session.experiment.list_user_scripts_directory('{directory}')", (None, None)
-        )
+        if self.is_inst_script:
+            self.abs_directory, (files_info, directories) = self.client.eval(
+                "session.experiment.list_instrument_scripts_directory()", (None, None)
+            )
+        else:
+            self.abs_directory, (files_info, directories) = self.client.eval(
+                f"session.experiment.list_user_scripts_directory('{directory}')", (None, None)
+            )
+
         if files_info is None:
             raise RuntimeError("Could not retrieve files from NICOS server")
 
@@ -223,6 +229,7 @@ class RemoteFileDialog(QDialog):
             return
 
         row = self.file_table.selectionModel().selectedRows()[0]
+        row = self.table_model.get_row(row.row())
 
         # Clicking 'open' on a folder should open the folder.
         if row[3]:
@@ -248,21 +255,8 @@ class RemoteFileDialog(QDialog):
         return self._get_sanitised_filename()
 
     def on_combo_script_type_changed(self, i):
-        if i == USER_SCRIPT:
-            self.abs_directory, files_info = self.client.eval(
-                "session.experiment.list_user_scripts_directory()", (None, None)
-            )
-            self.is_inst_script = False
-        else:
-            self.abs_directory, files_info = self.client.eval(
-                "session.experiment.list_instrument_scripts_directory()", (None, None)
-            )
-            self.is_inst_script = True
-
-        if files_info is None:
-            raise RuntimeError("Could not retrieve files from NICOS server")
-
-        self._update_files_list(files_info)
+        self.is_inst_script = i != USER_SCRIPT
+        self._update_files_list()
 
     def on_file_double_clicked(self, index):
         is_dir = self.table_model.data(
