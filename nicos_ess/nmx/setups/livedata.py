@@ -5,12 +5,14 @@ devices = dict(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="An nmx livedata channel",
         device_name="monitor1_counts_total",
+        workflow_id="nmx/monitor_histogram/1",
         type="counter",
     ),
     cbm2_counts_total=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="An nmx livedata channel",
         device_name="monitor2_counts_total",
+        workflow_id="nmx/monitor_histogram/1",
         type="counter",
     ),
     livedata_collector=device(
