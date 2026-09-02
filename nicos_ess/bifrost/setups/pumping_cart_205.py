@@ -1,22 +1,22 @@
-description = "Setup for SE-AUX-205 PVs with NICOS mapping."
+description = "Setup for pumping cart 205 (SE-AUX-205)"
 
-pv_root = "SE:SE-AUX-205:"
+pv_root = "se-aux-205:"
 
 devices = dict(
     # ------------------------------------------------------------------
     # Lakeshore temperatures
     # ------------------------------------------------------------------
-    pc205_reg_temp=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Lakeshore temperature channel A (regulator)",
-        readpv=f"{pv_root}TempA-r",
+    pc205_regulation_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Lakeshore temperature channel A (regulation)",
+        readpv=f"{pv_root}tempA-r",
         nexus_config=[
             {
                 "group_name": "pumping_cart_205",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "",
-                "source_name": f"{pv_root}TempA-r",
+                "source_name": f"{pv_root}tempA-r",
                 "schema": "f144",
                 "topic": "bifrost_sample_env",
                 "protocol": "pva",
@@ -26,7 +26,7 @@ devices = dict(
         ],
     ),
     pc205_sample_temp=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Lakeshore temperature channel B (sample)",
         readpv=f"{pv_root}TempB-r",
         nexus_config=[
@@ -44,8 +44,8 @@ devices = dict(
             },
         ],
     ),
-    pc205_lakeshore_temp_c=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+    pc205_channel_c_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Lakeshore temperature channel C",
         readpv=f"{pv_root}TempC-r",
         nexus_config=[
@@ -63,8 +63,8 @@ devices = dict(
             },
         ],
     ),
-    pc205_lakeshore_temp_d=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+    pc205_channel_d_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Lakeshore temperature channel D",
         readpv=f"{pv_root}TempD-r",
         nexus_config=[
@@ -86,8 +86,8 @@ devices = dict(
     # Vacuum transducers on the pumping cart
     # ------------------------------------------------------------------
     pc205_pressure_sensor_1=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Vacuum transducer 1 (pumping cart 205)",
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Vacuum transducer 1",
         readpv=f"{pv_root}P1-r",
         nexus_config=[
             {
@@ -105,8 +105,8 @@ devices = dict(
         ],
     ),
     pc205_pressure_sensor_2=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Vacuum transducer 2 (pumping cart 205)",
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Vacuum transducer 2",
         readpv=f"{pv_root}P2-r",
         nexus_config=[
             {
@@ -126,8 +126,8 @@ devices = dict(
     # ------------------------------------------------------------------
     # Nitrogen level and filling control
     # ------------------------------------------------------------------
-    pc205_ln2_level=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+    pc205_nitrogen_level=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Liquid-nitrogen level",
         readpv=f"{pv_root}LN2-r",
         nexus_config=[
@@ -145,72 +145,58 @@ devices = dict(
             },
         ],
     ),
-    pc205_ln2f_fill_switch=device(
-        "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-        description="Start/stop LN2 fill",
+    pc205_nitrogen_start_fill=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Start LN2 fill",
+        readpv=f"{pv_root}LN2F-Fill-s",
         writepv=f"{pv_root}LN2F-Fill-s",
-        states=["False", "True"],
-        mapping={"False": 0, "True": 1},
+        visibility=(),
     ),
-    pc205_ln2f_auto_switch=device(
-        "nicos_ess.devices.epics.manual_switch.ManualSwitch",
+    pc205_nitrogen_auto_switch=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="LN2 auto-fill on/off",
+        readpv=f"{pv_root}LN2F-Auto-s",
         writepv=f"{pv_root}LN2F-Auto-s",
-        states=["False", "True"],
-        mapping={"False": 0, "True": 1},
+        visibility=(),
     ),
-    pc205_ln2f_state=device(
+    pc205_nitrogen_state=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="State of the LN2 filling state machine",
         readpv=f"{pv_root}LN2F-State-r",
+        visibility=(),
     ),
-    pc205_ln2f_activity=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+    pc205_nitrogen_activity=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="LN2 filling in progress",
-        readpv=f"{pv_root}LN2F-r",
-    ),
-    # ------------------------------------------------------------------
-    # Helium level
-    # ------------------------------------------------------------------
-    pc205_he_level=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Helium level",
-        readpv=f"{pv_root}HE-r",
-        nexus_config=[
-            {
-                "group_name": "pumping_cart_205",
-                "nx_class": "NXcollection",
-                "units": "",
-                "suffix": "",
-                "source_name": f"{pv_root}HE-r",
-                "schema": "f144",
-                "topic": "bifrost_sample_env",
-                "protocol": "pva",
-                "periodic": 1,
-                "dataset_type": "nx_log",
-            },
-        ],
+        readpv=f"{pv_root}LN2F-Filling-r",
     ),
     # ------------------------------------------------------------------
     # Flush cycle
     # ------------------------------------------------------------------
-    pc205_flush_switch=device(
-        "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-        description="Start/stop the Flush cycle",
-        writepv=f"{pv_root}Flush-s",
-        states=["False", "True"],
-        mapping={"False": 0, "True": 1},
-    ),
     pc205_flush_state=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Current state of the Flush state machine",
         readpv=f"{pv_root}Flush-State-r",
+        visibility=(),
     ),
+    # pc205_flush_pressure_target=device(
+    #     "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+    #     description="Pressure target",
+    #     readpv=f"{pv_root}MISSING!!!",
+    #     writepv=f"{pv_root}MISSING!!!",
+    #     visibility=(),
+    # ),
+    # pc205_flush_running=device(
+    #     "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+    #     description="Flush cycle is running",
+    #     readpv=f"{pv_root}MISSING!!!",
+    #     visibility=(),
+    # ),
     # ------------------------------------------------------------------
     # Cold valve
     # ------------------------------------------------------------------
-    pc205_cvalve_position=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+    pc205_c_valve_position=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Cold valve current position",
         readpv=f"{pv_root}CValve-r",
         nexus_config=[
@@ -228,7 +214,7 @@ devices = dict(
             },
         ],
     ),
-    pc205_cvalve_target=device(
+    pc205_c_valve_target=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Cold valve target position",
         readpv=f"{pv_root}CValve-Target-s",
@@ -251,45 +237,19 @@ devices = dict(
         ],
     ),
     # ------------------------------------------------------------------
-    # Pressure-regulator set-point
-    # ------------------------------------------------------------------
-    pc205_p_reg_pressure_setpoint=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="Pressure-regulator pressure set point",
-        readpv=f"{pv_root}PReg-PSP-s",
-        writepv=f"{pv_root}PReg-PSP-s",
-        abslimits=(0, 1100),
-        userlimits=(0, 1100),
-        precision=0.1,
-        nexus_config=[
-            {
-                "group_name": "pumping_cart_205",
-                "nx_class": "NXcollection",
-                "units": "hPa",
-                "suffix": "",
-                "source_name": f"{pv_root}PReg-PSP-s",
-                "schema": "f144",
-                "topic": "bifrost_sample_env",
-                "protocol": "pva",
-                "periodic": 1,
-                "dataset_type": "nx_log",
-            },
-        ],
-    ),
-    # ------------------------------------------------------------------
     # Regulator-heater channels
     # ------------------------------------------------------------------
-    pc205_reg_heater_power=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Regulator heater power (readback)",
-        readpv=f"{pv_root}reg-htr-r",
+    pc205_regulation_heater_power=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Regulation heater power (readback)",
+        readpv=f"{pv_root}regulation-htr-r",
         nexus_config=[
             {
                 "group_name": "pumping_cart_205",
                 "nx_class": "NXcollection",
                 "units": "W",
                 "suffix": "",
-                "source_name": f"{pv_root}reg-htr-r",
+                "source_name": f"{pv_root}regulation-htr-r",
                 "schema": "f144",
                 "topic": "bifrost_sample_env",
                 "protocol": "pva",
@@ -298,28 +258,26 @@ devices = dict(
             },
         ],
     ),
-    pc205_reg_heater_range=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="Regulator heater range",
-        readpv=f"{pv_root}reg-htr_range-s",
-        writepv=f"{pv_root}reg-htr_range-s",
-        abslimits=(0, 100),
-        userlimits=(0, 100),
+    pc205_regulation_heater_range=device(
+        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
+        description="Regulation heater range",
+        readpv=f"{pv_root}regulation-htr_range-s",
+        writepv=f"{pv_root}regulation-htr_range-s",
     ),
-    pc205_reg_heater_setpoint=device(
+    pc205_regulation_temp_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="Regulator heater set point",
-        readpv=f"{pv_root}reg-setpoint-s",
-        writepv=f"{pv_root}reg-setpoint-s",
-        abslimits=(0, 1000),
-        userlimits=(0, 1000),
+        description="Regulation temperature setpoint",
+        readpv=f"{pv_root}regulation-setpoint-s",
+        writepv=f"{pv_root}regulation-setpoint-s",
+        abslimits=(0, 1500),
+        userlimits=(0, 1500),
         nexus_config=[
             {
                 "group_name": "pumping_cart_205",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "",
-                "source_name": f"{pv_root}reg-setpoint-s",
+                "source_name": f"{pv_root}regulation-setpoint-s",
                 "schema": "f144",
                 "topic": "bifrost_sample_env",
                 "protocol": "pva",
@@ -332,7 +290,7 @@ devices = dict(
     # Sample-heater channels
     # ------------------------------------------------------------------
     pc205_sample_heater_power=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Sample heater power (readback)",
         readpv=f"{pv_root}sample-htr-r",
         nexus_config=[
@@ -351,20 +309,20 @@ devices = dict(
         ],
     ),
     pc205_sample_heater_range=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
         description="Sample heater range",
         readpv=f"{pv_root}sample-htr_range-s",
         writepv=f"{pv_root}sample-htr_range-s",
-        abslimits=(0, 100),
-        userlimits=(0, 100),
+        abslimits=(0, 16777216),
+        userlimits=(0, 16777216),
     ),
-    pc205_sample_heater_setpoint=device(
+    pc205_sample_temp_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="Sample heater set point",
+        description="Sample temperature setpoint",
         readpv=f"{pv_root}sample-setpoint-s",
         writepv=f"{pv_root}sample-setpoint-s",
-        abslimits=(0, 1000),
-        userlimits=(0, 1000),
+        abslimits=(0, 1500),
+        userlimits=(0, 1500),
         nexus_config=[
             {
                 "group_name": "pumping_cart_205",
@@ -379,5 +337,46 @@ devices = dict(
                 "dataset_type": "nx_log",
             },
         ],
+    ),
+    # ------------------------------------------------------------------
+    # Loop 1
+    # ------------------------------------------------------------------
+    pc205_regulation_pid_p=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="PID proportional term for control regulation",
+        readpv=f"{pv_root}regulation-pid_p-s",
+        writepv=f"{pv_root}regulation-pid_p-s",
+        visibility=(),
+    ),
+    pc205_regulation_pid_d=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="PID derivative term for control regulation",
+        readpv=f"{pv_root}regulation-pid_d-s",
+        writepv=f"{pv_root}regulation-pid_d-s",
+        visibility=(),
+    ),
+    pc205_regulation_pid_i=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="PID integral term for control regulation",
+        readpv=f"{pv_root}regulation-pid_i-s",
+        writepv=f"{pv_root}regulation-pid_i-s",
+        visibility=(),
+    ),
+    pc205_regulation_mode=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Operating mode for regulation",
+        readpv=f"{pv_root}regulation-mode-s",
+        writepv=f"{pv_root}regulation-mode-s",
+        visibility=(),
+    ),
+    # ------------------------------------------------------------------
+    # Loop 2
+    # ------------------------------------------------------------------
+    pc205_sample_mode=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Operating mode for sample",
+        readpv=f"{pv_root}sample-mode-s",
+        writepv=f"{pv_root}sample-mode-s",
+        visibility=(),
     ),
 )
