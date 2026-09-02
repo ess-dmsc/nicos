@@ -239,6 +239,7 @@ class RemoteFileDialog(QDialog):
             self._update_path_controls()
             return
 
+        self.txt_filename.setText(row[0])
         self.accept()
 
     @pyqtSlot()
