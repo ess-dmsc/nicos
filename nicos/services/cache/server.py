@@ -356,6 +356,9 @@ class CacheServer(Device):
         # server sockets for TCP and UDP
         self._serversocket = None
         self._serversocket_udp = None
+        # set up event to signal that server sockets are ready to accept
+        # connections
+        self._ready_evt = threading.Event()
         # worker connections
         self._connected = {}
         self._attached_db._server = self
@@ -414,6 +417,8 @@ class CacheServer(Device):
             self.log.warning("starting main loop only bound to UDP broadcast")
         else:
             self.log.info("TCP bound to %s:%s", self._boundto[0], self._boundto[1])
+            # signal that server sockets are ready to accept connections
+            self._ready_evt.set()
 
         # now enter main serving loop
         while not self._stoprequest:
