@@ -4,15 +4,16 @@ import time
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
     QAbstractItemView,
+    QAbstractTableModel,
     QDialog,
     QHeaderView,
     QMessageBox,
     QRegularExpression,
     QRegularExpressionValidator,
     Qt,
+    pyqtSignal,
     pyqtSlot,
 )
-from nicos.guisupport.tablemodel import TableModel
 from nicos.utils import findResource
 from nicos_ess.gui.utils import get_icon
 
@@ -22,7 +23,31 @@ FOLDER_ICON = get_icon("folder_open-24px.svg")
 FILE_ICON = get_icon("document-24px.svg")
 
 
-class FileTableModel(TableModel):
+class FileTableModel(QAbstractTableModel):
+    data_updated = pyqtSignal()
+
+    def __init__(self, headers):
+        super().__init__()
+        self._headers = headers
+        self._table_data = []
+
+    def headerData(self, section, orientation, role):
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
+        ):
+            return self._headers[section]
+
+    def columnCount(self, index):
+        return len(self._headers)
+
+    def rowCount(self, index):
+        return len(self._table_data)
+
+    def _emit_update(self):
+        self.layoutChanged.emit()
+        self.data_updated.emit()
+
     def sort(self, column, order):
         if column == 0 and order == Qt.SortOrder.DescendingOrder:
             self._table_data.sort(key=lambda x: x[0])
@@ -35,21 +60,25 @@ class FileTableModel(TableModel):
         self._emit_update()
 
     def data(self, index, role):
-        row, column = self._get_row_and_column(index)
+        row, column = index.row(), index.column()
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return self._table_data[row][column]
 
         if role == Qt.ItemDataRole.DecorationRole and column == 0:
             # All table data is stored as strings
-            if self._table_data[row][3] == "True":
+            if self._table_data[row][3]:
                 return FOLDER_ICON
             return FILE_ICON
 
     def get_row(self, row_index):
-        if row_index < len(self._table_data):
+        if 0 <= row_index < len(self._table_data):
             return self._table_data[row_index]
         return None
-        
+
+    def set_data(self, data):
+        self._table_data = data
+        self._emit_update()
+
 
 class RemoteFileDialog(QDialog):
     @classmethod
@@ -143,54 +172,39 @@ class RemoteFileDialog(QDialog):
         self.filenames = {x[0] for x in files_info}
 
         raw_data = [
-            {
-                "Name": name,
-                "Modified": "",
-                "Raw modified": "",
-                "is_dir": True,
-            }
+            (
+                name,
+                "",
+                "",
+                True,
+            )
             for name  in directories
         ]
 
         for name, modified in files_info:
             raw_data.append(
-                {
-                    "Name": name,
-                    "Modified": time.ctime(modified),
-                    "Raw modified": int(modified),
-                    "is_dir": False,
-                }
+                (
+                    name,
+                    time.ctime(modified),
+                    int(modified),
+                    False,
+                )
             )
 
-        self.table_model.raw_data = raw_data
-
-        if files_info and not self.save:
-            first = self.table_model.index(0, 0)
-            self.file_table.setCurrentIndex(first)
-            self.on_selection_changed(first, None)
+        self.table_model.set_data(raw_data)
+        self.file_table.clearSelection()
 
     def on_selection_changed(self, current, _previous):
-        filename = self.table_model.data(
-            current,
-            Qt.ItemDataRole.DisplayRole,
-        )
-        self.txt_filename.setText(filename)
+        row = self.table_model.get_row(current.row())
+        if row and not row[3]:
+            self.txt_filename.setText(row[0])
 
     def on_filename_changed(self, name):
         self.btn_ok.setEnabled(name.strip() != "")
 
     @pyqtSlot()
     def on_btn_ok_pressed(self):
-        rows = []
-        for row in self.file_table.selectionModel().selectedRows():
-            rows.append(self.table_model.get_row(row.row()))
-
-        assert len(rows) == 1, "not using single selection mode"
-        row = rows[0]
-        print(row)
-
         if self.save:
-            # TODO: save clicked on folder
             filename = self.txt_filename.text().strip()
 
             if filename in self.filenames:
@@ -204,9 +218,14 @@ class RemoteFileDialog(QDialog):
                     return
             self.accept()
 
+        if not self.file_table.selectionModel().selectedRows():
+            # Ignore "open" if nothing selected
+            return
+
+        row = self.file_table.selectionModel().selectedRows()[0]
+
         # Clicking 'open' on a folder should open the folder.
-        if row[3] == "True":
-            print("Hello")
+        if row[3]:
             self.rel_directory.append(row[0])
             path = "/".join(self.rel_directory)
             self._update_files_list(path)
@@ -249,7 +268,7 @@ class RemoteFileDialog(QDialog):
         is_dir = self.table_model.data(
             self.table_model.index(index.row(), 3),
             Qt.ItemDataRole.DisplayRole,
-        ) == "True"
+        )
         filename = self.table_model.data(
             self.table_model.index(index.row(), 0),
             Qt.ItemDataRole.DisplayRole,
