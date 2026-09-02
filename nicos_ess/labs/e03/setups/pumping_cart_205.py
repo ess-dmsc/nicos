@@ -6,9 +6,9 @@ devices = dict(
     # ------------------------------------------------------------------
     # Lakeshore temperatures
     # ------------------------------------------------------------------
-    pc205_regulator_temp=device(
+    pc205_regulation_temp=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
-        description="Lakeshore temperature channel A (regulator)",
+        description="Lakeshore temperature channel A (regulation)",
         readpv=f"{pv_root}tempA-r",
     ),
     pc205_sample_temp=device(
@@ -113,22 +113,22 @@ devices = dict(
     # ------------------------------------------------------------------
     # Regulator-heater channels
     # ------------------------------------------------------------------
-    pc205_regulator_heater_power=device(
+    pc205_regulation_heater_power=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
-        description="Regulator heater power (readback)",
-        readpv=f"{pv_root}reg-htr-r",
+        description="Regulation heater power (readback)",
+        readpv=f"{pv_root}regulation-htr-r",
     ),
-    pc205_regulator_heater_range=device(
+    pc205_regulation_heater_range=device(
         "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
-        description="Regulator heater range",
-        readpv=f"{pv_root}reg-htr_range-s",
-        writepv=f"{pv_root}reg-htr_range-s",
+        description="Regulation heater range",
+        readpv=f"{pv_root}regulation-htr_range-s",
+        writepv=f"{pv_root}regulation-htr_range-s",
     ),
-    pc205_regulator_temp_setpoint=device(
+    pc205_regulation_temp_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="Regulator temperature setpoint",
-        readpv=f"{pv_root}reg-setpoint-s",
-        writepv=f"{pv_root}reg-setpoint-s",
+        description="Regulation temperature setpoint",
+        readpv=f"{pv_root}regulation-setpoint-s",
+        writepv=f"{pv_root}regulation-setpoint-s",
         abslimits=(0, 1500),
         userlimits=(0, 1500),
     ),
@@ -159,48 +159,42 @@ devices = dict(
     # ------------------------------------------------------------------
     # Loop 1
     # ------------------------------------------------------------------
-    pc205_loop_1_pid_p=device(
+    pc205_regulation_pid_p=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="PID proportional term for control loop 1",
-        readpv=f"{pv_root}temp_loop_1-pid_p-s",
-        writepv=f"{pv_root}temp_loop_1-pid_p-s",
+        description="PID proportional term for control regulation",
+        readpv=f"{pv_root}regulation-pid_p-s",
+        writepv=f"{pv_root}regulation-pid_p-s",
         visibility=(),
     ),
-    pc205_loop_1_pid_d=device(
+    pc205_regulation_pid_d=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="PID derivative term for control loop 1",
-        readpv=f"{pv_root}temp_loop_1-pid_d-s",
-        writepv=f"{pv_root}temp_loop_1-pid_d-s",
+        description="PID derivative term for control regulation",
+        readpv=f"{pv_root}regulation-pid_d-s",
+        writepv=f"{pv_root}regulation-pid_d-s",
         visibility=(),
     ),
-    pc205_loop_1_pid_i=device(
+    pc205_regulation_pid_i=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="PID integral term for control loop 1",
-        readpv=f"{pv_root}temp_loop_1-pid_i-s",
-        writepv=f"{pv_root}temp_loop_1-pid_i-s",
+        description="PID integral term for control regulation",
+        readpv=f"{pv_root}regulation-pid_i-s",
+        writepv=f"{pv_root}regulation-pid_i-s",
         visibility=(),
     ),
-    pc205_loop_1_temp_setpoint=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="Closed-loop setpoint for output 1 in kelvin",
-        readpv=f"{pv_root}temp_loop_1-setpoint-s",
-        writepv=f"{pv_root}temp_loop_1-setpoint-s",
-    ),
-    pc205_loop_1_mode=device(
+    pc205_regulation_mode=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="Operating mode for output 1",
-        readpv=f"{pv_root}:temp_loop_1-mode-s",
-        writepv=f"{pv_root}:temp_loop_1-mode-s",
+        description="Operating mode for regulation",
+        readpv=f"{pv_root}:regulation-mode-s",
+        writepv=f"{pv_root}:regulation-mode-s",
         visibility=(),
     ),
     # ------------------------------------------------------------------
     # Loop 2
     # ------------------------------------------------------------------
-    pc205_loop_2_mode=device(
+    pc205_sample_mode=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="Operating mode for output 2",
-        readpv=f"{pv_root}:temp_loop_2-mode-s",
-        writepv=f"{pv_root}:temp_loop_2-mode-s",
+        description="Operating mode for sample",
+        readpv=f"{pv_root}:sample-mode-s",
+        writepv=f"{pv_root}:sample-mode-s",
         visibility=(),
     ),
 )
