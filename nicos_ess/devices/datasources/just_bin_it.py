@@ -196,7 +196,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         "det_range": Param(
             "The detector range to histogram over",
             type=tupleof(int, int),
-            default=(0, 100),
+            default=(1, 100),
             userparam=True,
             settable=True,
         ),
