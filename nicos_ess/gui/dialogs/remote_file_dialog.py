@@ -183,6 +183,7 @@ class RemoteFileDialog(QDialog):
             self.btn_ok.setText("Save")
             self.btn_ok.setEnabled(False)
             self.txt_filename.textChanged.connect(self.on_filename_changed)
+            self.lbl_info.setText("Save file on the NICOS server")
             if name is not None:
                 self.txt_filename.setText(name.strip())
         else:
