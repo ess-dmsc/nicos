@@ -256,7 +256,7 @@ class RemoteFileDialog(QDialog):
     def on_btn_new_folder_pressed(self):
         dialog = NewFolderDialog()
         if dialog.exec():
-            rel_path = os.path.join(*self.rel_directory)
+            rel_path = os.path.join(*self.rel_directory) if self.rel_directory else ""
             path = os.path.join(rel_path, dialog.txt_name.text())
             self.client.eval(
                 f"session.experiment.create_user_script_directory('{path}')", None
