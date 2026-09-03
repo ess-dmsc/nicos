@@ -5,12 +5,17 @@ from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
     QAbstractItemView,
     QAbstractTableModel,
+    QDialogButtonBox,
+    QHBoxLayout,
     QDialog,
     QHeaderView,
+    QLabel,
     QMessageBox,
     QRegularExpression,
     QRegularExpressionValidator,
+    QLineEdit,
     Qt,
+    QVBoxLayout,
     pyqtSignal,
     pyqtSlot,
 )
@@ -22,6 +27,40 @@ INSTRUMENT_SCRIPT = 1
 FOLDER_ICON = get_icon("folder_open-24px.svg")
 FILE_ICON = get_icon("document-24px.svg")
 
+class NewFolderDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Enter Folder Name")
+        self.layout = QVBoxLayout()
+
+        label = QLabel("Enter folder name:")
+        self.txt_name = QLineEdit()
+
+        # Limit what chars are acceptable in a folder
+        self.txt_name.setValidator(
+            QRegularExpressionValidator(QRegularExpression(r"[A-Za-z0-9_-]+"), self)
+        )
+        self.txt_name.textChanged.connect(self.on_name_changed)
+
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(label)
+        hlayout.addWidget(self.txt_name)
+
+        self.button_box = QDialogButtonBox()
+        self.button_box.addButton(QDialogButtonBox.StandardButton.Cancel)
+        self.btn_ok = self.button_box.addButton(QDialogButtonBox.StandardButton.Ok)
+        self.btn_ok.setEnabled(False)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+        self.layout.addItem(hlayout)
+        self.layout.addWidget(self.button_box)
+        self.setLayout(self.layout)
+
+    def on_name_changed(self, name):
+        self.btn_ok.setEnabled(name.strip() != "")
+
+        
 
 class FileTableModel(QAbstractTableModel):
     data_updated = pyqtSignal()
@@ -148,6 +187,7 @@ class RemoteFileDialog(QDialog):
             self.setWindowTitle("Open Script File")
             self.txt_filename.hide()
             self.lbl_name.hide()
+            self.btn_new_folder.hide()
 
         if self.save or not self.admin:
             self.lbl_script_type.hide()
@@ -209,6 +249,17 @@ class RemoteFileDialog(QDialog):
         self.btn_ok.setEnabled(name.strip() != "")
 
     @pyqtSlot()
+    def on_btn_new_folder_pressed(self):
+        dialog = NewFolderDialog()
+        if dialog.exec():
+            rel_path = os.path.join(*self.rel_directory)
+            path = os.path.join(rel_path, dialog.txt_name.text())
+            self.client.eval(
+                f"session.experiment.create_user_script_directory('{path}')", None
+            )
+            self._update_files_list(rel_path)
+
+    @pyqtSlot()
     def on_btn_ok_pressed(self):
         if self.save:
             filename = self.txt_filename.text().strip()
@@ -234,7 +285,7 @@ class RemoteFileDialog(QDialog):
         # Clicking 'open' on a folder should open the folder.
         if row[3]:
             self.rel_directory.append(row[0])
-            path = "/".join(self.rel_directory)
+            path = os.path.join(*self.rel_directory)
             self._update_files_list(path)
             self._update_path_controls()
             return

@@ -351,6 +351,17 @@ class EssExperiment(Device):
             # NOTE: contents are received as bytes, so must be decoded!
             f.write(contents.decode())
 
+    def create_user_script_directory(self, path):
+        """Creates the specified user script directory."""
+        if ".." in path:
+            self.log.error("Relative paths are not allowed when creating directories.")
+            return
+        path = os.path.join(self.user_scripts_directory, path)
+        self.log.error(path)
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
     def _canQueryProposals(self):
         return self._yuos_client is not None
 
