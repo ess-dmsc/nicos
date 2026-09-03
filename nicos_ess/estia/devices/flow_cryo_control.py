@@ -7,13 +7,14 @@ from nicos.core import (
     pvname,
     status,
 )
+from nicos.core.mixins import CanDisable, HasLimits
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsDeviceBase,
     readback_channel,
 )
 
 
-class FlowCryoInput(EpicsDeviceBase, Moveable):
+class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
     """
     Controller device to control one input channel of the flow cryo
     """
@@ -52,7 +53,7 @@ class FlowCryoInput(EpicsDeviceBase, Moveable):
             volatile=True,
         ),
         "abslimits": Override(volatile=True, mandatory=False),
-        "userlimits": Override(volatile=True, chatty=False),
+        "userlimits": Override(volatile=False, chatty=False),
     }
 
     _default_pv_prefix_attr = "pvroot"
@@ -60,9 +61,11 @@ class FlowCryoInput(EpicsDeviceBase, Moveable):
     _connect_channels = ("alarm",)
 
     def doStart(self):
+        # determine ramp setting set by system, then set the pv to that value
         print("starting!")
 
     def doStop(self):
+        # set ramp pv to OFF
         print("stopping")
 
     def doPreinit(self, mode):
@@ -79,6 +82,8 @@ class FlowCryoInput(EpicsDeviceBase, Moveable):
             "alarm": readback_channel(f"Alarm{self.input_pos}-Summary"),
             "highlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.HIGH"),
             "lowlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.LOW"),
+            "hwhighlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.HIHI"),
+            "hwlowlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.LOLO"),
         }
         return epics_channels
 
@@ -86,6 +91,12 @@ class FlowCryoInput(EpicsDeviceBase, Moveable):
     def _compute_status(self, maxage=0):
         msg = self._read_channel_cached("alarm")
         if msg == 0:
-            return status.OK, "No Alarm"
+            return status.OK, " "
         else:
-            return status.OK, "All Good"
+            # TODO: Error Catching to determine where error is coming from
+            return status.ERROR, "ALARM"
+
+    def doReadAbslimits(self):
+        abs_min = self._epics.get_channel_value("hwlowlimit")
+        abs_max = self._epics.get_channel_value("hwhighlimit")
+        return abs_min, abs_max
