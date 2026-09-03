@@ -5,15 +5,15 @@ from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
     QAbstractItemView,
     QAbstractTableModel,
+    QDialog,
     QDialogButtonBox,
     QHBoxLayout,
-    QDialog,
     QHeaderView,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QRegularExpression,
     QRegularExpressionValidator,
-    QLineEdit,
     Qt,
     QVBoxLayout,
     pyqtSignal,
@@ -26,6 +26,7 @@ USER_SCRIPT = 0
 INSTRUMENT_SCRIPT = 1
 FOLDER_ICON = get_icon("folder_open-24px.svg")
 FILE_ICON = get_icon("document-24px.svg")
+
 
 class NewFolderDialog(QDialog):
     def __init__(self):
@@ -60,7 +61,6 @@ class NewFolderDialog(QDialog):
     def on_name_changed(self, name):
         self.btn_ok.setEnabled(name.strip() != "")
 
-        
 
 class FileTableModel(QAbstractTableModel):
     data_updated = pyqtSignal()
@@ -140,7 +140,9 @@ class RemoteFileDialog(QDialog):
         # We store the raw modification time but don't show it.
         # When we sort on modification time we use the raw value
         # which is in seconds since 1970.
-        self.table_model = FileTableModel(["Name", "Modified", "Raw modified", "is_dir"])
+        self.table_model = FileTableModel(
+            ["Name", "Modified", "Raw modified", "is_dir"]
+        )
 
         self.file_table.setModel(self.table_model)
         self.file_table.verticalHeader().setVisible(False)
@@ -207,7 +209,8 @@ class RemoteFileDialog(QDialog):
             )
         else:
             self.abs_directory, (files_info, directories) = self.client.eval(
-                f"session.experiment.list_user_scripts_directory('{directory}')", (None, None)
+                f"session.experiment.list_user_scripts_directory('{directory}')",
+                (None, None),
             )
 
         if files_info is None:
@@ -224,7 +227,7 @@ class RemoteFileDialog(QDialog):
                 "",
                 True,
             )
-            for name  in directories
+            for name in directories
         ]
 
         for name, modified in files_info:
@@ -238,7 +241,8 @@ class RemoteFileDialog(QDialog):
             )
 
         self.table_model.set_data(raw_data)
-        self.file_table.clearSelection()
+        if len(files_info):
+            self.file_table.clearSelection()
 
     def on_selection_changed(self, current, _previous):
         row = self.table_model.get_row(current.row())
