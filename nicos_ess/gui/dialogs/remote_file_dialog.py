@@ -167,7 +167,7 @@ class RemoteFileDialog(QDialog):
 
         self.btn_ok.setDefault(True)
 
-        self.file_table.selectionModel().currentRowChanged.connect(
+        self.file_table.selectionModel().selectionChanged.connect(
             self.on_selection_changed
         )
 
@@ -246,7 +246,11 @@ class RemoteFileDialog(QDialog):
             self.file_table.clearSelection()
 
     def on_selection_changed(self, current, _previous):
-        row = self.table_model.get_row(current.row())
+        if len(current.indexes()) == 0:
+            return
+        # Only one row can be selected at a time.
+        current_row = current.indexes()[0].row()
+        row = self.table_model.get_row(current_row)
         if row and not row[3]:
             self.txt_filename.setText(row[0])
 
