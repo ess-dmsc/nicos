@@ -306,7 +306,7 @@ class EssExperiment(Device):
         """
         instrument = session.instrument.name.lower()
         directory = os.path.join(self.instrument_scripts_directory, instrument)
-        # Throw away any directories as we don't support directories for
+        # Ignore any directories as we don't support directories for
         # instrument scripts.
         (files, _) = self._list_directory_files(directory, extension=".py")
         return directory, (files, [])
@@ -357,7 +357,6 @@ class EssExperiment(Device):
             self.log.error("Relative paths are not allowed when creating directories.")
             return
         path = os.path.join(self.user_scripts_directory, path)
-        self.log.error(path)
 
         if not os.path.exists(path):
             os.makedirs(path)
