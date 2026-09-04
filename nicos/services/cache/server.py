@@ -38,7 +38,8 @@ import queue
 import select
 import socket
 import threading
-from time import sleep, time as currenttime
+from time import sleep
+from time import time as currenttime
 
 from nicos import config, session
 from nicos.core import Attach, Device, Param, host
@@ -97,14 +98,14 @@ class CacheWorker:
         self.start_sender(name)
 
         # start receiver thread
-        self.receiver = createThread("receiver %s" % name, self._receiver_thread)
+        self.receiver = createThread("receiver %s" % name, self._receiver_thread)  # noqa: UP031 upstream
 
     def start_sender(self, name):
         self.send_queue = queue.Queue()
-        self.sender = createThread("sender %s" % name, self._sender_thread)
+        self.sender = createThread("sender %s" % name, self._sender_thread)  # noqa: UP031 upstream
 
     def __str__(self):
-        return "worker(%s)" % self.name
+        return "worker(%s)" % self.name  # noqa: UP031 upstream
 
     def is_active(self):
         return not self.stoprequest and self.receiver.is_alive()
@@ -269,7 +270,7 @@ class CacheWorker:
                 if not time:
                     time = currenttime()
                 # self.log.debug('sending update of %s to %s', key, value)
-                if ttl is not None:
+                if ttl is not None:  # noqa: SIM108 upstream
                     msg = f"{time}+{ttl}@{key}{op}{value}\n"
                 else:
                     msg = f"{time}@{key}{op}{value}\n"
@@ -356,6 +357,9 @@ class CacheServer(Device):
         # server sockets for TCP and UDP
         self._serversocket = None
         self._serversocket_udp = None
+        # set up event to signal that server sockets are ready to accept
+        # connections
+        self._ready_evt = threading.Event()
         # worker connections
         self._connected = {}
         self._attached_db._server = self
@@ -414,6 +418,8 @@ class CacheServer(Device):
             self.log.warning("starting main loop only bound to UDP broadcast")
         else:
             self.log.info("TCP bound to %s:%s", self._boundto[0], self._boundto[1])
+            # signal that server sockets are ready to accept connections
+            self._ready_evt.set()
 
         # now enter main serving loop
         while not self._stoprequest:
@@ -445,7 +451,7 @@ class CacheServer(Device):
                 if self._serversocket in res[0]:
                     # TCP connection came in
                     conn, addr = self._serversocket.accept()
-                    addr = "tcp://%s:%d" % addr
+                    addr = "tcp://%s:%d" % addr  # noqa: UP031 upstream
                     self.log.info("new connection from %s", addr)
                     self._connected[addr] = CacheWorker(
                         self._attached_db, conn, name=addr, loglevel=self.loglevel
@@ -453,7 +459,7 @@ class CacheServer(Device):
                 elif self._serversocket_udp in res[0]:
                     # UDP data came in
                     data, addr = self._serversocket_udp.recvfrom(3072)
-                    nice_addr = "udp://%s:%d" % addr
+                    nice_addr = "udp://%s:%d" % addr  # noqa: UP031 upstream
                     self.log.info("new connection from %s", nice_addr)
                     self._connected[nice_addr] = CacheUDPWorker(
                         self._attached_db,
