@@ -102,6 +102,7 @@
     <file alias="check_circle_green">material/icons/check_circle_green-24px.svg</file>
     <file alias="cut">material/icons/cut-24px.svg</file>
     <file alias="device_unknown">material/icons/device_unknown-24px.svg</file>
+    <file alias="document">material/icons/document-24px.svg</file>
     <file alias="done">material/icons/done-24px.svg</file>
     <file alias="edit">material/icons/edit-24px.svg</file>
     <file alias="eject">material/icons/eject-24px.svg</file>
