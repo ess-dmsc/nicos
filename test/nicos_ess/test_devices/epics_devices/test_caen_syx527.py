@@ -12,20 +12,9 @@ SOURCES = {
     "module02": "SIM:HVM-101:Ch01",
 }
 
-STATUS_BITS = {
-    "ON": 0,
-    "RU": 1,
-    "RD": 2,
-    "OC": 3,
-    "OV": 4,
-    "UV": 5,
-    "ET": 6,
-    "MV": 7,
-    "ED": 8,
-    "IT": 9,
-    "CE": 10,
-    "UN": 11,
-}
+# Only the state bits are monitored; every fault bit is summarised by the
+# IOC's -Status-Alarm record.
+STATUS_BITS = {"ON": 0, "RU": 1, "RD": 2}
 
 MONITORED_SUFFIXES = (
     "-VMon",
@@ -33,6 +22,7 @@ MONITORED_SUFFIXES = (
     "-IMon",
     "-I0Set-RB",
     "-Pw-RB",
+    "-Status-Alarm",
     *(f"-Status-{record}" for record in STATUS_BITS),
 )
 
@@ -50,6 +40,7 @@ def power_supply_backend(fake_backend):
         fake_backend.values[f"{source}-Pw-RB"] = 0
         for record in STATUS_BITS:
             fake_backend.values[f"{source}-Status-{record}"] = 0
+        fake_backend.values[f"{source}-Status-Alarm"] = 0
         fake_backend.units[f"{source}-VMon"] = "V"
         fake_backend.units[f"{source}-V0Set-RB"] = "V"
         fake_backend.units[f"{source}-V0Set"] = "V"
@@ -87,6 +78,10 @@ def emit_status_word(backend, source, word):
         backend.emit_update(f"{source}-Status-{record}", value=(word >> bit) & 1)
 
 
+def emit_fault(backend, source, on=True):
+    backend.emit_update(f"{source}-Status-Alarm", value=int(on))
+
+
 def emit_powered(backend, source, on=True):
     backend.emit_update(f"{source}-Pw-RB", value=int(on))
     emit_status_word(backend, source, int(on))
@@ -107,7 +102,11 @@ def test_group_uses_live_readback_and_status_pvs_with_epics_units(
     assert f"{SOURCES['module01']}-I0Set-RB" in subscribed_pvs
     assert f"{SOURCES['module01']}-Pw-RB" in subscribed_pvs
     assert f"{SOURCES['module01']}-Status-ON" in subscribed_pvs
+    assert f"{SOURCES['module01']}-Status-Alarm" in subscribed_pvs
     assert f"{SOURCES['module01']}-Status" not in subscribed_pvs
+    # the individual fault bits are left to the IOC screens
+    assert f"{SOURCES['module01']}-Status-OC" not in subscribed_pvs
+    assert f"{SOURCES['module01']}-Status-UV" not in subscribed_pvs
     startup_pvs = set(power_supply_backend.connect_calls)
     assert f"{SOURCES['module01']}-VMon" in startup_pvs
     assert f"{SOURCES['module01']}-Pw-RB" not in startup_pvs
@@ -124,7 +123,23 @@ def test_initial_status_waits_for_complete_monitor_snapshot(
 
     assert daemon_device.status() == (
         status.UNKNOWN,
-        "waiting for EPICS channel data",
+        f"waiting for EPICS data from {len(MONITORED_SUFFIXES) * len(SOURCES)} of "
+        f"{len(MONITORED_SUFFIXES) * len(SOURCES)} PVs",
+    )
+
+
+def test_status_reports_how_many_pvs_are_still_missing(
+    device_harness, power_supply_backend
+):
+    daemon_device, _poller_device = create_group(device_harness)
+    for source in SOURCES.values():
+        for suffix in MONITORED_SUFFIXES[:-1]:
+            power_supply_backend.emit_update(f"{source}{suffix}")
+
+    total = len(MONITORED_SUFFIXES) * len(SOURCES)
+    assert daemon_device.status() == (
+        status.UNKNOWN,
+        f"waiting for EPICS data from {len(SOURCES)} of {total} PVs",
     )
 
 
@@ -313,11 +328,73 @@ def test_current_changes_are_not_movement_but_current_alarms_affect_status(
     )
 
 
-def test_cached_status_uses_the_atomic_monitor_snapshot(
+def test_daemon_startup_does_not_clobber_the_live_poller_status(
+    device_harness, power_supply_backend
+):
+    config = {"sources": SOURCES, "precision": 1.0, "monitor": True, "pva": True}
+    poller_device = device_harness.create_poller(
+        CaenSyx527ChannelGroup, name="power_group", **config
+    )
+    emit_snapshot(power_supply_backend)
+    assert poller_device.status() == (status.DISABLED, "output disabled")
+
+    # A daemon restart re-creates the device while the poller keeps running.
+    # It never subscribes, so it reads what the poller cached rather than
+    # publishing a view of its own, and does so without going to the IOCs.
+    power_supply_backend.get_calls.clear()
+    daemon_device = device_harness.create_daemon(
+        CaenSyx527ChannelGroup, name="power_group", **config
+    )
+
+    assert daemon_device.status() == (status.DISABLED, "output disabled")
+    assert [
+        call for call in power_supply_backend.get_calls if call[0] != "get_units"
+    ] == []
+
+
+def test_status_is_republished_only_when_it_changes(
     device_harness, power_supply_backend
 ):
     _daemon_device, poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
+
+    def status_writes():
+        return len(
+            poller_device._cache.history(
+                poller_device._name, "status", 0, time.time() + 1
+            )
+        )
+
+    before = status_writes()
+    power_supply_backend.emit_update(f"{SOURCES['module01']}-VMon", value=0.23)
+    assert status_writes() == before
+
+    emit_fault(power_supply_backend, SOURCES["module01"])
+    assert status_writes() == before + 1
+
+
+def test_volatile_current_parameters_read_the_iocs(
+    device_harness, power_supply_backend
+):
+    daemon_device, _poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    power_supply_backend.get_calls.clear()
+
+    # No monitor update for this one: only a direct read can see it.
+    power_supply_backend.values[f"{SOURCES['module01']}-IMon"] = 0.5
+
+    assert daemon_device.currents == (0.5, 0.1)
+    assert [call[1] for call in power_supply_backend.get_calls] == [
+        f"{source}-IMon" for source in SOURCES.values()
+    ]
+
+
+def test_monitor_status_is_derived_from_the_shared_cache(
+    device_harness, power_supply_backend
+):
+    _daemon_device, poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    assert poller_device._compute_status(None) == (status.DISABLED, "output disabled")
 
     poller_device._cache.put(
         poller_device._name,
@@ -326,11 +403,24 @@ def test_cached_status_uses_the_atomic_monitor_snapshot(
         time.time(),
     )
 
-    assert poller_device._status_words["module01"] == 0
     assert poller_device._compute_status(None) == (
-        status.DISABLED,
-        "output disabled",
+        status.BUSY,
+        "waiting for outputs to disable",
     )
+
+
+def test_daemon_and_poller_compute_the_same_status(
+    device_harness, power_supply_backend
+):
+    daemon_device, poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    power_supply_backend.get_calls.clear()
+
+    assert daemon_device._compute_status(None) == poller_device._compute_status(None)
+
+    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-Alarm", value=1)
+    assert daemon_device._compute_status(None) == poller_device._compute_status(None)
+    assert power_supply_backend.get_calls == []
 
 
 def test_explicit_daemon_poll_still_reads_hardware(
@@ -554,30 +644,32 @@ def test_status_update_recomputes_from_monitors_without_direct_epics_gets(
     emit_snapshot(power_supply_backend)
     power_supply_backend.get_calls.clear()
 
-    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-OC", value=1)
+    emit_fault(power_supply_backend, SOURCES["module02"])
 
     assert power_supply_backend.get_calls == []
     assert daemon_device.status() == (
         status.ERROR,
-        "output disabled; module02: over current",
+        "output disabled; module02: alarm",
     )
 
 
-@pytest.mark.parametrize(
-    ("record", "message"),
-    [("UV", "under voltage"), ("ED", "externally disabled")],
-)
-def test_decoded_warning_is_reported_with_its_channel(
-    device_harness, power_supply_backend, record, message
-):
+def test_alarm_summary_is_reported_per_channel(device_harness, power_supply_backend):
     daemon_device, _poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
 
-    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-{record}", value=1)
+    for source in SOURCES.values():
+        emit_fault(power_supply_backend, source)
 
     assert daemon_device.status() == (
-        status.WARN,
-        f"output disabled; module02: {message}",
+        status.ERROR,
+        "output disabled; module01: alarm; module02: alarm",
+    )
+
+    emit_fault(power_supply_backend, SOURCES["module01"], on=False)
+
+    assert daemon_device.status() == (
+        status.ERROR,
+        "output disabled; module02: alarm",
     )
 
 
@@ -594,14 +686,14 @@ def test_reconnect_reuses_the_last_complete_monitor_snapshot(
     daemon_device, _poller_device = create_group(device_harness)
     emit_snapshot(power_supply_backend)
 
-    power_supply_backend.emit_connection(f"{SOURCES['module02']}-Status-OC", False)
+    power_supply_backend.emit_connection(f"{SOURCES['module02']}-Status-Alarm", False)
     assert daemon_device.status() == (
         status.UNKNOWN,
         "lost connection to EPICS",
     )
 
-    power_supply_backend.emit_connection(f"{SOURCES['module02']}-Status-OC", True)
+    power_supply_backend.emit_connection(f"{SOURCES['module02']}-Status-Alarm", True)
     assert daemon_device.status() == (status.DISABLED, "output disabled")
 
-    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-OC")
+    power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-Alarm")
     assert daemon_device.status() == (status.DISABLED, "output disabled")

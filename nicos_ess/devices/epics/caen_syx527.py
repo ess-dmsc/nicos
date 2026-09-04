@@ -28,26 +28,44 @@ from nicos_ess.devices.epics.pva.epics_common import (
 from nicos_ess.devices.epics.pva.epics_multisource import EpicsMultiSourceBase
 from nicos_ess.devices.mixins import EventDrivenCanDisable
 
-_STATUS_CHANNELS = {
-    "status_on": (0, "-Status-ON"),
-    "status_ramping_up": (1, "-Status-RU"),
-    "status_ramping_down": (2, "-Status-RD"),
-    "status_over_current": (3, "-Status-OC"),
-    "status_over_voltage": (4, "-Status-OV"),
-    "status_under_voltage": (5, "-Status-UV"),
-    "status_external_trip": (6, "-Status-ET"),
-    "status_max_voltage": (7, "-Status-MV"),
-    "status_external_disable": (8, "-Status-ED"),
-    "status_internal_trip": (9, "-Status-IT"),
-    "status_calibration_error": (10, "-Status-CE"),
-    "status_unplugged": (11, "-Status-UN"),
+# Status bits driving the group's power and movement state.
+_STATE_SUFFIXES = {
+    "status_on": "-Status-ON",
+    "status_ramping_up": "-Status-RU",
+    "status_ramping_down": "-Status-RD",
+}
+
+# Channels the group status is computed from, one boolean per supply channel.
+# "-Status-Alarm" is the IOC's OR of every per-channel fault bit (over
+# current, over/under voltage, trips, calibration error, unplugged, ...), so
+# the group monitors the summary and leaves the individual bits to the IOC
+# screens.
+_FLAG_CHANNELS = ("power_readback", "status_alarm", *_STATE_SUFFIXES)
+
+# Channels whose per-channel values are published as one group cache key.
+_GROUP_VALUES = {
+    "voltage": "value",
+    "setpoint": "target",
+    "current": "currents",
+    "current_limit": "current_limits",
 }
 
 
 class CaenSyx527ChannelGroup(
     EpicsMultiSourceBase, EventDrivenCanDisable, HasPrecision, Moveable
 ):
-    """A group of CAEN SYx527 channels operated as one NICOS device."""
+    """A group of CAEN SYx527 channels operated as one NICOS device.
+
+    The channels are powered on and off together and report one status for the
+    whole group. Value and target hold one entry per channel, ordered as the
+    ``sources`` mapping declares them.
+
+    Monitor updates land in the NICOS cache and the status is derived from
+    there: ``maxage=None`` reads the cached per-channel values, any other
+    maxage reads the IOCs, so ``status(0)`` reports what the hardware says
+    right now. No channel state is kept on the device object, so every session
+    computes the same status.
+    """
 
     parameters = {
         "currents": Param(
@@ -91,31 +109,30 @@ class CaenSyx527ChannelGroup(
         "current_limit_command": command_channel("-I0Set"),
         "power_readback": readback_channel("-Pw-RB", connect_on_startup=False),
         "power": command_channel("-Pw"),
+        "status_alarm": status_channel(
+            "-Status-Alarm", refresh_status=False, connect_on_startup=False
+        ),
         **{
             channel: status_channel(
                 suffix, refresh_status=False, connect_on_startup=False
             )
-            for channel, (_bit, suffix) in _STATUS_CHANNELS.items()
+            for channel, suffix in _STATE_SUFFIXES.items()
         },
-    }
-
-    _warning_bits = {
-        5: "under voltage",
-        8: "externally disabled",
-    }
-    _error_bits = {
-        3: "over current",
-        4: "over voltage",
-        6: "external trip",
-        7: "maximum voltage",
-        9: "internal trip",
-        10: "calibration error",
-        11: "unplugged",
     }
 
     errorstates = {**Moveable.errorstates, status.UNKNOWN: MoveError}
 
     def init(self):
+        """Give this instance its own ``currents``/``current_limits`` Params.
+
+        Their type depends on the number of sources and ``doPreinit`` fills in
+        their unit from the IOC, so both must be per-instance rather than the
+        class-level Param objects shared by every instance. NICOS validates
+        against ``self.parameters`` at runtime, so the copies have to be
+        installed before ``Device.init`` initialises any parameter.
+        ``self.sources`` is not usable this early: its getter needs
+        ``self._cache``, which ``Device.init`` is about to set.
+        """
         source_count = len(self._config.get("sources", ()))
         current_type = (
             float
@@ -145,16 +162,14 @@ class CaenSyx527ChannelGroup(
             if len(self._source_ids) == 1
             else tupleof(*(float for _ in self._source_ids))
         )
-        self._seen_updates = set()
-        self._voltages = {}
-        self._setpoints = {}
-        self._currents = {}
-        self._current_limits = {}
-        self._power_states = {}
-        self._status_words = {}
-        self._alarm_states = {}
-        self._last_status_signature = None
         super().doPreinit(mode)
+        self._subscribed_keys = [
+            self._epics.source_key(source_id, channel)
+            for source_id in self._source_ids
+            for channel, info in self._epics_channels.items()
+            if info.subscribe
+        ]
+        self._cache_complete = False
 
         if mode != SIMULATION:
             voltage_units = self._units_for("voltage", "setpoint", "setpoint_command")
@@ -189,18 +204,44 @@ class CaenSyx527ChannelGroup(
             return (float(value),)
         return tuple(value)
 
-    def _as_value(self, values):
-        ordered = tuple(values[source_id] for source_id in self._source_ids)
+    def _group_value(self, per_source):
+        ordered = tuple(per_source[source_id] for source_id in self._source_ids)
         return ordered[0] if len(ordered) == 1 else ordered
 
-    def _all_monitors_seen(self):
-        subscribed = sum(info.subscribe for info in self._epics_channels.values())
-        return len(self._seen_updates) == len(self.sources) * subscribed
+    def _pending_updates(self):
+        """Return (pending, total) subscribed PVs with nothing cached yet.
+
+        Reading a channel that has never reported falls back to a blocking IOC
+        get, so the monitor path waits until the cache is complete. Entries do
+        not disappear once written, so the check latches when it is satisfied
+        rather than sweeping every key on every update.
+        """
+        total = len(self._subscribed_keys)
+        if self._cache_complete:
+            return 0, total
+        pending = sum(
+            self._cache.get(self._name, key, Ellipsis) is Ellipsis
+            for key in self._subscribed_keys
+        )
+        self._cache_complete = not pending
+        return pending, total
 
     def _after_subscribe(self, mode):
         super()._after_subscribe(mode)
         if mode != SIMULATION and self.monitor and self._cache is not None:
             self._refresh_status(time.time())
+
+    def _refresh_status(self, ts):
+        """Publish the group status when it differs from what the cache holds.
+
+        Every update of every subscribed PV lands here, far more often than the
+        group status changes, and each publish is a cache write seen by every
+        client. Reading the cache back also republishes a status that someone
+        else invalidated.
+        """
+        snapshot = self._status_snapshot(maxage=None)
+        if snapshot != self._cache.get(self._name, "status"):
+            self._cache.put(self._name, "status", snapshot, ts)
 
     def _voltages_are_off(self, voltage):
         threshold = self.voltage_off_threshold
@@ -210,111 +251,52 @@ class CaenSyx527ChannelGroup(
 
     def _on_channel_update(self, update):
         timestamp = time.time()
-        key = update.source_id, update.channel
-        self._seen_updates.add(key)
-        self._alarm_states[key] = update.severity, update.message
-
-        if update.channel == "voltage":
-            self._voltages[update.source_id] = float(update.value)
-        elif update.channel == "setpoint":
-            self._setpoints[update.source_id] = float(update.value)
-        elif update.channel == "current":
-            self._currents[update.source_id] = float(update.value)
-        elif update.channel == "current_limit":
-            self._current_limits[update.source_id] = float(update.value)
-        elif update.channel == "power_readback":
-            self._power_states[update.source_id] = bool(int(update.value))
-        elif update.channel in _STATUS_CHANNELS:
-            bit, _suffix = _STATUS_CHANNELS[update.channel]
-            mask = 1 << bit
-            word = self._status_words.get(update.source_id, 0)
-            if int(update.value):
-                word |= mask
-            else:
-                word &= ~mask
-            self._status_words[update.source_id] = word
-
         super()._on_channel_update(update)
 
-        if len(self._voltages) == len(self.sources):
-            self._cache.put(
-                self._name, "value", self._as_value(self._voltages), timestamp
-            )
-        if len(self._setpoints) == len(self.sources):
-            self._cache.put(
-                self._name, "target", self._as_value(self._setpoints), timestamp
-            )
-        if len(self._currents) == len(self.sources):
-            self._cache.put(
-                self._name, "currents", self._as_value(self._currents), timestamp
-            )
-        if len(self._current_limits) == len(self.sources):
+        cache_key = _GROUP_VALUES.get(update.channel)
+        if cache_key and not self._pending_updates()[0]:
             self._cache.put(
                 self._name,
-                "current_limits",
-                self._as_value(self._current_limits),
+                cache_key,
+                self._group_value(self._read_values(update.channel, None)),
                 timestamp,
             )
-
-        signature = self._status_signature()
-        if signature is not None and signature != self._last_status_signature:
-            self._last_status_signature = signature
-            self._refresh_status(timestamp)
-
-    def _on_connection_change(self, change):
-        super()._on_connection_change(change)
-        if not change.is_connected:
-            self._last_status_signature = None
-
-    def _status_signature(self):
-        if not self._all_monitors_seen():
-            return None
-        powered = all(word & 1 for word in self._status_words.values())
-        at_target = powered and self.doIsAtTarget(
-            self._as_value(self._voltages), self._as_value(self._setpoints)
-        )
-        voltages_are_off = self._voltages_are_off(self._as_value(self._voltages))
-        return (
-            tuple(self._status_words.items()),
-            tuple(self._power_states.items()),
-            tuple(self._alarm_states.items()),
-            at_target,
-            voltages_are_off,
-        )
+        self._refresh_status(timestamp)
 
     def _read_values(self, channel, maxage):
+        """Per-channel values for the value and status paths."""
         return {
             source_id: float(self._read_source(source_id, channel, maxage))
             for source_id in self._source_ids
         }
 
-    def _read_status_words(self, maxage):
-        words = {}
-        for source_id in self._source_ids:
-            word = 0
-            for channel, (bit, _suffix) in _STATUS_CHANNELS.items():
-                if int(self._read_source(source_id, channel, maxage)):
-                    word |= 1 << bit
-            words[source_id] = word
-        return words
-
-    def _read_power_states(self, maxage):
+    def _get_values(self, channel):
+        """Per-channel values straight from the IOCs, for volatile params."""
         return {
-            source_id: bool(int(self._read_source(source_id, "power_readback", maxage)))
+            source_id: float(self._epics.get_source_value(source_id, channel))
             for source_id in self._source_ids
         }
 
+    def _read_flags(self, maxage):
+        return {
+            (source_id, channel): bool(
+                int(self._read_source(source_id, channel, maxage))
+            )
+            for source_id in self._source_ids
+            for channel in _FLAG_CHANNELS
+        }
+
     def doRead(self, maxage=0):
-        return self._as_value(self._read_values("voltage", maxage))
+        return self._group_value(self._read_values("voltage", maxage))
 
     def doReadTarget(self):
-        return self._as_value(self._read_values("setpoint", None))
+        return self._group_value(self._read_values("setpoint", None))
 
     def doReadCurrents(self):
-        return self._as_value(self._read_values("current", None))
+        return self._group_value(self._get_values("current"))
 
     def doReadCurrent_Limits(self):
-        return self._as_value(self._read_values("current_limit", None))
+        return self._group_value(self._get_values("current_limit"))
 
     def doReadUnit(self):
         return self._epics.get_source_units(self._source_ids[0], "voltage")
@@ -377,82 +359,69 @@ class CaenSyx527ChannelGroup(
     def release(self):
         return super().release()
 
-    def _fault_status(self, words):
-        warnings = []
-        errors = []
-        for source_id, word in words.items():
-            warnings.extend(
-                f"{source_id}: {label}"
-                for bit, label in self._warning_bits.items()
-                if word & (1 << bit)
-            )
-            errors.extend(
-                f"{source_id}: {label}"
-                for bit, label in self._error_bits.items()
-                if word & (1 << bit)
-            )
-        if errors:
-            return status.ERROR, "; ".join(errors)
-        if warnings:
-            return status.WARN, "; ".join(warnings)
-        return status.OK, ""
+    def _count(self, flags, channel):
+        return sum(flags[source_id, channel] for source_id in self._source_ids)
 
-    def _output_status(self, words, power_states, voltage, setpoint):
-        channel_count = len(words)
-        requested_on = sum(power_states.values())
-        channels_on = sum(bool(word & 1) for word in words.values())
-        ramping_up = sum(bool(word & 0b010) for word in words.values())
-        ramping_down = sum(bool(word & 0b100) for word in words.values())
-        ramping = ramping_up + ramping_down
+    def _fault_status(self, flags):
+        alarmed = [
+            source_id
+            for source_id in self._source_ids
+            if flags[source_id, "status_alarm"]
+        ]
+        if not alarmed:
+            return status.OK, ""
+        return status.ERROR, "; ".join(f"{source_id}: alarm" for source_id in alarmed)
+
+    def _output_status(self, flags, voltage, setpoint):
+        count = len(self._source_ids)
+        requested_on = self._count(flags, "power_readback")
+        channels_on = self._count(flags, "status_on")
+        ramping_up = self._count(flags, "status_ramping_up")
+        ramping_down = self._count(flags, "status_ramping_down")
 
         if not requested_on:
-            if channels_on or ramping_up:
-                return status.BUSY, "waiting for outputs to disable"
-            if self.voltage_off_threshold is not None:
-                if not self._voltages_are_off(voltage):
-                    threshold = f"{self.voltage_off_threshold:g}"
-                    if self.unit:
-                        threshold += f" {self.unit}"
-                    return (
-                        status.BUSY,
-                        f"waiting for output voltages to fall to {threshold} or below",
-                    )
-                return status.DISABLED, "output disabled"
-            if ramping_down:
+            still_on = channels_on or ramping_up
+            if not still_on and not self._voltages_are_off(voltage):
+                threshold = f"{self.voltage_off_threshold:g} {self.unit}".strip()
+                return (
+                    status.BUSY,
+                    f"waiting for output voltages to fall to {threshold} or below",
+                )
+            # A ramp down is only safe to ignore when a threshold says how far
+            # the voltage still has to fall.
+            if still_on or (ramping_down and self.voltage_off_threshold is None):
                 return status.BUSY, "waiting for outputs to disable"
             return status.DISABLED, "output disabled"
-        if requested_on != channel_count:
+        if requested_on != count:
+            return status.WARN, f"{requested_on} of {count} outputs requested on"
+        if channels_on != count:
+            return status.BUSY, f"{channels_on} of {count} outputs enabled"
+        if ramping_up or ramping_down:
             return (
-                status.WARN,
-                f"{requested_on} of {channel_count} outputs requested on",
+                status.BUSY,
+                f"{ramping_up + ramping_down} of {count} outputs ramping",
             )
-        if channels_on != channel_count:
-            return status.BUSY, f"{channels_on} of {channel_count} outputs enabled"
-        if ramping:
-            return status.BUSY, f"{ramping} of {channel_count} outputs ramping"
         if not self.doIsAtTarget(voltage, setpoint):
             return status.BUSY, "voltage readback has not reached target"
         return status.OK, "output enabled"
 
     def _compute_status(self, maxage=0):
-        if maxage is None:
-            if not self._all_monitors_seen():
-                return status.UNKNOWN, "waiting for EPICS channel data"
-            words = dict(self._status_words)
-            power_states = dict(self._power_states)
-            voltage = self._as_value(self._voltages)
-            setpoint = self._as_value(self._setpoints)
-            hardware = worst_status(*self._alarm_states.values())
-        else:
-            words = self._read_status_words(maxage)
-            power_states = self._read_power_states(maxage)
-            voltage = self.doRead(maxage)
-            setpoint = self._as_value(self._read_values("setpoint", maxage))
-            hardware = super()._compute_status(maxage)
+        if maxage is None and self._cache is not None:
+            pending, total = self._pending_updates()
+            if pending:
+                return (
+                    status.UNKNOWN,
+                    f"waiting for EPICS data from {pending} of {total} PVs",
+                )
 
-        device_status = self._output_status(words, power_states, voltage, setpoint)
+        flags = self._read_flags(maxage)
+        voltage = self.doRead(maxage)
+        setpoint = self._group_value(self._read_values("setpoint", maxage))
+        hardware = super()._compute_status(maxage)
 
-        faults = self._fault_status(words)
+        device_status = self._output_status(flags, voltage, setpoint)
+
+        faults = self._fault_status(flags)
         hardware_faults = worst_status(hardware, faults)
         severity = (
             device_status[0] if hardware_faults[0] == status.OK else hardware_faults[0]
