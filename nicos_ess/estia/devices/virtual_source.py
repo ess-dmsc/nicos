@@ -144,10 +144,10 @@ class VirtualSource(Moveable):
             )
         else:
             return (
-                Value("Left", unit="mm", fmtstr="%.3f"),
-                Value("Right", unit="mm", fmtstr="%.3f"),
-                Value("Bottom", unit="mm", fmtstr="%.3f"),
-                Value("Top", unit="mm", fmtstr="%.3f"),
+                Value("Left(-)", unit="mm", fmtstr="%.3f"),
+                Value("Right(+)", unit="mm", fmtstr="%.3f"),
+                Value("Bottom(-)", unit="mm", fmtstr="%.3f"),
+                Value("Top(+)", unit="mm", fmtstr="%.3f"),
                 Value("Angle", unit="deg", fmtstr="%.3f"),
             )
 
