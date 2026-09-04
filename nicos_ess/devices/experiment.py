@@ -306,7 +306,10 @@ class EssExperiment(Device):
         """
         instrument = session.instrument.name.lower()
         directory = os.path.join(self.instrument_scripts_directory, instrument)
-        return directory, self._list_directory_files(directory, extension=".py")
+        # Ignore any directories as we don't support directories for
+        # instrument scripts.
+        (files, _) = self._list_directory_files(directory, extension=".py")
+        return directory, (files, [])
 
     def list_user_scripts_directory(self, directory="") -> (str, list[str]):
         """Fetches a list of files in the specified user scripts directory.
@@ -314,19 +317,22 @@ class EssExperiment(Device):
         Args:
             directory: the sub-directory of the user scripts directory.
 
-        Returns: (the directory path, a list of files)
+        Returns: (the directory path, a list of files, a list of sub-directories)
         """
         directory = os.path.join(self.user_scripts_directory, directory)
         return directory, self._list_directory_files(directory, extension=".py")
 
     def _list_directory_files(self, directory, extension=""):
         files = []
+        directories = []
         for file in os.listdir(directory):
             path = os.path.join(directory, file)
             if os.path.isfile(path) and path.endswith(extension):
                 last_modified = int(os.path.getmtime(path))
                 files.append((file, last_modified))
-        return files
+            elif os.path.isdir(path):
+                directories.append(file)
+        return files, directories
 
     def read_server_file(self, filepath) -> str | None:
         """Reads the specified file from the server and returns it."""
@@ -344,6 +350,16 @@ class EssExperiment(Device):
         with open(filepath, "w", encoding="utf-8") as f:
             # NOTE: contents are received as bytes, so must be decoded!
             f.write(contents.decode())
+
+    def create_user_script_directory(self, path):
+        """Creates the specified user script directory."""
+        if ".." in path:
+            self.log.error("Relative paths are not allowed when creating directories.")
+            return
+        path = os.path.join(self.user_scripts_directory, path)
+
+        if not os.path.exists(path):
+            os.makedirs(path)
 
     def _canQueryProposals(self):
         return self._yuos_client is not None

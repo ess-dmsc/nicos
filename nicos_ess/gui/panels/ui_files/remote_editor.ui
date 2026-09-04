@@ -223,7 +223,7 @@
     <string>&amp;Open...</string>
    </property>
    <property name="toolTip">
-    <string>Open script from disk</string>
+    <string>Open script located on the server</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -256,7 +256,7 @@
     <string>&amp;Save</string>
    </property>
    <property name="toolTip">
-    <string>Save script</string>
+    <string>Save script on the server</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
