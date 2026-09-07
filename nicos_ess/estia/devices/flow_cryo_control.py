@@ -7,6 +7,7 @@ from nicos.core import (
     pvname,
     status,
 )
+from nicos.core.errors import UsageError
 from nicos.core.mixins import CanDisable, HasLimits
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsDeviceBase,
@@ -61,12 +62,25 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
     _connect_channels = ("alarm",)
 
     def doStart(self):
+        ramp_enum = {
+            "Off": 0,
+            "Range1/Low": 1,
+            "Range2/Medium": 2,
+            "Range3/High": 3,
+            "Range4": 4,
+            "Range5": 5,
+        }
         # determine ramp setting set by system, then set the pv to that value
-        print("starting!")
+        if self.ramp == "Off":
+            raise UsageError(
+                self, "Ramp is currently set to OFF! Change ramp type in the parameters"
+            )
+        else:
+            return ramp_enum["Range1/Low"]
 
     def doStop(self):
         # set ramp pv to OFF
-        print("stopping")
+        self.log.info("Ramp set to OFF")
 
     def doPreinit(self, mode):
         self._current_status = (status.OK, "")
