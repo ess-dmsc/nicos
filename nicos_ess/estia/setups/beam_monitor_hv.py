@@ -29,7 +29,7 @@ for i in range(0, 2):
     )
 # Monitor Voltage
 for i in range(0, 2):
-    devices[f"voltage_monitor_channel_{i}"] = device(
+    devices[f"channel_{i}_voltage_monitor"] = device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description=f"Channel {i} voltage monitor",
         readpv=f"{pv_root}Ch{i}Voltage-R",
@@ -37,7 +37,7 @@ for i in range(0, 2):
 
 # Set Voltage
 for i in range(0, 2):
-    devices[f"set_voltage_channel_{i}"] = device(
+    devices[f"channel_{i}_set_voltage"] = device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description=f"Channel {i} voltage set",
         readpv=f"{pv_root}Ch{i}VSet-R",
@@ -47,7 +47,7 @@ for i in range(0, 2):
 
 # Set Current
 for i in range(0, 2):
-    devices[f"set_current_channel_{i}"] = device(
+    devices[f"channel_{i}_set_current"] = device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description=f"Channel {i} current set",
         readpv=f"{pv_root}Ch{i}CurrSet-R",
@@ -57,7 +57,7 @@ for i in range(0, 2):
 
 # Monitor Current
 for i in range(0, 2):
-    devices[f"current_monitor_channel_{i}"] = device(
+    devices[f"channel_{i}_current_monitor"] = device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description=f"Channel {i} current monitor",
         readpv=f"{pv_root}Ch{i}Current-R",
@@ -65,7 +65,7 @@ for i in range(0, 2):
 
 # Ramp UP
 for i in range(0, 2):
-    devices[f"ramp_up_channel_{i}"] = device(
+    devices[f"channel_{i}_ramp_up"] = device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description=f"Channel {i} Ramp Up setting",
         readpv=f"{pv_root}Ch{i}RampUp-R",
@@ -75,7 +75,7 @@ for i in range(0, 2):
 
 # Ramp DOWN
 for i in range(0, 2):
-    devices[f"ramp_down_channel_{i}"] = device(
+    devices[f"channel_{i}_ramp_down"] = device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description=f"Channel {i} Ramp Up setting",
         readpv=f"{pv_root}Ch{i}RampDown-R",
