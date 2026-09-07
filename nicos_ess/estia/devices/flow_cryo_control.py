@@ -7,11 +7,11 @@ from nicos.core import (
     pvname,
     status,
 )
-from nicos.core.errors import UsageError
 from nicos.core.mixins import CanDisable, HasLimits
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsDeviceBase,
     readback_channel,
+    setpoint_channel,
 )
 
 
@@ -31,6 +31,13 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
         "input_pos": Param(
             "Input position of the Flow Cryo",
             type=oneof("A", "B", "C", "D", "D2", "D3", "D4", "D5"),
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "output_num": Param(
+            "Output number the input is connected to",
+            type=int,
             mandatory=True,
             settable=False,
             userparam=False,
@@ -61,27 +68,6 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
     _primary_channel = "value"
     _connect_channels = ("alarm",)
 
-    def doStart(self):
-        ramp_enum = {
-            "Off": 0,
-            "Range1/Low": 1,
-            "Range2/Medium": 2,
-            "Range3/High": 3,
-            "Range4": 4,
-            "Range5": 5,
-        }
-        # determine ramp setting set by system, then set the pv to that value
-        if self.ramp == "Off":
-            raise UsageError(
-                self, "Ramp is currently set to OFF! Change ramp type in the parameters"
-            )
-        else:
-            return ramp_enum["Range1/Low"]
-
-    def doStop(self):
-        # set ramp pv to OFF
-        self.log.info("Ramp set to OFF")
-
     def doPreinit(self, mode):
         self._current_status = (status.OK, "")
         if mode == SIMULATION:
@@ -98,6 +84,10 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             "lowlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.LOW"),
             "hwhighlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.HIHI"),
             "hwlowlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.LOLO"),
+            "target": setpoint_channel(f"Setp{self.output_num}-SP"),
+            "target_rb": readback_channel(f"Setp{self.output_num}-RB"),
+            "ramp": setpoint_channel(f"Range{self.output_num}-SP"),
+            "ramp_rb": readback_channel(f"Range{self.output_num}-RB"),
         }
         return epics_channels
 
@@ -114,3 +104,27 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
         abs_min = self._epics.get_channel_value("hwlowlimit")
         abs_max = self._epics.get_channel_value("hwhighlimit")
         return abs_min, abs_max
+
+    def isAllowed(self, pos):
+        if self.ramp == "OFF":
+            why = "Ramping was commanded to start but chosen setting is OFF! \
+                    Please select a new ramp speed in parameters"
+            return False, why
+        return Moveable.isAllowed(self, pos)
+
+    def doStart(self, value):
+        ramp_enum = {
+            "Off": 0,
+            "Range1/Low": 1,
+            "Range2/Medium": 2,
+            "Range3/High": 3,
+            "Range4": 4,
+            "Range5": 5,
+        }
+        # determine ramp setting set by system, then set the pv to that value
+        self.log.info(f"heating to target with ramp of {self.ramp}")
+        self._epics.put_channel_value("target", value)
+        self._epics.put_channel_value("ramp", ramp_enum[self.ramp])
+
+    def doStop(self):
+        self._epics.put_channel_value("ramp", 0)
