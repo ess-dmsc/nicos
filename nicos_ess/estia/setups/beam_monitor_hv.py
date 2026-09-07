@@ -8,23 +8,23 @@ devices = dict()
 for i in range(0, 2):
     devices[f"channel_{i}_state"] = device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        description=f"Detector HVPS state {i}",
+        description=f"BM HV state {i}",
         readpv=f"{pv_root}Ch{i}On-R",
     )
 
     # Error Message
 
-    devices["error_message"] = device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description=f"Channel {i} error message",
-        readpv=f"{pv_root}ErrorString-R",
-    )
+devices["error_message"] = device(
+    "nicos_ess.devices.epics.pva.EpicsStringReadable",
+    description=f"Channel {i} error message",
+    readpv=f"{pv_root}ErrorString-R",
+)
 
 # ON and OFF
 for i in range(0, 2):
     devices[f"enable_channel_{i}"] = device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description=f"Detector HVPS enable on {i}",
+        description=f"Detector HVPS enable on channel{i}",
         readpv=f"{pv_root}Ch{i}On-S",
         writepv=f"{pv_root}Ch{i}On-S",
     )
