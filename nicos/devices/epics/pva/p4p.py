@@ -144,6 +144,33 @@ class P4pWrapper:
         result = self._context.get(pvname, timeout=self._timeout)
         return self._convert_value(pvname, result["value"], as_string)
 
+    def get_pv_readings(self, pvs):
+        """Read {PV: as_string} as {PV: (value, (severity, message))}.
+
+        Issue the gets together, extracting values and alarms from the same
+        responses. This is not an atomic snapshot across PVs. A failed PV
+        raises CommunicationError identifying that PV; no partial readings
+        are returned.
+        """
+        names = list(pvs)
+        if not names:
+            return {}
+        results = self._context.get(names, timeout=self._timeout, throw=False)
+        readings = {}
+        for pvname, result in zip(names, results):
+            if isinstance(result, Exception):
+                raise CommunicationError(
+                    f"error reading PV {pvname}: {str(result) or 'timed out'}"
+                ) from result
+            value = result["value"]
+            if hasattr(value, "getID") and value.getID() == "enum_t":
+                self._choices[pvname] = value["choices"]
+            readings[pvname] = (
+                self._convert_value(pvname, value, pvs[pvname]),
+                self._extract_alarm_info(result),
+            )
+        return readings
+
     def _convert_value(self, pvname, value, as_string=False):
         try:
             # Enums are complicated

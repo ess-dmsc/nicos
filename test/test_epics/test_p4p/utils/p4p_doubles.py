@@ -3,7 +3,6 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 
 class CallSpy:
@@ -30,18 +29,25 @@ class FakeSubscription:
 class FakeContext:
     def __init__(self):
         self._get_results: dict[str, object] = {}
-        self.get_calls: list[tuple[str, Optional[float]]] = []
+        self.get_calls: list[tuple[str | list[str], float | None]] = []
         self.put_calls = []  # list of (pvname, value, timeout, wait, process)
-        self.monitor_calls: list[tuple[str, Optional[str], Optional[bool]]] = []
+        self.monitor_calls: list[tuple[str, str | None, bool | None]] = []
         self._subscriptions: list[FakeSubscription] = []
 
     def set_get_result(self, pvname: str, result: object):
         self._get_results[pvname] = result
 
-    def get(self, pvname: str, timeout=None):
+    def get(self, pvname: str | list[str], timeout=None, throw=True):
         self.get_calls.append((pvname, timeout))
+        if isinstance(pvname, list):
+            results = [self._get_results.get(name, {}) for name in pvname]
+            if throw:
+                for result in results:
+                    if isinstance(result, Exception):
+                        raise result
+            return results
         result = self._get_results.get(pvname, {})
-        if isinstance(result, Exception):
+        if throw and isinstance(result, Exception):
             raise result
         return result
 
