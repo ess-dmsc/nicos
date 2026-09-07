@@ -12,8 +12,7 @@ for i in range(0, 2):
         readpv=f"{pv_root}Ch{i}On-R",
     )
 
-    # Error Message
-
+# Error Message
 devices["error_message"] = device(
     "nicos_ess.devices.epics.pva.EpicsStringReadable",
     description=f"Channel {i} error message",
