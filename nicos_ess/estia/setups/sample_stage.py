@@ -7,7 +7,7 @@ hex_root = "ESTIA-SES:MC-MCU-001:"
 
 devices = dict(
     sample_stage_coupling=device(
-        "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
+        "nicos_ess.devices.epics.pva.shutter.EpicsHeavyShutter",
         description="Detector Arm Pneumatic Coupling: Support Structure on Air Pads",
         writepv="ESTIA-SpCpl:MC-Pne-01:ShtOpen",
         readpv="ESTIA-SpCpl:MC-Pne-01:ShtAuxBits07",

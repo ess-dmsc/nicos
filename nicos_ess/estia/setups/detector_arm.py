@@ -11,7 +11,7 @@ devices = dict(
         fmtstr="%.4f",
     ),
     pneumatic_coupling_ctrl=device(
-        "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
+        "nicos_ess.devices.epics.pva.shutter.EpicsHeavyShutter",
         description="Detector Arm Pneumatic Coupling: Support Structure on Air Pads",
         writepv=f"{det_arm_root}:ShtOpen",
         readpv=f"{det_arm_root}:ShtAuxBits07",
