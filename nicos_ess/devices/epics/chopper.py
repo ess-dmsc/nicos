@@ -203,6 +203,7 @@ class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
 
     attached_devices = {
         "in_phase": Attach("In phase ", EpicsMappedReadable),
+        "state": Attach("Current state of the chopper", Readable),
     }
 
     def doIsCompleted(self):
@@ -215,8 +216,8 @@ class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
             else:
                 raise ValueError(f"Unexpected phase value: {phase!r}")
         else:
-            status = self._attached_status.read()
-            return status == "Ready"
+            state = self._attached_state.read()
+            return state == "Ready"
 
 
 class NewEssChopperController(EssChopperController):
