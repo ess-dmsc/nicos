@@ -11,6 +11,9 @@ from nicos.core import (
     status,
 )
 from nicos.devices.abstract import MappedMoveable
+from nicos_ess.devices.epics.pva import (
+    EpicsMappedReadable,
+)
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsStatusOnlyReadable,
     get_from_cache_or,
@@ -196,8 +199,18 @@ class NewEssChopperController(EssChopperController):
 
     attached_devices = {
         "alarms": Attach("Alarms of the chopper", NewChopperAlarms, optional=True),
+        "in_phase": Attach("In phase ", EpicsMappedReadable),
     }
 
     parameter_overrides = {
         "mapping": Override(settable=False),
     }
+
+    def doIsCompleted(self):
+        phase = self._attached_in_phase.read()
+        if phase == "Not in phase":
+            return False
+        elif phase == "In phase":
+            return True
+        else:
+            raise ValueError(f"Unexpected phase value: {phase!r}")
