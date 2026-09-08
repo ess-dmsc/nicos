@@ -14,7 +14,6 @@ from nicos_ess.devices.mixins import CanReferenceWithWarning
 class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
     ## TODO
     # - add unit to parameter in device dialog
-    # - check limits update with updated syringe types
     parameters = {
         "pvroot": Param(
             "The root of the pv",
