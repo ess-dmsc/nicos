@@ -338,7 +338,7 @@ class EssExperiment(Device):
     def read_server_file(self, filepath) -> str | None:
         """Reads the specified file from the server and returns it."""
         if ".." in filepath:
-            self.log.error("Relative filepaths are not allowed when reading files.")
+            self.log.error("Relative filepaths are not allowed.")
             return None
         with open(filepath, encoding="utf-8") as f:
             return f.read()
@@ -346,7 +346,7 @@ class EssExperiment(Device):
     def write_server_file(self, filepath, contents):
         """Write the contents to the specified file."""
         if ".." in filepath:
-            self.log.error("Relative filepaths are not allowed when writing files.")
+            self.log.error("Relative filepaths are not allowed.")
             return
         with open(filepath, "w", encoding="utf-8") as f:
             # NOTE: contents are received as bytes, so must be decoded!
@@ -355,7 +355,7 @@ class EssExperiment(Device):
     def create_user_script_directory(self, path):
         """Creates the specified user script directory."""
         if ".." in path:
-            self.log.error("Relative paths are not allowed when creating directories.")
+            self.log.error("Relative paths are not allowed.")
             return
         path = os.path.join(self.user_scripts_directory, path)
 
@@ -365,7 +365,7 @@ class EssExperiment(Device):
     def delete_file(self, path):
         """Deletes the specified file"""
         if ".." in path:
-            self.log.error("Relative paths are not allowed when deleting a file.")
+            self.log.error("Relative paths are not allowed.")
             return
         path = os.path.join(self.user_scripts_directory, path)
 
@@ -375,12 +375,24 @@ class EssExperiment(Device):
     def delete_directory(self, path):
         """Deletes the specified directory and contents"""
         if ".." in path:
-            self.log.error("Relative paths are not allowed when deleting a directory.")
+            self.log.error("Relative paths are not allowed.")
             return
         path = os.path.join(self.user_scripts_directory, path)
 
         if os.path.exists(path):
             shutil.rmtree(path, ignore_errors=True)
+
+    def rename_file(self, old, new):
+        """Renames the file/directory to the new name"""
+        if ".." in old:
+            self.log.error("Relative paths are not allowed.")
+            return
+        old = os.path.join(self.user_scripts_directory, old)
+        new = os.path.join(self.user_scripts_directory, new)
+        self.log.warn(old, new)
+
+        if os.path.exists(old):
+            os.rename(old, new)
 
     def _canQueryProposals(self):
         return self._yuos_client is not None

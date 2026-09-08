@@ -32,15 +32,17 @@ FILE_ICON = get_icon("document-24px.svg")
 
 
 class NewFolderDialog(QDialog):
-    def __init__(self):
+    def __init__(self, title, label_text, post_label_text="", text=""):
         super().__init__()
-        self.setWindowTitle("Enter Folder Name")
+        self.setWindowTitle(title)
         self.layout = QVBoxLayout()
 
-        label = QLabel("Enter folder name:")
+        label = QLabel(label_text)
+        post_label = QLabel(post_label_text)
         self.txt_name = QLineEdit()
+        self.txt_name.setText(text)
 
-        # Limit what chars are acceptable in a folder
+        # Limit what chars are acceptable in a folder/filename
         self.txt_name.setValidator(
             QRegularExpressionValidator(QRegularExpression(r"[A-Za-z0-9_-]+"), self)
         )
@@ -49,6 +51,8 @@ class NewFolderDialog(QDialog):
         hlayout = QHBoxLayout()
         hlayout.addWidget(label)
         hlayout.addWidget(self.txt_name)
+        if post_label_text:
+            hlayout.addWidget(post_label)
 
         self.button_box = QDialogButtonBox()
         self.button_box.addButton(QDialogButtonBox.StandardButton.Cancel)
@@ -227,9 +231,7 @@ class RemoteFileDialog(QDialog):
 
     def delete_item(self, row):
         row = self.table_model.get_row(row)
-        print("deleting", row)
-
-        base_path = os.path.join(*self.rel_directory, "")
+        base_path = os.path.join(*self.rel_directory) if self.rel_directory else ""
         path = os.path.join(base_path, row[0])
 
         if row[3]:
@@ -253,7 +255,25 @@ class RemoteFileDialog(QDialog):
         self._update_files_list(base_path)
 
     def rename_item(self, row):
-        print("renaming")
+        row = self.table_model.get_row(row)
+        base_path = os.path.join(*self.rel_directory) if self.rel_directory else ""
+        old = os.path.join(base_path, row[0])
+
+        if row[3]:
+            dialog = NewFolderDialog("Rename Folder", "Enter new name:", text=row[0])
+        else:
+            dialog = NewFolderDialog("Rename Script", "Enter new name:", ".py", row[0].removesuffix(".py"))
+
+        if dialog.exec():
+            new_name = dialog.txt_name.text()
+            new_name += ".py" if not row[3] else ""
+            new = os.path.join(base_path, new_name)
+            print(old, new)
+            self.client.eval(
+                f"session.experiment.rename_file('{old}', '{new}')", None
+            )
+
+            self._update_files_list(base_path)
 
     def _update_files_list(self, directory=""):
         if self.is_inst_script:
@@ -311,7 +331,7 @@ class RemoteFileDialog(QDialog):
 
     @pyqtSlot()
     def on_btn_new_folder_pressed(self):
-        dialog = NewFolderDialog()
+        dialog = NewFolderDialog("Enter Folder Name", "Enter folder name:")
         if dialog.exec():
             rel_path = os.path.join(*self.rel_directory) if self.rel_directory else ""
             path = os.path.join(rel_path, dialog.txt_name.text())
