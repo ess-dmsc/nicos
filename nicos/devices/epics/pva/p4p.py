@@ -152,9 +152,10 @@ class P4pWrapper:
         raises CommunicationError identifying that PV; no partial readings
         are returned.
         """
-        names = list(pvs)
-        if not names:
+        if not pvs:
             return {}
+
+        names = list(pvs)
         results = self._context.get(names, timeout=self._timeout, throw=False)
         readings = {}
         for pvname, result in zip(names, results):
