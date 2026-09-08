@@ -19,7 +19,7 @@ devices = dict(
         visibility=(),
     ),
     mini_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{pv_root}Spd_R",
         writepv=f"{pv_root}Spd_S",
