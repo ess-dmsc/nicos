@@ -5,12 +5,15 @@ from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
     QAbstractItemView,
     QAbstractTableModel,
+    QAction,
+    QCursor,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMenu,
     QMessageBox,
     QRegularExpression,
     QRegularExpressionValidator,
@@ -202,6 +205,55 @@ class RemoteFileDialog(QDialog):
 
         self._update_files_list()
         self._update_path_controls()
+        self.file_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.file_table.customContextMenuRequested.connect(self._show_context_menu)
+
+    def _show_context_menu(self, point):
+        row = self.file_table.indexAt(point).row()
+        print(row)
+        if row < 0:
+            return
+
+        rename_action = QAction("Rename", self)
+        rename_action.triggered.connect(lambda: self.rename_item(row))
+
+        delete_action = QAction("Delete", self)
+        delete_action.triggered.connect(lambda: self.delete_item(row))
+
+        menu = QMenu()
+        menu.addAction(rename_action)
+        menu.addAction(delete_action)
+        menu.exec(QCursor.pos())
+
+    def delete_item(self, row):
+        row = self.table_model.get_row(row)
+        print("deleting", row)
+
+        base_path = os.path.join(*self.rel_directory, "")
+        path = os.path.join(base_path, row[0])
+
+        if row[3]:
+            # Deleting folder so warn
+            reply = QMessageBox.question(
+                self, "Warning", "Deleting a folder will delete all the contents. Are you sure?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.No:
+                return
+            
+            self.client.eval(
+                f"session.experiment.delete_directory('{path}')",
+                None,
+            )
+        else:
+            self.client.eval(
+                f"session.experiment.delete_file('{path}')",
+                None,
+            )
+        self._update_files_list(base_path)
+
+    def rename_item(self, row):
+        print("renaming")
 
     def _update_files_list(self, directory=""):
         if self.is_inst_script:

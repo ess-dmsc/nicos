@@ -1,6 +1,7 @@
 """ESS Experiment device."""
 
 import os
+import shutil
 import time
 from os import path
 
@@ -360,6 +361,26 @@ class EssExperiment(Device):
 
         if not os.path.exists(path):
             os.makedirs(path)
+
+    def delete_file(self, path):
+        """Deletes the specified file"""
+        if ".." in path:
+            self.log.error("Relative paths are not allowed when deleting a file.")
+            return
+        path = os.path.join(self.user_scripts_directory, path)
+
+        if os.path.exists(path):
+            os.remove(path)
+
+    def delete_directory(self, path):
+        """Deletes the specified directory and contents"""
+        if ".." in path:
+            self.log.error("Relative paths are not allowed when deleting a directory.")
+            return
+        path = os.path.join(self.user_scripts_directory, path)
+
+        if os.path.exists(path):
+            shutil.rmtree(path, ignore_errors=True)
 
     def _canQueryProposals(self):
         return self._yuos_client is not None
