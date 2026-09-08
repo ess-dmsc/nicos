@@ -18,15 +18,6 @@ devices = dict(
         requires={"level": "admin"},
         visibility=(),
     ),
-    mini_chopper_speed=device(
-        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
-        description="The current speed.",
-        readpv=f"{pv_root}Spd_R",
-        writepv=f"{pv_root}Spd_S",
-        abslimits=(0.0, 14),
-        precision=0.1,
-        mapping={"14": 14, "7": 7, "0": 0},
-    ),
     mini_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
@@ -57,6 +48,16 @@ devices = dict(
         description="The chopper is in phase.",
         readpv=f"{pv_root}InPhaseTS-R",
         maxage=0,
+    ),
+    mini_chopper_speed=device(
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
+        description="The current speed.",
+        readpv=f"{pv_root}Spd_R",
+        writepv=f"{pv_root}Spd_S",
+        abslimits=(0.0, 14),
+        precision=0.1,
+        mapping={"14": 14, "7": 7, "0": 0},
+        in_phase="mini_chopper_phased",
     ),
     mini_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
@@ -103,6 +104,5 @@ devices = dict(
         command="mini_chopper_control",
         speed="mini_chopper_speed",
         chic_conn="mini_chopper_chic",
-        in_phase="mini_chopper_phased",
     ),
 )
