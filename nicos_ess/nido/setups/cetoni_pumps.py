@@ -11,7 +11,6 @@ devices = dict(
         pvroot=pump1_pvroot,
         readpv=f"{pump1_pvroot}FilledVolume",
         writepv=f"{pump1_pvroot}FillVol-SP",
-        precision=0.005,
         home_warning_msg="Please make sure syringes are removed before homing",
     ),
     pump2=device(
@@ -20,7 +19,6 @@ devices = dict(
         pvroot=pump2_pvroot,
         readpv=f"{pump2_pvroot}FilledVolume",
         writepv=f"{pump2_pvroot}FillVol-SP",
-        precision=0.005,
         home_warning_msg="Please make sure syringes are removed before homing",
     ),
 )
