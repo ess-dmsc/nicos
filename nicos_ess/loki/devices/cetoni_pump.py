@@ -1,3 +1,5 @@
+import time
+
 from nicos.core import SIMULATION, Override, Param, oneof, status, usermethod
 from nicos_ess.devices.epics.pva import EpicsAnalogMoveable
 from nicos_ess.devices.epics.pva.epics_common import (
@@ -152,6 +154,13 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
             }
         )
         return epics_channels
+
+    def _on_channel_update(self, update):
+        super()._on_channel_update(update)
+        if update.channel == "max_vol":
+            ts = time.time()
+            self._cache.put(self._name, "abslimits", (0, update.value), ts)
+            self._cache.put(self._name, "userlimits", self.doReadUserlimits(), ts)
 
     def doReadAbslimits(self):
         high_limit = self._epics.get_channel_value("max_vol")

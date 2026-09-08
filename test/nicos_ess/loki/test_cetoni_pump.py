@@ -93,6 +93,20 @@ class TestCetoniPumpController:
         with pytest.raises(LimitError):
             pump.move(100)
 
+    def test_new_max_volume_updates_limits(self, device_harness, fake_backend):
+        pump_in_daemon, pump_in_poller = device_harness.create_pair(
+            CetoniPumpController,
+            name="pump",
+            shared={
+                "pvroot": "SP1:",
+                "readpv": "SP1:FilledVolume",
+                "writepv": "SP1:FillVol-SP",
+            },
+        )
+        fake_backend.emit_update("SP1:MaxVol", value=3.1)
+        assert pump_in_daemon._cache.get(pump_in_daemon, "abslimits") == (0, 3.1)
+        assert pump_in_daemon._cache.get(pump_in_daemon, "userlimits") == (0, 3.1)
+
     def test_epics_update_triggers_poller_callback(self, device_harness, fake_backend):
         original = CetoniPumpController._on_channel_update
 
