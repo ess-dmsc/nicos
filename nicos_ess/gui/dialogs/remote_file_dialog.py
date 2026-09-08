@@ -262,6 +262,7 @@ class RemoteFileDialog(QDialog):
         # TODO: on save check file exists (may have been renamed) else save as
         # TODO: rename Newfolderdialog
         # TODO: Only admins can delete?
+        # TODO: disable rename and delete for inst_scripts
         if row[3]:
             dialog = NewFolderDialog("Rename Folder", "Enter new name:", text=row[0])
         else:
