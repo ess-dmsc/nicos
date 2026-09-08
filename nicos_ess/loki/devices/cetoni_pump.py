@@ -108,10 +108,11 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
                     pv_prefix_attr="pvroot",
                     pv_suffix="MaxVol",
                 ),
-                "syringe_type": readback_channel(
+                "syringe_type": setpoint_channel(
                     cache_key="syringe_type",
                     pv_prefix_attr="pvroot",
                     pv_suffix="SyrType",
+                    is_enum=True,
                 ),
                 "stop": command_channel(
                     pv_prefix_attr="pvroot",
@@ -184,9 +185,7 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         return self._epics.get_channel_value("stroke_max")
 
     def doReadSyringe_Type(self):
-        raw_value = self._epics.get_channel_value("syringe_type")
-        choices = self._epics.get_channel_value_choices("syringe_type")
-        return choices[raw_value]
+        return self._epics.get_channel_value("syringe_type")
 
     def doWriteSyringe_Type(self, target):
         self._epics.put_channel_value("syringe_type", target)
