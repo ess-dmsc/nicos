@@ -207,7 +207,7 @@ class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
     }
 
     def doIsCompleted(self):
-        if self.read() != 0:
+        if self.target != "0":
             phase = self._attached_in_phase.read()
             if phase == "Not in phase":
                 return False
