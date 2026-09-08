@@ -7,7 +7,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 from p4p.client.raw import Context as RawContext
-from p4p.client.thread import Context
+from p4p.client.thread import Context, RemoteError
 
 from nicos.core import CommunicationError, status
 from nicos.devices.epics.pva.p4p import P4pWrapper, pvget, pvput
@@ -78,6 +78,52 @@ def test_get_pv_value_returns_scalar(fake_context: FakeContext):
 
     assert pva_wrapper.get_pv_value("PV:INT") == 42
     assert fake_context.get_calls == [("PV:INT", 1.0)]
+
+
+def test_readings_use_one_bulk_get_for_values_and_alarms(fake_context: FakeContext):
+    fake_context.set_get_result(
+        "PV:FLOAT",
+        {
+            "value": 12.5,
+            "alarm": {"severity": 2, "message": "overvoltage"},
+        },
+    )
+    fake_context.set_get_result(
+        "PV:ENUM",
+        {
+            "value": FakeEnumValue(index=1, choices=["Off", "On"]),
+            "alarm": {"severity": 0, "message": "NO_ALARM"},
+        },
+    )
+    pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
+
+    assert pva_wrapper.get_pv_readings({"PV:FLOAT": False, "PV:ENUM": True}) == {
+        "PV:FLOAT": (12.5, (status.ERROR, "overvoltage")),
+        "PV:ENUM": ("On", (status.OK, "")),
+    }
+    assert fake_context.get_calls == [(["PV:FLOAT", "PV:ENUM"], 1.0)]
+
+
+def test_empty_readings_do_not_access_epics(fake_context: FakeContext):
+    pva_wrapper = P4pWrapper(context=fake_context)
+
+    assert pva_wrapper.get_pv_readings({}) == {}
+    assert fake_context.get_calls == []
+
+
+@pytest.mark.parametrize("error", [TimeoutError(), RemoteError("read denied")])
+def test_readings_fail_with_the_unavailable_pv_name(fake_context: FakeContext, error):
+    fake_context.set_get_result(
+        "PV:OK", {"value": 1, "alarm": {"severity": 0, "message": "NO_ALARM"}}
+    )
+    fake_context.set_get_result("PV:FAILED", error)
+    pva_wrapper = P4pWrapper(context=fake_context)
+
+    with pytest.raises(CommunicationError, match="PV:FAILED") as excinfo:
+        pva_wrapper.get_pv_readings({"PV:OK": False, "PV:FAILED": False})
+
+    assert (str(error) or "timed out") in str(excinfo.value)
+    assert excinfo.value.__cause__ is error
 
 
 def test_get_pv_value_as_string_converts_ndarray_to_string(fake_context: FakeContext):
