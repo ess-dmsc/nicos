@@ -259,6 +259,9 @@ class RemoteFileDialog(QDialog):
         base_path = os.path.join(*self.rel_directory) if self.rel_directory else ""
         old = os.path.join(base_path, row[0])
 
+        # TODO: on save check file exists (may have been renamed) else save as
+        # TODO: rename Newfolderdialog
+        # TODO: Only admins can delete?
         if row[3]:
             dialog = NewFolderDialog("Rename Folder", "Enter new name:", text=row[0])
         else:
