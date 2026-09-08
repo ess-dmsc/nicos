@@ -1,8 +1,7 @@
 import time
 
-from nicos.core import CommunicationError, Param, dictof, pvname, status
+from nicos.core import Param, dictof, pvname
 from nicos_ess.devices.epics.pva.epics_common import (
-    LOST_CONNECTION_STATUS,
     EpicsChannelComponent,
     EpicsChannelKind,
     EpicsDeviceBase,
@@ -62,6 +61,22 @@ class EpicsMultiSourceComponent(EpicsChannelComponent):
             lambda pv: self.wrapper.get_alarm_status(pv),
         )
 
+    def get_source_readings(self, keys):
+        """Fetch values and alarms together for (source, channel) keys."""
+        names = {key: self.source_pv(*key) for key in keys}
+        readings = self._ask_wrapper(
+            "error reading EPICS sources",
+            lambda: self.wrapper.get_pv_readings(
+                {
+                    pv: self.epics_channels[channel].as_string
+                    for (_, channel), pv in names.items()
+                }
+            ),
+        )
+        with self._lock:
+            self._connected_pvs.update(names.values())
+        return {key: readings[pv] for key, pv in names.items()}
+
     def get_source_units(self, source_id, channel, default=""):
         return self._on_pv(
             self.source_pv(source_id, channel),
@@ -78,11 +93,11 @@ class EpicsMultiSourceComponent(EpicsChannelComponent):
             lambda pv: self.wrapper.get_limits(pv, default_low, default_high),
         )
 
-    def put_source_value(self, source_id, channel, value):
+    def put_source_value(self, source_id, channel, value, *, wait=False):
         self._on_pv(
             self.source_pv(source_id, channel),
             f"writing {value!r} to",
-            lambda pv: self.wrapper.put_pv_value(pv, value),
+            lambda pv: self.wrapper.put_pv_value(pv, value, wait=wait),
         )
 
 
@@ -133,34 +148,48 @@ class EpicsMultiSourceBase(EpicsDeviceBase):
             maxage=maxage,
         )
 
-    def _put_source(self, source_id, channel, value):
-        self._epics.put_source_value(source_id, channel, value)
+    def _put_source(self, source_id, channel, value, *, wait=False):
+        self._epics.put_source_value(source_id, channel, value, wait=wait)
 
     def doReadUnit(self):
         return self._config.get("unit", "") or self._params.get("unit", "")
 
     def _compute_status(self, maxage=0):
-        # Fold the worst hardware alarm across every subscribed (source,
-        # channel); base _status_snapshot adds the connection status on top.
-        # Honour maxage like the single-source bases: maxage=0 reads hardware
-        # (so a fresh status sees a dead source), otherwise read the cache.
-        if getattr(self, "_cache", None) is None:
-            return status.OK, ""
-        candidates = [
-            self._read_source_alarm(source_id, channel, maxage)
-            for source_id in self.sources
-            for channel, info in self._epics_channels.items()
-            if info.subscribe
-        ]
-        return worst_status(*candidates)
+        readings = self._read_source_snapshot(maxage)
+        return worst_status(*(alarm for _, alarm in readings.values()))
 
-    def _read_source_alarm(self, source_id, channel, maxage):
-        def _read():
-            try:
-                return self._epics.get_source_alarm(source_id, channel)
-            except (TimeoutError, CommunicationError):
-                return LOST_CONNECTION_STATUS
+    def _read_source_snapshot(self, maxage, *, cache_only=False):
+        """Read subscribed values and alarms, batching missing/expired PVs.
 
-        return get_from_cache_or(
-            self, self._source_alarm_key(source_id, channel), _read, maxage=maxage
-        )
+        Monitor callbacks use cache_only to avoid blocking for initial or
+        invalidated data. Direct reads stay local to this call, so they cannot
+        overwrite newer monitor updates in the shared cache.
+        """
+        readings = {}
+        missing = []
+        mintime = None if maxage is None else time.time() - maxage
+        for source_id in self.sources:
+            for channel, info in self._epics_channels.items():
+                if not info.subscribe:
+                    continue
+                key = source_id, channel
+                if self.monitor and self._cache is not None and maxage != 0:
+                    value = self._cache.get(
+                        self._name,
+                        self._epics.source_key(*key),
+                        Ellipsis,
+                        mintime=mintime,
+                    )
+                    alarm = self._cache.get(
+                        self._name,
+                        self._source_alarm_key(*key),
+                        Ellipsis,
+                        mintime=mintime,
+                    )
+                    if value is not Ellipsis and alarm is not Ellipsis:
+                        readings[key] = value, alarm
+                        continue
+                missing.append(key)
+        if missing and not cache_only:
+            readings.update(self._epics.get_source_readings(missing))
+        return readings

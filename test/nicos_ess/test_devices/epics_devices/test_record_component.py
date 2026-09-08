@@ -892,7 +892,7 @@ class MultiGlueProbe:
     )
     _source_alarm_key = EpicsMultiSourceBase._source_alarm_key
     _compute_status = EpicsMultiSourceBase._compute_status
-    _read_source_alarm = EpicsMultiSourceBase._read_source_alarm
+    _read_source_snapshot = EpicsMultiSourceBase._read_source_snapshot
     _status_snapshot = EpicsDeviceBase._status_snapshot
     _refresh_status = EpicsDeviceBase._refresh_status
     doStatus = EpicsDeviceBase.doStatus
@@ -908,6 +908,9 @@ class MultiGlueProbe:
         self._disconnected = set()
         self._epics = EpicsMultiSourceComponent(
             MULTI_CHANNELS, SOURCES, wrapper=FakeEpicsBackend()
+        )
+        self._epics.wrapper.values.update(
+            dict.fromkeys(self._epics.pvs_to_connect(), 0)
         )
 
 

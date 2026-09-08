@@ -46,6 +46,7 @@ class FakeEpicsBackend:
         self.value_choices = {}
         self.connect_calls = []
         self.put_calls = []
+        self.put_errors = {}
         self.get_calls = []
         self.subscriptions = []
         self._is_connected = True
@@ -78,6 +79,14 @@ class FakeEpicsBackend:
         return self._get_value(pvname, as_string)
 
     @_requires_connected_backend
+    def get_pv_readings(self, pvs):
+        self.get_calls.append(("get_pv_readings", dict(pvs)))
+        return {
+            pv: (self._get_value(pv, as_string), self.alarms.get(pv, (status.OK, "")))
+            for pv, as_string in pvs.items()
+        }
+
+    @_requires_connected_backend
     def get_units(self, pvname, default=""):
         self.get_calls.append(("get_units", pvname, default))
         return self.units.get(pvname, default)
@@ -99,6 +108,8 @@ class FakeEpicsBackend:
 
     @_requires_connected_backend
     def put_pv_value(self, pvname, value, wait=False):
+        if pvname in self.put_errors:
+            raise self.put_errors[pvname]
         self.values[pvname] = value
         self.put_calls.append((pvname, value, wait))
 
@@ -197,7 +208,9 @@ def patch_create_wrapper(monkeypatch, module):
 
     from nicos_ess.devices.epics.pva import epics_common
 
+    # Replace the network transport so device tests need no external IOC.
     monkeypatch.setattr(epics_common, "create_wrapper", make_backend, raising=False)
+    # Device modules may import the network factory directly.
     monkeypatch.setattr(module, "create_wrapper", make_backend, raising=False)
     return backend
 

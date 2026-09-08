@@ -80,6 +80,30 @@ def test_get_pv_value_returns_scalar(fake_context: FakeContext):
     assert fake_context.get_calls == [("PV:INT", 1.0)]
 
 
+def test_readings_use_one_bulk_get_for_values_and_alarms(fake_context):
+    fake_context.set_get_result(
+        "PV:FLOAT",
+        {
+            "value": 12.5,
+            "alarm": {"severity": 2, "message": "overvoltage"},
+        },
+    )
+    fake_context.set_get_result(
+        "PV:ENUM",
+        {
+            "value": FakeEnumValue(index=1, choices=["Off", "On"]),
+            "alarm": {"severity": 0, "message": "NO_ALARM"},
+        },
+    )
+    wrapper = P4pWrapper(timeout=1.0, context=fake_context)
+
+    assert wrapper.get_pv_readings({"PV:FLOAT": False, "PV:ENUM": True}) == {
+        "PV:FLOAT": (12.5, (status.ERROR, "overvoltage")),
+        "PV:ENUM": ("On", (status.OK, "")),
+    }
+    assert fake_context.get_calls == [(["PV:FLOAT", "PV:ENUM"], 1.0)]
+
+
 def test_get_pv_value_as_string_converts_ndarray_to_string(fake_context: FakeContext):
     fake_context.set_get_result("PV:WFM", {"value": np.array([65, 66], dtype=np.uint8)})
     pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)

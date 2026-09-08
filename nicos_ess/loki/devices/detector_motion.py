@@ -1,4 +1,5 @@
 from nicos.core import (
+    SIMULATION,
     Attach,
     Moveable,
     status,
@@ -40,7 +41,9 @@ class LOKIDetectorMotion(EpicsMotor):
             Message indicating why movement is or isn't allowed.
         """
 
-        power_status, message = self._attached_power_supply.status()
+        if self._mode == SIMULATION:
+            return True, ""
+        power_status, message = self._attached_power_supply.status(0)
         if power_status != status.DISABLED:
             return False, message
         return True, ""

@@ -3,9 +3,22 @@ from types import SimpleNamespace
 
 import pytest
 
-from nicos.core import ADMIN, GUEST, AccessError, ConfigurationError, LimitError, status
+from nicos.core import (
+    ADMIN,
+    GUEST,
+    SIMULATION,
+    SLAVE,
+    AccessError,
+    CanDisable,
+    CommunicationError,
+    ConfigurationError,
+    LimitError,
+    ModeError,
+    status,
+)
 from nicos.devices.generic import ParamDevice, ReadonlyParamDevice
 from nicos_ess.devices.epics.caen_syx527 import CaenSyx527ChannelGroup
+from test.nicos_ess.loki.test_loki_detector_carriage import FakeLokiDetectorMotion
 
 SOURCES = {
     "module01": "SIM:HVM-100:Ch00",
@@ -224,28 +237,6 @@ def test_off_threshold_waits_for_voltage_then_ignores_safe_ramp_down(
     assert daemon_device.status() == (status.DISABLED, "output disabled")
 
 
-@pytest.mark.parametrize("active_status", ["ON", "RU"])
-def test_requested_off_waits_for_outputs_to_stop(
-    device_harness, power_supply_backend, active_status
-):
-    daemon_device, _poller_device = create_group(device_harness)
-    emit_snapshot(power_supply_backend)
-
-    power_supply_backend.emit_update(
-        f"{SOURCES['module01']}-Status-{active_status}", value=1
-    )
-
-    assert daemon_device.status() == (
-        status.BUSY,
-        "waiting for outputs to disable",
-    )
-
-    power_supply_backend.emit_update(
-        f"{SOURCES['module01']}-Status-{active_status}", value=0
-    )
-    assert daemon_device.status() == (status.DISABLED, "output disabled")
-
-
 def test_enabled_output_is_busy_until_voltage_reaches_target(
     device_harness, power_supply_backend
 ):
@@ -264,45 +255,6 @@ def test_enabled_output_is_busy_until_voltage_reaches_target(
         power_supply_backend.emit_update(f"{source}-VMon", value=800.0)
 
     assert daemon_device.status() == (status.OK, "output enabled")
-
-
-def test_partial_power_request_is_warn(device_harness, power_supply_backend):
-    daemon_device, _poller_device = create_group(device_harness)
-    emit_snapshot(power_supply_backend)
-
-    emit_powered(power_supply_backend, SOURCES["module02"])
-
-    assert daemon_device.status() == (
-        status.WARN,
-        "1 of 2 outputs requested on",
-    )
-
-
-def test_requested_power_is_busy_until_all_outputs_report_on(
-    device_harness, power_supply_backend
-):
-    daemon_device, _poller_device = create_group(device_harness)
-    emit_snapshot(power_supply_backend)
-
-    for source in SOURCES.values():
-        power_supply_backend.emit_update(f"{source}-Pw-RB", value=1)
-    emit_status_word(power_supply_backend, SOURCES["module02"], 1)
-
-    assert daemon_device.status() == (status.BUSY, "1 of 2 outputs enabled")
-
-
-def test_ramping_bit_keeps_an_enabled_group_busy_at_target(
-    device_harness, power_supply_backend
-):
-    daemon_device, _poller_device = create_group(device_harness)
-    emit_snapshot(power_supply_backend)
-
-    for source in SOURCES.values():
-        emit_powered(power_supply_backend, source)
-        power_supply_backend.emit_update(f"{source}-VMon", value=800.0)
-    power_supply_backend.emit_update(f"{SOURCES['module01']}-Status-RU", value=1)
-
-    assert daemon_device.status() == (status.BUSY, "1 of 2 outputs ramping")
 
 
 def test_current_changes_are_not_movement_but_current_alarms_affect_status(
@@ -324,7 +276,7 @@ def test_current_changes_are_not_movement_but_current_alarms_affect_status(
     )
     assert daemon_device.status() == (
         status.ERROR,
-        "output enabled; leak current alarm",
+        "leak current alarm",
     )
 
 
@@ -442,7 +394,7 @@ def test_explicit_daemon_poll_still_reads_hardware(
     )
 
 
-def test_enable_relies_on_monitor_updates_when_polling_is_disabled(
+def test_enable_polls_and_waits_for_power_readbacks(
     device_harness, power_supply_backend
 ):
     daemon_device, _poller_device = create_group(device_harness)
@@ -451,10 +403,15 @@ def test_enable_relies_on_monitor_updates_when_polling_is_disabled(
 
     device_harness.run_daemon(daemon_device.enable)
 
-    assert power_supply_backend.get_calls == []
+    assert isinstance(daemon_device, CanDisable)
+    assert daemon_device.status() == (status.BUSY, "waiting for outputs to enable")
     assert all(
         power_supply_backend.values[f"{source}-Pw"] == 1 for source in SOURCES.values()
     )
+    for source in SOURCES.values():
+        emit_powered(power_supply_backend, source)
+        power_supply_backend.emit_update(f"{source}-VMon", value=800.0)
+    assert daemon_device.status() == (status.OK, "output enabled")
 
 
 def test_poller_poll_can_refresh_monitor_derived_status(
@@ -649,7 +606,7 @@ def test_status_update_recomputes_from_monitors_without_direct_epics_gets(
     assert power_supply_backend.get_calls == []
     assert daemon_device.status() == (
         status.ERROR,
-        "output disabled; module02: alarm",
+        "module02: alarm",
     )
 
 
@@ -662,21 +619,23 @@ def test_alarm_summary_is_reported_per_channel(device_harness, power_supply_back
 
     assert daemon_device.status() == (
         status.ERROR,
-        "output disabled; module01: alarm; module02: alarm",
+        "module01: alarm; module02: alarm",
     )
 
     emit_fault(power_supply_backend, SOURCES["module01"], on=False)
 
     assert daemon_device.status() == (
         status.ERROR,
-        "output disabled; module02: alarm",
+        "module02: alarm",
     )
 
 
 def test_value_info_names_each_channel(device_harness, power_supply_backend):
     daemon_device, _poller_device = create_group(device_harness)
 
-    assert [value.name for value in daemon_device.valueInfo()] == list(SOURCES)
+    assert [value.name for value in daemon_device.valueInfo()] == [
+        f"{daemon_device.name}.{source_id}" for source_id in SOURCES
+    ]
     assert all(value.unit == "V" for value in daemon_device.valueInfo())
 
 
@@ -697,3 +656,474 @@ def test_reconnect_reuses_the_last_complete_monitor_snapshot(
 
     power_supply_backend.emit_update(f"{SOURCES['module02']}-Status-Alarm")
     assert daemon_device.status() == (status.DISABLED, "output disabled")
+
+
+@pytest.mark.parametrize("monitor", [True, False])
+def test_start_waits_for_all_setpoint_readbacks(
+    device_harness, power_supply_backend, monitor
+):
+    daemon_device, _poller_device = create_group(device_harness, monitor=monitor)
+    emit_snapshot(power_supply_backend)
+    for source in SOURCES.values():
+        emit_powered(power_supply_backend, source)
+        power_supply_backend.emit_update(f"{source}-VMon", value=800.0)
+
+    device_harness.run_daemon(daemon_device.start, (1000.0, 1100.0))
+    # CAEN input records can still contain the previous setpoints after a put.
+    for source in SOURCES.values():
+        power_supply_backend.emit_update(f"{source}-V0Set-RB")
+    assert daemon_device.target == (1000.0, 1100.0)
+    assert not device_harness.run_daemon(daemon_device.isCompleted)
+
+    for source, value in zip(SOURCES.values(), (1000.0, 1100.0)):
+        power_supply_backend.emit_update(f"{source}-VMon", value=value)
+    first, second = SOURCES.values()
+    power_supply_backend.emit_update(f"{first}-V0Set-RB", value=1000.0)
+    assert daemon_device.target == (1000.0, 1100.0)
+    assert not device_harness.run_daemon(daemon_device.isCompleted)
+
+    power_supply_backend.emit_update(f"{second}-V0Set-RB", value=1100.0)
+    assert device_harness.run_daemon(daemon_device.isCompleted)
+    assert daemon_device.target == (1000.0, 1100.0)
+
+    # Once acknowledged, subsequent external changes can update the target.
+    power_supply_backend.emit_update(f"{second}-V0Set-RB", value=1200.0)
+    assert daemon_device.status(0)[0] == status.BUSY
+    assert daemon_device.target == (1000.0, 1200.0)
+
+
+def test_fresh_completion_does_not_let_older_monitors_restore_the_old_target(
+    device_harness, power_supply_backend
+):
+    daemon_device, _poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    for source in SOURCES.values():
+        emit_powered(power_supply_backend, source)
+        power_supply_backend.emit_update(f"{source}-VMon", value=800.0)
+    device_harness.run_daemon(daemon_device.start, (1000.0, 1000.0))
+
+    for source in SOURCES.values():
+        power_supply_backend.values[f"{source}-V0Set-RB"] = 1000.0
+        power_supply_backend.values[f"{source}-VMon"] = 1000.0
+    assert device_harness.run_daemon(daemon_device.isCompleted)
+
+    # The IOC has acknowledged the move, but the monitor cache still lags.
+    power_supply_backend.emit_update(f"{SOURCES['module01']}-IMon", value=0.2)
+    assert daemon_device.target == (1000.0, 1000.0)
+    assert daemon_device.status()[0] == status.BUSY
+    emit_snapshot(power_supply_backend)
+    assert daemon_device.status() == (status.OK, "output enabled")
+
+
+def test_ramping_warning_does_not_complete_movement(
+    device_harness, power_supply_backend
+):
+    daemon_device, _poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    for source in SOURCES.values():
+        emit_powered(power_supply_backend, source)
+        power_supply_backend.emit_update(f"{source}-Status-RU", value=1)
+    pv = f"{SOURCES['module01']}-IMon"
+    power_supply_backend.alarms[pv] = status.WARN, "minor current alarm"
+    power_supply_backend.emit_update(
+        pv, severity=status.WARN, message="minor current alarm"
+    )
+
+    assert daemon_device.status() == (
+        status.BUSY,
+        "2 of 2 outputs ramping",
+    )
+    assert not device_harness.run_daemon(daemon_device.isCompleted)
+
+
+@pytest.mark.parametrize(
+    "alarm, expected, movement_allowed",
+    [
+        (status.WARN, (status.DISABLED, "output disabled"), True),
+        (status.ERROR, (status.ERROR, "current alarm"), False),
+        (status.UNKNOWN, (status.UNKNOWN, "current alarm"), False),
+    ],
+)
+def test_disabled_supply_alarms_and_detector_movement(
+    device_harness, power_supply_backend, alarm, expected, movement_allowed
+):
+    daemon_device, _poller_device = create_group(
+        device_harness, voltage_off_threshold=5.0
+    )
+    motor = create_detector_motor(device_harness, daemon_device)
+    emit_snapshot(power_supply_backend)
+    pv = f"{SOURCES['module01']}-IMon"
+    power_supply_backend.alarms[pv] = alarm, "current alarm"
+    power_supply_backend.emit_update(pv, severity=alarm, message="current alarm")
+    assert daemon_device.status() == expected
+    assert device_harness.run_daemon(motor.isAllowed, 20)[0] == movement_allowed
+    if movement_allowed:
+        device_harness.run_daemon(motor.start, 20)
+        assert motor.target == 20
+    else:
+        with pytest.raises(LimitError, match="current alarm"):
+            device_harness.run_daemon(motor.start, 20)
+
+
+def test_initial_updates_publish_all_group_values(device_harness, power_supply_backend):
+    daemon_device, _poller_device = create_group(device_harness)
+    assert daemon_device.target == (800.0, 800.0)
+    assert daemon_device.read() == (0.22, 0.22)
+    for source in SOURCES.values():
+        power_supply_backend.values[f"{source}-V0Set-RB"] = 900.0
+        power_supply_backend.values[f"{source}-VMon"] = 0.5
+    power_supply_backend.get_calls.clear()
+    # All value PVs arrive before the final status bit in this snapshot.
+    emit_snapshot(power_supply_backend)
+    assert daemon_device.read() == (0.5, 0.5)
+    assert daemon_device.target == (900.0, 900.0)
+    assert daemon_device.status() == (status.DISABLED, "output disabled")
+    assert power_supply_backend.get_calls == []
+
+
+def test_ramp_down_monitor_callback_does_not_read_the_ioc(
+    device_harness, power_supply_backend
+):
+    daemon_device, _poller_device = create_group(
+        device_harness, voltage_off_threshold=5.0
+    )
+    emit_snapshot(power_supply_backend)
+    power_supply_backend.get_calls.clear()
+    power_supply_backend.emit_update(f"{SOURCES['module01']}-VMon", value=50.0)
+    assert daemon_device.status() == (
+        status.BUSY,
+        "waiting for output voltages to fall to 5 V or below",
+    )
+    assert power_supply_backend.get_calls == []
+
+
+def test_without_monitors_status_reads_the_ioc(device_harness, power_supply_backend):
+    daemon_device, _poller_device = create_group(device_harness, monitor=False)
+    assert daemon_device.status() == (status.DISABLED, "output disabled")
+    device_harness.run_daemon(daemon_device.enable)
+    assert daemon_device.status() == (status.BUSY, "waiting for outputs to enable")
+
+
+@pytest.mark.parametrize("maxage", [None, 60, 0])
+def test_read_honours_maxage(device_harness, power_supply_backend, maxage):
+    daemon_device, _poller_device = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    for source in SOURCES.values():
+        power_supply_backend.values[f"{source}-VMon"] = 2.0
+    expected = (2.0, 2.0) if maxage == 0 else (0.22, 0.22)
+    assert daemon_device.read(maxage) == expected
+
+
+@pytest.mark.parametrize(
+    "sources, target", [(SOURCES, (100.0, 200.0)), ({"one": "SIM:ONE"}, 100.0)]
+)
+def test_simulated_commands_do_not_access_epics(
+    device_harness, fake_backend, sources, target
+):
+    device = device_harness.create_daemon(
+        CaenSyx527ChannelGroup, mode=SIMULATION, sources=sources, pva=True
+    )
+    device_harness.run_daemon(device.start, target)
+    device_harness.run_daemon(device.enable)
+    device_harness.run_daemon(device.disable)
+    assert device.read() == target
+    assert device.target == target
+    assert fake_backend.connect_calls == []
+    assert fake_backend.get_calls == []
+    assert fake_backend.put_calls == []
+
+
+@pytest.mark.parametrize("method", ["enable", "disable"])
+def test_power_commands_honour_slave_mode(device_harness, power_supply_backend, method):
+    device, _ = create_group(device_harness, mode=SLAVE)
+    with pytest.raises(ModeError):
+        device_harness.run_daemon(getattr(device, method))
+    assert power_supply_backend.put_calls == []
+
+
+@pytest.mark.parametrize("method", ["enable", "disable"])
+def test_power_commands_honour_access_requirements(
+    device_harness, power_supply_backend, method
+):
+    device, _ = create_group(device_harness, requires={"level": ADMIN})
+    with device_harness.activate(device_harness.DAEMON_ROLE) as active_session:
+        active_session.executing_user = SimpleNamespace(name="guest", level=GUEST)
+        with pytest.raises(AccessError):
+            getattr(device, method)()
+    assert power_supply_backend.put_calls == []
+
+
+def create_detector_motor(device_harness, supply, *, mode=None):
+    return device_harness.create_daemon(
+        FakeLokiDetectorMotion,
+        name="detector_motor",
+        power_supply=supply.name,
+        motorpv="SIM:MOTOR",
+        abslimits=(-100, 100),
+        userlimits=(-100, 100),
+        **({"mode": mode} if mode is not None else {}),
+    )
+
+
+@pytest.mark.parametrize("voltage, powered", [(50.0, 0), (0.22, 1)])
+def test_detector_interlock_rechecks_hardware_when_monitors_lag(
+    device_harness, power_supply_backend, voltage, powered
+):
+    supply, _ = create_group(device_harness, voltage_off_threshold=5.0)
+    motor = create_detector_motor(device_harness, supply)
+    emit_snapshot(power_supply_backend)
+    assert supply.status() == (status.DISABLED, "output disabled")
+
+    first = SOURCES["module01"]
+    power_supply_backend.values[f"{first}-VMon"] = voltage
+    power_supply_backend.values[f"{first}-Pw-RB"] = powered
+    power_supply_backend.values[f"{first}-Status-ON"] = powered
+    assert not device_harness.run_daemon(motor.isAllowed, 20)[0]
+    with pytest.raises(LimitError):
+        device_harness.run_daemon(motor.start, 20)
+
+
+def test_pending_enable_blocks_detector_before_power_readbacks_update(
+    device_harness, power_supply_backend
+):
+    supply, _ = create_group(device_harness, voltage_off_threshold=5.0)
+    motor = create_detector_motor(device_harness, supply)
+    emit_snapshot(power_supply_backend)
+    assert device_harness.run_daemon(motor.isAllowed, 20)[0]
+
+    device_harness.run_daemon(supply.enable)
+    assert supply.status() == (status.BUSY, "waiting for outputs to enable")
+    # An unrelated monitor still sees all power readbacks as off.
+    power_supply_backend.emit_update(f"{SOURCES['module01']}-IMon", value=0.2)
+    assert supply.status() == (status.BUSY, "waiting for outputs to enable")
+    with pytest.raises(LimitError, match="waiting for outputs to enable"):
+        device_harness.run_daemon(motor.start, 20)
+
+    device_harness.run_daemon(supply.disable)
+    assert device_harness.run_daemon(motor.isAllowed, 20)[0]
+
+
+def test_detector_can_move_in_simulation_without_epics(device_harness, fake_backend):
+    supply = device_harness.create_daemon(
+        CaenSyx527ChannelGroup, mode=SIMULATION, sources=SOURCES, pva=True
+    )
+    motor = create_detector_motor(device_harness, supply, mode=SIMULATION)
+    device_harness.run_daemon(motor.start, 20)
+    assert motor.read() == 20
+    assert fake_backend.get_calls == []
+    assert fake_backend.put_calls == []
+
+
+def test_pending_target_survives_daemon_restart(device_harness, power_supply_backend):
+    supply, _ = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    for source in SOURCES.values():
+        emit_powered(power_supply_backend, source)
+        power_supply_backend.emit_update(f"{source}-VMon", value=800.0)
+    device_harness.run_daemon(supply.start, (1000.0, 1100.0))
+    device_harness.run_daemon(supply.shutdown)
+    restarted = device_harness.create_daemon(
+        CaenSyx527ChannelGroup,
+        name=supply.name,
+        sources=SOURCES,
+        precision=1.0,
+        pva=True,
+    )
+    assert restarted.target == (1000.0, 1100.0)
+    assert not device_harness.run_daemon(restarted.isCompleted)
+
+
+def test_current_limit_write_reads_the_previous_value_once(
+    device_harness, power_supply_backend
+):
+    supply, _ = create_group(device_harness)
+    power_supply_backend.get_calls.clear()
+    supply.current_limits = (100.0, 200.0)
+    reads = [
+        call[1] for call in power_supply_backend.get_calls if call[0] == "get_pv_value"
+    ]
+    assert reads == [f"{source}-I0Set-RB" for source in SOURCES.values()]
+
+
+def test_single_channel_value_info_uses_device_name(
+    device_harness, power_supply_backend
+):
+    supply, _ = create_group(device_harness, sources={"one": SOURCES["module01"]})
+    assert [value.name for value in supply.valueInfo()] == [supply.name]
+
+
+def test_fresh_status_batches_values_and_alarms_once(
+    device_harness, power_supply_backend
+):
+    supply, _ = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    pv = f"{SOURCES['module02']}-IMon"
+    power_supply_backend.alarms[pv] = status.ERROR, "current alarm"
+    power_supply_backend.get_calls.clear()
+
+    assert supply.status(0) == (status.ERROR, "current alarm")
+    # Transport calls are the regression: one batch, no second alarm pass.
+    assert power_supply_backend.get_calls == [
+        (
+            "get_pv_readings",
+            {
+                f"{source}{suffix}": False
+                for source in SOURCES.values()
+                for suffix in MONITORED_SUFFIXES
+            },
+        )
+    ]
+
+
+@pytest.mark.parametrize("maxage", [None, 60, 0])
+def test_status_honours_maxage_for_values_and_alarms(
+    device_harness, power_supply_backend, maxage
+):
+    supply, _ = create_group(device_harness, voltage_off_threshold=5.0)
+    emit_snapshot(power_supply_backend)
+    power_supply_backend.values[f"{SOURCES['module01']}-VMon"] = 50.0
+    power_supply_backend.alarms[f"{SOURCES['module02']}-IMon"] = (
+        status.ERROR,
+        "current alarm",
+    )
+
+    expected = (
+        (
+            status.ERROR,
+            "current alarm",
+        )
+        if maxage == 0
+        else (status.DISABLED, "output disabled")
+    )
+    assert supply.status(maxage) == expected
+
+
+def test_positive_maxage_batches_only_expired_readings(
+    device_harness, power_supply_backend
+):
+    supply, _ = create_group(device_harness, voltage_off_threshold=5.0)
+    emit_snapshot(power_supply_backend)
+    old = time.time() - 120
+    for key, value in (
+        ("status", (status.DISABLED, "output disabled")),
+        ("module01/voltage", 0.22),
+        ("module02/current/_alarm_status", (status.OK, "")),
+    ):
+        supply._cache.put(supply.name, key, value, old)
+    voltage_pv = f"{SOURCES['module01']}-VMon"
+    current_pv = f"{SOURCES['module02']}-IMon"
+    power_supply_backend.values[voltage_pv] = 50.0
+    power_supply_backend.alarms[current_pv] = status.ERROR, "current alarm"
+    power_supply_backend.get_calls.clear()
+
+    assert supply.status(60) == (
+        status.ERROR,
+        "current alarm",
+    )
+    assert power_supply_backend.get_calls == [
+        ("get_pv_readings", {voltage_pv: False, current_pv: False})
+    ]
+
+
+@pytest.mark.parametrize("key", ["module01/voltage", "module01/voltage/_alarm_status"])
+def test_invalidated_monitor_data_does_not_trigger_network_reads(
+    device_harness, power_supply_backend, key
+):
+    supply, _ = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    supply._cache.invalidate(supply.name, key)
+    power_supply_backend.get_calls.clear()
+
+    power_supply_backend.emit_update(f"{SOURCES['module02']}-IMon", value=0.2)
+
+    assert supply.status() == (
+        status.UNKNOWN,
+        f"waiting for EPICS data from 1 of {len(SOURCES) * len(MONITORED_SUFFIXES)} PVs",
+    )
+    assert power_supply_backend.get_calls == []
+    power_supply_backend.emit_update(f"{SOURCES['module01']}-VMon")
+    assert supply.status() == (status.DISABLED, "output disabled")
+
+
+def test_status_without_monitors_ignores_existing_cached_readings(
+    device_harness, power_supply_backend
+):
+    supply, _ = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    device_harness.run_daemon(supply.shutdown)
+    supply = device_harness.create_daemon(
+        CaenSyx527ChannelGroup,
+        name=supply.name,
+        sources=SOURCES,
+        monitor=False,
+        pva=True,
+    )
+    power_supply_backend.values[f"{SOURCES['module01']}-Status-Alarm"] = 1
+    supply._cache.invalidate(supply.name, "status")
+
+    assert supply.status() == (status.ERROR, "module01: alarm")
+
+
+def test_fresh_status_reports_disconnected_backend(
+    device_harness, power_supply_backend
+):
+    supply, _ = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    power_supply_backend.disconnect_backend()
+
+    assert supply.status(0) == (status.UNKNOWN, "lost connection to EPICS")
+
+
+def test_partial_voltage_write_keeps_the_target_until_successful_retry(
+    device_harness, power_supply_backend
+):
+    supply, _ = create_group(device_harness)
+    emit_snapshot(power_supply_backend)
+    for source in SOURCES.values():
+        emit_powered(power_supply_backend, source)
+        power_supply_backend.emit_update(f"{source}-VMon", value=800.0)
+    first, second = SOURCES.values()
+    power_supply_backend.put_errors[f"{second}-V0Set"] = TimeoutError("write failed")
+
+    with pytest.raises(CommunicationError, match="write failed"):
+        device_harness.run_daemon(supply.start, (1000.0, 1100.0))
+
+    assert power_supply_backend.values[f"{first}-V0Set"] == 1000.0
+    assert power_supply_backend.values[f"{second}-V0Set"] == 800.0
+    power_supply_backend.emit_update(f"{first}-V0Set-RB", value=1000.0)
+    power_supply_backend.emit_update(f"{first}-VMon", value=1000.0)
+    assert supply.target == (1000.0, 1100.0)
+    assert supply.status(0) == (status.BUSY, "waiting for voltage setpoints to update")
+    assert not device_harness.run_daemon(supply.isCompleted)
+
+    power_supply_backend.put_errors.clear()
+    device_harness.run_daemon(supply.start, (1000.0, 1100.0))
+    power_supply_backend.emit_update(f"{second}-V0Set-RB", value=1100.0)
+    power_supply_backend.emit_update(f"{second}-VMon", value=1100.0)
+    assert device_harness.run_daemon(supply.isCompleted)
+
+
+def test_partial_enable_keeps_detector_blocked_until_explicit_disable(
+    device_harness, power_supply_backend
+):
+    supply, _ = create_group(device_harness, voltage_off_threshold=5.0)
+    motor = create_detector_motor(device_harness, supply)
+    emit_snapshot(power_supply_backend)
+    first, second = SOURCES.values()
+    power_supply_backend.put_errors[f"{second}-Pw"] = TimeoutError("write failed")
+
+    with pytest.raises(CommunicationError, match="write failed"):
+        device_harness.run_daemon(supply.enable)
+
+    assert power_supply_backend.values[f"{first}-Pw"] == 1
+    assert power_supply_backend.values[f"{second}-Pw"] == 0
+    assert supply.status(0) == (status.BUSY, "waiting for outputs to enable")
+    emit_powered(power_supply_backend, first)
+    with pytest.raises(LimitError, match="waiting for outputs to enable"):
+        device_harness.run_daemon(motor.start, 20)
+
+    power_supply_backend.put_errors.clear()
+    device_harness.run_daemon(supply.disable)
+    emit_powered(power_supply_backend, first, on=False)
+    assert supply.status(0) == (status.DISABLED, "output disabled")
+    assert device_harness.run_daemon(motor.isAllowed, 20)[0]

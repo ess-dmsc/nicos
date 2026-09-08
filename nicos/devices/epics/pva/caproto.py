@@ -150,6 +150,23 @@ class CaprotoWrapper:
         except CaprotoTimeoutError:
             raise TimeoutError(f"getting {pvname} timed out") from None
 
+    def get_pv_readings(self, pvs):
+        """Read {PV: as_string} as {PV: (value, (severity, message))}."""
+        readings = {}
+        for pvname, as_string in pvs.items():
+            self.connect_pv(pvname)
+            try:
+                result = self._pvs[pvname].read(
+                    timeout=self._timeout, data_type="control"
+                )
+            except CaprotoTimeoutError:
+                raise TimeoutError(f"getting {pvname} timed out") from None
+            readings[pvname] = (
+                self._convert_value(pvname, result, as_string),
+                self._extract_alarm_info(result.metadata),
+            )
+        return readings
+
     def _convert_value(self, pvname, raw_value, as_string=False):
         if len(raw_value.data) == 1:
             value = raw_value.data[0]
@@ -162,7 +179,7 @@ class CaprotoWrapper:
         # waveforms and arrays are ndarrays
         if isinstance(raw_value.data, np.ndarray):
             val_type = FTYPE_TO_TYPE[self._pvs[pvname].channel.native_data_type]
-            if val_type == bytes or as_string:
+            if val_type is bytes or as_string:
                 return raw_value.data.tobytes().decode()
 
         return str(raw_value.data) if as_string else raw_value.data
