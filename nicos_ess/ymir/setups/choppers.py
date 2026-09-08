@@ -103,5 +103,6 @@ devices = dict(
         command="mini_chopper_control",
         speed="mini_chopper_speed",
         chic_conn="mini_chopper_chic",
+        in_phase="mini_chopper_phased",
     ),
 )
