@@ -6,7 +6,7 @@ linked_pvroot = "B02-CSLab:SE-Pumps:Lnkd"
 
 devices = dict(
     pump1=device(
-        "nicos_ess.loki.devices.cetoni_pump.CetoniPumpController",
+        "nicos_ess.loki.devices.cetoni_pump_old.CetoniPumpController",
         description="Control device for cetoni pump SP1",
         pvroot=pump1_pvroot,
         linked_pump_device="linked_pumping",
@@ -19,7 +19,7 @@ devices = dict(
         writepv=f"{pump1_pvroot}SyrType",
     ),
     pump2=device(
-        "nicos_ess.loki.devices.cetoni_pump.CetoniPumpController",
+        "nicos_ess.loki.devices.cetoni_pump_old.CetoniPumpController",
         description="Control device for cetoni pump SP2",
         pvroot=pump2_pvroot,
         linked_pump_device="linked_pumping",
@@ -32,7 +32,7 @@ devices = dict(
         writepv=f"{pump2_pvroot}SyrType",
     ),
     linked_pumping=device(
-        "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode",
+        "nicos_ess.loki.devices.cetoni_pump_old.CetoniPumpLinkedMode",
         description="Device to start the linked pumping flow",
         pvroot=linked_pvroot,
         linked_pumping_mode="linked_pumping_mode",
