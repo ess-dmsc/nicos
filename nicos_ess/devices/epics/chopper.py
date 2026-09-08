@@ -196,6 +196,15 @@ class NewChopperAlarms(ChopperAlarms):
 
 
 class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
+    """
+    Chopper speed class implements doIsCompleted to ease the maw
+    usage inside scripts and scans
+    """
+
+    attached_devices = {
+        "in_phase": Attach("In phase ", EpicsMappedReadable),
+    }
+
     def doIsCompleted(self):
         if self.read() != 0:
             phase = self._attached_in_phase.read()
@@ -215,7 +224,6 @@ class NewEssChopperController(EssChopperController):
 
     attached_devices = {
         "alarms": Attach("Alarms of the chopper", NewChopperAlarms, optional=True),
-        "in_phase": Attach("In phase ", EpicsMappedReadable),
         "speed": Attach("Speed PV of the chopper", EssChopperSpeed),
     }
 
