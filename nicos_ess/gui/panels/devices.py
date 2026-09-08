@@ -241,8 +241,9 @@ class DevicesPanel(Panel):
         with self.sgroup as settings:
             for i in range(self.tree.topLevelItemCount()):
                 v = settings.value(
-                    "%s/expanded"
-                    % self.tree.topLevelItem(i).text(self.col_index["NAME"]),
+                    "{}/expanded".format(
+                        self.tree.topLevelItem(i).text(self.col_index["NAME"])
+                    ),
                     True,
                     bool,
                 )
@@ -252,8 +253,9 @@ class DevicesPanel(Panel):
         with self.sgroup as settings:
             for i in range(self.tree.topLevelItemCount()):
                 settings.setValue(
-                    "%s/expanded"
-                    % self.tree.topLevelItem(i).text(self.col_index["NAME"]),
+                    "{}/expanded".format(
+                        self.tree.topLevelItem(i).text(self.col_index["NAME"])
+                    ),
                     self.tree.topLevelItem(i).isExpanded(),
                 )
 
@@ -312,7 +314,7 @@ class DevicesPanel(Panel):
         # show warnings and errors emitted by the current command in a window
         if message[5] != self._exec_reqid or message[2] < WARNING:
             return
-        msg = "%s: %s" % (message[0], message[3].strip())
+        msg = f"{message[0]}: {message[3].strip()}"
         if self._error_window is None:
 
             def reset_errorwindow():
@@ -406,7 +408,7 @@ class DevicesPanel(Panel):
         if failure:
             short_failure = failure.split("\n")[0]
             devitem.setText(
-                self.col_index["STATUS"], "creating device failed: %s" % short_failure
+                self.col_index["STATUS"], f"creating device failed: {short_failure}"
             )
             if self.useicons:
                 devitem.setIcon(self.col_index["NAME"], self.statusIcon[ERROR])
@@ -504,9 +506,11 @@ class DevicesPanel(Panel):
             devitem.setForeground(
                 self.col_index["VALUE"], self.valueBrush[devinfo.expired, devinfo.fixed]
             )
-            if not devitem.parent().isExpanded():
-                if ldevname == devitem.parent().representative:
-                    devitem.parent().setText(self.col_index["VALUE"], fmted)
+            if (
+                not devitem.parent().isExpanded()
+                and ldevname == devitem.parent().representative
+            ):
+                devitem.parent().setText(self.col_index["VALUE"], fmted)
         elif subkey == "target":
             if time < devinfo.valtime:
                 return
@@ -522,10 +526,7 @@ class DevicesPanel(Panel):
         elif subkey == "status":
             if time < devinfo.stattime:
                 return
-            if not value:
-                status = (UNKNOWN, "?")
-            else:
-                status = cache_load(value)
+            status = (UNKNOWN, "?") if not value else cache_load(value)
             devinfo.status = status
             devinfo.stattime = time
             devitem.setText(3, str(status[1]))
@@ -636,7 +637,7 @@ class DevicesPanel(Panel):
     @pyqtSlot()
     def on_actionRetryCreate_triggered(self):
         if self._menu_dev:
-            self.exec_command("CreateDevice(%r)" % self._menu_dev)
+            self.exec_command(f"CreateDevice({self._menu_dev!r})")
 
     @pyqtSlot()
     def on_actionShutDown_triggered(self):
@@ -648,32 +649,32 @@ class DevicesPanel(Panel):
             if self.askQuestion(
                 "This will unload the device until the setup is loaded again. Proceed?"
             ):
-                self.exec_command("RemoveDevice(%r)" % self._menu_dev, ask_queue=False)
+                self.exec_command(f"RemoveDevice({self._menu_dev!r})", ask_queue=False)
 
     @pyqtSlot()
     def on_actionReset_triggered(self):
         if self._menu_dev:
-            self.exec_command("reset(%r)" % self._menu_dev)
+            self.exec_command(f"reset({self._menu_dev!r})")
 
     @pyqtSlot()
     def on_actionFix_triggered(self):
         if self._menu_dev:
             reason, ok = QInputDialog.getText(
-                self, "Fix", "Please enter the reason for fixing %s:" % self._menu_dev
+                self, "Fix", f"Please enter the reason for fixing {self._menu_dev}:"
             )
             if not ok:
                 return
-            self.exec_command("fix(%r, %r)" % (self._menu_dev, reason))
+            self.exec_command(f"fix({self._menu_dev!r}, {reason!r})")
 
     @pyqtSlot()
     def on_actionRelease_triggered(self):
         if self._menu_dev:
-            self.exec_command("release(%r)" % self._menu_dev)
+            self.exec_command(f"release({self._menu_dev!r})")
 
     @pyqtSlot()
     def on_actionStop_triggered(self):
         if self._menu_dev:
-            self.exec_command("stop(%r)" % self._menu_dev, immediate=True)
+            self.exec_command(f"stop({self._menu_dev!r})", immediate=True)
 
     @pyqtSlot()
     def on_actionMove_triggered(self):
@@ -683,7 +684,7 @@ class DevicesPanel(Panel):
     @pyqtSlot()
     def on_actionHelp_triggered(self):
         if self._menu_dev:
-            self.client.eval("session.showHelp(session.devices[%r])" % self._menu_dev)
+            self.client.eval(f"session.showHelp(session.devices[{self._menu_dev!r}])")
 
     @pyqtSlot()
     def on_actionPlotHistory_triggered(self):
@@ -697,10 +698,10 @@ class DevicesPanel(Panel):
             if failure:
                 if self.askQuestion(
                     "This device could not be created due to "
-                    "the following error:\n\n%s\n\nDo you "
-                    "want to retry creating it?" % failure
+                    f"the following error:\n\n{failure}\n\nDo you "
+                    "want to retry creating it?"
                 ):
-                    self.exec_command("CreateDevice(%r)" % devname)
+                    self.exec_command(f"CreateDevice({devname!r})")
             else:
                 self._open_control_dialog(devname)
         elif item.type() == PARAM_TYPE:
@@ -718,7 +719,7 @@ class DevicesPanel(Panel):
         devinfo = self._devinfo[ldevname]
         item = self._devitems[ldevname]
 
-        classes = self.client.eval("session.getDevice(%r).classes" % devname, [])
+        classes = self.client.eval(f"session.getDevice({devname!r}).classes", [])
 
         # The first class is the "real" class
         if classes[0] == "nicos_ess.devices.epics.pva.motor.EpicsMotor":
@@ -756,7 +757,7 @@ class DevicesPanel(Panel):
                 for field in ("temperature", "electric_field", "magnetic_field")
                 if sample_params.get(field) and sample_params[field] not in curr_devs
             ]
-            self.client.eval("session.clearSampleFields(%r)" % clear_fields)
+            self.client.eval(f"session.clearSampleFields({clear_fields!r})")
 
     # API shared with ControlDialog
     def exec_command(self, command, ask_queue=True, immediate=False):
@@ -832,11 +833,11 @@ class ControlDialog(QDialog):
                 self.close()
                 return
 
-        self.deviceName.setText("Device: %s" % self.devname)
-        self.setWindowTitle("Control %s" % self.devname)
+        self.deviceName.setText(f"Device: {self.devname}")
+        self.setWindowTitle(f"Control {self.devname}")
 
         # trigger parameter poll
-        self.client.eval("%s.pollParams()" % self.devname, None)
+        self.client.eval(f"{self.devname}.pollParams()", None)
 
         # now get all cache keys pertaining to the device and set the
         # properties we want
@@ -853,7 +854,7 @@ class ControlDialog(QDialog):
             classes = set(param_classes)
         elif not classes:
             live_classes = self.client.eval(
-                "session.getDevice(%r).classes" % self.devname, []
+                f"session.getDevice({self.devname!r}).classes", []
             )
             classes = set(live_classes or ())
         self.devinfo.classes = classes
@@ -879,7 +880,7 @@ class ControlDialog(QDialog):
         if "alias" in params:
             if params["alias"]:
                 self.deviceName.setText(
-                    self.deviceName.text() + " (alias for %s)" % params["alias"]
+                    self.deviceName.text() + " (alias for {})".format(params["alias"])
                 )
             alias_config = self.client.eval("session.alias_config", {})
             self.aliasTarget = QComboBox(self)
@@ -943,10 +944,10 @@ class ControlDialog(QDialog):
             self.moveBtns.addButton(menuBtn, QDialogButtonBox.ButtonRole.ResetRole)
 
         def reset(checked):
-            self.device_panel.exec_command("reset(%s)" % self.devrepr)
+            self.device_panel.exec_command(f"reset({self.devrepr})")
 
         def stop(checked):
-            self.device_panel.exec_command("stop(%s)" % self.devrepr, immediate=True)
+            self.device_panel.exec_command(f"stop({self.devrepr})", immediate=True)
 
         self.moveBtns.addButton(
             "Reset", QDialogButtonBox.ButtonRole.ResetRole
@@ -985,7 +986,7 @@ class ControlDialog(QDialog):
             self.target.setClient(self.client)
 
             def btn_callback(target):
-                self.device_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
+                self.device_panel.exec_command(f"move({self.devrepr}, {target!r})")
 
             self.target.valueChosen.connect(btn_callback)
             self.targetFrame.layout().takeAt(1).widget().deleteLater()
@@ -1005,7 +1006,7 @@ class ControlDialog(QDialog):
                 self.relMoveGroup.setVisible(False)
             else:
                 self.valueinfo = self.client.eval(
-                    "session.getDevice(%r).valueInfo()" % self.devname, None
+                    f"session.getDevice({self.devname!r}).valueInfo()", None
                 )
                 if self.valueinfo:
                     self.valueinfo_names = tuple(
@@ -1059,7 +1060,7 @@ class ControlDialog(QDialog):
                     target = self.target.getValue()
                 except ValueError:
                     return
-                self.device_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
+                self.device_panel.exec_command(f"move({self.devrepr}, {target!r})")
 
             if self.target.getValue() is not Ellipsis:  # (button widget)
                 self.moveBtn = self.moveBtns.addButton(
@@ -1091,7 +1092,7 @@ class ControlDialog(QDialog):
         else:
             target = self.devinfo.value + direction * self.rel_target.getValue()
 
-        self.device_panel.exec_command("maw(%s, %r)" % (self.devrepr, target))
+        self.device_panel.exec_command(f"maw({self.devrepr}, {target!r})")
 
     @pyqtSlot()
     def on_btn_settings_clicked(self):
@@ -1118,7 +1119,7 @@ class ControlDialog(QDialog):
         dlg = dialogFromUi(
             self, findResource("nicos_ess/gui/panels/ui_files/devices_limits.ui")
         )
-        dlg.descLabel.setText("Adjust user limits of %s:" % self.devname)
+        dlg.descLabel.setText(f"Adjust user limits of {self.devname}:")
 
         userlimits = self.client.getDeviceParam(self.devname, "userlimits")
         dlg.limitMin.setText(
@@ -1142,7 +1143,7 @@ class ControlDialog(QDialog):
         target.setClient(self.client)
 
         def callback():
-            self.device_panel.exec_command("resetlimits(%s)" % self.devrepr)
+            self.device_panel.exec_command(f"resetlimits({self.devrepr})")
             dlg.reject()
 
         dlg.btn_reset.clicked.connect(callback)
@@ -1161,7 +1162,7 @@ class ControlDialog(QDialog):
             self.on_actionSetLimits_triggered()
             return
         self.device_panel.exec_command(
-            'set(%s, "userlimits", %s)' % (self.devrepr, newlimits)
+            f'set({self.devrepr}, "userlimits", {newlimits})'
         )
 
     def _get_new_value(self, window_title, desc):
@@ -1183,25 +1184,23 @@ class ControlDialog(QDialog):
     @pyqtSlot()
     def on_actionAdjustOffset_triggered(self):
         val = self._get_new_value(
-            "Adjust offset", "Redefine current position of %s" % self.devname
+            "Adjust offset", f"Redefine current position of {self.devname}"
         )
         if val is not None:
-            self.device_panel.exec_command("adjust(%s, %r)" % (self.devrepr, val))
+            self.device_panel.exec_command(f"adjust({self.devrepr}, {val!r})")
 
     @pyqtSlot()
     def on_actionSetPosition_triggered(self):
         val = self._get_new_value(
-            "Set hardware position", "Set hardware position of %s" % self.devname
+            "Set hardware position", f"Set hardware position of {self.devname}"
         )
         if val is not None:
             if self.devrepr != self.devname:
-                cmd = "CreateDevice(%s); %s.setPosition(%r)" % (
-                    self.devrepr,
-                    self.devname,
-                    val,
+                cmd = (
+                    f"CreateDevice({self.devrepr}); {self.devname}.setPosition({val!r})"
                 )
             else:
-                cmd = "%s.setPosition(%r)" % (self.devname, val)
+                cmd = f"{self.devname}.setPosition({val!r})"
             self.device_panel.exec_command(cmd)
 
     @pyqtSlot()
@@ -1212,33 +1211,33 @@ class ControlDialog(QDialog):
             if not qwindow.exec():
                 return
 
-        self.device_panel.exec_command("home(%s)" % self.devrepr)
+        self.device_panel.exec_command(f"home({self.devrepr})")
 
     @pyqtSlot()
     def on_actionFix_triggered(self):
         reason, ok = QInputDialog.getText(
-            self, "Fix", "Please enter the reason for fixing %s:" % self.devname
+            self, "Fix", f"Please enter the reason for fixing {self.devname}:"
         )
         if not ok:
             return
-        self.device_panel.exec_command("fix(%s, %r)" % (self.devrepr, reason))
+        self.device_panel.exec_command(f"fix({self.devrepr}, {reason!r})")
 
     @pyqtSlot()
     def on_actionRelease_triggered(self):
-        self.device_panel.exec_command("release(%s)" % self.devrepr)
+        self.device_panel.exec_command(f"release({self.devrepr})")
 
     @pyqtSlot()
     def on_actionEnable_triggered(self):
-        self.device_panel.exec_command("enable(%s)" % self.devrepr)
+        self.device_panel.exec_command(f"enable({self.devrepr})")
 
     @pyqtSlot()
     def on_actionDisable_triggered(self):
-        self.device_panel.exec_command("disable(%s)" % self.devrepr)
+        self.device_panel.exec_command(f"disable({self.devrepr})")
 
     @pyqtSlot()
     def on_setAliasBtn_clicked(self):
         self.device_panel.exec_command(
-            'set(%s, "alias", %r)' % (self.devrepr, self.aliasTarget.currentText())
+            f'set({self.devrepr}, "alias", {self.aliasTarget.currentText()!r})'
         )
 
     @pyqtSlot()
