@@ -201,6 +201,12 @@ class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
     usage inside scripts and scans
     """
 
+    TARGET_ZERO = "0"
+    _INPHASE_STATES = {
+        "Not in phase": False,
+        "In phase": True,
+    }
+
     attached_devices = {
         "in_phase": Attach("In phase ", EpicsMappedReadable),
         "state": Attach("Current state of the chopper", Readable),
@@ -211,30 +217,21 @@ class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
         self._previous_inphase = False
 
     def _str_to_bool(self, inp):
-        if inp == "Not in phase":
-            return False
-        elif inp == "In phase":
-            return True
-        else:
-            raise ValueError(f"Unknown in phase state: {inp}")
+        return self._INPHASE_STATES[inp]
 
     def doIsCompleted(self):
-        if self.target != "0":
-            # Get current in phase state
-            current_inphase_str = self._attached_in_phase.read()
-            current_inphase = self._str_to_bool(current_inphase_str)
+        if self.target != self.TARGET_ZERO:
+            return self._is_completed_by_inphase_edge()
+        return self._is_completed_by_state()
 
-            # Border detection
-            output = current_inphase and not self._previous_inphase
+    def _is_completed_by_inphase_edge(self):
+        current = self._str_to_bool(self._attached_in_phase.read())
+        edge_detected = current and not self._previous_inphase
+        self._previous_inphase = current
+        return edge_detected
 
-            # Update for next iteration
-            self._previous_inphase = current_inphase
-
-            return output
-
-        else:
-            state = self._attached_state.read()
-            return state == "Ready"
+    def _is_completed_by_state(self):
+        return self._attached_state.read() == "Ready"
 
 
 class NewEssChopperController(EssChopperController):
