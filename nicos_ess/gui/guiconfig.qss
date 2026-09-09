@@ -32,19 +32,6 @@ QMenuBar::item:pressed {
     color:black;
 }
 
-/* ----- QMenu -------------------------------------------------- */
-
-QMenu {
-     background-color: #ececec;
-     color: black;
-     margin: 0px;
-     border-radius: 5px;
-}
-
-QMenu::item:disabled {
-     color:#959ea7;
-}
-
 /* -------------------- QToolBar -------------------- */
 
 QToolBar {
