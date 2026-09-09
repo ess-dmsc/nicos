@@ -206,15 +206,31 @@ class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
         "state": Attach("Current state of the chopper", Readable),
     }
 
+    def doInit(self):
+        self._previous_inphase = False
+
+    def _str_to_bool(self, inp):
+        if inp == "Not in phase":
+            return False
+        elif inp == "In phase":
+            return True
+        else:
+            raise ValueError(f"Unknown in phase state: {inp}")
+
     def doIsCompleted(self):
         if self.target != "0":
-            phase = self._attached_in_phase.read()
-            if phase == "Not in phase":
-                return False
-            elif phase == "In phase":
-                return True
-            else:
-                raise ValueError(f"Unexpected phase value: {phase!r}")
+            # Get current in phase state
+            current_inphase_str = self._attached_in_phase.read()
+            current_inphase = self._str_to_bool(current_inphase_str)
+
+            # Border detection
+            output = current_inphase and not self._previous_inphase
+
+            # Update for next iteration
+            self._previous_inphase = current_inphase
+
+            return output
+
         else:
             state = self._attached_state.read()
             return state == "Ready"
