@@ -12,6 +12,7 @@ devices = dict(
         readpv=f"{pump1_pvroot}FilledVolume",
         writepv=f"{pump1_pvroot}FillVol-SP",
         home_warning_msg="Please make sure syringes are removed before homing",
+        precision=0.00001,
     ),
     pump2=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpController",
@@ -20,5 +21,6 @@ devices = dict(
         readpv=f"{pump2_pvroot}FilledVolume",
         writepv=f"{pump2_pvroot}FillVol-SP",
         home_warning_msg="Please make sure syringes are removed before homing",
+        precision=0.00001,
     ),
 )
