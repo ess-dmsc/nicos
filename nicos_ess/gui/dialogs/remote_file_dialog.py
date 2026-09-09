@@ -245,12 +245,12 @@ class RemoteFileDialog(QDialog):
                 return
             
             self.client.eval(
-                f"session.experiment.delete_directory('{path}')",
+                f"session.experiment.delete_user_script_directory('{path}')",
                 None,
             )
         else:
             self.client.eval(
-                f"session.experiment.delete_file('{path}')",
+                f"session.experiment.delete_user_script_file('{path}')",
                 None,
             )
         self._update_files_list(base_path)
@@ -260,9 +260,7 @@ class RemoteFileDialog(QDialog):
         base_path = os.path.join(*self.rel_directory) if self.rel_directory else ""
         old = os.path.join(base_path, row[0])
 
-        # TODO: on save check file exists (may have been renamed) else save as
         # TODO: rename Newfolderdialog
-        # TODO: Only admins can delete?
         # TODO: disable rename and delete for inst_scripts
         if row[3]:
             dialog = NewFolderDialog("Rename Folder", "Enter new name:", text=row[0])
@@ -273,9 +271,8 @@ class RemoteFileDialog(QDialog):
             new_name = dialog.txt_name.text()
             new_name += ".py" if not row[3] else ""
             new = os.path.join(base_path, new_name)
-            print(old, new)
             self.client.eval(
-                f"session.experiment.rename_file('{old}', '{new}')", None
+                f"session.experiment.rename_user_script_file('{old}', '{new}')", None
             )
 
             self._update_files_list(base_path)

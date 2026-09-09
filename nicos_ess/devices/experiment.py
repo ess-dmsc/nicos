@@ -362,7 +362,7 @@ class EssExperiment(Device):
         if not os.path.exists(path):
             os.makedirs(path)
 
-    def delete_file(self, path):
+    def delete_user_script_file(self, path):
         """Deletes the specified file"""
         if ".." in path:
             self.log.error("Relative paths are not allowed.")
@@ -372,7 +372,7 @@ class EssExperiment(Device):
         if os.path.exists(path):
             os.remove(path)
 
-    def delete_directory(self, path):
+    def delete_user_script_directory(self, path):
         """Deletes the specified directory and contents"""
         if ".." in path:
             self.log.error("Relative paths are not allowed.")
@@ -382,9 +382,9 @@ class EssExperiment(Device):
         if os.path.exists(path):
             shutil.rmtree(path, ignore_errors=True)
 
-    def rename_file(self, old, new):
+    def rename_user_script_file(self, old, new):
         """Renames the file/directory to the new name"""
-        if ".." in old:
+        if ".." in old or ".." in new:
             self.log.error("Relative paths are not allowed.")
             return
         old = os.path.join(self.user_scripts_directory, old)
@@ -393,6 +393,15 @@ class EssExperiment(Device):
 
         if os.path.exists(old):
             os.rename(old, new)
+
+    def user_script_file_exists(self, path):
+        """Does the specified file exist?"""
+        if ".." in path:
+            self.log.error("Relative paths are not allowed.")
+            return
+        path = os.path.join(self.user_scripts_directory, path)
+
+        return os.path.exists(path)
 
     def _canQueryProposals(self):
         return self._yuos_client is not None

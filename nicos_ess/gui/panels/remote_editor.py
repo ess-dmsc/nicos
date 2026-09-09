@@ -1072,16 +1072,24 @@ class EditorPanel(Panel):
             self.saveFileAs(self.currentEditor)
 
     def saveFile(self, editor):
-        if not self.filenames[editor]:
+        filename = self.filenames[editor]
+
+        if not filename:
             return self.saveFileAs(editor)
 
         if self.is_imported_script[editor]:
             # Suggest the same name as it was imported as.
-            name = os.path.basename(self.filenames[editor])
+            name = os.path.basename(filename)
             return self.saveFileAs(editor, name=name)
 
+        # If file no longer exists on server, for example: someone renames the parent
+        # folder, use save as
+        if not self.client.eval(
+                f"session.experiment.user_script_file_exists('{filename}')",
+            ):
+            return self.saveFileAs(editor)
+
         self.saving = True
-        filename = self.filenames[editor]
         # The content must be sent as bytes because eval cannot handle strings
         # containing \n, \t, etc.
         content = editor.text().encode()
