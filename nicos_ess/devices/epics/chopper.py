@@ -206,7 +206,8 @@ class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
         "state": Attach("Current state of the chopper", Readable),
     }
 
-    def doInit(self):
+    def doInit(self, mode):
+        EpicsManualMappedAnalogMoveable.doInit(self, mode)
         self._previous_inphase = False
 
     def _str_to_bool(self, inp):
