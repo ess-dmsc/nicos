@@ -1,4 +1,4 @@
-description = "Inverted Guide Alignment Motors"
+description = "Ancillary axis for the Sample Area"
 prefix = "FREIA-AncSt:MC-Lin-"
 
 devices = dict(
