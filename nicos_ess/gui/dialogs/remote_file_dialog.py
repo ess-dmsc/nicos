@@ -218,11 +218,12 @@ class RemoteFileDialog(QDialog):
         if row < 0:
             return
 
-        rename_action = QAction("Rename", self)
+        rename_action = QAction("Rename...", self)
         rename_action.triggered.connect(lambda: self.rename_item(row))
 
         delete_action = QAction("Delete", self)
         delete_action.triggered.connect(lambda: self.delete_item(row))
+        delete_action.setIcon(get_icon("delete-24px.svg"))
 
         menu = QMenu()
         menu.addAction(rename_action)
