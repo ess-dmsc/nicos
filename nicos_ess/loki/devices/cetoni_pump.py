@@ -14,6 +14,7 @@ from nicos_ess.devices.mixins import CanReferenceWithWarning
 class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
     ## TODO
     # - add unit to parameter in device dialog
+    # - add enabled/disabled flag in epics?
     parameters = {
         "pvroot": Param(
             "The root of the pv",
