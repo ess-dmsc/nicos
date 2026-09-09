@@ -92,7 +92,7 @@ devices = dict(
         writepv=f"{pv_root}Spd_S",
         abslimits=(0.0, 14),
         precision=0.1,
-        mapping={"14": 14, "7": 7, "0": 0},
+        mapping={"-14": -14, "-7": -7, "0": 0, "7": 7, "14": 14},
         in_phase="mini_chopper_phased",
         state="mini_chopper_status",
     ),
