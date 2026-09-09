@@ -211,6 +211,9 @@ class RemoteFileDialog(QDialog):
         self._update_path_controls()
         self.file_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.file_table.customContextMenuRequested.connect(self._show_context_menu)
+        policy = self.txt_path.sizePolicy()
+        policy.setRetainSizeWhenHidden(True)
+        self.txt_path.setSizePolicy(policy)
 
     def _show_context_menu(self, point):
         row = self.file_table.indexAt(point).row()
