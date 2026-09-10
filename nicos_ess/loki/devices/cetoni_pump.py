@@ -315,56 +315,59 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
         super()._after_subscribe(mode)
 
     def _build_epics_channels(self):
-        epics_channels = {
-            "flowrate": setpoint_channel(
-                cache_key="flowrate",
-                pv_prefix_attr="pvroot",
-                pv_suffix="FlowRate-SP",
-            ),
-            "flowrate_max": readback_channel(
-                cache_key="flowrate_max",
-                pv_prefix_attr="pvroot",
-                pv_suffix="MaxFlowRate",
-            ),
-            "total_vol": readback_channel(
-                cache_key="total_vol",
-                pv_prefix_attr="pvroot",
-                pv_suffix="TotalVol",
-            ),
-            "first_fill_syringe": setpoint_channel(
-                cache_key="first_fill_syringe",
-                pv_prefix_attr="pvroot",
-                pv_suffix="FillingSyringeIdx-SP",
-                is_enum=True,
-            ),
-            "max_dosing_time": setpoint_channel(
-                cache_key="max_dosing_time",
-                pv_prefix_attr="pvroot",
-                pv_suffix="MaxDosingTime-SP",
-            ),
-            "start": command_channel(
-                pv_prefix_attr="pvroot",
-                pv_suffix="Start-Cmd",
-            ),
-            "stop": command_channel(
-                pv_prefix_attr="pvroot",
-                pv_suffix="StopAllPumps-Cmd",
-            ),
-            "enable": command_channel(
-                pv_prefix_attr="pvroot",
-                pv_suffix="Enable-Cmd",
-            ),
-            "is_disabled": status_channel(
-                cache_key="is_disabled",
-                pv_prefix_attr="pvroot",
-                pv_suffix="Disabled",
-            ),
-            "is_pumping": status_channel(
-                cache_key="is_pumping",
-                pv_prefix_attr="pvroot",
-                pv_suffix="IsPumping",
-            ),
-        }
+        epics_channels = super()._build_epics_channels()
+        epics_channels.update(
+            {
+                "flowrate": setpoint_channel(
+                    cache_key="flowrate",
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="FlowRate-SP",
+                ),
+                "flowrate_max": readback_channel(
+                    cache_key="flowrate_max",
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="MaxFlowRate",
+                ),
+                "total_vol": readback_channel(
+                    cache_key="total_vol",
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="TotalVol",
+                ),
+                "first_fill_syringe": setpoint_channel(
+                    cache_key="first_fill_syringe",
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="FillingSyringeIdx-SP",
+                    is_enum=True,
+                ),
+                "max_dosing_time": setpoint_channel(
+                    cache_key="max_dosing_time",
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="MaxDosingTime-SP",
+                ),
+                "start": command_channel(
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="Start-Cmd",
+                ),
+                "stop": command_channel(
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="StopAllPumps-Cmd",
+                ),
+                "enable": command_channel(
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="Enable-Cmd",
+                ),
+                "is_disabled": status_channel(
+                    cache_key="is_disabled",
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="Disabled",
+                ),
+                "is_pumping": status_channel(
+                    cache_key="is_pumping",
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="IsPumping",
+                ),
+            }
+        )
         return epics_channels
 
     #
