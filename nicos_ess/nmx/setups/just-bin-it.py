@@ -93,16 +93,6 @@ devices = dict(
         det_height=32,
         det_range=(1, 1024),
     ),
-    mon_3_data=device(
-        "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
-        description="A just-bin-it image channel",
-        data_topic="nmx_beam_monitor",
-        source="cbm3",
-        brokers=configdata("config.KAFKA_BROKERS"),
-        unit="evts",
-        hist_type="1-D TOF",
-        hist_topic="nmx_visualisation",
-    ),
 )
 
 startupcode = """
