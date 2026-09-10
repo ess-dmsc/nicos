@@ -397,8 +397,8 @@ class VirtualCounter(VirtualChannel):
         if self.gentype == "const":
             self._generator = lambda x: self.countrate * x
         elif self.gentype == "gauss":
-            self._generator = lambda x: (
-                normal(loc=self.countrate, scale=self.countrate / 10.0) * x
+            self._generator = (
+                lambda x: normal(loc=self.countrate, scale=self.countrate / 10.0) * x
             )
 
     def doStart(self):
