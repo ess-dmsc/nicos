@@ -19,7 +19,6 @@ devices = dict(
             "det_p2_data",
             "mon_1_data",
             "mon_2_data",
-            "mon_3_data",
         ],
         timers=["timer"],
     ),
