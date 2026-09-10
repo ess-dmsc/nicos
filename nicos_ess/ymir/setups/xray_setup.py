@@ -142,6 +142,7 @@ devices = dict(
     ),
     # Filter menu
     filter_menu=device(
-        "nicos_ess.devices.filter.FilterMenu", description="Filter Menu", states=0
+        "nicos_ess.devices.filter.FilterMenu",
+        description="Filter Menu",
     ),
 )
