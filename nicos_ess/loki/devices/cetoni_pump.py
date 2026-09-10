@@ -2,12 +2,14 @@ import time
 
 from nicos.core import (
     SIMULATION,
+    CanDisable,
     Override,
     Param,
+    oneof,
     status,
     usermethod,
 )
-from nicos_ess.devices.epics.pva import EpicsAnalogMoveable
+from nicos_ess.devices.epics.pva import EpicsAnalogMoveable, EpicsMappedMoveable
 from nicos_ess.devices.epics.pva.epics_common import (
     command_channel,
     readback_channel,
@@ -59,6 +61,7 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
             description="Syringe type",
             volatile=True,
             settable=True,
+            type=str,
         ),
     }
 
@@ -68,9 +71,9 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         "userlimits": Override(volatile=True, chatty=False),
     }
 
-    # def _after_subscribe(self, mode):
-    #     syringe_types = self._epics.get_channel_value_choices("syringe_type")
-    #     self.parameters["syringe_type"].type = oneof(*syringe_types)
+    def _after_subscribe(self, mode):
+        syringe_types = self._epics.get_channel_value_choices("syringe_type")
+        self.parameters["syringe_type"].type = oneof(*syringe_types)
 
     def _build_epics_channels(self):
         epics_channels = super()._build_epics_channels()
@@ -267,96 +270,96 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         self._epics.put_channel_value("generate_flow", target)
 
 
-# class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
-#     parameters = {
-#         "pvroot": Param(
-#             "The root of the pv",
-#             type=str,
-#             mandatory=True,
-#             settable=False,
-#             userparam=False,
-#         ),
-#         "flowrate": Param(
-#             description="Linked syringe flowrate",
-#             settable=True,
-#             volatile=True,
-#         ),
-#         "flowrate_max": Param(
-#             description="Max flowrate",
-#             volatile=True,
-#         ),
-#         "total_vol": Param(
-#             description="Total volume",
-#             volatile=True,
-#         ),
-#         "first_fill_syringe": Param(
-#             description="First syringe to fill",
-#             volatile=True,
-#             settable=True,
-#         ),
-#         "max_dosing_time": Param(
-#             description="Time for linked pumping in time mode",
-#             volatile=True,
-#             settable=True,
-#         ),
-#     }
-#
-#     parameter_overrides = {
-#         "mapping": Override(internal=True, mandatory=False, settable=False),
-#     }
-#
-#     def _build_epics_channels(self):
-#         epics_channels = {
-#             "flowrate": setpoint_channel(
-#                 cache_key="flowrate",
-#                 pv_prefix_attr="pvroot",
-#                 pv_suffix="FlowRate-SP",
-#             ),
-#             "flowrate_max": readback_channel(
-#                 cache_key="flowrate_max",
-#                 pv_prefix_attr="pvroot",
-#                 pv_suffix="MaxFlowRate",
-#             ),
-#             "total_vol": readback_channel(
-#                 cache_key="total_vol",
-#                 pv_prefix_attr="pvroot",
-#                 pv_suffix="TotalVol",
-#             ),
-#             "first_fill_syringe": setpoint_channel(
-#                 cache_key="first_fill_syringe",
-#                 pv_prefix_attr="pvroot",
-#                 pv_suffix="FillingSyringeIdx-SP",
-#                 is_enum=True,
-#             ),
-#             "max_dosing_time": setpoint_channel(
-#                 cache_key="max_dosing_time",
-#                 pv_prefix_attr="pvroot",
-#                 pv_suffix="MaxDosingTime-SP",
-#             ),
-#             "start": command_channel(
-#                 pv_prefix_attr="pvroot",
-#                 pv_suffix="Start-Cmd",
-#             ),
-#             "stop": command_channel(
-#                 pv_prefix_attr="pvroot",
-#                 pv_suffix="StopAllPumps-Cmd",
-#             ),
-#             "enable": command_channel(
-#                 pv_prefix_attr="pvroot",
-#                 pv_suffix="Enable-Cmd",
-#             ),
-#             "is_disabled": status_channel(
-#                 cache_key="is_disabled",
-#                 pv_prefix_attr="pvroot",
-#                 pv_suffix="Disabled",
-#             ),
-#             "is_pumping": status_channel(
-#                 cache_key="is_pumping",
-#                 pv_prefix_attr="pvroot",
-#                 pv_suffix="IsPumping",
-#             ),
-#         }
-#         return epics_channels
+class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
+    parameters = {
+        "pvroot": Param(
+            "The root of the pv",
+            type=str,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "flowrate": Param(
+            description="Linked syringe flowrate",
+            settable=True,
+            volatile=True,
+        ),
+        "flowrate_max": Param(
+            description="Max flowrate",
+            volatile=True,
+        ),
+        "total_vol": Param(
+            description="Total volume",
+            volatile=True,
+        ),
+        "first_fill_syringe": Param(
+            description="First syringe to fill",
+            volatile=True,
+            settable=True,
+        ),
+        "max_dosing_time": Param(
+            description="Time for linked pumping in time mode",
+            volatile=True,
+            settable=True,
+        ),
+    }
+
+    parameter_overrides = {
+        "mapping": Override(internal=True, mandatory=False, settable=False),
+    }
+
+    def _build_epics_channels(self):
+        epics_channels = {
+            "flowrate": setpoint_channel(
+                cache_key="flowrate",
+                pv_prefix_attr="pvroot",
+                pv_suffix="FlowRate-SP",
+            ),
+            "flowrate_max": readback_channel(
+                cache_key="flowrate_max",
+                pv_prefix_attr="pvroot",
+                pv_suffix="MaxFlowRate",
+            ),
+            "total_vol": readback_channel(
+                cache_key="total_vol",
+                pv_prefix_attr="pvroot",
+                pv_suffix="TotalVol",
+            ),
+            "first_fill_syringe": setpoint_channel(
+                cache_key="first_fill_syringe",
+                pv_prefix_attr="pvroot",
+                pv_suffix="FillingSyringeIdx-SP",
+                is_enum=True,
+            ),
+            "max_dosing_time": setpoint_channel(
+                cache_key="max_dosing_time",
+                pv_prefix_attr="pvroot",
+                pv_suffix="MaxDosingTime-SP",
+            ),
+            "start": command_channel(
+                pv_prefix_attr="pvroot",
+                pv_suffix="Start-Cmd",
+            ),
+            "stop": command_channel(
+                pv_prefix_attr="pvroot",
+                pv_suffix="StopAllPumps-Cmd",
+            ),
+            "enable": command_channel(
+                pv_prefix_attr="pvroot",
+                pv_suffix="Enable-Cmd",
+            ),
+            "is_disabled": status_channel(
+                cache_key="is_disabled",
+                pv_prefix_attr="pvroot",
+                pv_suffix="Disabled",
+            ),
+            "is_pumping": status_channel(
+                cache_key="is_pumping",
+                pv_prefix_attr="pvroot",
+                pv_suffix="IsPumping",
+            ),
+        }
+        return epics_channels
 
 
 def get_target_inside_limits(target, limit_low, limit_high):
