@@ -7,6 +7,7 @@ from nicos_ess.gui.panels.live_pyqt import LiveDataPanel
 from nicos.guisupport.qt import QSpinBox, QTimer
 from PyQt5.QtCore import Qt
 
+
 class XrayPanel(Panel):
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
@@ -31,27 +32,28 @@ class XrayPanel(Panel):
         self.devflatpanel_motor = options.get("flatpanel_motor")
 
         # Create and place detector image.
-        self.panel = LiveDataPanel(parent, client, options) #can also use MultiLiveDataPanel
-        self.panel.update_widget_to_show(True) #shows 2D-image
+        self.panel = LiveDataPanel(
+            parent, client, options
+        )  # can also use MultiLiveDataPanel
+        self.panel.update_widget_to_show(True)  # shows 2D-image
         self.place_panel.addWidget(self.panel)
 
         # Put items in menus.
         self.create_filter_menu()
         self.create_image_mode_menu()
 
-        # Disable scrolling values for voltage and current. 
+        # Disable scrolling values for voltage and current.
         # Do the same for DoubleSpinBoxes or specific DoubleSpinBoxes if you wish.
         opts = Qt.FindChildrenRecursively
         spinboxes = self.findChildren(QSpinBox, options=opts)
         for box in spinboxes:
             box.wheelEvent = lambda *event: None
 
-        self.timer = QTimer(self) #for the blinking warmup light
+        self.timer = QTimer(self)  # for the blinking warmup light
 
         # Start client.
-        client.setup.connect(self.on_client_setup) #keeps running until setup is ready
-        client.cache.connect(self.on_client_cache) #update position and status info
-
+        client.setup.connect(self.on_client_setup)  # keeps running until setup is ready
+        client.cache.connect(self.on_client_cache)  # update position and status info
 
     def _is_live(self):
         check = self.client.getDeviceList()
@@ -87,7 +89,6 @@ class XrayPanel(Panel):
 
     def exec_command(self, command):
         self._exec_reqid = self.client.run(command)
-
 
     def load_data(self):
         # Read parameter values.
@@ -127,12 +128,12 @@ class XrayPanel(Panel):
 
         self.bwvoltage.setValue(vvoltage)
         self.brvoltage.setText(str(vvoltage_r))
-        voltage_percentage = int(round(vvoltage-20)/280*100)
+        voltage_percentage = int(round(vvoltage - 20) / 280 * 100)
         self.progress_voltage.setValue(voltage_percentage)
-        
+
         self.bwcurrent.setValue(vcurrent)
         self.brcurrent.setText(str(vcurrent_r))
-        current_percentage = int(round(vcurrent/10))
+        current_percentage = int(round(vcurrent / 10))
         self.progress_current.setValue(current_percentage)
 
         self.bwacquire_time.setValue(vacquire_time)
@@ -151,11 +152,12 @@ class XrayPanel(Panel):
         self.update_power()
 
         # Set start values.
-        self.exec_command(f"move(filter_menu, 'No filter')") # can remove if you want to remember filter choice between sessions 
-                                                             # (but then you have to add reading and setting the choice of filter
-                                                             #  in this function, like with imagemode)
+        self.exec_command(
+            f"move(filter_menu, 'No filter')"
+        )  # can remove if you want to remember filter choice between sessions
+        # (but then you have to add reading and setting the choice of filter
+        #  in this function, like with imagemode)
         self.exec_command(f"SetDetectors({self.devcollector})")
-
 
     def status(self):
         stylesheet = "; border-radius: 20px; border: 3px solid black;"
@@ -163,7 +165,7 @@ class XrayPanel(Panel):
         if self.status_value != "WARMUP":
             if self.timer.isActive():
                 self.timer.stop()
-        
+
         if self.status_value == "NOT READY":
             self.brstatus.setText("ERROR")
             self.warmup_info.setText("Not warmed up")
@@ -205,12 +207,12 @@ class XrayPanel(Panel):
         value = self.client.getDeviceParam(self.devxray, "value")
         if value == "XOF":
             self.exec_command(f"move(xray, 'XON')")
-            self.xray_info.setText('X-ray ON')
-            self.bxray.setText('Turn OFF')
+            self.xray_info.setText("X-ray ON")
+            self.bxray.setText("Turn OFF")
         elif value == "XON":
             self.exec_command(f"move(xray, 'XOF')")
-            self.xray_info.setText('X-ray OFF')
-            self.bxray.setText('Turn ON')
+            self.xray_info.setText("X-ray OFF")
+            self.bxray.setText("Turn ON")
 
     def on_bwarmup_pressed(self):
         self.exec_command(f"move(warmup, '')")
@@ -223,8 +225,10 @@ class XrayPanel(Panel):
         newvalue = self.bwvoltage.value()
         if curvalue != newvalue:
             self.exec_command(f"move(voltage, {newvalue})")
-            percentage = int(round(newvalue-20)/280*100)
-            self.progress_voltage.setValue(percentage) #change to read-value when x-ray is working
+            percentage = int(round(newvalue - 20) / 280 * 100)
+            self.progress_voltage.setValue(
+                percentage
+            )  # change to read-value when x-ray is working
             self.update_power(voltage=newvalue)
 
     # When the voltage is 231 kV or more, the voltage can only take on values between 0 and 500 uA. Maybe add this limitation?
@@ -233,8 +237,10 @@ class XrayPanel(Panel):
         newvalue = self.bwcurrent.value()
         if curvalue != newvalue:
             self.exec_command(f"move(current, {newvalue})")
-            percentage = int(round(newvalue/10))
-            self.progress_current.setValue(percentage) #change to read-value when x-ray is working
+            percentage = int(round(newvalue / 10))
+            self.progress_current.setValue(
+                percentage
+            )  # change to read-value when x-ray is working
             self.update_power(current=newvalue)
 
     def update_power(self, voltage=-1, current=-1):
@@ -245,31 +251,37 @@ class XrayPanel(Panel):
             voltage = self.client.getDeviceParam(self.devvoltage, "value")
         if current == -1:
             current = self.client.getDeviceParam(self.devcurrent, "value")
-        power = voltage * current * 10**(-3)
+        power = voltage * current * 10 ** (-3)
         self.brpower.setText(str(round(power)))
-        percentage = int(round(power/230*100))
+        percentage = int(round(power / 230 * 100))
         self.progress_power.setValue(percentage)
 
-    def on_bwfocus_editingFinished(self): # will not finish due to no focus_r most likely
+    def on_bwfocus_editingFinished(
+        self,
+    ):  # will not finish due to no focus_r most likely
         curvalue = self.client.getDeviceParam(self.devfocus, "value")
         newvalue = self.bwfocus.value()
         if curvalue != newvalue:
             self.exec_command(f"move(focus, {newvalue})")
 
-    def on_bwalign_x_editingFinished(self): # will not finish due to no align_x_r most likely
+    def on_bwalign_x_editingFinished(
+        self,
+    ):  # will not finish due to no align_x_r most likely
         curvalue = self.client.getDeviceParam(self.devalign_x, "value")
         newvalue = self.bwalign_x.value()
         if curvalue != newvalue:
             self.exec_command(f"move(align_x, {newvalue})")
 
-    def on_bwalign_y_editingFinished(self): # will not finish due to no align_y_r most likely
+    def on_bwalign_y_editingFinished(
+        self,
+    ):  # will not finish due to no align_y_r most likely
         curvalue = self.client.getDeviceParam(self.devalign_y, "value")
         newvalue = self.bwalign_y.value()
         if curvalue != newvalue:
             self.exec_command(f"move(align_y, {newvalue})")
 
     def on_balign_beam_pressed(self):
-         self.exec_command(f"move(align_beam, '')")
+        self.exec_command(f"move(align_beam, '')")
 
     def on_balign_all_pressed(self):
         self.exec_command(f"move(align_all, '')")
@@ -317,7 +329,6 @@ class XrayPanel(Panel):
         if curvalue != newvalue:
             self.exec_command(f"move({self.devflatpanel_motor}, {newvalue})")
 
-
     # Functions for the two menus (image mode and filter).
     def create_image_mode_menu(self):
         items = ["single", "multiple", "continuous"]
@@ -325,7 +336,14 @@ class XrayPanel(Panel):
         self.image_mode_menu.currentTextChanged.connect(self.on_image_mode_changed)
 
     def create_filter_menu(self):
-        items = ["No filter", "Al 1.2mm", "Fe 0.3mm", "Cu 0.35mm", "Cu0.35mm Fe0.3mm", "Cu 0.65mm"]
+        items = [
+            "No filter",
+            "Al 1.2mm",
+            "Fe 0.3mm",
+            "Cu 0.35mm",
+            "Cu0.35mm Fe0.3mm",
+            "Cu 0.65mm",
+        ]
         self.filter_menu.addItems(items)
         self.filter_menu.currentTextChanged.connect(self.on_filter_changed)
 

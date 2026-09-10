@@ -1,15 +1,16 @@
 from nicos.core import Moveable, Param, Override, status, tupleof
 
+
 class FilterMenu(Moveable):
-    '''Lets the user choose a filter'''
+    """Lets the user choose a filter"""
 
     parameters = {
-        "curstatus" : Param(
-                    "Current status",
-                    type=tupleof(int, str),
-                    settable=True,
-                    default=(status.OK, "idle"),
-                ),
+        "curstatus": Param(
+            "Current status",
+            type=tupleof(int, str),
+            settable=True,
+            default=(status.OK, "idle"),
+        ),
         "curvalue": Param("Current value", type=str),
     }
 
