@@ -4,21 +4,14 @@ NICOS data source devices for consuming ESSLivedata and sending light commands.
 - LiveDataCollector:
     * Subscribes to DA00 data topics (including LIVEDATA_NICOS_DATA)
     * Tails X5F2 status/heartbeat topics
-    * (optional) Tails responses topics
-    * Maintains a JobRegistry and publishes it into NICOS cache
-    * Routes DA00 to DataChannel(s) by DeviceSelector
-    * Provides job_command helpers (reset/stop/remove)
+    * Routes DA00 to DataChannel(s) by device_name
+    * Sends workflow-level reset commands when counting starts
 
 - DataChannel:
-    * User selects either:
-      - A "selector" string of the form:
-        "<instr>/<ns>/<name>/<version>@<source>#<job_number>/<output>"
-        for job-based channels (regular data topics)
-      - Or a "device_name" (from ESSlivedata device contract) for device-based
-        channels (LIVEDATA_NICOS_DATA topic)
+    * Uses a "device_name" (from ESSlivedata device contract) for device-based
+      channels (LIVEDATA_NICOS_DATA topic)
     * Receives matched DA00 messages and pushes to NICOS live plots
-    * Offers convenience methods reset()/stop()/remove() that send JobCommand
-    * For device-based channels, reset() sends workflow-level commands
+    * Ignores pre-reset data until its "start_time" coordinate changes
 """
 
 from __future__ import annotations
@@ -26,6 +19,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+from dataclasses import dataclass
 from uuid import uuid4
 
 import numpy as np
@@ -39,7 +33,7 @@ from nicos.core import (
     POLLER,
     SIMULATION,
     ArrayDesc,
-    Moveable,
+    CommunicationError,
     Override,
     Param,
     floatrange,
@@ -49,22 +43,25 @@ from nicos.core import (
     tupleof,
 )
 from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
-from nicos.utils import byteBuffer, createThread, sleep
-from nicos_ess.devices.datasources.livedata_utils import (
-    DeviceSelector,
-    JobInfo,
-    JobRegistry,
-    WorkflowId,
-    parse_result_key,
-)
+from nicos.utils import byteBuffer, createThread
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 
-DISCONNECTED_STATE = (status.ERROR, "Disconnected")
-INIT_MESSAGE = "Initializing LiveDataCollector…"
+COMMAND_TIMEOUT = 5.0
 
 
-class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
+@dataclass
+class _JobHealth:
+    """What one backend job last said about itself."""
+
+    workflow_id: str
+    source_name: str
+    code: int
+    text: str
+    expected_at: float
+
+
+class DataChannel(CounterChannelMixin, PassiveChannel):
     """Channel for a particular derived device.
 
     Forwards DA00 'signal' arrays to NICOS live data.
@@ -88,6 +85,17 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
             userparam=False,
             settable=True,
             default="",
+        ),
+        "source_name": Param(
+            "Source owning this device, from the ESSlivedata device contract",
+            type=str,
+            mandatory=True,
+        ),
+        "data_timeout": Param(
+            "Maximum wait for initial data, reset confirmation or fresh data",
+            type=floatrange(0.1),
+            default=10.0,
+            unit="s",
         ),
         "curstatus": Param(
             "Store the current device status",
@@ -121,16 +129,14 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
     def doPreinit(self, mode):
         self._collector = None  # set by LiveDataCollector
         self._signal: np.ndarray | None = None
+        self._generation: int | None = None
+        self._gate_generation: int | None = None
+        self._has_baseline = threading.Event()
+        self._last_update = None
+        self._started = 0.0
         self.arraydesc = ArrayDesc(self.name, shape=(), dtype=np.int32)
         if session.sessiontype != POLLER:
             self._update_status(status.OK, "")
-
-    def doInit(self, mode):
-        self._device_selector_obj: DeviceSelector | None = (
-            DeviceSelector.parse_device_name(self.device_name, self.workflow_id)
-            if self.device_name
-            else None
-        )
 
     def doRead(self, maxage=0):
         return [self.curvalue]
@@ -142,80 +148,81 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
         return self.arraydesc
 
     def doStatus(self, maxage=0):
+        if self.curstatus[0] == status.ERROR:
+            return self.curstatus
+        backend = (
+            self._collector.source_health(self.workflow_id, self.source_name)
+            if self._collector
+            else (status.OK, "")
+        )
+        if self.running:
+            if backend[0] not in (status.OK, status.WARN):
+                self.curstatus = (status.ERROR, backend[1])
+            elif (
+                time.monotonic()
+                - (
+                    self._last_update
+                    if self._last_update is not None
+                    else self._started
+                )
+                > self.data_timeout
+            ):
+                self.curstatus = (status.ERROR, "Timed out waiting for fresh data")
+            else:
+                # WARN is a completed state in NICOS; a warning must not end a count.
+                return status.BUSY, backend[1] or self.curstatus[1]
+            return self.curstatus
+        if backend[0] != status.OK:
+            return backend
         return self.curstatus
 
-    def doWriteDeviceName(self, value):
-        self._device_selector_obj = DeviceSelector.parse_device_name(
-            value, self.workflow_id
-        )
-
-    def doWriteWorkflowId(self, value):
-        self._workflow_id = value
-        # Update device selector if it exists
-        if self._device_selector_obj:
-            self._device_selector_obj = DeviceSelector(
-                device_name=self._device_selector_obj.device_name, workflow_id=value
-            )
-
-    def start(self, target=None, **preset):
-        # DataChannel is both a Moveable (selector changes) and a PassiveChannel
-        # (detector counting).  The two base classes define incompatible start()
-        # signatures (positional vs keyword-only), so we must dispatch here.
-        if target is not None:
-            return Moveable.start(self, target)
-        return PassiveChannel.start(self, **preset)
-
     def doPrepare(self):
-        self._update_status(status.BUSY, "Preparing")
-
-        # check if a valid selector is set
         self.curvalue = 0
         self._signal = None
-        if not self._device_selector_obj:
-            self.log.warning(
-                "No workflow channel selected for %s. Will not prepare channel.",
-                self.name,
-            )
-            self._update_status(status.WARN, "No workflow channel selected")
-            return
-
-        self._collector.send_workflow_reset_command(self.workflow_id)
-        sleep(0.5)  # give backend time to process reset
+        self._last_update = None
         self._update_status(status.OK, "")
 
     def doStop(self):
         self.running = False
-        self._update_status(status.OK, "")
+        if self.curstatus[0] != status.ERROR:
+            self._update_status(status.OK, "")
 
     def doFinish(self):
-        self.running = False
-        self._update_status(status.OK, "")
+        if self.running and self._last_update is None:
+            self._update_status(status.ERROR, "No post-reset data received")
+        code, text = self.doStatus(0)
+        self.doStop()
+        if code == status.ERROR:
+            raise CommunicationError(self, text)
 
-    def doStart(self, target=None):
-        # if no target is given, it's a start command from the Detector class
-        # treat it as beginning a count/scan instead of changing selector
-
-        # passivechannel path
-        if target is None:
-            if not self._device_selector_obj:
-                self.log.warning(
-                    "No workflow channel selected for %s. Will not start counting.",
-                    self.name,
-                )
-                self._update_status(status.OK, "")
-                return
-            self.running = True
-            self._update_status(status.BUSY, "Counting started")
-            return
+    def doStart(self):
+        self._started = time.monotonic()
+        self.running = True
+        self._update_status(status.BUSY, "Counting started")
 
     def _update_status(self, new_status, message):
         self.curstatus = (new_status, message)
-        self._cache.put(self._name, "status", self.curstatus, time.time())
+        if self._cache:
+            self._cache.put(self._name, "status", self.doStatus(), time.time())
+
+    def arm_reset(self):
+        """Ignore the current accumulation until a reset starts a new one."""
+        if not self._has_baseline.wait(self.data_timeout):
+            raise CommunicationError(self, "No initial data received before reset")
+        self._gate_generation = self._generation
+        self._last_update = None
+
+    @staticmethod
+    def _generation_of(by_name) -> int | None:
+        """The ``start_time`` marking which accumulation this message belongs to."""
+        var = by_name.get("start_time")
+        if var is None:
+            return None
+        data = np.asarray(var.data).reshape(-1)
+        return int(data[0]) if data.size else None
 
     # Called by collector when a matching DA00 arrives
     def update_data_from_da00(self, da00_msg, timestamp_ns: int):
-        if not getattr(self, "running", True):
-            return
         try:
             variables = list(da00_msg.data)
             by_name = {
@@ -223,6 +230,32 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
                 for v in variables
                 if getattr(v, "name", None)
             }
+
+            generation = self._generation_of(by_name)
+            if generation is None:
+                if self.running:
+                    self._update_status(status.ERROR, "Missing start_time in data")
+                return
+            if not self.running:
+                if "signal" in by_name:
+                    self._generation = max(self._generation or generation, generation)
+                    self._has_baseline.set()
+                return
+            if self.curstatus[0] == status.ERROR:
+                return
+            if self._gate_generation is not None:
+                if generation <= self._gate_generation:
+                    return
+                self._gate_generation = None
+            elif self._generation is not None:
+                if generation < self._generation:
+                    return
+                if generation > self._generation:
+                    self._generation = generation
+                    self._update_status(status.ERROR, "Accumulation reset during count")
+                    return
+            self._generation = generation
+
             sig = by_name.get("signal")
             if sig is None:
                 return
@@ -356,13 +389,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
                 axis_names = [sig_axes[x_idx], sig_axes[y_idx]]
                 axis_units = [x_unit, y_unit]
 
-            # Title from signal label or DA00 result key
-            try:
-                rk = parse_result_key(da00_msg.source_name)
-                fallback_title = rk.output_name or self.name
-            except Exception:
-                fallback_title = self.name
-            title = (getattr(sig, "label", None) or "").strip() or fallback_title
+            title = (getattr(sig, "label", None) or "").strip() or self.name
             signal_unit = getattr(sig, "unit", None) or ""
 
             if self._signal is None:
@@ -387,6 +414,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
                 signal_unit=signal_unit,
                 x_is_time=x_is_time_flag,
             )
+            self._last_update = time.monotonic()
             self._update_status(status.BUSY, "Counting")
         except Exception as exc:
             self._update_status(status.ERROR, str(exc))
@@ -435,40 +463,14 @@ class DataChannel(CounterChannelMixin, PassiveChannel, Moveable):
             labelbuffers,
         )
 
-    def _resolve_job(self) -> JobInfo | None:
-        """Clean this up and the rest in livedata utils."""
-        if not self._collector or not self._selector_obj:
-            return None
-        sel = self._selector_obj
-        reg = self._collector._registry
-        if sel.job_number:
-            for j in reg.list_jobs():
-                if (
-                    j.workflow_path == sel.workflow_path
-                    and j.source_name == sel.source_name
-                    and j.job_number == sel.job_number
-                ):
-                    return j
-            return None
-        return reg.resolve_latest(sel.workflow_path, sel.source_name)
-
-    def reset_job(self):
-        job = self._resolve_job()
-        if job:
-            self._collector.send_workflow_reset_command(self.workflow_id)
-        else:
-            self.log.warning("Could not resolve job to reset")
-
 
 class LiveDataCollector(Detector):
     """
     One device to:
       * consume DA00 data (KafkaSubscriber with callbacks)
       * tail X5F2 status/heartbeat topics (KafkaConsumer in a small thread)
-      * optionally tail responses topic
-      * maintain JobRegistry and mirror it into the NICOS cache
-      * route DA00 to DataChannel(s) whose 'selector' matches the ResultKey
-      * publish JobCommand JSON to commands topic
+      * route each message to the DataChannel whose device_name matches
+      * reset the workflows behind its channels when a count starts
     """
 
     parameters = {
@@ -493,24 +495,10 @@ class LiveDataCollector(Detector):
             preinit=True,
             userparam=False,
         ),
-        "responses_topics": Param(
-            "Kafka topic(s) where responses/acks are written (optional)",
-            type=listof(str),
-            default=[],
-            preinit=True,
-            userparam=False,
-        ),
         "commands_topic": Param(
             "Kafka topic to which we send job_command/workflow_config",
             type=str,
             default="",
-            preinit=True,
-            userparam=False,
-        ),
-        "service_name": Param(
-            "Service name part for command keys (e.g. 'data_reduction')",
-            type=str,
-            default="data_reduction",
             preinit=True,
             userparam=False,
         ),
@@ -538,17 +526,25 @@ class LiveDataCollector(Detector):
     # internals
     _data_subscriber: KafkaSubscriber | None = None
     _status_consumer: KafkaConsumer | None = None
-    _resp_consumer: KafkaConsumer | None = None
     _producer: KafkaProducer | None = None
 
     def doPreinit(self, mode):
         Detector.doPreinit(self, mode)
-        self._registry = JobRegistry()
-        self._last_expected_status_time = time.time()
+        self._data_channels = [
+            ch for ch in self._channels if isinstance(ch, DataChannel)
+        ]
         self._data_subscriber = None
+        self._status_consumer = None
+        self._status_thread = None
+        self._producer = None
+        self._jobs: dict[str, _JobHealth] = {}
+        self._seen_sources = set()
+        self._heartbeat_started = time.monotonic()
+        self._stop_status = threading.Event()
+        self._published_health: dict[str, tuple[int, str]] = {}
 
         # Attach collector reference to channels
-        for ch in self._channels:
+        for ch in self._data_channels:
             ch._collector = self
 
         if mode == SIMULATION or session.sessiontype == POLLER:
@@ -574,27 +570,64 @@ class LiveDataCollector(Detector):
                 "livedata_status_tail", self._tail_status_topic
             )
 
-        # Responses consumer (optional)
-        if self.responses_topics:
-            self._resp_consumer = KafkaConsumer.create(
-                self.brokers,
-                starting_offset="latest",
-                group_id=self._unique_group("resp"),
-            )
-            self._resp_consumer.subscribe(self.responses_topics)
-            self._resp_thread = createThread(
-                "livedata_responses_tail", self._tail_responses_topic
-            )
-
         # Commands producer
         if self.commands_topic:
-            self._producer = KafkaProducer.create(self.brokers)
-
-        self._cache.put(self, "status", (status.WARN, INIT_MESSAGE), time.time())
+            self._producer = KafkaProducer.create(
+                self.brokers, **{"message.timeout.ms": int(COMMAND_TIMEOUT * 1000)}
+            )
 
     def _unique_group(self, label: str) -> str:
         base = self.cfg_group_id or "nicos-livedata"
         return f"{base}-{label}-{uuid4().hex}"
+
+    def _workflow_ids(self) -> list[str]:
+        """The distinct workflows backing this detector's channels."""
+        return list(
+            dict.fromkeys(
+                ch.workflow_id
+                for ch in self._data_channels
+                if ch.device_name and ch.workflow_id
+            )
+        )
+
+    def doStart(self):
+        """Reset the accumulation behind every channel, then start counting.
+
+        Reset is whole-workflow, so channels sharing a workflow_id are covered
+        by one command. Channels are armed first, so that a post-reset message
+        arriving before they start is not taken for the old accumulation.
+        """
+        for ch in self._data_channels:
+            ch.arm_reset()
+        for workflow_id in self._workflow_ids():
+            self.send_workflow_reset_command(workflow_id)
+        Detector.doStart(self)
+
+    def source_health(self, workflow_id: str, source_name: str) -> tuple[int, str]:
+        """Status of the backend job feeding one contracted source.
+
+        A session that never subscribed has no opinion and reports OK.
+        """
+        if self._status_consumer is None or not workflow_id:
+            return (status.OK, "")
+        now = time.monotonic()
+        awaiting_heartbeat = (workflow_id, source_name) not in self._seen_sources
+        live = [
+            job
+            for job in self._jobs.values()
+            if job.workflow_id == workflow_id
+            and job.source_name == source_name
+            and job.expected_at + self.status_timeout > now
+        ]
+        if not live:
+            if (
+                awaiting_heartbeat
+                and now < self._heartbeat_started + self.status_timeout
+            ):
+                return (status.WARN, "Waiting for job heartbeat")
+            return (status.ERROR, f"no running job for {workflow_id}/{source_name}")
+        worst = max(live, key=lambda job: job.code)
+        return (worst.code, worst.text)
 
     def _on_data_messages(self, messages: list[tuple[int, bytes]]):
         for timestamp_ns, raw in messages:
@@ -603,149 +636,85 @@ class LiveDataCollector(Detector):
                     continue
                 da = deserialise_da00(raw)
 
-                # Try to parse as ResultKey (for regular data topics)
-                # For NICOS_DATA topic, source_name is just the device name
-                try:
-                    rk = parse_result_key(da.source_name)
-                    self._registry.note_output(
-                        rk.workflow_id, rk.source_name, rk.output_name
-                    )
-                    try:
-                        self._registry.mark_seen(rk.source_name)
-                    except Exception as e:
-                        self.log.warning(f"Could not refresh workflow in registry: {e}")
-                except (json.JSONDecodeError, KeyError, TypeError):
-                    # Not a ResultKey JSON, must be a device name from NICOS_DATA topic
-                    rk = None
-
                 # Route to matching channels
                 self._dispatch_to_channels(timestamp_ns, da)
             except Exception as exc:
                 self.log.warning(f"Could not decode/route DA00: {exc}")
-
-        try:
-            self._registry.expire_stale()
-        except Exception as e:
-            self.log.warning(f"Error expiring stale jobs: {e}")
+        self._publish_health_changes()
 
     def _on_no_data(self):
-        # Nothing special; do not spam cache.
-        pass
+        self._publish_health_changes()
 
     def _tail_status_topic(self):
-        """
-        Tail X5F2 heartbeat/status messages. We expect msg.status_json containing:
-        {
-          "status": ...,
-          "message": {
-            "state": "...",
-            "job_id": {"source_name": "...", "job_number": "..."},
-            "workflow_id": "instr/ns/name/version",
-            "start_time": <ns>, "end_time": <ns>,
-            ... (warning/error)
-          }
-          "update_interval": <ms>
-        }
-        """
-        while True:
+        while not self._stop_status.is_set():
+            # poll() also yields partition-EOF and error events, which carry
+            # no payload.
             msg = self._status_consumer.poll(timeout_ms=200)
-            if not msg:
-                time.sleep(0.05)
-                self._check_disconnect()
-                continue
-            try:
-                if get_schema(msg.value()) != "x5f2":
-                    self._status_consumer._consumer.commit(msg, asynchronous=False)
-                    continue
-                st = deserialise_x5f2(msg.value())
-                js = json.loads(st.status_json) if st.status_json else {}
-                payload = js.get("message", js)
-                wf_str = payload.get("workflow_id", "")
-                wf_parts = wf_str.split("/") if wf_str else []
-                if len(wf_parts) == 3:
-                    wf = WorkflowId(
-                        instrument=wf_parts[0],
-                        name=wf_parts[1],
-                        version=int(wf_parts[2]),
-                    )
-                    job = payload.get("job_id", {})
-                    self._registry.jobinfo_from_status(
-                        wf,
-                        job_source_name=job.get("source_name", ""),
-                        state=payload.get("state", "unknown"),
-                        start_time_ns=payload.get("start_time"),
-                        end_time_ns=payload.get("end_time"),
-                        heartbeat_ms=st.update_interval,  # NEW
-                    )
-
-                # update next expected heartbeat
-                self._bump_expected_status(st.update_interval)
-
-                # check if we are in the initializing phase, if we are, set to OK
-                if self.status(0) == (status.WARN, INIT_MESSAGE):
-                    self._cache.put(self, "status", (status.OK, ""), time.time())
-
-                self._registry.expire_stale()
-
-            except Exception as exc:
-                self.log.warning(f"Bad status message: {exc}")
-            finally:
-                self._status_consumer._consumer.commit(msg, asynchronous=False)
-
-    def _tail_responses_topic(self):
-        """
-        Examples of a start and stop and reset command response:
-
-        Start:
-        {"identifier":{"instrument":"dummy","name":"total_counts","version":1},"job_number":"51d0d89b-d05f-4509-8761-392af404919b","schedule":{"start_time":null,"end_time":null},"aux_source_names":{},"params":{}}
-        Stop:
-        {"job_id":{"source_name":"panel_0","job_number":"51d0d89b-d05f-4509-8761-392af404919b"},"workflow_id":null,"action":"stop"}
-        Reset:
-        {"job_id":{"source_name":"panel_0","job_number":"86598705-c030-42b2-8bb4-5a80a7c375aa"},"workflow_id":null,"action":"reset"}
-
-        """
-
-        while True:
-            msg = self._resp_consumer.poll(timeout_ms=200)
-            if not msg:
-                time.sleep(0.05)
-                continue
-            try:
-                raw = msg.value()
+            if msg is not None and not msg.error():
                 try:
-                    js = json.loads(raw.decode("utf-8"))
-                except Exception:
-                    js = None
+                    self._note_job_heartbeat(msg.value())
+                except Exception as exc:
+                    self.log.warning(f"Could not decode heartbeat: {exc}")
+            # Runs on every pass, so a workflow that stops heartbeating expires.
+            now = time.monotonic()
+            self._jobs = {
+                key: job
+                for key, job in self._jobs.items()
+                if job.expected_at + self.status_timeout > now
+            }
+            self._publish_health_changes()
 
-                if isinstance(js, dict):
-                    # Accept either an ACK of our command or a terminal status
-                    action = (js.get("action") or "").lower()
-                    job = js.get("job_id") or {}
-                    src = job.get("source_name") or js.get("source_name") or ""
-                    jn = job.get("job_number") or ""
+    def _publish_health_changes(self):
+        """Push health changes and data timeouts into the cache."""
+        changed = False
+        for ch in self._data_channels:
+            health = ch.doStatus(0)
+            if health != self._published_health.get(ch.name):
+                self._published_health[ch.name] = health
+                self._cache.put(ch, "status", health, time.time())
+                changed = True
+        if changed:
+            self._cache.put(self, "status", self.doStatus(0), time.time())
 
-                    remove_hint = action == "remove"
+    def _note_job_heartbeat(self, raw: bytes):
+        """Record what one x5f2 job heartbeat says.
 
-                    if remove_hint and src and jn:
-                        self._registry.remove_job(src, jn)
+        ``status_json.status`` is already a NICOS status constant.
+        """
+        if get_schema(raw) != "x5f2":
+            return
+        st = deserialise_x5f2(raw)
+        payload = json.loads(st.status_json) if st.status_json else {}
+        message = payload.get("message") or {}
+        if message.get("message_type") != "job":
+            return
 
-            except Exception:
-                pass
-            finally:
-                self._resp_consumer._consumer.commit(msg, asynchronous=False)
+        job = message["job_id"]
+        key = f"{job['source_name']}/{job['job_number']}"
+        state = message["state"]
+        self._seen_sources.add((message["workflow_id"], job["source_name"]))
+        if state == "stopped":
+            self._jobs.pop(key, None)
+            return
+        code = int(payload["status"])
+        if code == status.UNKNOWN:
+            code = status.ERROR
+        self._jobs[key] = _JobHealth(
+            workflow_id=message["workflow_id"],
+            source_name=job["source_name"],
+            code=code,
+            text=""
+            if code == status.OK
+            else (message.get("error") or message.get("warning") or state),
+            expected_at=time.monotonic() + max(1, int(st.update_interval // 1000)),
+        )
 
     def _dispatch_to_channels(self, timestamp_ns: int, da):
-        for ch in self._channels:
-            dev_sel: DeviceSelector | None = getattr(ch, "_device_selector_obj", None)
-
-            # Try DeviceSelector (for NICOS_DATA topic)
-            if (
-                dev_sel
-                and da.source_name
-                and dev_sel.matches_da00_source(da.source_name)
-            ):
+        if not da.source_name:
+            return
+        for ch in self._data_channels:
+            if ch.device_name == da.source_name:
                 ch.update_data_from_da00(da, timestamp_ns)
-                continue
 
     def send_workflow_reset_command(self, workflow_id: str):
         """
@@ -761,8 +730,7 @@ class LiveDataCollector(Detector):
             The workflow ID in format "instrument/name/version"
         """
         if not self._producer or not self.commands_topic:
-            self.log.warning("No producer or commands_topic configured")
-            return
+            raise CommunicationError(self, "No producer or commands_topic configured")
 
         # Build payload according to ADR 0006
         payload = {
@@ -772,12 +740,10 @@ class LiveDataCollector(Detector):
             "message_id": str(uuid4()),
         }
 
-        wait_for_delivery_event = threading.Event()
+        delivery = []
 
         def _on_delivery(err, msg):
-            if err:
-                self.log.warning(f"Workflow reset command delivery failed: {err}.")
-            wait_for_delivery_event.set()
+            delivery.append(err)
 
         try:
             self.log.info(f"Sending workflow reset command for {workflow_id}")
@@ -785,30 +751,26 @@ class LiveDataCollector(Detector):
                 self.commands_topic,
                 message=json.dumps(payload).encode("utf-8"),
                 on_delivery_callback=_on_delivery,
+                flush_timeout=COMMAND_TIMEOUT,
             )
-            # Wait for delivery confirmation or timeout
-            if not wait_for_delivery_event.wait(timeout=5.0):
-                self.log.warning("Workflow reset command delivery timed out")
         except Exception as exc:
-            self.log.warning(f"Error sending workflow reset command: {exc}")
-
-    def _bump_expected_status(self, update_interval_ms: int):
-        interval_s = max(1, int(update_interval_ms // 1000))
-        next_due = time.time() + interval_s
-        if next_due > self._last_expected_status_time:
-            self._last_expected_status_time = next_due
-
-    def _check_disconnect(self):
-        if time.time() > (self._last_expected_status_time + self.status_timeout):
-            try:
-                self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
-            except Exception as e:
-                self.log.warning(f"Could not update disconnected status: {e}")
+            raise CommunicationError(
+                self, f"Error sending workflow reset: {exc}"
+            ) from exc
+        if not delivery:
+            raise CommunicationError(self, "Workflow reset command delivery timed out")
+        if delivery[0] is not None:
+            raise CommunicationError(
+                self, f"Workflow reset delivery failed: {delivery[0]}"
+            )
 
     def doShutdown(self):
-        # Best-effort cleanup; Kafka wrappers usually are resilient to late close.
+        self._stop_status.set()
         try:
             if self._data_subscriber:
                 self._data_subscriber.close()
-        except Exception:
-            pass
+        finally:
+            if self._status_thread:
+                self._status_thread.join()
+            if self._status_consumer:
+                self._status_consumer.close()
