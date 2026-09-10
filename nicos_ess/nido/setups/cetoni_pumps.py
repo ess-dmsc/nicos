@@ -23,10 +23,10 @@ devices = dict(
         home_warning_msg="Please make sure syringes are removed before homing",
         precision=0.00001,
     ),
-    linked_pumping=device(
-        "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode",
-        pvroot=linked_pvroot,
-        readpv=f"{linked_pvroot}StopMode-SP",
-        writepv=f"{linked_pvroot}StopMode-SP",
-    ),
+    # linked_pumping=device(
+    #     "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode",
+    #     pvroot=linked_pvroot,
+    #     readpv=f"{linked_pvroot}StopMode-SP",
+    #     writepv=f"{linked_pvroot}StopMode-SP",
+    # ),
 )
