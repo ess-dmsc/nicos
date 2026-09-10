@@ -370,15 +370,14 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
         )
         return epics_channels
 
-    #
-    # def doStart(self, target):
-    #     is_disabled = self._epics.get_channel_value("is_disabled")
-    #     if is_disabled:
-    #         self.log.warning("Please enable before starting")
-    #         return
-    #     if target.lower() == "start":
-    #         self._epics.put_channel_value("start", 1)
-    #
+    def doStart(self, target):
+        is_disabled = self._epics.get_channel_value("is_disabled")
+        if is_disabled:
+            self.log.warning("Please enable before starting")
+            return
+        self._epics.put_channel_value("write", target)
+        self._epics.put_channel_value("start", 1)
+
     def doReadMax_Dosing_Time(self):
         return self._epics.get_channel_value("max_dosing_time")
 
@@ -410,10 +409,9 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
         self._epics.put_channel_value("enable", 1 if on else 0)
         # self._cache.invalidate(self, "is_disabled")
 
-    #
-    # def doStop(self):
-    #     self._epics.put_channel_value("stop", 1)
-    #
+    def doStop(self):
+        self._epics.put_channel_value("stop", 1)
+
     def _compute_status(self, maxage=0):
         is_pumping = self._epics.get_channel_value("is_pumping")
         if is_pumping:
