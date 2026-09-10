@@ -312,7 +312,7 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
     def _after_subscribe(self, mode):
         first_fill_syringe = self._epics.get_channel_value_choices("first_fill_syringe")
         self.parameters["first_fill_syringe"].type = oneof(*first_fill_syringe)
-        super()._after_subscribe(mode)
+        super()._after_subscribe(self, mode)
 
     def _build_epics_channels(self):
         epics_channels = {
