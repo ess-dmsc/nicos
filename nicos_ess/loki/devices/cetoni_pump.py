@@ -414,16 +414,16 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
     # def doStop(self):
     #     self._epics.put_channel_value("stop", 1)
     #
-    # def _compute_status(self):
-    #     is_pumping = self._epics.get_channel_value("is_pumping")
-    #     if is_pumping:
-    #         return status.BUSY, "Pumping"
-    #
-    #     is_disabled = self._epics.get_channel_value("is_disabled")
-    #     if is_disabled:
-    #         return status.WARN, "Disabled"
-    #     else:
-    #         return status.OK, "Enabled"
+    def _compute_status(self, maxage=0):
+        is_pumping = self._epics.get_channel_value("is_pumping")
+        if is_pumping:
+            return status.BUSY, f"Pumping, status: {self._read_primary_alarm()[1]}"
+
+        is_disabled = self._epics.get_channel_value("is_disabled")
+        if is_disabled:
+            return status.WARN, f"Disabled, status: {self._read_primary_alarm()[1]}"
+        else:
+            return status.OK, f"Enabled, status: {self._read_primary_alarm()[1]}"
 
 
 def get_target_inside_limits(target, limit_low, limit_high):
