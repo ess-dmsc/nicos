@@ -279,140 +279,140 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
             settable=False,
             userparam=False,
         ),
-        "flowrate": Param(
-            description="Linked syringe flowrate",
-            settable=True,
-            volatile=True,
-        ),
-        "flowrate_max": Param(
-            description="Max flowrate",
-            volatile=True,
-        ),
-        "total_vol": Param(
-            description="Total volume",
-            volatile=True,
-        ),
-        "first_fill_syringe": Param(
-            description="First syringe to fill",
-            volatile=True,
-            settable=True,
-        ),
-        "max_dosing_time": Param(
-            description="Time for linked pumping in time mode",
-            volatile=True,
-            settable=True,
-        ),
+        # "flowrate": Param(
+        #     description="Linked syringe flowrate",
+        #     settable=True,
+        #     volatile=True,
+        # ),
+        # "flowrate_max": Param(
+        #     description="Max flowrate",
+        #     volatile=True,
+        # ),
+        # "total_vol": Param(
+        #     description="Total volume",
+        #     volatile=True,
+        # ),
+        # "first_fill_syringe": Param(
+        #     description="First syringe to fill",
+        #     volatile=True,
+        #     settable=True,
+        # ),
+        # "max_dosing_time": Param(
+        #     description="Time for linked pumping in time mode",
+        #     volatile=True,
+        #     settable=True,
+        # ),
     }
 
     parameter_overrides = {
         "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
-    def _build_epics_channels(self):
-        epics_channels = {
-            "flowrate": setpoint_channel(
-                cache_key="flowrate",
-                pv_prefix_attr="pvroot",
-                pv_suffix="FlowRate-SP",
-            ),
-            "flowrate_max": readback_channel(
-                cache_key="flowrate_max",
-                pv_prefix_attr="pvroot",
-                pv_suffix="MaxFlowRate",
-            ),
-            "total_vol": readback_channel(
-                cache_key="total_vol",
-                pv_prefix_attr="pvroot",
-                pv_suffix="TotalVol",
-            ),
-            "first_fill_syringe": setpoint_channel(
-                cache_key="first_fill_syringe",
-                pv_prefix_attr="pvroot",
-                pv_suffix="FillingSyringeIdx-SP",
-                is_enum=True,
-            ),
-            "max_dosing_time": setpoint_channel(
-                cache_key="max_dosing_time",
-                pv_prefix_attr="pvroot",
-                pv_suffix="MaxDosingTime-SP",
-            ),
-            "start": command_channel(
-                pv_prefix_attr="pvroot",
-                pv_suffix="Start-Cmd",
-            ),
-            "stop": command_channel(
-                pv_prefix_attr="pvroot",
-                pv_suffix="StopAllPumps-Cmd",
-            ),
-            "enable": command_channel(
-                pv_prefix_attr="pvroot",
-                pv_suffix="Enable-Cmd",
-            ),
-            "is_disabled": status_channel(
-                cache_key="is_disabled",
-                pv_prefix_attr="pvroot",
-                pv_suffix="Disabled",
-            ),
-            "is_pumping": status_channel(
-                cache_key="is_pumping",
-                pv_prefix_attr="pvroot",
-                pv_suffix="IsPumping",
-            ),
-        }
-        return epics_channels
-
-    def doStart(self, target):
-        is_disabled = self._epics.get_channel_value("is_disabled")
-        if is_disabled:
-            self.log.warning("Please enable before starting")
-            return
-        if target.lower() == "start":
-            self._epics.put_channel_value("start", 1)
-
-    def doReadMax_Dosing_Time(self):
-        return self._epics.get_channel_value("max_dosing_time")
-
-    def doWriteMax_Dosing_Time(self, target):
-        self._epics.put_channel_value("max_dosing_time", target)
-
-    def doReadFlowrate(self):
-        return self._epics.get_channel_value("flowrate")
-
-    def doReadFlowrate_Max(self):
-        return self._epics.get_channel_value("flowrate_max")
-
-    def doReadFlowrate_Unit(self):
-        return self._epics.get_channel_value("flowrate_unit")
-
-    def doWriteFlowrate(self, target):
-        self._epics.put_channel_value("flowrate", target)
-
-    def doReadTotal_Vol(self):
-        return self._epics.get_channel_value("total_vol")
-
-    def doReadFirst_Fill_Syringe(self):
-        return self._epics.get_channel_value("first_fill_syringe")
-
-    def doWriteFirst_Fill_Syringe(self, target):
-        self._epics.put_channel_value("first_fill_syringe", target)
-
-    def doEnable(self, on=False):
-        self._epics.put_channel_value("enable", 1 if on else 0)
-        # self._cache.invalidate(self, "is_disabled")
-
-    def doStop(self):
-        self._epics.put_channel_value("stop", 1)
-
-    def _compute_status(self):
-        is_pumping = self._epics.get_channel_value("is_pumping")
-        if is_pumping:
-            return status.BUSY, "Pumping"
-
-        is_disabled = self._epics.get_channel_value("is_disabled")
-        if is_disabled:
-            return status.WARN, "Disabled"
-        else:
-            return status.OK, "Enabled"
+    # def _build_epics_channels(self):
+    #     epics_channels = {
+    #         "flowrate": setpoint_channel(
+    #             cache_key="flowrate",
+    #             pv_prefix_attr="pvroot",
+    #             pv_suffix="FlowRate-SP",
+    #         ),
+    #         "flowrate_max": readback_channel(
+    #             cache_key="flowrate_max",
+    #             pv_prefix_attr="pvroot",
+    #             pv_suffix="MaxFlowRate",
+    #         ),
+    #         "total_vol": readback_channel(
+    #             cache_key="total_vol",
+    #             pv_prefix_attr="pvroot",
+    #             pv_suffix="TotalVol",
+    #         ),
+    #         "first_fill_syringe": setpoint_channel(
+    #             cache_key="first_fill_syringe",
+    #             pv_prefix_attr="pvroot",
+    #             pv_suffix="FillingSyringeIdx-SP",
+    #             is_enum=True,
+    #         ),
+    #         "max_dosing_time": setpoint_channel(
+    #             cache_key="max_dosing_time",
+    #             pv_prefix_attr="pvroot",
+    #             pv_suffix="MaxDosingTime-SP",
+    #         ),
+    #         "start": command_channel(
+    #             pv_prefix_attr="pvroot",
+    #             pv_suffix="Start-Cmd",
+    #         ),
+    #         "stop": command_channel(
+    #             pv_prefix_attr="pvroot",
+    #             pv_suffix="StopAllPumps-Cmd",
+    #         ),
+    #         "enable": command_channel(
+    #             pv_prefix_attr="pvroot",
+    #             pv_suffix="Enable-Cmd",
+    #         ),
+    #         "is_disabled": status_channel(
+    #             cache_key="is_disabled",
+    #             pv_prefix_attr="pvroot",
+    #             pv_suffix="Disabled",
+    #         ),
+    #         "is_pumping": status_channel(
+    #             cache_key="is_pumping",
+    #             pv_prefix_attr="pvroot",
+    #             pv_suffix="IsPumping",
+    #         ),
+    #     }
+    #     return epics_channels
+    #
+    # def doStart(self, target):
+    #     is_disabled = self._epics.get_channel_value("is_disabled")
+    #     if is_disabled:
+    #         self.log.warning("Please enable before starting")
+    #         return
+    #     if target.lower() == "start":
+    #         self._epics.put_channel_value("start", 1)
+    #
+    # def doReadMax_Dosing_Time(self):
+    #     return self._epics.get_channel_value("max_dosing_time")
+    #
+    # def doWriteMax_Dosing_Time(self, target):
+    #     self._epics.put_channel_value("max_dosing_time", target)
+    #
+    # def doReadFlowrate(self):
+    #     return self._epics.get_channel_value("flowrate")
+    #
+    # def doReadFlowrate_Max(self):
+    #     return self._epics.get_channel_value("flowrate_max")
+    #
+    # def doReadFlowrate_Unit(self):
+    #     return self._epics.get_channel_value("flowrate_unit")
+    #
+    # def doWriteFlowrate(self, target):
+    #     self._epics.put_channel_value("flowrate", target)
+    #
+    # def doReadTotal_Vol(self):
+    #     return self._epics.get_channel_value("total_vol")
+    #
+    # def doReadFirst_Fill_Syringe(self):
+    #     return self._epics.get_channel_value("first_fill_syringe")
+    #
+    # def doWriteFirst_Fill_Syringe(self, target):
+    #     self._epics.put_channel_value("first_fill_syringe", target)
+    #
+    # def doEnable(self, on=False):
+    #     self._epics.put_channel_value("enable", 1 if on else 0)
+    #     # self._cache.invalidate(self, "is_disabled")
+    #
+    # def doStop(self):
+    #     self._epics.put_channel_value("stop", 1)
+    #
+    # def _compute_status(self):
+    #     is_pumping = self._epics.get_channel_value("is_pumping")
+    #     if is_pumping:
+    #         return status.BUSY, "Pumping"
+    #
+    #     is_disabled = self._epics.get_channel_value("is_disabled")
+    #     if is_disabled:
+    #         return status.WARN, "Disabled"
+    #     else:
+    #         return status.OK, "Enabled"
 
 
 def get_target_inside_limits(target, limit_low, limit_high):
