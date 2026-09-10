@@ -296,6 +296,7 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
             description="First syringe to fill",
             volatile=True,
             settable=True,
+            type=str,
         ),
         "max_dosing_time": Param(
             description="Time for linked pumping in time mode",
