@@ -407,7 +407,6 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
 
     def doEnable(self, on=False):
         self._epics.put_channel_value("enable", 1 if on else 0)
-        # self._cache.invalidate(self, "is_disabled")
 
     def doStop(self):
         self._epics.put_channel_value("stop", 1)
