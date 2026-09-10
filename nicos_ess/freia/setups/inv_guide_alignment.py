@@ -9,7 +9,7 @@ devices = dict(
     ),
     inv_guide_rotation=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Iinverted Guide Rotation",
+        description="Inverted Guide Rotation",
         motorpv=f"{prefix}RotY-01:Mtr",
     ),
 )
