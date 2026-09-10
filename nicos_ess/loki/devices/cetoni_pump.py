@@ -361,6 +361,59 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
         }
         return epics_channels
 
+    def doStart(self, target):
+        is_disabled = self._epics.get_channel_value("is_disabled")
+        if is_disabled:
+            self.log.warning("Please enable before starting")
+            return
+        if target.lower() == "start":
+            self._epics.put_channel_value("start", 1)
+
+    def doReadMax_Dosing_Time(self):
+        return self._epics.get_channel_value("max_dosing_time")
+
+    def doWriteMax_Dosing_Time(self, target):
+        self._epics.put_channel_value("max_dosing_time", target)
+
+    def doReadFlowrate(self):
+        return self._epics.get_channel_value("flowrate")
+
+    def doReadFlowrate_Max(self):
+        return self._epics.get_channel_value("flowrate_max")
+
+    def doReadFlowrate_Unit(self):
+        return self._epics.get_channel_value("flowrate_unit")
+
+    def doWriteFlowrate(self, target):
+        self._epics.put_channel_value("flowrate", target)
+
+    def doReadTotal_Vol(self):
+        return self._epics.get_channel_value("total_vol")
+
+    def doReadFirst_Fill_Syringe(self):
+        return self._epics.get_channel_value("first_fill_syringe")
+
+    def doWriteFirst_Fill_Syringe(self, target):
+        self._epics.put_channel_value("first_fill_syringe", target)
+
+    def doEnable(self, on=False):
+        self._epics.put_channel_value("enable", 1 if on else 0)
+        # self._cache.invalidate(self, "is_disabled")
+
+    def doStop(self):
+        self._epics.put_channel_value("stop", 1)
+
+    def _compute_status(self):
+        is_pumping = self._epics.get_channel_value("is_pumping")
+        if is_pumping:
+            return status.BUSY, "Pumping"
+
+        is_disabled = self._epics.get_channel_value("is_disabled")
+        if is_disabled:
+            return status.WARN, "Disabled"
+        else:
+            return status.OK, "Enabled"
+
 
 def get_target_inside_limits(target, limit_low, limit_high):
     target = max(limit_low, target)
