@@ -1,4 +1,4 @@
-description  = "The X-ray setup that will be used for ODIN"
+description = "The X-ray setup that will be used for ODIN"
 
 pv_root = "LabODIN-Xray:Ctrl-HV-01:"
 
@@ -9,8 +9,6 @@ devices = dict(
         description="Model Name Check",
         readpv="{}Model-R".format(pv_root),
     ),
-
-
     # Core status
     status_r=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -27,8 +25,6 @@ devices = dict(
         description="Interlock Status",
         readpv="{}Interlock-R".format(pv_root),
     ),
-
-
     # Operational commands
     xray=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
@@ -48,11 +44,9 @@ devices = dict(
         readpv="{}Reset-S".format(pv_root),
         writepv="{}Reset-S".format(pv_root),
     ),
-
-
     # Tube Voltage (20 - 300 kV)
     voltage=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable", #might change to digital
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",  # might change to digital
         description="Set Tube Voltage",
         readpv="{}Voltage-RB".format(pv_root),
         writepv="{}Voltage-S".format(pv_root),
@@ -61,13 +55,11 @@ devices = dict(
     voltage_r=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Output Tube Voltage Check",
-        readpv="{}Voltage-R".format(pv_root)
+        readpv="{}Voltage-R".format(pv_root),
     ),
-
-
     # Tube Current (0 - 1000 uA)
     current=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable", #might change to digital
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",  # might change to digital
         description="Set Tube Current",
         readpv="{}Current-RB".format(pv_root),
         writepv="{}Current-S".format(pv_root),
@@ -76,50 +68,42 @@ devices = dict(
     current_r=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Output Tube Current Check",
-        readpv="{}Current-R".format(pv_root)
+        readpv="{}Current-R".format(pv_root),
     ),
-
-
     # Focus Settings (0 - 23000)
     focus=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable", #might change to digital
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",  # might change to digital
         description="Set Focus Value",
         readpv="{}Focus-RB".format(pv_root),
         writepv="{}Focus-S".format(pv_root),
         abslimits=(0, 23000),
     ),
-    
-
     # Environment/Misc Monitoring
     vacuum_r=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Vacuum Level Check",
-        readpv="{}Vacuum-R".format(pv_root)
+        readpv="{}Vacuum-R".format(pv_root),
     ),
     temperature_r=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
         description="Temperature Check",
-        readpv="{}Temperature-R".format(pv_root)
+        readpv="{}Temperature-R".format(pv_root),
     ),
-
-
     # X/Y Object Alignment Settings (-1200 to 1200)
     align_x=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable", #might change to digital
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",  # might change to digital
         description="Set X-dir Object Align",
         readpv="{}AlignX-RB".format(pv_root),
         writepv="{}AlignX-S".format(pv_root),
-        abslimits=(-1200,1200),
+        abslimits=(-1200, 1200),
     ),
     align_y=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable", #might change to digital
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",  # might change to digital
         description="Set Y-dir Object Align",
         readpv="{}AlignY-RB".format(pv_root),
         writepv="{}AlignY-S".format(pv_root),
-        abslimits=(-1200,1200),
+        abslimits=(-1200, 1200),
     ),
-
-
     # Alignment Execution Commands
     align_beam=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
@@ -139,16 +123,15 @@ devices = dict(
         readpv="{}AlignStop-S".format(pv_root),
         writepv="{}AlignStop-S".format(pv_root),
     ),
-
     # Virtual motors (to be replaced with real ones)
     source_motor=device(
-            "nicos.devices.generic.virtual.VirtualMotor",
-            description="Source Motor",
-            abslimits=(0, 100),
-            curvalue=0,
-            unit="mm",
-            speed=5.0,
-        ),
+        "nicos.devices.generic.virtual.VirtualMotor",
+        description="Source Motor",
+        abslimits=(0, 100),
+        curvalue=0,
+        unit="mm",
+        speed=5.0,
+    ),
     flatpanel_motor=device(
         "nicos.devices.generic.virtual.VirtualMotor",
         description="Detector/Flat Panel Motor",
@@ -157,11 +140,8 @@ devices = dict(
         unit="mm",
         speed=5.0,
     ),
-
     # Filter menu
     filter_menu=device(
-        "nicos_ess.devices.filter.FilterMenu",
-        description="Filter Menu",
-        states=0
-    )
+        "nicos_ess.devices.filter.FilterMenu", description="Filter Menu", states=0
+    ),
 )
