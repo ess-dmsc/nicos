@@ -54,7 +54,7 @@ devices = dict(
     ),
     det_p2_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
-        description="A just-bin-it image channel",
+        description="Panel 2 just-bin-it image channel",
         hist_topic="nmx_visualisation",
         data_topic="nmx_detector_p2",
         brokers=configdata("config.KAFKA_BROKERS"),
