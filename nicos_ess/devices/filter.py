@@ -1,4 +1,4 @@
-from nicos.core import Moveable, Param, Override, status, tupleof
+from nicos.core import Moveable, Override, Param, status, tupleof
 
 
 class FilterMenu(Moveable):
