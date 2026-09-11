@@ -6,6 +6,7 @@ from nicos.core import LimitError, status
 from nicos_ess.devices.epics.pva import epics_common
 from nicos_ess.loki.devices.cetoni_pump import (
     CetoniPumpController,
+    CetoniPumpLinkedMode,
     get_target_inside_limits,
 )
 
@@ -30,7 +31,19 @@ def fake_backend(fake_epics_backend_factory):
     backend.values["SP1:SyrMaxPstStrk.EGU"] = "mm"
     backend.values["SP1:FaultState"] = 0
     backend.values["SP1:RefPosInitd"] = 1
+    backend.values["Lnkd:FlowRate-SP"] = 0
+    backend.values["Lnkd:MaxFlowRate"] = 1
+    backend.values["Lnkd:TotalVol"] = 3
+    backend.values["Lnkd:FillingSyringeIdx-SP"] = 0
+    backend.values["Lnkd:MaxDosingTime-SP"] = 5
+    backend.values["Lnkd:Disabled"] = 0
+    backend.values["Lnkd:IsPumping"] = 0
+    backend.values["Lnkd:StopMode-SP"] = 0
+    backend.values["Lnkd:Start-Cmd"] = 0
+
     backend.value_choices["SP1:SyrType"] = ["3mL 200bar", "5mL 100bar"]
+    backend.value_choices["Lnkd:FillingSyringeIdx-SP"] = ["SP1", "SP2"]
+    backend.value_choices["Lnkd:StopMode-SP"] = ["Manual", "Time"]
     return backend
 
 
@@ -44,7 +57,7 @@ class TestCetoniPumpController:
     def test_new_target_cap_at_limit_high(self):
         assert get_target_inside_limits(target=300, limit_low=10, limit_high=200) == 200
 
-    def test_daemon_device_ok(self, daemon_device_harness, fake_backend):
+    def test_pump_device_ok(self, daemon_device_harness, fake_backend):
         pump = daemon_device_harness.create_master(
             CetoniPumpController,
             name="pump",
@@ -55,7 +68,7 @@ class TestCetoniPumpController:
         assert pump.read(maxage=0) == 1
         assert pump.status()[0] == status.OK
 
-    def test_daemon_device_fault(self, daemon_device_harness, fake_backend):
+    def test_pump_device_fault(self, daemon_device_harness, fake_backend):
         pump = daemon_device_harness.create_master(
             CetoniPumpController,
             name="pump",
@@ -66,7 +79,7 @@ class TestCetoniPumpController:
         fake_backend.values["SP1:FaultState"] = 1
         assert pump.status(maxage=0)[0] == status.ERROR
 
-    def test_daemon_device_write(self, daemon_device_harness, fake_backend):
+    def test_pump_device_write(self, daemon_device_harness, fake_backend):
         pump = daemon_device_harness.create_master(
             CetoniPumpController,
             name="pump",
@@ -79,7 +92,7 @@ class TestCetoniPumpController:
         assert ("SP1:FillVol-SP", 2, False) in fake_backend.put_calls
         assert fake_backend.values["SP1:FillVol-SP"] == 2
 
-    def test_daemon_device_do_not_exceed_max_vol(
+    def test_pump_device_do_not_exceed_max_vol(
         self, daemon_device_harness, fake_backend
     ):
         pump = daemon_device_harness.create_master(
@@ -93,7 +106,7 @@ class TestCetoniPumpController:
         with pytest.raises(LimitError):
             pump.move(100)
 
-    def test_new_max_volume_updates_limits(self, device_harness, fake_backend):
+    def test_pump_new_max_volume_updates_limits(self, device_harness, fake_backend):
         pump_in_daemon, pump_in_poller = device_harness.create_pair(
             CetoniPumpController,
             name="pump",
@@ -107,7 +120,9 @@ class TestCetoniPumpController:
         assert pump_in_daemon._cache.get(pump_in_daemon, "abslimits") == (0, 3.1)
         assert pump_in_daemon._cache.get(pump_in_daemon, "userlimits") == (0, 3.1)
 
-    def test_epics_update_triggers_poller_callback(self, device_harness, fake_backend):
+    def test_pump_epics_update_triggers_poller_callback(
+        self, device_harness, fake_backend
+    ):
         original = CetoniPumpController._on_channel_update
 
         with patch.object(
@@ -134,3 +149,26 @@ class TestCetoniPumpController:
             assert update.value == 3
             assert pump_in_poller._epics.cache_key_for(update.channel) == "value"
             assert pump_in_daemon._cache.get(pump_in_daemon, "value") == 3
+
+    def test_linked_daemon_device_ok(self, daemon_device_harness, fake_backend):
+        linked = daemon_device_harness.create_master(
+            CetoniPumpLinkedMode,
+            name="linked",
+            pvroot="Lnkd:",
+            readpv="Lnkd:StopMode-SP",
+            writepv="Lnkd:StopMode-SP",
+        )
+        assert linked.read(maxage=0) == "Manual"
+        assert linked.status()[0] == status.OK
+
+    def test_linked_start_updates_pvs(self, daemon_device_harness, fake_backend):
+        linked = daemon_device_harness.create_master(
+            CetoniPumpLinkedMode,
+            name="linked",
+            pvroot="Lnkd:",
+            readpv="Lnkd:StopMode-SP",
+            writepv="Lnkd:StopMode-SP",
+        )
+        linked.start("Time")
+        assert fake_backend.values["Lnkd:StopMode-SP"] == "Time"
+        assert fake_backend.values["Lnkd:Start-Cmd"] == 1
