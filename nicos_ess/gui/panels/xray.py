@@ -1,11 +1,12 @@
 """NICOS X-ray panel."""
 
+from PyQt5.QtCore import Qt
+
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
+from nicos.guisupport.qt import QSpinBox, QTimer
 from nicos.utils import findResource
 from nicos_ess.gui.panels.live_pyqt import LiveDataPanel
-from nicos.guisupport.qt import QSpinBox, QTimer
-from PyQt5.QtCore import Qt
 
 
 class XrayPanel(Panel):
@@ -58,9 +59,7 @@ class XrayPanel(Panel):
     def _is_live(self):
         check = self.client.getDeviceList()
         # name returns as a non-empty list if something exists
-        if check != []:
-            return True
-        return False
+        return check != []
 
     def on_client_setup(self):
         if self._is_live():
@@ -153,7 +152,7 @@ class XrayPanel(Panel):
 
         # Set start values.
         self.exec_command(
-            f"move(filter_menu, 'No filter')"
+            "move(filter_menu, 'No filter')"
         )  # can remove if you want to remember filter choice between sessions
         # (but then you have to add reading and setting the choice of filter
         #  in this function, like with imagemode)
@@ -162,9 +161,8 @@ class XrayPanel(Panel):
     def status(self):
         stylesheet = "; border-radius: 20px; border: 3px solid black;"
 
-        if self.status_value != "WARMUP":
-            if self.timer.isActive():
-                self.timer.stop()
+        if self.status_value != "WARMUP" and self.timer.isActive():
+            self.timer.stop()
 
         if self.status_value == "NOT READY":
             self.brstatus.setText("ERROR")
@@ -206,19 +204,19 @@ class XrayPanel(Panel):
     def on_bxray_pressed(self):
         value = self.client.getDeviceParam(self.devxray, "value")
         if value == "XOF":
-            self.exec_command(f"move(xray, 'XON')")
+            self.exec_command("move(xray, 'XON')")
             self.xray_info.setText("X-ray ON")
             self.bxray.setText("Turn OFF")
         elif value == "XON":
-            self.exec_command(f"move(xray, 'XOF')")
+            self.exec_command("move(xray, 'XOF')")
             self.xray_info.setText("X-ray OFF")
             self.bxray.setText("Turn ON")
 
     def on_bwarmup_pressed(self):
-        self.exec_command(f"move(warmup, '')")
+        self.exec_command("move(warmup, '')")
 
     def on_breset_pressed(self):
-        self.exec_command(f"move(reset, '')")
+        self.exec_command("move(reset, '')")
 
     def on_bwvoltage_editingFinished(self):
         curvalue = self.client.getDeviceParam(self.devvoltage, "value")
@@ -231,7 +229,8 @@ class XrayPanel(Panel):
             )  # change to read-value when x-ray is working
             self.update_power(voltage=newvalue)
 
-    # When the voltage is 231 kV or more, the voltage can only take on values between 0 and 500 uA. Maybe add this limitation?
+    # When the voltage is 231 kV or more, the voltage can only take on values between 0 and 500 uA.
+    # Maybe add this limitation?
     def on_bwcurrent_editingFinished(self):
         curvalue = self.client.getDeviceParam(self.devcurrent, "value")
         newvalue = self.bwcurrent.value()
@@ -281,13 +280,13 @@ class XrayPanel(Panel):
             self.exec_command(f"move(align_y, {newvalue})")
 
     def on_balign_beam_pressed(self):
-        self.exec_command(f"move(align_beam, '')")
+        self.exec_command("move(align_beam, '')")
 
     def on_balign_all_pressed(self):
-        self.exec_command(f"move(align_all, '')")
+        self.exec_command("move(align_all, '')")
 
     def on_balign_stop_pressed(self):
-        self.exec_command(f"move(align_stop, '')")
+        self.exec_command("move(align_stop, '')")
 
     def on_bstart_pressed(self):
         self.exec_command(f"{self.devcamera}.start()")
