@@ -14,8 +14,8 @@ devices = dict(
     foc1_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv=f"{pv_root_1}C_Execute",
-        writepv=f"{pv_root_1}C_Execute",
+        readpv=f"{pv_root_1}C_ExecuteUser",
+        writepv=f"{pv_root_1}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
@@ -58,11 +58,28 @@ devices = dict(
         readpv=f"{pv_root_1}InPhaseTS-R",
     ),
     foc1_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv=f"{pv_root_1}Pos_R",
         writepv=f"{pv_root_1}Park_S",
         visibility=(),
+        mapping={
+            "park pos 0": 0,
+            "park pos 1": 45,
+            "park pos 2": 90,
+            "park pos 3": 180,
+        },
+    ),
+    foc1_chopper_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the chopper.",
+        readpv=f"{pv_root_1}ParkStatus_R",
+    ),
+    foc1_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the chopper.",
+        readpv=f"{pv_root_1}C_Park",
+        writepv=f"{pv_root_1}C_Park",
     ),
     foc1_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -72,13 +89,13 @@ devices = dict(
         pva=True,
     ),
     foc1_chopper_alarms=device(
-        "nicos_ess.devices.epics.chopper.ChopperAlarms",
+        "nicos_ess.devices.epics.chopper.NewChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_1,
         visibility=(),
     ),
     foc1_chopper=device(
-        "nicos_ess.devices.epics.chopper.EssChopperController",
+        "nicos_ess.devices.epics.chopper.NewEssChopperController",
         description="The chopper controller",
         pollinterval=0.5,
         maxage=None,
@@ -98,8 +115,8 @@ devices = dict(
     foc2_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv=f"{pv_root_2}C_Execute",
-        writepv=f"{pv_root_2}C_Execute",
+        readpv=f"{pv_root_2}C_ExecuteUser",
+        writepv=f"{pv_root_2}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
@@ -142,11 +159,28 @@ devices = dict(
         readpv=f"{pv_root_2}InPhaseTS-R",
     ),
     foc2_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv=f"{pv_root_2}Pos_R",
         writepv=f"{pv_root_2}Park_S",
         visibility=(),
+        mapping={
+            "park pos 0": 0,
+            "park pos 1": 45,
+            "park pos 2": 90,
+            "park pos 3": 180,
+        },
+    ),
+    foc2_chopper_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the chopper.",
+        readpv=f"{pv_root_1}ParkStatus_R",
+    ),
+    foc2_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the chopper.",
+        readpv=f"{pv_root_1}C_Park",
+        writepv=f"{pv_root_1}C_Park",
     ),
     foc2_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -155,13 +189,13 @@ devices = dict(
         visibility=(),
     ),
     foc2_chopper_alarms=device(
-        "nicos_ess.devices.epics.chopper.ChopperAlarms",
+        "nicos_ess.devices.epics.chopper.NewChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_2,
         visibility=(),
     ),
     foc2_chopper=device(
-        "nicos_ess.devices.epics.chopper.EssChopperController",
+        "nicos_ess.devices.epics.chopper.NewEssChopperController",
         description="The chopper controller",
         pollinterval=0.5,
         maxage=None,
