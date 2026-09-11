@@ -87,28 +87,4 @@ devices = dict(
         controlled_device="beamstop5",
         mapping={"Parked": 989.891, "In beam": 54.6},
     ),
-    beamstop_selector=device(
-        "nicos_ess.loki.devices.beamstop.LokiBeamstopController",
-        bsx_positioner="beamstop_x_positioner",
-        bsy_positioner="beamstop_y_positioner",
-        bs1_positioner="beamstop1_positioner",
-        bs2_positioner="beamstop2_positioner",
-        bs3_positioner="beamstop3_positioner",
-        bs4_positioner="beamstop4_positioner",
-        bs5_positioner="beamstop5_positioner",
-        # This mapping is a placeholder, the values are set in the class. The keys should not be edited.
-        # TODO: remove the mapping argument from this setup file and use the mapping defined in the class
-        mapping={
-            "Park all beamstops": (),
-            "Beamstop 1": (),
-            "Beamstop 2": (),
-            "Beamstop 2 + monitor": (),
-            "Beamstop 3": (),
-            "Beamstop 3 + monitor": (),
-            "Beamstop 4": (),
-            "Beamstop 4 + monitor": (),
-            "Beamstop 5": (),
-            "Beamstop 5 + monitor": (),
-        },
-    ),
 )
