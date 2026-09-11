@@ -107,7 +107,7 @@
        <item>
         <widget class="QPushButton" name="btn_clear">
          <property name="text">
-          <string>Deselect All</string>
+          <string>Deselect all</string>
          </property>
         </widget>
        </item>
