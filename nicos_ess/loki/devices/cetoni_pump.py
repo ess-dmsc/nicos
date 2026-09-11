@@ -271,6 +271,7 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
 
 
 class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
+    # todo: check enabled before changing stuff
     parameters = {
         "pvroot": Param(
             "The root of the pv",
