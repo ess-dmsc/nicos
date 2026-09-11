@@ -81,7 +81,7 @@ devices = dict(
     ),
     mon_2_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
-        description="A just-bin-it image channel",
+        description="Beam monitor 2 just-bin-it image channel",
         hist_topic="nmx_visualisation",
         data_topic="nmx_beam_monitor",
         brokers=configdata("config.KAFKA_BROKERS"),
