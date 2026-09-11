@@ -16,34 +16,7 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QGridLayout" name="gridLayout_4">
-     <item row="1" column="0" rowspan="3">
-      <widget class="QListWidget" name="basicSetup">
-       <property name="minimumSize">
-        <size>
-         <width>180</width>
-         <height>350</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QListWidget" name="optSetups">
-       <property name="minimumSize">
-        <size>
-         <width>180</width>
-         <height>0</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QLabel" name="label_pnp">
-       <property name="text">
-        <string>Select plug and play setups:     </string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
+     <item row="6" column="1">
       <widget class="QListWidget" name="pnpSetups">
        <property name="minimumSize">
         <size>
@@ -53,21 +26,17 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Select basic instrument configuration:     </string>
+     <item row="1" column="0" rowspan="6">
+      <widget class="QListWidget" name="basicSetup">
+       <property name="minimumSize">
+        <size>
+         <width>180</width>
+         <height>350</height>
+        </size>
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Select optional components:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="2" rowspan="3">
+     <item row="1" column="2" rowspan="6">
       <widget class="QLabel" name="setupDescription">
        <property name="minimumSize">
         <size>
@@ -88,6 +57,61 @@
         <bool>true</bool>
        </property>
       </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Select basic instrument configuration:     </string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QListWidget" name="optSetups">
+       <property name="minimumSize">
+        <size>
+         <width>180</width>
+         <height>0</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Select optional components:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QLabel" name="label_pnp">
+       <property name="text">
+        <string>Select plug and play setups:     </string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <layout class="QHBoxLayout" name="horizontalLayout" stretch="4,0">
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_clear">
+         <property name="text">
+          <string>Deselect All</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
@@ -145,13 +169,6 @@
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <item>
-      <widget class="QPushButton" name="btn_clear">
-       <property name="text">
-        <string>Clear Opt Components</string>
-       </property>
-      </widget>
-     </item>
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
