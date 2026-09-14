@@ -179,19 +179,19 @@ devices = dict(
         readpv=f"{pv_root}Flush-State-r",
         visibility=(),
     ),
-    # pc205_flush_pressure_target=device(
-    #     "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-    #     description="Pressure target",
-    #     readpv=f"{pv_root}MISSING!!!",
-    #     writepv=f"{pv_root}MISSING!!!",
-    #     visibility=(),
-    # ),
-    # pc205_flush_running=device(
-    #     "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-    #     description="Flush cycle is running",
-    #     readpv=f"{pv_root}MISSING!!!",
-    #     visibility=(),
-    # ),
+    pc205_flush_pressure_target=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Pressure target",
+        readpv=f"{pv_root}Flush-PTarget-s",
+        writepv=f"{pv_root}Flush-PTarget-s",
+        visibility=(),
+    ),
+    pc205_flush_running=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Flush cycle is running",
+        readpv=f"{pv_root}Flush-Running-r",
+        visibility=(),
+    ),
     # ------------------------------------------------------------------
     # Cold valve
     # ------------------------------------------------------------------
@@ -259,7 +259,7 @@ devices = dict(
         ],
     ),
     pc205_regulation_heater_range=device(
-        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Regulation heater range",
         readpv=f"{pv_root}regulation-htr_range-s",
         writepv=f"{pv_root}regulation-htr_range-s",
@@ -309,12 +309,10 @@ devices = dict(
         ],
     ),
     pc205_sample_heater_range=device(
-        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Sample heater range",
         readpv=f"{pv_root}sample-htr_range-s",
         writepv=f"{pv_root}sample-htr_range-s",
-        abslimits=(0, 16777216),
-        userlimits=(0, 16777216),
     ),
     pc205_sample_temp_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -377,6 +375,30 @@ devices = dict(
         description="Operating mode for sample",
         readpv=f"{pv_root}sample-mode-s",
         writepv=f"{pv_root}sample-mode-s",
+        visibility=(),
+    ),
+    # ------------------------------------------------------------------
+    # PReg
+    # ------------------------------------------------------------------
+    pc205_preg_out=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Output",
+        readpv=f"{pv_root}PReg-Out-r",
+    ),
+    pc205_preg_valve_pos=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Valve position",
+        readpv=f"{pv_root}PReg-VPos-s",
+        writepv=f"{pv_root}PReg-VPos-s",
+    ),
+    # ------------------------------------------------------------------
+    # Valve 16
+    # ------------------------------------------------------------------
+    pc205_valve_16_state=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Valve state",
+        readpv=f"{pv_root}Valve16-state-s",
+        writepv=f"{pv_root}Valve16-state-s",
         visibility=(),
     ),
 )
