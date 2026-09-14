@@ -11,6 +11,59 @@ from nicos.core import (
     tupleof,
 )
 from nicos.core.errors import InvalidValueError
+from nicos.devices.abstract import MappedMoveable
+
+
+class LaserMacro(MappedMoveable):
+    """Laser motion macro for the virtual source
+    The laser itself is turned on manually. The position for the laser
+    will always be the same, but the return position may change. This device
+    updates the return position when the laser is moved for use so that the original
+    position may be easily reused.
+    """
+
+    parameter_overrides = {
+        "mapping": Override(
+            default={"On": (11.5, 5), "Off": (0, 0)},
+            userparam=False,
+        ),
+    }
+    attached_devices = {
+        "blade_v": Attach("The virtual source stage", Moveable, optional=False),
+        "angle": Attach("The virtual source stage", Moveable, optional=False),
+    }
+    devices = ("blade_v", "angle")
+
+    def doStart(self, target):
+        if target == "On":
+            self._updateLastKnownPos()
+        return self._startRaw(self._mapTargetValue(target))
+
+    def doStatus(self, maxage=0):
+        return multiStatus(self._adevs, maxage=maxage)
+
+    def _updateLastKnownPos(self):
+        values = self._readRaw()
+        if values == self.mapping["Off"]:
+            return
+        self._setROParam("mapping", {"On": (11.5, 5), "Off": values})
+        self.log.info(f"Updated last know position to {self.mapping['Off']}")
+
+    def _readRaw(self, maxage=0):
+        return self._adevs["blade_v"].read(), self._adevs["angle"].read()
+
+    def _startRaw(self, target):
+        vertical, angle = target[0], target[1]
+        self._adevs["blade_v"].start(vertical)
+        self._adevs["angle"].start(angle)
+
+    def _mapReadValue(self, value):
+        inverse_mapping = {v: k for k, v in self.mapping.items()}
+        mapped_value = inverse_mapping.get(value)
+        rounded_val = (round(value[0], 3), round(value[1], 3))
+        if not mapped_value or mapped_value == "Off":
+            return f"Off: {rounded_val}"
+        return f"Laser in Position: {self.mapping['On']}"
 
 
 class VirtualSource(Moveable):
