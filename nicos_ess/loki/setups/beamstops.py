@@ -14,12 +14,12 @@ devices = dict(
         description="Mapped positions for beamstop motor along beam axis",
         controlled_device="beamstop_x",
         mapping={
-            "Parked": 1,
-            "Xpos BS1": 171.23,
-            "Xpos BS2": 264.22,
-            "Xpos BS3": 233.82,
-            "Xpos BS4": 202,
-            "Xpos BS5": 171.66,
+            "parked": 1,
+            "xpos bs1": 171.23,
+            "xpos bs2": 264.22,
+            "xpos bs3": 233.82,
+            "xpos bs4": 202,
+            "xpos bs": 171.66,
         },
     ),
     beamstop_y=device(
@@ -32,7 +32,7 @@ devices = dict(
         "nicos_ess.devices.mapped_controller.MappedController",
         description="Mapped positions for beamstop motor horizontal axis",
         controlled_device="beamstop_y",
-        mapping={"In beam": 32.5},
+        mapping={"in-beam": 32.5},
     ),
     beamstop1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -44,7 +44,7 @@ devices = dict(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         description="Mapped positions for beamstop motor Z1 M4 Transmission",
         controlled_device="beamstop1",
-        mapping={"Parked": 987.5, "In beam": 54.630},
+        mapping={"parked": 987.5, "in-beam": 54.630},
     ),
     beamstop2=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -56,7 +56,7 @@ devices = dict(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         description="Mapped positions for beamstop motor Z2",
         controlled_device="beamstop2",
-        mapping={"Parked": 977.998, "In beam": 59.320},
+        mapping={"parked": 977.998, "in-beam": 59.320},
     ),
     beamstop3=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -68,7 +68,7 @@ devices = dict(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         description="Mapped positions for beamstop motor Z3",
         controlled_device="beamstop3",
-        mapping={"Parked": 987.5, "In beam": 55.6},
+        mapping={"parked": 987.5, "in-eam": 55.6},
     ),
     beamstop4=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -80,7 +80,7 @@ devices = dict(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         description="Mapped positions for beamstop motor Z4",
         controlled_device="beamstop4",
-        mapping={"Parked": 987, "In beam": 57.3},
+        mapping={"parked": 987, "in-beam": 57.3},
     ),
     beamstop5=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -92,6 +92,30 @@ devices = dict(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         description="Mapped positions for beamstop motor Z5",
         controlled_device="beamstop5",
-        mapping={"Parked": 989.891, "In beam": 54.6},
+        mapping={"parked": 989.891, "in-beam": 54.6},
+    ),
+    beamstop_selector=device(
+        "nicos_ess.loki.devices.beamstop.LokiBeamstopController",
+        bsx_positioner="beamstop_x_positioner",
+        bsy_positioner="beamstop_y_positioner",
+        bs1_positioner="beamstop1_positioner",
+        bs2_positioner="beamstop2_positioner",
+        bs3_positioner="beamstop3_positioner",
+        bs4_positioner="beamstop4_positioner",
+        bs5_positioner="beamstop5_positioner",
+        # This mapping is a placeholder, the values are set in the class. The keys should not be edited.
+        # TODO: remove the mapping argument from this setup file and use the mapping defined in the class
+        mapping={
+            "Park all beamstops": (),
+            "Beamstop 1": (),
+            "Beamstop 2": (),
+            "Beamstop 2 + monitor": (),
+            "Beamstop 3": (),
+            "Beamstop 3 + monitor": (),
+            "Beamstop 4": (),
+            "Beamstop 4 + monitor": (),
+            "Beamstop 5": (),
+            "Beamstop 5 + monitor": (),
+        },
     ),
 )
