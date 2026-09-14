@@ -93,6 +93,55 @@ def attached_chopper_devices(device_harness, fake_backend):
 
 
 @pytest.fixture
+def attached_new_chopper_devices(device_harness, fake_backend):
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_state",
+        shared={"initial": "stop"},
+    )
+    device_harness.create_pair(
+        HarnessMappedMoveable,
+        name="ess_command",
+        shared={"mapping": {"stop": 0, "start": 1}},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_chic_conn",
+        shared={"initial": "Connected"},
+    )
+
+    fake_backend.values["SIM:CHOP:SPD.RBV"] = 14.0
+    fake_backend.values["SIM:CHOP:SPD.VAL"] = 14.0
+    fake_backend.values["SIM:CHOP:InPhase_R"] = "Not in phase"
+    fake_backend.value_choices["SIM:CHOP:InPhase_R"] = [
+        "Not in phase",
+        "In phase",
+    ]
+    device_harness.create_pair(
+        EpicsMappedReadable,
+        name="ess_speed_in_phase",
+        shared={
+            "readpv": "SIM:CHOP:InPhase_R",
+            "monitor": True,
+            "pva": True,
+        },
+    )
+    device_harness.create_pair(
+        chopper_mod.EssChopperSpeed,
+        name="ess_speed",
+        shared={
+            "readpv": "SIM:CHOP:SPD.RBV",
+            "writepv": "SIM:CHOP:SPD.VAL",
+            "mapping": {"0": 0.0, "14": 14.0},
+            "monitor": True,
+            "pva": True,
+            "state": "ess_state",
+            "in_phase": "ess_speed_in_phase",
+        },
+    )
+
+
+@pytest.fixture
 def chopper_speed_devices(device_harness, fake_backend):
     device_harness.create_pair(
         HarnessReadable,
@@ -193,8 +242,10 @@ class TestEssChopperControllerHarness:
 
 
 class TestNewEssChopperControllerHarness:
-    def test_initializes(self, device_harness, fake_backend, attached_chopper_devices):
-        del fake_backend, attached_chopper_devices
+    def test_initializes(
+        self, device_harness, fake_backend, attached_new_chopper_devices
+    ):
+        del fake_backend, attached_new_chopper_devices
         daemon_device, poller_device = device_harness.create_pair(
             chopper_mod.NewEssChopperController,
             name="ess_chopper",
