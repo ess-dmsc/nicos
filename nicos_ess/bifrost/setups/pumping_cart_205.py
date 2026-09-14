@@ -379,4 +379,18 @@ devices = dict(
         writepv=f"{pv_root}sample-mode-s",
         visibility=(),
     ),
+    # ------------------------------------------------------------------
+    # PReg
+    # ------------------------------------------------------------------
+    pc205_preg_out=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Output",
+        readpv=f"{pv_root}PReg-Out-r",
+    ),
+    pc205_preg_valve_pos=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Valve position",
+        readpv=f"{pv_root}PReg-VPos-s",
+        writepv=f"{pv_root}PReg-VPos-s",
+    ),
 )
