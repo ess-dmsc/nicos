@@ -56,6 +56,13 @@ devices = dict(
         rot="vs_slit_rotation",
         opmode="centered",
     ),
+    laser_position=device(
+        "nicos_ess.estia.devices.virtual_source.LaserMacro",
+        description="Laser positioning for the virtual source",
+        blade_v="left_bottom_blade_vertical",
+        angle="vs_slit_rotation",
+        mapping={"On": (11.5, 5), "Off": (0, 0)},
+    ),
     # Temperature Readouts
     right_horizontal_temp=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
