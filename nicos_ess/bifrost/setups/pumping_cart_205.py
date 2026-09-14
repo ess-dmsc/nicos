@@ -259,7 +259,7 @@ devices = dict(
         ],
     ),
     pc205_regulation_heater_range=device(
-        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Regulation heater range",
         readpv=f"{pv_root}regulation-htr_range-s",
         writepv=f"{pv_root}regulation-htr_range-s",
@@ -309,7 +309,7 @@ devices = dict(
         ],
     ),
     pc205_sample_heater_range=device(
-        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Sample heater range",
         readpv=f"{pv_root}sample-htr_range-s",
         writepv=f"{pv_root}sample-htr_range-s",
