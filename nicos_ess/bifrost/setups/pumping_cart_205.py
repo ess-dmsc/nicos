@@ -313,8 +313,6 @@ devices = dict(
         description="Sample heater range",
         readpv=f"{pv_root}sample-htr_range-s",
         writepv=f"{pv_root}sample-htr_range-s",
-        abslimits=(0, 16777216),
-        userlimits=(0, 16777216),
     ),
     pc205_sample_temp_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
