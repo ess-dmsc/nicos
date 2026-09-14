@@ -26,7 +26,7 @@ import pytest
 
 from nicos.core import status
 from nicos_ess.devices.epics import chopper as chopper_mod
-from nicos_ess.devices.epics.pva import epics_common
+from nicos_ess.devices.epics.pva import EpicsMappedReadable, epics_common
 from nicos_ess.devices.epics.pva.epics_devices import EpicsManualMappedAnalogMoveable
 from test.nicos_ess.test_devices.doubles import (
     FakeEpicsBackend,
@@ -86,6 +86,30 @@ def attached_chopper_devices(device_harness, fake_backend):
             "readpv": "SIM:ODIN:SPD.RBV",
             "writepv": "SIM:ODIN:SPD.VAL",
             "mapping": {"0": 0.0, "14": 14.0},
+            "monitor": True,
+            "pva": True,
+        },
+    )
+
+
+@pytest.fixture
+def chopper_speed_devices(device_harness, fake_backend):
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_state",
+        shared={"initial": "Ready"},
+    )
+
+    fake_backend.values["SIM:CHOP:InPhase_R"] = "Not in phase"
+    fake_backend.value_choices["SIM:CHOP:InPhase_R"] = [
+        "Not in phase",
+        "In phase",
+    ]
+    device_harness.create_pair(
+        EpicsMappedReadable,
+        name="ess_in_phase",
+        shared={
+            "readpv": "SIM:CHOP:InPhase_R",
             "monitor": True,
             "pva": True,
         },
@@ -185,3 +209,81 @@ class TestNewEssChopperControllerHarness:
 
         assert daemon_device is not None
         assert poller_device is not None
+
+
+class TestEssChopperSpeed:
+    def _create_pair(self, device_harness):
+        return device_harness.create_pair(
+            chopper_mod.EssChopperSpeed,
+            name="ess_chopper_speed",
+            shared={
+                "readpv": "SIM:ODIN:SPD.RBV",
+                "writepv": "SIM:ODIN:SPD.VAL",
+                "mapping": {"0": 0.0, "14": 14.0},
+                "monitor": True,
+                "pva": True,
+                "state": "ess_state",
+                "in_phase": "ess_in_phase",
+            },
+        )
+
+    def test_initializes(self, device_harness, fake_backend, chopper_speed_devices):
+        del fake_backend, chopper_speed_devices
+        daemon_device, poller_device = self._create_pair(device_harness)
+
+        assert daemon_device is not None
+        assert poller_device is not None
+
+    def test_completes_by_state_when_target_is_zero(
+        self, device_harness, fake_backend, chopper_speed_devices
+    ):
+        del fake_backend, chopper_speed_devices
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        daemon_device._setROParam("target", daemon_device.TARGET_ZERO)
+        assert daemon_device.doIsCompleted() is True
+
+    def test_not_completed_by_state_when_not_ready(self, device_harness, fake_backend):
+        device_harness.create_pair(
+            HarnessReadable,
+            name="ess_state",
+            shared={"initial": "Moving"},
+        )
+
+        fake_backend.values["SIM:CHOP:InPhase_R"] = "Not in phase"
+        fake_backend.value_choices["SIM:CHOP:InPhase_R"] = [
+            "Not in phase",
+            "In phase",
+        ]
+        device_harness.create_pair(
+            EpicsMappedReadable,
+            name="ess_in_phase",
+            shared={
+                "readpv": "SIM:CHOP:InPhase_R",
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        daemon_device._setROParam("target", daemon_device.TARGET_ZERO)
+        assert daemon_device.doIsCompleted() is False
+
+    def test_completes_on_inphase_rising_edge_when_target_nonzero(
+        self, device_harness, fake_backend, chopper_speed_devices
+    ):
+        del chopper_speed_devices
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        daemon_device._setROParam("target", "14")
+
+        assert daemon_device.doIsCompleted() is False
+        assert daemon_device._previous_inphase is False
+
+        fake_backend.emit_update("SIM:CHOP:InPhase_R", value="In phase")
+
+        assert daemon_device.doIsCompleted() is True
+        assert daemon_device._previous_inphase is True
+
+        assert daemon_device.doIsCompleted() is False
