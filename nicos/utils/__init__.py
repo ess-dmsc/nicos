@@ -474,10 +474,11 @@ def bitDescription(bits, *descriptions):
 
 def createThread(name, target, args=(), kwargs=None, daemon=True, start=True):
     """Create, start and return a Python thread."""
+
     def inner(*args, **kwds):
         # Since Numpy 2.2, printoptions are thread-local so we need to set them
         # in every thread to the default set in nicos/__init__.py.
-        numpy.set_printoptions(legacy='1.13')
+        numpy.set_printoptions(legacy="1.13")
         return target(*args, **kwds)
 
     thread = threading.Thread(target=inner, name=name, args=args, kwargs=kwargs)
@@ -826,10 +827,18 @@ def disableDirectory(
         enable=False,
         logger=logger,
     )
+<<<<<<< HEAD
     if failflag and logger:
         logger.warning(
             "Disabling failed for some files, please check access rights manually"
         )
+=======
+    if failflag:
+        if logger:
+            logger.warning(
+                "Disabling failed for some files, please check access rights manually"
+            )
+>>>>>>> b5fa01b4d (style(core/utils)!: ruff format+adjust ruff rules)
     return failflag
     # maybe logging is better done in the caller of disableDirectory
 
@@ -861,10 +870,18 @@ def enableDirectory(
         enable=True,
         logger=logger,
     )
+<<<<<<< HEAD
     if failflag and logger:
         logger.warning(
             "Enabling failed for some files, please check access rights manually"
         )
+=======
+    if failflag:
+        if logger:
+            logger.warning(
+                "Enabling failed for some files, please check access rights manually"
+            )
+>>>>>>> b5fa01b4d (style(core/utils)!: ruff format+adjust ruff rules)
     return failflag
     # maybe logging is better done in the caller of enableDirectory
 
@@ -1000,8 +1017,13 @@ def daemonize():
 
     # redirect standard file descriptors
     # pylint: disable=consider-using-with,unspecified-encoding
+<<<<<<< HEAD
     sys.stdin = open("/dev/null", encoding=None)  # noqa: SIM115
     sys.stdout = sys.stderr = open("/dev/null", "w", encoding=None)  # noqa: SIM115
+=======
+    sys.stdin = open("/dev/null", encoding=None)
+    sys.stdout = sys.stderr = open("/dev/null", "w", encoding=None)
+>>>>>>> b5fa01b4d (style(core/utils)!: ruff format+adjust ruff rules)
 
 
 def setuser(recover=True):
