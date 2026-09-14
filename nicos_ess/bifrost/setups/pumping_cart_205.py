@@ -391,4 +391,14 @@ devices = dict(
         readpv=f"{pv_root}PReg-VPos-s",
         writepv=f"{pv_root}PReg-VPos-s",
     ),
+    # ------------------------------------------------------------------
+    # Valve 16
+    # ------------------------------------------------------------------
+    pc205_valve_16_state=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Valve state",
+        readpv=f"{pv_root}Valve16-state-s",
+        writepv=f"{pv_root}Valve16-state-s",
+        visibility=(),
+    ),
 )
