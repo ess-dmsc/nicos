@@ -179,19 +179,19 @@ devices = dict(
         readpv=f"{pv_root}Flush-State-r",
         visibility=(),
     ),
-    # pc205_flush_pressure_target=device(
-    #     "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-    #     description="Pressure target",
-    #     readpv=f"{pv_root}MISSING!!!",
-    #     writepv=f"{pv_root}MISSING!!!",
-    #     visibility=(),
-    # ),
-    # pc205_flush_running=device(
-    #     "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-    #     description="Flush cycle is running",
-    #     readpv=f"{pv_root}MISSING!!!",
-    #     visibility=(),
-    # ),
+    pc205_flush_pressure_target=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Pressure target",
+        readpv=f"{pv_root}Flush-PTarget-s",
+        writepv=f"{pv_root}Flush-PTarget-s",
+        visibility=(),
+    ),
+    pc205_flush_running=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Flush cycle is running",
+        readpv=f"{pv_root}Flush-Running-r",
+        visibility=(),
+    ),
     # ------------------------------------------------------------------
     # Cold valve
     # ------------------------------------------------------------------
