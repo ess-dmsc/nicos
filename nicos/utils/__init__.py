@@ -476,7 +476,13 @@ def bitDescription(bits, *descriptions):
 
 def createThread(name, target, args=(), kwargs=None, daemon=True, start=True):
     """Create, start and return a Python thread."""
-    thread = threading.Thread(target=target, name=name, args=args, kwargs=kwargs)
+    def inner(*args, **kwds):
+        # Since Numpy 2.2, printoptions are thread-local so we need to set them
+        # in every thread to the default set in nicos/__init__.py.
+        numpy.set_printoptions(legacy='1.13')
+        return target(*args, **kwds)
+
+    thread = threading.Thread(target=inner, name=name, args=args, kwargs=kwargs)
     thread.daemon = daemon
     if start:
         thread.start()
