@@ -265,9 +265,12 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
     def status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        if param == "readpv" and value != 0:
-            if time.monotonic() >= self._last_update + self._plot_update_delay:
-                _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
+        if (
+            param == "readpv"
+            and value != 0
+            and time.monotonic() >= self._last_update + self._plot_update_delay
+        ):
+            _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
 
         EpicsDevice.status_change_callback(
             self, name, param, value, units, limits, severity, message, **kwargs
@@ -445,7 +448,7 @@ class TimepixDetector(AreaDetector):
             # already done? exit immediately
             current_value = self._get_pv(
                 pv_name,
-                as_string=False if isinstance(expected_value, (int, float)) else True,
+                as_string=not isinstance(expected_value, (int, float)),
             )
             if precision is not None and isinstance(current_value, (int, float)):
                 if abs(current_value - expected_value) <= precision:
@@ -630,21 +633,6 @@ class ADSimDetector(AreaDetector):
         ):
             self.subarraymode = False
 
-    def doStart(self):
-        num_images = self.preselection if self.iscontroller else None
-
-        if num_images == 0:
-            return
-        elif not num_images or num_images < 0:
-            self.imagemode = "continuous"
-        elif num_images == 1:
-            self.imagemode = "single"
-        elif num_images > 1:
-            self.imagemode = "multiple"
-            self.numimages = num_images
-
-        self.doAcquire()
-
     def doReadSizex(self):
         return self._get_pv("size_x_rbv")
 
@@ -773,7 +761,7 @@ class OrcaFlash4(AreaDetector):
             "Number of triggers per image.", settable=True, volatile=True
         ),
         "triggeractive": Param(
-            "Trigger active of the camera. While in sync_readout mode, the exposure time is controlled via numtriggers NOT acquiretime and acquireperiod.",
+            "In sync_readout mode, exposure is set via numtriggers, not acquiretime/acquireperiod.",
             type=oneof("edge", "level", "sync_readout"),
             settable=True,
             volatile=True,
@@ -916,7 +904,7 @@ class OrcaFlash4(AreaDetector):
         if detector_state != "Done" and alarm_severity < status.BUSY:
             alarm_severity = status.BUSY
         self._write_alarm_to_log(detector_state, alarm_severity, alarm_status)
-        return alarm_severity, "%s, image mode is %s" % (detector_state, self.imagemode)
+        return alarm_severity, f"{detector_state}, image mode is {self.imagemode}"
 
     def _write_alarm_to_log(self, pv_value, severity, stat):
         msg_format = "%s (%s)"
