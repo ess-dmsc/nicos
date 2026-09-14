@@ -45,7 +45,8 @@ from io import BufferedWriter, FileIO
 from itertools import chain, islice
 from os import path
 from stat import S_IRGRP, S_IROTH, S_IRUSR, S_IRWXU, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR
-from time import localtime, mktime, sleep, strftime, strptime, time as currenttime
+from time import localtime, mktime, sleep, strftime, strptime
+from time import time as currenttime
 
 import numpy
 
@@ -217,7 +218,7 @@ class HardwareStub:
         from nicos.core import ProgrammingError
 
         raise ProgrammingError(
-            self.dev, "accessing hardware method %s in " "simulation mode" % name
+            self.dev, "accessing hardware method %s in simulation mode" % name
         )
 
 
@@ -476,10 +477,11 @@ def bitDescription(bits, *descriptions):
 
 def createThread(name, target, args=(), kwargs=None, daemon=True, start=True):
     """Create, start and return a Python thread."""
+
     def inner(*args, **kwds):
         # Since Numpy 2.2, printoptions are thread-local so we need to set them
         # in every thread to the default set in nicos/__init__.py.
-        numpy.set_printoptions(legacy='1.13')
+        numpy.set_printoptions(legacy="1.13")
         return target(*args, **kwds)
 
     thread = threading.Thread(target=inner, name=name, args=args, kwargs=kwargs)
@@ -646,7 +648,7 @@ DEFAULT_FILE_MODE = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 
 
 def readFile(filename):
-    with open(filename, "r", encoding="utf-8") as fp:
+    with open(filename, encoding="utf-8") as fp:
         return [line.strip() for line in fp]
 
 
@@ -693,7 +695,7 @@ def moveOutOfWay(filepath, maxbackups=10):
                 try:
                     os.rename(filepath, renamename)
                     return renamename
-                except os.error as ex:
+                except OSError as ex:
                     raise RuntimeError(
                         "Could not rename %s to backup "
                         "name %s: %s" % (filepath, renamename, ex)
@@ -836,8 +838,7 @@ def disableDirectory(
     if failflag:
         if logger:
             logger.warning(
-                "Disabling failed for some files, please check "
-                "access rights manually"
+                "Disabling failed for some files, please check access rights manually"
             )
     return failflag
     # maybe logging is better done in the caller of disableDirectory
@@ -873,7 +874,7 @@ def enableDirectory(
     if failflag:
         if logger:
             logger.warning(
-                "Enabling failed for some files, please check " "access rights manually"
+                "Enabling failed for some files, please check access rights manually"
             )
     return failflag
     # maybe logging is better done in the caller of enableDirectory
@@ -1010,7 +1011,7 @@ def daemonize():
 
     # redirect standard file descriptors
     # pylint: disable=consider-using-with,unspecified-encoding
-    sys.stdin = open("/dev/null", "r", encoding=None)
+    sys.stdin = open("/dev/null", encoding=None)
     sys.stdout = sys.stderr = open("/dev/null", "w", encoding=None)
 
 
@@ -1154,10 +1155,8 @@ def formatExtendedFrame(frame):
 
 ST_HEADER = "Stack trace (most recent call last):"
 TB_HEADER = "Traceback (most recent call last):"
-TB_CAUSE_MSG = "The above exception was the direct cause of the " "following exception:"
-TB_CONTEXT_MSG = (
-    "During handling of the above exception, another " "exception occurred:"
-)
+TB_CAUSE_MSG = "The above exception was the direct cause of the following exception:"
+TB_CONTEXT_MSG = "During handling of the above exception, another exception occurred:"
 
 
 def listExtendedTraceback(exc, seen=None):
@@ -1398,7 +1397,7 @@ def decodeAny(string):
 
 
 _SAFE_FILE_CHARS = frozenset(
-    "-=+_.,()[]{}0123456789abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "-=+_.,()[]{}0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 _BAD_NAMES = frozenset(
     (".", "..", "con", "prn", "aux", "nul")
