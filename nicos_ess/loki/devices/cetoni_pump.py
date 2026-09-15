@@ -172,7 +172,7 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
             candidates.append((status.WARN, "Disabled"))
         else:
             candidates.append((status.OK, "Enabled"))
-        return worst_status(self._read_primary_alarm(maxage=maxage), *candidates)
+        return worst_status(*candidates, self._read_primary_alarm(maxage=maxage))
 
 
 class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
