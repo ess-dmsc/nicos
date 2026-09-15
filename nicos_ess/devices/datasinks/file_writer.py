@@ -711,7 +711,7 @@ class FileWriterControlSink(Device):
             job_to_replay.start_time,
             job_to_replay.stop_time,
             job_number,
-            message.job
+            message.job_id
         )
 
     def doShutdown(self):
