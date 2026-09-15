@@ -124,7 +124,7 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
     def doStart(self, target):
         is_disabled = self._epics.get_channel_value("is_disabled")
         if is_disabled:
-            self.log.warning("Please enable before starting")
+            self.log.warning(f'Please enable device: "{self.name}" before starting')
             return
         self._epics.put_channel_value("write", target)
         self._epics.put_channel_value("start", 1)
