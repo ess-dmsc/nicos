@@ -346,8 +346,7 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
             self.log.warning(
                 f"Please disable device: {self._attached_linked_pumping.name} first"
             )
-            return False
-        return True
+        return linked_mode_disabled
 
     def doReadAbslimits(self):
         high_limit = self._epics.get_channel_value("max_vol")
