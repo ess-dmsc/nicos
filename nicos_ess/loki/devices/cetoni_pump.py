@@ -360,7 +360,7 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
 
     def doWritePressure_Max(self, target):
         limit_low, limit_high = self._epics.get_channel_limits("pressure_max")
-        target = get_target_inside_limits(target, limit_low, limit_high)
+        target = min(limit_high, max(limit_low, target))
         self._epics.put_channel_value("pressure_max", target)
         return target
 
@@ -445,9 +445,3 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         if not self._linked_mode_disabled():
             return
         self._epics.put_channel_value("generate_flow", target)
-
-
-def get_target_inside_limits(target, limit_low, limit_high):
-    target = max(limit_low, target)
-    target = min(limit_high, target)
-    return target

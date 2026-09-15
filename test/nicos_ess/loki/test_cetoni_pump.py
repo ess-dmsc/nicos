@@ -7,7 +7,6 @@ from nicos_ess.devices.epics.pva import epics_common
 from nicos_ess.loki.devices.cetoni_pump import (
     CetoniPumpController,
     CetoniPumpLinkedMode,
-    get_target_inside_limits,
 )
 
 
@@ -24,6 +23,7 @@ def fake_backend(fake_epics_backend_factory):
     backend.values["SP1:SyrType"] = 0
     backend.values["SP1:Pressure"] = 0
     backend.values["SP1:MaxPressure"] = 5
+
     backend.values["SP1:Pressure.EGU"] = "mbar"
     backend.values["SP1:SyrInnerDiam"] = 0.3
     backend.values["SP1:SyrInnerDiam.EGU"] = "mm"
@@ -41,6 +41,8 @@ def fake_backend(fake_epics_backend_factory):
     backend.values["Lnkd:StopMode-SP"] = 0
     backend.values["Lnkd:Start-Cmd"] = 0
 
+    backend.limits["SP1:MaxPressure"] = (0, 5)
+
     backend.value_choices["SP1:SyrType"] = ["3mL 200bar", "5mL 100bar"]
     backend.value_choices["Lnkd:FillingSyringeIdx-SP"] = ["SP1", "SP2"]
     backend.value_choices["Lnkd:StopMode-SP"] = ["Manual", "Time"]
@@ -48,15 +50,6 @@ def fake_backend(fake_epics_backend_factory):
 
 
 class TestCetoniPumpController:
-    def test_new_target_valid(self):
-        assert get_target_inside_limits(target=100, limit_low=10, limit_high=200) == 100
-
-    def test_new_target_cap_at_limit_low(self):
-        assert get_target_inside_limits(target=1, limit_low=10, limit_high=200) == 10
-
-    def test_new_target_cap_at_limit_high(self):
-        assert get_target_inside_limits(target=300, limit_low=10, limit_high=200) == 200
-
     def test_pump_device_ok(self, daemon_device_harness, fake_backend):
         pump = daemon_device_harness.create_master(
             CetoniPumpController,
@@ -123,6 +116,34 @@ class TestCetoniPumpController:
         fake_backend.values["SP1:MaxVol"] = 5
         with pytest.raises(LimitError):
             pump.move(100)
+
+    def test_pump_set_max_pressure_inside_limits(
+        self, daemon_device_harness, fake_backend
+    ):
+        pump = daemon_device_harness.create_master(
+            CetoniPumpController,
+            name="pump",
+            pvroot="SP1:",
+            readpv="SP1:FilledVolume",
+            writepv="SP1:FillVol-SP",
+        )
+        fake_backend.values["SP1:MaxPressure"] = 5
+        pump.pressure_max = 4
+        assert pump.pressure_max == 4
+
+    def test_pump_set_max_pressure_capped_at_max(
+        self, daemon_device_harness, fake_backend
+    ):
+        pump = daemon_device_harness.create_master(
+            CetoniPumpController,
+            name="pump",
+            pvroot="SP1:",
+            readpv="SP1:FilledVolume",
+            writepv="SP1:FillVol-SP",
+        )
+        fake_backend.values["SP1:MaxPressure"] = 3
+        pump.pressure_max = 6
+        assert pump.pressure_max == 5
 
     def test_pump_new_max_volume_updates_limits(self, device_harness, fake_backend):
         pump_in_daemon, pump_in_poller = device_harness.create_pair(
