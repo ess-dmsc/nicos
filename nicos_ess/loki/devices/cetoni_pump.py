@@ -403,19 +403,19 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         self._epics.put_channel_value("stop", 1)
 
     def _compute_status(self, maxage=0):
+        candidates = []
         is_in_fault = self._epics.get_channel_value("is_fault")
         if is_in_fault:
-            return status.ERROR, "In faulty state"
-
+            candidates.append((status.ERROR, "In faulty state"))
         is_homed = self._epics.get_channel_value("is_homed")
         if not is_homed:
-            return status.WARN, "Not homed"
-
+            candidates.append((status.WARN, "Not homed"))
         is_pumping = self._epics.get_channel_value("is_pumping")
         if is_pumping:
-            return status.BUSY, "Pumping"
+            candidates.append((status.BUSY, "Pumping"))
         else:
-            return status.OK, "idle"
+            candidates.append((status.OK, "idle"))
+        return worst_status(*candidates, self._read_primary_alarm(maxage=maxage))
 
     @usermethod
     def fill_syringe(self):
