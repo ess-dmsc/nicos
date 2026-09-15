@@ -335,6 +335,8 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
             self._cache.put(self._name, "userlimits", self.doReadUserlimits(), ts)
 
     def _linked_mode_disabled(self):
+        if self._attached_linked_pumping is None:
+            return True
         linked_mode_disabled = self._attached_linked_pumping._epics.get_channel_value(
             "is_disabled"
         )
