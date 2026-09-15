@@ -22,7 +22,9 @@ from streaming_data_types import (
 from streaming_data_types.fbschemas.action_response_answ.ActionOutcome import (
     ActionOutcome,
 )
-from streaming_data_types.fbschemas.action_response_answ.ActionType import ActionType
+from streaming_data_types.fbschemas.action_response_answ.ActionType import (
+    ActionType,
+)
 
 from nicos import session
 from nicos.core import (
@@ -120,7 +122,8 @@ class JobRecord:
 
     def is_overdue(self, leeway):
         return (
-            self.state == JobState.STARTED and currenttime() > self.next_update + leeway
+            self.state == JobState.STARTED
+            and currenttime() > self.next_update + leeway
         )
 
     def stop_request(self, stop_time):
@@ -181,7 +184,9 @@ class FileWriterStatus(KafkaStatusHandler):
     def _update_cached_jobs(self):
         self.job_history = [
             self._jobs_in_order[k].as_dict()
-            for k in list(self._jobs_in_order.keys())[-self.job_history_limit :]
+            for k in list(self._jobs_in_order.keys())[
+                -self.job_history_limit :
+            ]
         ]
 
     def new_messages_callback(self, messages):
@@ -242,19 +247,25 @@ class FileWriterStatus(KafkaStatusHandler):
             self._jobs[result.job_id].on_writing(self.statusinterval)
             self._jobs[result.job_id].service_id = result.service_id
         else:
-            self.log.debug("request to start writing failed for job %s", result.job_id)
+            self.log.debug(
+                "request to start writing failed for job %s", result.job_id
+            )
             self._jobs[result.job_id].no_start_ack(result.message)
 
     def _on_stop_response(self, result):
         if not self._jobs[result.job_id].stop_requested:
-            self.log.warning("stop requested from external agent for %s", result.job_id)
+            self.log.warning(
+                "stop requested from external agent for %s", result.job_id
+            )
 
         if result.outcome == ActionOutcome.Success:
             self.log.debug(
                 "request to stop writing succeeded for job %s", result.job_id
             )
         else:
-            self.log.debug("request to stop writing failed for job %s", result.job_id)
+            self.log.debug(
+                "request to stop writing failed for job %s", result.job_id
+            )
             self._jobs[result.job_id].set_error_msg(result.message)
 
     def no_messages_callback(self):
@@ -264,7 +275,9 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def _check_for_lost_jobs(self):
         overdue_jobs = [
-            k for k, v in self._jobs.items() if v.is_overdue(self.timeoutinterval)
+            k
+            for k, v in self._jobs.items()
+            if v.is_overdue(self.timeoutinterval)
         ]
         for overdue in overdue_jobs:
             self._jobs[overdue].on_lost("lost connection to job")
@@ -291,7 +304,9 @@ class FileWriterStatus(KafkaStatusHandler):
         if self._mode == MASTER:
             self._setROParam("curstatus", new_status)
             if self._cache:
-                self._cache.put(self._name, "status", new_status, currenttime())
+                self._cache.put(
+                    self._name, "status", new_status, currenttime()
+                )
 
     @property
     def jobs_in_progress(self):
@@ -395,7 +410,9 @@ class FileWriterController:
             delivery_info = (message.partition(), message.offset())
 
         producer = KafkaProducer.create(self.brokers)
-        producer.produce(self.pool_topic, message, on_delivery_callback=on_delivery)
+        producer.produce(
+            self.pool_topic, message, on_delivery_callback=on_delivery
+        )
 
         while not delivered:
             time.sleep(0.1)
@@ -406,7 +423,9 @@ class FileWriterController:
         device = self._check_for_device("NexusStructure")
         if device:
             return device.instrument_name
-        self.log.warning("Could not locate instrument name from NexusStructure device")
+        self.log.warning(
+            "Could not locate instrument name from NexusStructure device"
+        )
         return ""
 
     def _check_for_device(self, name):
@@ -420,7 +439,9 @@ class FileWriterController:
         file_num_str = f"{file_num:0>6}"
         command_str = "".join(
             c for c in command_str.lower() if c in "0123456789abcdef"
-        )[:11]  # truncate command_str to leave 4 random bytes
+        )[
+            :11
+        ]  # truncate command_str to leave 4 random bytes
         # set version to name-based SHA1 hash (constructed)
         # nb; version 8 not recognised by stduuid!
         prefix = f"{proposal_str}{file_num_str}5{command_str}"
@@ -428,7 +449,9 @@ class FileWriterController:
         random_part_len = len(random_uuid) - len(prefix)
         generated_str = prefix + random_uuid[:random_part_len]
         # set variant to RFC 4122
-        generated_uuid = uuid.UUID(generated_str[:16] + "8" + generated_str[17:])
+        generated_uuid = uuid.UUID(
+            generated_str[:16] + "8" + generated_str[17:]
+        )
 
         return str(generated_uuid)
 
@@ -491,7 +514,9 @@ class FileWriterControlSink(Device):
 
     attached_devices = {
         "status": Attach("The file-writer status device", FileWriterStatus),
-        "nexus": Attach("Supplies the NeXus file structure", NexusStructureProvider),
+        "nexus": Attach(
+            "Supplies the NeXus file structure", NexusStructureProvider
+        ),
     }
 
     def doInit(self, mode):
@@ -530,7 +555,11 @@ class FileWriterControlSink(Device):
             )
             structure = self._attached_nexus.get_structure(metainfo, file_num)
             self._start_job(
-                file_path, file_num, structure, start_time=start_time, job_id=job_id
+                file_path,
+                file_num,
+                structure,
+                start_time=start_time,
+                job_id=job_id,
             )
         self.log.info("Filewriting started")
 
@@ -623,7 +652,9 @@ class FileWriterControlSink(Device):
                     "number is required to start writing."
                 )
             else:
-                raise RuntimeError("cannot start writing as proposal number not set")
+                raise RuntimeError(
+                    "cannot start writing as proposal number not set"
+                )
         active_jobs = self.get_active_jobs()
         if active_jobs:
             raise AlreadyWritingException(
@@ -636,17 +667,28 @@ class FileWriterControlSink(Device):
                 return ["abcd1234-abcd-1234-abcd-abcdef123456"]
             return []
         jobs = self._attached_status.jobs_in_progress
-        active_jobs = self._attached_status.marked_for_stop.symmetric_difference(jobs)
+        active_jobs = (
+            self._attached_status.marked_for_stop.symmetric_difference(jobs)
+        )
         return active_jobs
 
     def list_jobs(self, n=None):
         dt_format = "%Y-%m-%d %H:%M:%S"
-        headers = ["job", "status", "start time", "stop time", "replay of", "error"]
+        headers = [
+            "job",
+            "status",
+            "start time",
+            "stop time",
+            "replay of",
+            "error",
+        ]
         funcs = [
             lambda job: str(job.job_number),
             lambda job: job.get_state_string(),
             lambda job: job.start_time.strftime(dt_format),
-            lambda job: job.stop_time.strftime(dt_format) if job.stop_time else "",
+            lambda job: (
+                job.stop_time.strftime(dt_format) if job.stop_time else ""
+            ),
             lambda job: str(job.replay_of) if job.replay_of else "",
             lambda job: job.error_msg if job.error_msg else "",
         ]
@@ -677,14 +719,18 @@ class FileWriterControlSink(Device):
                 job_to_replay = job
                 break
         if not job_to_replay:
-            raise RuntimeError("Could not replay job as that job number was not found")
+            raise RuntimeError(
+                "Could not replay job as that job number was not found"
+            )
         if not job_to_replay:
             raise RuntimeError(
                 "Could not replay job as no stop time defined for that job"
             )
 
         partition, offset = job_to_replay.kafka_offset
-        self._consumer.seek(self.pool_topic, partition=partition, offset=offset)
+        self._consumer.seek(
+            self.pool_topic, partition=partition, offset=offset
+        )
         poll_start = time.monotonic()
         time_out_s = 5
         while True:
@@ -692,7 +738,11 @@ class FileWriterControlSink(Device):
             # Because there are multiple partitions, we might not get the message
             # we want immediately. So, we need to check whether the message is the
             # one we are looking for.
-            if data and data.partition() == partition and data.offset() == offset:
+            if (
+                data
+                and data.partition() == partition
+                and data.offset() == offset
+            ):
                 break
             if not data and time.monotonic() > poll_start + time_out_s:
                 raise RuntimeError(
@@ -711,6 +761,7 @@ class FileWriterControlSink(Device):
             job_to_replay.start_time,
             job_to_replay.stop_time,
             job_number,
+            message.job_id,
         )
 
     def doShutdown(self):
