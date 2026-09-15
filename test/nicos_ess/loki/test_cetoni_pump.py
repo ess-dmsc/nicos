@@ -80,13 +80,22 @@ class TestCetoniPumpController:
         assert pump.status(maxage=0)[0] == status.ERROR
 
     def test_pump_device_write(self, daemon_device_harness, fake_backend):
+        daemon_device_harness.create_master(
+            CetoniPumpLinkedMode,
+            name="linked",
+            pvroot="Lnkd:",
+            readpv="Lnkd:StopMode-SP",
+            writepv="Lnkd:StopMode-SP",
+        )
         pump = daemon_device_harness.create_master(
             CetoniPumpController,
             name="pump",
             pvroot="SP1:",
             readpv="SP1:FilledVolume",
             writepv="SP1:FillVol-SP",
+            linked_pumping="linked",
         )
+        fake_backend.values["Lnkd:Disabled"] = 1
         fake_backend.values["SP1:MaxVol"] = 5
         pump.move(2)
         assert ("SP1:FillVol-SP", 2, False) in fake_backend.put_calls
@@ -95,13 +104,22 @@ class TestCetoniPumpController:
     def test_pump_device_do_not_exceed_max_vol(
         self, daemon_device_harness, fake_backend
     ):
+        daemon_device_harness.create_master(
+            CetoniPumpLinkedMode,
+            name="linked",
+            pvroot="Lnkd:",
+            readpv="Lnkd:StopMode-SP",
+            writepv="Lnkd:StopMode-SP",
+        )
         pump = daemon_device_harness.create_master(
             CetoniPumpController,
             name="pump",
             pvroot="SP1:",
             readpv="SP1:FilledVolume",
             writepv="SP1:FillVol-SP",
+            linked_pumping="linked",
         )
+        fake_backend.values["Lnkd:Disabled"] = 1
         fake_backend.values["SP1:MaxVol"] = 5
         with pytest.raises(LimitError):
             pump.move(100)
