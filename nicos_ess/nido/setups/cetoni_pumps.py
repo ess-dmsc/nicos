@@ -13,6 +13,7 @@ devices = dict(
         writepv=f"{pump1_pvroot}FillVol-SP",
         home_warning_msg="Please make sure syringes are removed before homing",
         precision=0.00001,
+        linked_pumping="linked_pumping",
     ),
     pump2=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpController",
@@ -22,6 +23,7 @@ devices = dict(
         writepv=f"{pump2_pvroot}FillVol-SP",
         home_warning_msg="Please make sure syringes are removed before homing",
         precision=0.00001,
+        linked_pumping="linked_pumping",
     ),
     linked_pumping=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode",
