@@ -23,7 +23,6 @@ def fake_backend(fake_epics_backend_factory):
     backend.values["SP1:SyrType"] = 0
     backend.values["SP1:Pressure"] = 0
     backend.values["SP1:MaxPressure"] = 5
-
     backend.values["SP1:Pressure.EGU"] = "mbar"
     backend.values["SP1:SyrInnerDiam"] = 0.3
     backend.values["SP1:SyrInnerDiam.EGU"] = "mm"
@@ -49,136 +48,92 @@ def fake_backend(fake_epics_backend_factory):
     return backend
 
 
+@pytest.fixture
+def pump_in_daemon(daemon_device_harness, fake_backend):
+    return daemon_device_harness.create_master(
+        CetoniPumpController,
+        name="pump_in_daemon",
+        pvroot="SP1:",
+        readpv="SP1:FilledVolume",
+        writepv="SP1:FillVol-SP",
+    )
+
+
+@pytest.fixture
+def pump_pair(device_harness, fake_backend):
+    return device_harness.create_pair(
+        CetoniPumpController,
+        name="pump",
+        shared={
+            "pvroot": "SP1:",
+            "readpv": "SP1:FilledVolume",
+            "writepv": "SP1:FillVol-SP",
+        },
+    )
+
+
+@pytest.fixture
+def linked_pumping_in_daemon(daemon_device_harness, fake_backend):
+    return daemon_device_harness.create_master(
+        CetoniPumpLinkedMode,
+        name="linked",
+        pvroot="Lnkd:",
+        readpv="Lnkd:StopMode-SP",
+        writepv="Lnkd:StopMode-SP",
+    )
+
+
 class TestCetoniPumpController:
-    def test_pump_device_ok(self, daemon_device_harness, fake_backend):
-        pump = daemon_device_harness.create_master(
-            CetoniPumpController,
-            name="pump",
-            pvroot="SP1:",
-            readpv="SP1:FilledVolume",
-            writepv="SP1:FillVol-SP",
-        )
-        assert pump.read(maxage=0) == 1
-        assert pump.status()[0] == status.OK
+    def test_pump_device_ok(self, pump_in_daemon):
+        assert pump_in_daemon.read(maxage=0) == 1
+        assert pump_in_daemon.status()[0] == status.OK
 
-    def test_pump_device_fault(self, daemon_device_harness, fake_backend):
-        pump = daemon_device_harness.create_master(
-            CetoniPumpController,
-            name="pump",
-            pvroot="SP1:",
-            readpv="SP1:FilledVolume",
-            writepv="SP1:FillVol-SP",
-        )
+    def test_pump_device_fault(self, pump_in_daemon, fake_backend):
         fake_backend.values["SP1:FaultState"] = 1
-        assert pump.status(maxage=0)[0] == status.ERROR
+        assert pump_in_daemon.status(maxage=0)[0] == status.ERROR
 
-    def test_pump_device_write(self, daemon_device_harness, fake_backend):
-        daemon_device_harness.create_master(
-            CetoniPumpLinkedMode,
-            name="linked",
-            pvroot="Lnkd:",
-            readpv="Lnkd:StopMode-SP",
-            writepv="Lnkd:StopMode-SP",
-        )
-        pump = daemon_device_harness.create_master(
-            CetoniPumpController,
-            name="pump",
-            pvroot="SP1:",
-            readpv="SP1:FilledVolume",
-            writepv="SP1:FillVol-SP",
-            linked_pumping="linked",
-        )
+    def test_pump_device_write(
+        self, linked_pumping_in_daemon, pump_in_daemon, fake_backend
+    ):
         fake_backend.values["Lnkd:Disabled"] = 1
         fake_backend.values["SP1:MaxVol"] = 5
-        pump.move(2)
+        pump_in_daemon.move(2)
         assert ("SP1:FillVol-SP", 2, False) in fake_backend.put_calls
         assert fake_backend.values["SP1:FillVol-SP"] == 2
 
     def test_pump_device_do_not_exceed_max_vol(
-        self, daemon_device_harness, fake_backend
+        self, linked_pumping_in_daemon, pump_in_daemon, fake_backend
     ):
-        daemon_device_harness.create_master(
-            CetoniPumpLinkedMode,
-            name="linked",
-            pvroot="Lnkd:",
-            readpv="Lnkd:StopMode-SP",
-            writepv="Lnkd:StopMode-SP",
-        )
-        pump = daemon_device_harness.create_master(
-            CetoniPumpController,
-            name="pump",
-            pvroot="SP1:",
-            readpv="SP1:FilledVolume",
-            writepv="SP1:FillVol-SP",
-            linked_pumping="linked",
-        )
         fake_backend.values["Lnkd:Disabled"] = 1
         fake_backend.values["SP1:MaxVol"] = 5
         with pytest.raises(LimitError):
-            pump.move(100)
+            pump_in_daemon.move(100)
 
-    def test_pump_set_max_pressure_inside_limits(
-        self, daemon_device_harness, fake_backend
-    ):
-        pump = daemon_device_harness.create_master(
-            CetoniPumpController,
-            name="pump",
-            pvroot="SP1:",
-            readpv="SP1:FilledVolume",
-            writepv="SP1:FillVol-SP",
-        )
+    def test_pump_set_max_pressure_inside_limits(self, pump_in_daemon, fake_backend):
         fake_backend.values["SP1:MaxPressure"] = 5
-        pump.pressure_max = 4
-        assert pump.pressure_max == 4
+        pump_in_daemon.pressure_max = 4
+        assert pump_in_daemon.pressure_max == 4
 
-    def test_pump_set_max_pressure_capped_at_max(
-        self, daemon_device_harness, fake_backend
-    ):
-        pump = daemon_device_harness.create_master(
-            CetoniPumpController,
-            name="pump",
-            pvroot="SP1:",
-            readpv="SP1:FilledVolume",
-            writepv="SP1:FillVol-SP",
-        )
+    def test_pump_set_max_pressure_capped_at_max(self, pump_in_daemon, fake_backend):
         fake_backend.values["SP1:MaxPressure"] = 3
-        pump.pressure_max = 6
-        assert pump.pressure_max == 5
+        pump_in_daemon.pressure_max = 6
+        assert pump_in_daemon.pressure_max == 5
 
-    def test_pump_new_max_volume_updates_limits(self, device_harness, fake_backend):
-        pump_in_daemon, pump_in_poller = device_harness.create_pair(
-            CetoniPumpController,
-            name="pump",
-            shared={
-                "pvroot": "SP1:",
-                "readpv": "SP1:FilledVolume",
-                "writepv": "SP1:FillVol-SP",
-            },
-        )
+    def test_pump_new_max_volume_updates_limits(self, pump_pair, fake_backend):
+        pump_in_daemon, pump_in_poller = pump_pair
         fake_backend.emit_update("SP1:MaxVol", value=3.1)
         assert pump_in_daemon._cache.get(pump_in_daemon, "abslimits") == (0, 3.1)
         assert pump_in_daemon._cache.get(pump_in_daemon, "userlimits") == (0, 3.1)
 
-    def test_pump_epics_update_triggers_poller_callback(
-        self, device_harness, fake_backend
-    ):
+    def test_pump_epics_update_triggers_poller_callback(self, pump_pair, fake_backend):
         original = CetoniPumpController._on_channel_update
-
         with patch.object(
             CetoniPumpController,
             "_on_channel_update",
             autospec=True,
             side_effect=original,
         ) as callback:
-            pump_in_daemon, pump_in_poller = device_harness.create_pair(
-                CetoniPumpController,
-                name="pump",
-                shared={
-                    "pvroot": "SP1:",
-                    "readpv": "SP1:FilledVolume",
-                    "writepv": "SP1:FillVol-SP",
-                },
-            )
+            pump_in_daemon, pump_in_poller = pump_pair
             fake_backend.emit_update("SP1:FilledVolume", value=3)
             callback.assert_called_once()
             device, update = callback.call_args.args
@@ -189,25 +144,11 @@ class TestCetoniPumpController:
             assert pump_in_poller._epics.cache_key_for(update.channel) == "value"
             assert pump_in_daemon._cache.get(pump_in_daemon, "value") == 3
 
-    def test_linked_daemon_device_ok(self, daemon_device_harness, fake_backend):
-        linked = daemon_device_harness.create_master(
-            CetoniPumpLinkedMode,
-            name="linked",
-            pvroot="Lnkd:",
-            readpv="Lnkd:StopMode-SP",
-            writepv="Lnkd:StopMode-SP",
-        )
-        assert linked.read(maxage=0) == "Manual"
-        assert linked.status()[0] == status.OK
+    def test_linked_daemon_device_ok(self, linked_pumping_in_daemon, fake_backend):
+        assert linked_pumping_in_daemon.read(maxage=0) == "Manual"
+        assert linked_pumping_in_daemon.status()[0] == status.OK
 
-    def test_linked_start_updates_pvs(self, daemon_device_harness, fake_backend):
-        linked = daemon_device_harness.create_master(
-            CetoniPumpLinkedMode,
-            name="linked",
-            pvroot="Lnkd:",
-            readpv="Lnkd:StopMode-SP",
-            writepv="Lnkd:StopMode-SP",
-        )
-        linked.start("Time")
+    def test_linked_start_updates_pvs(self, linked_pumping_in_daemon, fake_backend):
+        linked_pumping_in_daemon.start("Time")
         assert fake_backend.values["Lnkd:StopMode-SP"] == "Time"
         assert fake_backend.values["Lnkd:Start-Cmd"] == 1
