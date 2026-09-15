@@ -16,6 +16,7 @@ from nicos_ess.devices.epics.pva.epics_common import (
     readback_channel,
     setpoint_channel,
     status_channel,
+    worst_status,
 )
 from nicos_ess.devices.mixins import CanReferenceWithWarning
 
@@ -162,15 +163,16 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
         self._epics.put_channel_value("stop", 1)
 
     def _compute_status(self, maxage=0):
+        candidates = []
         is_pumping = self._epics.get_channel_value("is_pumping")
         if is_pumping:
-            return status.BUSY, f"Pumping, status: {self._read_primary_alarm()[1]}"
-
+            candidates.append((status.BUSY, "Pumping"))
         is_disabled = self._epics.get_channel_value("is_disabled")
         if is_disabled:
-            return status.WARN, f"Disabled, status: {self._read_primary_alarm()[1]}"
+            candidates.append((status.WARN, "Disabled"))
         else:
-            return status.OK, f"Enabled, status: {self._read_primary_alarm()[1]}"
+            candidates.append((status.OK, "Enabled"))
+        return worst_status(self._read_primary_alarm(maxage=maxage), *candidates)
 
 
 class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
