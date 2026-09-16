@@ -1,0 +1,22 @@
+{
+  "123456": {
+    "id": "123456",
+    "title": "A test proposal",
+    "proposer": [
+      "John",
+      "Doe",
+      "johndoe",
+      "European Spallation Source ERIC (ESS)"
+    ],
+    "users": [
+      [
+        "Jane",
+        "Doe",
+        "janedoe",
+        "European Spallation Source ERIC (ESS)"
+      ]
+    ],
+    "db_id": 0,
+    "samples": []
+  }
+}
