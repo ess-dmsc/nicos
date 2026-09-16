@@ -362,6 +362,9 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
 
     def _on_channel_update(self, update):
         super()._on_channel_update(update)
+        # setting the syringe type updates the maximum volume which
+        # should be reflected in the limits. This ensures the
+        # limits are updated immediately after maximum volume changes.
         if update.channel == "max_vol":
             ts = time.time()
             self._cache.put(self._name, "abslimits", (0, update.value), ts)
