@@ -236,13 +236,13 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def _on_start_response(self, result):
         if result.outcome == ActionOutcome.Success:
-            self.log.debug(
+            self.log.info(
                 "request to start writing succeeded for job %s", result.job_id
             )
             self._jobs[result.job_id].on_writing(self.statusinterval)
             self._jobs[result.job_id].service_id = result.service_id
         else:
-            self.log.debug("request to start writing failed for job %s", result.job_id)
+            self.log.error("request to start writing failed for job %s", result.job_id)
             self._jobs[result.job_id].no_start_ack(result.message)
 
     def _on_stop_response(self, result):
@@ -250,11 +250,9 @@ class FileWriterStatus(KafkaStatusHandler):
             self.log.warning("stop requested from external agent for %s", result.job_id)
 
         if result.outcome == ActionOutcome.Success:
-            self.log.debug(
-                "request to stop writing succeeded for job %s", result.job_id
-            )
+            self.log.info("request to stop writing succeeded for job %s", result.job_id)
         else:
-            self.log.debug("request to stop writing failed for job %s", result.job_id)
+            self.log.error("request to stop writing failed for job %s", result.job_id)
             self._jobs[result.job_id].set_error_msg(result.message)
 
     def no_messages_callback(self):
