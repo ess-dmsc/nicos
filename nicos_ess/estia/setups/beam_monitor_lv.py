@@ -65,7 +65,7 @@ for i in range(1, 3):
         readpv=f"{pv_root}Ch{i}Enable-RB",
     )
 
-devices["lv_error_message"] = device(
+devices["lv_master_enable"] = device(
     "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
     description="Master enable",
     readpv=f"{pv_root}MasterEnable-RB",
