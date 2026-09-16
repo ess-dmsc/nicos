@@ -37,7 +37,7 @@ devices = dict(
         maxage=None,
     ),
     # DPU and SPU Config
-    config_detector=device(
+    config_detector_position=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX DPU Configuration",
         readpv=f"{pv_root}getDPUConfiguration",
@@ -47,7 +47,7 @@ devices = dict(
         maxage=None,
     ),
     # SPU Config
-    config_sample_holder=device(
+    config_sample_holder_position=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU Configuration",
         readpv=f"{pv_root}getSPUConfiguration",
