@@ -3,7 +3,7 @@ description = "MOXA box controlled lights"
 pv_root = "SE-NURF:SE-E1241-001:"
 
 devices = dict(
-    ch_0=device(
+    light_ch_0=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="Large box shutter",
         writepv=f"{pv_root}AO0Set",
@@ -15,7 +15,7 @@ devices = dict(
         # abslimits=(0,5),
         # userlimits=(0,5),
     ),
-    ch_3=device(
+    light_ch_3=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Small LED",
         readpv=f"{pv_root}AO3",

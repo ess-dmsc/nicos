@@ -188,6 +188,7 @@ class KafkaConsumer:
         }
 
         self._conf_effective = {**base_conf, **options}
+        print(self._conf_effective)
         self._consumer_factory = consumer_factory
         self._consumer = consumer_factory(self._conf_effective)
 
