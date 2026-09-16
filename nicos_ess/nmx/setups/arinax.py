@@ -36,12 +36,22 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    # DPU Config
-    detector_config=device(
+    # DPU and SPU Config
+    config_detector=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX DPU Configuration",
         readpv=f"{pv_root}getDPUConfiguration",
         writepv=f"{pv_root}setDPUConfiguration",
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+    ),
+    # SPU Config
+    config_sample_holder=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="ARINAX SPU Configuration",
+        readpv=f"{pv_root}getSPUConfiguration",
+        writepv=f"{pv_root}setSPUConfiguration",
         monitor=True,
         pollinterval=0.5,
         maxage=None,
