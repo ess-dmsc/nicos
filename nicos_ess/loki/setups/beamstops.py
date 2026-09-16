@@ -103,6 +103,7 @@ devices = dict(
         bs3_positioner="beamstop3_positioner",
         bs4_positioner="beamstop4_positioner",
         bs5_positioner="beamstop5_positioner",
+        description="No description available.",
         # This mapping is a placeholder, the values are set in the class. The keys should not be edited.
         # TODO: remove the mapping argument from this setup file and use the mapping defined in the class
         mapping={

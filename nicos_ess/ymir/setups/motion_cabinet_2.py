@@ -122,6 +122,7 @@ devices = dict(
     sample_changer_controller=device(
         "nicos_ess.devices.mapped_controller.MappedController",
         controlled_device="sample_changer_axis",
+        description="No description available.",
         mapping={"sample_1": 0, "sample_2": 10, "sample_3": 20},
     ),
     slit_y_plus=device(

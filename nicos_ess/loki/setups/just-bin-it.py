@@ -52,6 +52,7 @@ devices = dict(
     bank0_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="bank0_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -71,6 +72,7 @@ devices = dict(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="bank1_data",
         parameter="event_rate",
+        description="A just-bin-it event rate",
         copy_status=True,
     ),
     bank2_data=device(
@@ -88,6 +90,7 @@ devices = dict(
     bank2_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="bank2_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -106,6 +109,7 @@ devices = dict(
     bank3_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="bank3_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -124,6 +128,7 @@ devices = dict(
     bank4_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="bank4_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -142,6 +147,7 @@ devices = dict(
     bank5_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="bank5_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -160,6 +166,7 @@ devices = dict(
     bank6_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="bank6_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -178,6 +185,7 @@ devices = dict(
     bank7_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="bank7_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -196,6 +204,7 @@ devices = dict(
     bank8_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="bank8_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -211,6 +220,7 @@ devices = dict(
     ),
     monitor0_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
+        description="A just-bin-it event rate",
         device="monitor0_data",
         parameter="event_rate",
         copy_status=True,
@@ -228,6 +238,7 @@ devices = dict(
     monitor1_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="monitor1_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -244,6 +255,7 @@ devices = dict(
     monitor2_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="monitor2_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -263,6 +275,7 @@ devices = dict(
     monitor3_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="monitor3_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),
@@ -279,6 +292,7 @@ devices = dict(
     monitor4_eventrate=device(
         "nicos.devices.generic.paramdev.ReadonlyParamDevice",
         device="monitor4_data",
+        description="A just-bin-it event rate",
         parameter="event_rate",
         copy_status=True,
     ),

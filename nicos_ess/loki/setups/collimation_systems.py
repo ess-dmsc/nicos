@@ -17,6 +17,7 @@ devices = dict(
     collimator_selector_1_controller=device(
         "nicos_ess.devices.mapped_controller.MappedController",
         controlled_device="collimator_selector_1",
+        description="No description available.",
         mapping={"collimation_position": -9.23, "guide_position": 251.92},
     ),
     collimator_selector_2=device(
@@ -28,6 +29,7 @@ devices = dict(
     collimator_selector_2_controller=device(
         "nicos_ess.devices.mapped_controller.MappedController",
         controlled_device="collimator_selector_2",
+        description="No description available.",
         mapping={"collimation_position": 310.96, "guide_position": -49.84},
     ),
     slit_set_1_left_blade=device(
