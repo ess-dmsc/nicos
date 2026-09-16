@@ -189,6 +189,24 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
 
 
 class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
+    """Control an individual Cetoni syringe pump.
+
+    The volume can be set using the target value or a relative move.
+    The ``flowrate`` parameter controls the pumping rate,
+    and ``pressure_max`` sets the pressure limit.
+
+    The type of syringe is set using the ``syringe_type`` parameter.
+    Changing the syringe type will update the volume limit and
+    pressure limit.
+
+    User methods allow filling or emptying the syringe and generating a
+    constant flow where positive flow rates dispense liquid and negative flow rates
+    aspirate liquid.
+
+    If a linked pumping device is attached, it must be disabled before
+    operating the syringe individually.
+    """
+
     ## TODO
     # - add unit to parameter in device dialog
     parameters = {
