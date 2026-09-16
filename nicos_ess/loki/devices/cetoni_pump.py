@@ -22,6 +22,19 @@ from nicos_ess.devices.mixins import CanReferenceWithWarning
 
 
 class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
+    """Control linked pumping between two Cetoni syringes.
+
+    Liquid is transferred back and forth between the syringes at the
+    configured flowrate. Two pumping modes are supported:
+
+    * Manual: pump until explicitly stopped.
+    * Time: pump for the duration specified by ``max_dosing_time``.
+
+    The ``first_fill_syringe`` parameter selects which syringe fills first,
+    determining the initial flow direction. The device must be enabled
+    before linked pumping can start.
+    """
+
     parameters = {
         "pvroot": Param(
             "The root of the pv",
