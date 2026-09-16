@@ -1,4 +1,6 @@
-# NICOS
+# NICOS (ESS fork)
+
+This is a forked version of NICOS for use at the European Spallation Source (ESS). For the original upstream version, please visit https://nicos-controls.org/
 
 ## Installation
 
