@@ -2,8 +2,7 @@ description = "ARINAX controls (sample exposure system)"
 
 group = "optional"
 
-# pv_root = "NMX-mockup:"
-pv_root = "NMX-ExpSys::"  # EPICS proxy production PVs
+pv_root = "NMX-ExpSys::"  # EPICS proxy IOC that interfaces ARINAX PVs
 
 SAMPLE_STORAGE = {
     f"Sample Storage {s} - SS{i}": (f"Sample_Storage_{s}", f"SS{i}")
@@ -17,7 +16,7 @@ UNIPUCKS = {
     for i in range(1, 17)
 }
 
-ZOOM_LEVELS = {f"Zoom level {l}": l for l in range(1, 8)}
+ZOOM_LEVELS = {f"Zoom level {i}": i for i in range(1, 8)}
 
 devices = dict(
     # General statue/status of ARINAX system
@@ -65,7 +64,7 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    # Sample load
+    # Sample loading
     sample_load_from_SS=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="Select and load an ARINAX SPU sample from storage",
@@ -94,7 +93,7 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    # TODO: Still to be solved/included in the proxy IOC!
+    # TODO: Placeholder. To be included in the proxy IOC.
     sample_unload=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="Unload ARINAX SPU sample",
@@ -107,31 +106,26 @@ devices = dict(
             "Unload sample": "1",  # String PV. Preferably use "0" or "1".
         },
     ),
-    # Sample centring motion
-    # Using numbers to have the same order from ARINAX GUI
+    # Sample centring motion (using numbers to have the same order from ARINAX GUI)
     sample_centring_1_phi=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample centring motor Phi",
         readpv=f"{pv_root}getPhiPosition",
         writepv=f"{pv_root}setPhiPosition",
-        # unit="deg",
     ),
     sample_centring_2_chi=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample centring motor Chi",
         readpv=f"{pv_root}getChiPosition",
         writepv=f"{pv_root}setChiPosition",
-        # unit="mm",
     ),
     sample_centring_3_theta=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample centring motor Theta",
         readpv=f"{pv_root}getThetaPosition",
         writepv=f"{pv_root}setThetaPosition",
-        # unit="mm",
     ),
     # Alignment table motion
-    # TODO: Add the set PVs below to the proxy.
     alignment_table_x=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor X",
@@ -150,7 +144,6 @@ devices = dict(
         readpv=f"{pv_root}getAlignmentTableZPosition",
         writepv=f"{pv_root}setAlignmentTableZPosition",
     ),
-    # TODO: Add AlignmentTable Vx, Vy, Vfocus to the proxy.
     alignment_table_vx=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Vx",
@@ -183,7 +176,7 @@ devices = dict(
         writepv=f"{pv_root}setCentringTableYPosition",
     ),
     # Backlight
-    # TODO: This can possibly be changed to (manual) mapped device once we know its real limits.
+    # TODO: Changed to a manual mapping once we know the step size.
     backlight_level=device(
         "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
         description="ARINAX SPU backlight level",
