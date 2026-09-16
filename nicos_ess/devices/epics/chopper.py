@@ -220,11 +220,57 @@ class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
         return self._INPHASE_STATES[inp]
 
     def doIsCompleted(self):
+        """
+        Checking if chopper frequency change was accomplished is done by verifying if it is in steady state. The way we
+        can do it is watching the in-phase flag, that tells whether the tachometer and EVR signals concur, using
+        statistical methods on the EPICS IOC to determine that.
+
+        Watching in-phase flag state does not work since its change is not instantaneous when we command a frequency
+        change and `doIsCompleted` will give us a false positive—although EPICS has a mechanism to put flag down when
+        speed setpoint is changed, there is no enough time for the state change to reach NICOS. Thus, we developed a
+        rising edge detector, `_is_completed_by_inphase_edge`, that detects the transition, not only the state.
+
+        The problem is partially solved by the edge detector, however the in-phase flag does not go "Not in phase"
+        when set the target to 0 Hz—that is the same as sending a Stop to the controller and the statistics algorithm
+        of EPICS IOC stops working. To handle that case we verify whether the target is zero and if it is we verify it
+        the chopper state changed to "Ready", that means that the disc stopped and the movement is completed making
+        this function returns true. We call the edge detector otherwise.
+        """
         if self.target != self.TARGET_ZERO:
             return self._is_completed_by_inphase_edge()
         return self._is_completed_by_state()
 
     def _is_completed_by_inphase_edge(self):
+        """
+        This function implements a rising edge detector, as the following picture shows
+
+          in-phase
+          ^
+          |
+        1 |_ _ _ _ _ _ ________ ...
+          |           |
+          |           ^
+        0 |___________|__________-> t
+
+                      ^rising edge of the signal
+
+        from the above chart we can extract the truth table:
+
+        previous | current | output
+        ---------|---------|-------
+         0       | 0       | 0
+         0       | 1       | 1
+         1       | 0       | 0
+         1       | 1       | 0
+
+        and implemented it with logic gates:
+
+        previous -----o|``-.
+                       |    :----- output
+        current  ------|..-`
+
+        This function returns the output value and updates the previous value for the next iteration.
+        """
         current = self._str_to_bool(self._attached_in_phase.read())
         edge_detected = current and not self._previous_inphase
         self._previous_inphase = current
