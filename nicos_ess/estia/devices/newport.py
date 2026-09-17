@@ -8,6 +8,10 @@ from nicos.core import (
     multiStatus,
     tupleof,
 )
+from nicos_ess.devices.epics.pva import (
+    EpicsMappedMoveable,
+    EpicsReadable,
+)
 
 
 class NewportHexapod(Moveable):
@@ -18,9 +22,18 @@ class NewportHexapod(Moveable):
         "unit": Override(default="", mandatory=False, settable=True),
     }
 
-    axis_names = ("tx", "ty", "tz", "rx", "ry", "rz", "gmt")
     valuetype = tupleof(float, float, float, float, float, float, float)
+
+    axis_names = ("tx", "ty", "tz", "rx", "ry", "rz", "gmt")
+    sp_names = ((setpoint + "_sp") for setpoint in axis_names[:-1])
+
     attached_devices = {name: Attach(name, Moveable) for name in axis_names}
+    attached_devices = {name: Attach(name, Moveable) for name in sp_names}
+    attached_device = {
+        "move_all": Attach("move_all", EpicsMappedMoveable),
+        "status": Attach("status", EpicsReadable),
+        # "errMsg":Attach("status", EpicsStringReadable),
+    }
 
     def doStart(self, target):
         # Create a very small delay between axis motions to allow

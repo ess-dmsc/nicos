@@ -99,6 +99,13 @@ devices = dict(
         ry="ry",
         rz="rz",
         gmt="goniometer",
+        tx_sp="setpoint_1",
+        ty_sp="setpoint_2",
+        tz_sp="setpoint_3",
+        rx_sp="setpoint_4",
+        ry_sp="setpoint_5",
+        rz_sp="setpoint_6",
+        status="hexapod_status",
     ),
     hexapod_status=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -110,5 +117,48 @@ devices = dict(
         description="Current coordinate system",
         readpv=f"{hex_root}CS",
         writepv=f"{hex_root}CS",
+    ),
+    # SETPOINTS FOR HEXAPOD
+    setpoint_1=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Moveall setpoint",
+        readpv=f"{hex_root}T1",
+        writepv=f"{hex_root}T1",
+    ),
+    setpoint_2=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Moveall setpoint",
+        readpv=f"{hex_root}T2",
+        writepv=f"{hex_root}T2",
+    ),
+    setpoint_3=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Moveall setpoint",
+        readpv=f"{hex_root}T3",
+        writepv=f"{hex_root}T3",
+    ),
+    setpoint_4=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Moveall setpoint",
+        readpv=f"{hex_root}T4",
+        writepv=f"{hex_root}T4",
+    ),
+    setpoint_5=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Moveall setpoint",
+        readpv=f"{hex_root}T5",
+        writepv=f"{hex_root}T5",
+    ),
+    setpoint_6=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Moveall setpoint",
+        readpv=f"{hex_root}T6",
+        writepv=f"{hex_root}T6",
+    ),
+    move_all_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The move all commander for the hexapod",
+        readpv=f"{hex_root}MOVE_ALL",
+        writepv=f"{hex_root}MOVE_ALL",
     ),
 )
