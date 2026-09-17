@@ -3,9 +3,11 @@ from logging import WARNING
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
+from nicos.core.status import BUSY, ERROR, OK, UNKNOWN
 from nicos.guisupport.qt import pyqtSlot
 from nicos.protocols.cache import cache_load
 from nicos.utils import findResource
+from nicos_ess.gui.panels.utils import attach_status_resources
 
 
 class HexapodPanel(Panel):
@@ -14,7 +16,9 @@ class HexapodPanel(Panel):
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
+        attach_status_resources(self)
         loadUi(self, findResource("nicos_ess/estia/gui/panels/ui_files/hexapod.ui"))
+        self.useicons = bool(options.get("icons", True))
 
         # Hexapod info
         self.paraminfo = {}
@@ -162,13 +166,20 @@ class HexapodPanel(Panel):
 
     def update_status_window(self, code):
         # Use error type to change icon
-        # error_val = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63]
-        # ready_val = [10, 11, 12, 13, 15, 16, 17, 70, 77]
-        # ok_val = [40, 41, 43, 44, 45, 47, 48, 49, 64, 68, 69, 73]
-        # not_ref = 42
+        error_val = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 42, 50, 63]
+        ready_val = [10, 11, 12, 13, 15, 16, 17, 70, 77]
+        busy_val = [40, 41, 43, 44, 45, 47, 48, 49, 64, 68, 69, 73]
 
         code = round(code)
-        self.hexStatus.setText(f"{code}:\n\nMsg")
+        self.hexStatus.setText(f"{code}: ")
+        if code in error_val:
+            self.statusimage.setPixmap(self.statusIcon[ERROR].pixmap(16, 16))
+        elif code in ready_val:
+            self.statusimage.setPixmap(self.statusIcon[OK].pixmap(16, 16))
+        elif code in busy_val:
+            self.statusimage.setPixmap(self.statusIcon[BUSY].pixmap(16, 16))
+        else:
+            self.statusimage.setPixmap(self.statusIcon[UNKNOWN].pixmap(16, 16))
 
     def update_coord_window(self, value):
         # sometimes the mapping is odd for awhile, so checking for int or string and
