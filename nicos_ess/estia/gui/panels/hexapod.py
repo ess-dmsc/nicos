@@ -10,6 +10,7 @@ from nicos.utils import findResource
 
 class HexapodPanel(Panel):
     panelName = "Hexapod Controller"
+    axis_names = ("tx", "ty", "tz", "rx", "ry", "rz", "gmt")
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
@@ -154,42 +155,25 @@ class HexapodPanel(Panel):
         hexapod_info.pop(self.devname)
 
         for keys in adevs:
-            mini_dict = {}
-            mini_dict.update({"devname": adevs[keys]})
-            self.adevs.update({f"{keys}": mini_dict})
+            if keys in self.axis_names:
+                mini_dict = {}
+                mini_dict.update({"devname": adevs[keys]})
+                self.adevs.update({f"{keys}": mini_dict})
 
     def update_status_window(self, code):
-        # A bit messy but works to get some error indication quickly
-        error_val = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63]
-        ready_val = [10, 11, 12, 13, 15, 16, 17, 70, 77]
-        ok_val = [40, 41, 43, 44, 45, 47, 48, 49, 64, 68, 69, 73]
-        not_ref = 42
-        if code:
-            code = round(code)
-            if code in error_val:
-                self.hexStatus.setStyleSheet("background-color: lightred")
-            elif code in ready_val:
-                self.hexStatus.setStyleSheet("background-color: lightgreen")
-            elif code in ok_val:
-                self.hexStatus.setStyleSheet("background-color: lightblue")
-            elif code == not_ref:
-                self.hexStatus.setStyleSheet("background-color: orange")
-            else:
-                self.hexStatus.setStyleSheet("background-color: None")
-            self.hexStatus.setText(f"{code}")
+        # Use error type to change icon
+        # error_val = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63]
+        # ready_val = [10, 11, 12, 13, 15, 16, 17, 70, 77]
+        # ok_val = [40, 41, 43, 44, 45, 47, 48, 49, 64, 68, 69, 73]
+        # not_ref = 42
+
+        code = round(code)
+        self.hexStatus.setText(f"{code}:\n\nMsg")
 
     def update_coord_window(self, value):
         # sometimes the mapping is odd for awhile, so checking for int or string and
         # setting text accordingly
-        if value == "Work":
-            self.coordSyst.setStyleSheet("background-color: lightgreen")
-            self.coordSyst.setText("Work")
-        elif value == "Tool":
-            self.coordSyst.setStyleSheet("background-color: lightgreen")
-            self.coordSyst.setText("Tool")
-        else:
-            self.coordSyst.setText("")
-            self.coordSyst.setStyleSheet("background-color: gray")
+        self.coordSyst.setText(f"{value}")
 
     def setup_qt_vars(self):
         self.qtObj = {
@@ -266,6 +250,8 @@ class HexapodPanel(Panel):
     def on_refresh_pressed(self):
         # Sets the spin boxes to the current axis positions for easier absolute motion control
         values = self.client.getDeviceParam(self.devname, "value")
+        self.update_status_window(self.client.getDeviceParam(self.status, "value"))
+        self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
         self.update_position_info(values, "newVal")
 
     @pyqtSlot()

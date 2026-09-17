@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1213</width>
+    <width>1466</width>
     <height>992</height>
    </rect>
   </property>
@@ -75,8 +75,8 @@
     <rect>
      <x>10</x>
      <y>70</y>
-     <width>1191</width>
-     <height>551</height>
+     <width>1351</width>
+     <height>611</height>
     </rect>
    </property>
    <property name="tabPosition">
@@ -1291,23 +1291,23 @@
        <x>230</x>
        <y>410</y>
        <width>781</width>
-       <height>91</height>
+       <height>121</height>
       </rect>
      </property>
      <property name="title">
-      <string>Status</string>
+      <string>Status and Error Message</string>
      </property>
      <widget class="QLabel" name="hexStatus">
       <property name="geometry">
        <rect>
-        <x>0</x>
-        <y>20</y>
-        <width>781</width>
-        <height>71</height>
+        <x>80</x>
+        <y>30</y>
+        <width>701</width>
+        <height>91</height>
        </rect>
       </property>
       <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+       <enum>QFrame::NoFrame</enum>
       </property>
       <property name="frameShadow">
        <enum>QFrame::Sunken</enum>
@@ -1319,9 +1319,46 @@
        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="alignment">
-       <set>Qt::AlignCenter</set>
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
       </property>
       <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QLabel" name="statusimage">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>60</y>
+        <width>18</width>
+        <height>18</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>18</width>
+        <height>18</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>18</width>
+        <height>18</height>
+       </size>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="pixmap">
+       <pixmap resource="../../../../../resources/nicos-gui.qrc">:/leds/status_white</pixmap>
+      </property>
+      <property name="scaledContents">
        <bool>true</bool>
       </property>
      </widget>
@@ -1332,7 +1369,7 @@
        <x>20</x>
        <y>410</y>
        <width>171</width>
-       <height>91</height>
+       <height>71</height>
       </rect>
      </property>
      <property name="title">
@@ -1344,11 +1381,11 @@
         <x>0</x>
         <y>20</y>
         <width>171</width>
-        <height>71</height>
+        <height>51</height>
        </rect>
       </property>
       <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+       <enum>QFrame::NoFrame</enum>
       </property>
       <property name="frameShadow">
        <enum>QFrame::Sunken</enum>
@@ -1361,21 +1398,11 @@
       </property>
      </widget>
     </widget>
-   </widget>
-   <widget class="QWidget" name="coordTab">
-    <attribute name="title">
-     <string>Coord System</string>
-    </attribute>
-   </widget>
-   <widget class="QWidget" name="expTab">
-    <attribute name="title">
-     <string>Expert Control</string>
-    </attribute>
     <widget class="QPushButton" name="butTest">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>30</y>
+       <x>1040</x>
+       <y>430</y>
        <width>101</width>
        <height>25</height>
       </rect>
@@ -1394,6 +1421,16 @@
      </property>
     </widget>
    </widget>
+   <widget class="QWidget" name="coordTab">
+    <attribute name="title">
+     <string>Coord System</string>
+    </attribute>
+   </widget>
+   <widget class="QWidget" name="expTab">
+    <attribute name="title">
+     <string>Expert Control</string>
+    </attribute>
+   </widget>
   </widget>
   <action name="actionReference_drive">
    <property name="text">
@@ -1409,6 +1446,7 @@
  <layoutdefault spacing="6" margin="11"/>
  <resources>
   <include location="../../../../../resources/nicos-gui.qrc"/>
+  <include location="../../../../resources/nicos-gui.qrc"/>
  </resources>
  <connections/>
 </ui>

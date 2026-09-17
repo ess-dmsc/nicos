@@ -55,7 +55,7 @@ class NewportHexapod(Moveable):
 
     def doStart(self, target):
         # set all setpoints to their target position then start with move_all
-        for name, input in zip(self.sp_names, target):
+        for name, input in zip(self.sp_names, target[:-1]):
             self._adevs[name].start(input)
         self._adevs["move_all"].move("On")
         self._adevs["gmt"].start(target[-1])
