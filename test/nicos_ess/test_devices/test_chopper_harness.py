@@ -263,8 +263,8 @@ class TestNewEssChopperControllerHarness:
 
 
 class TestEssChopperSpeed:
-    def _create_pair(self, device_harness):
-        return device_harness.create_pair(
+    def _create_daemon(self, device_harness):
+        daemon_device, _ = device_harness.create_pair(
             chopper_mod.EssChopperSpeed,
             name="ess_chopper_speed",
             shared={
@@ -278,18 +278,19 @@ class TestEssChopperSpeed:
             },
         )
 
+        return daemon_device
+
     def test_initializes(self, device_harness, fake_backend, chopper_speed_devices):
         del fake_backend, chopper_speed_devices
-        daemon_device, poller_device = self._create_pair(device_harness)
+        daemon_device = self._create_daemon(device_harness)
 
         assert daemon_device is not None
-        assert poller_device is not None
 
     def test_completes_by_state_when_target_is_zero(
         self, device_harness, fake_backend, chopper_speed_devices
     ):
         del fake_backend, chopper_speed_devices
-        daemon_device, _poller_device = self._create_pair(device_harness)
+        daemon_device = self._create_daemon(device_harness)
 
         daemon_device._setROParam("target", daemon_device.TARGET_ZERO)
         assert daemon_device.doIsCompleted() is True
@@ -316,7 +317,7 @@ class TestEssChopperSpeed:
             },
         )
 
-        daemon_device, _poller_device = self._create_pair(device_harness)
+        daemon_device = self._create_daemon(device_harness)
 
         daemon_device._setROParam("target", daemon_device.TARGET_ZERO)
         assert daemon_device.doIsCompleted() is False
@@ -325,7 +326,7 @@ class TestEssChopperSpeed:
         self, device_harness, fake_backend, chopper_speed_devices
     ):
         del chopper_speed_devices
-        daemon_device, _poller_device = self._create_pair(device_harness)
+        daemon_device = self._create_daemon(device_harness)
 
         daemon_device._setROParam("target", "14")
 
