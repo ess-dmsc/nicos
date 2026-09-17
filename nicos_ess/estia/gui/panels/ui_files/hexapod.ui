@@ -75,8 +75,8 @@
     <rect>
      <x>10</x>
      <y>70</y>
-     <width>1351</width>
-     <height>611</height>
+     <width>1241</width>
+     <height>741</height>
     </rect>
    </property>
    <property name="tabPosition">
@@ -94,11 +94,11 @@
       <rect>
        <x>10</x>
        <y>10</y>
-       <width>1114</width>
-       <height>391</height>
+       <width>1211</width>
+       <height>481</height>
       </rect>
      </property>
-     <layout class="QHBoxLayout" name="hexapodControls" stretch="0,2,1">
+     <layout class="QHBoxLayout" name="hexapodControls" stretch="0,2,2">
       <property name="spacing">
        <number>9</number>
       </property>
@@ -862,8 +862,8 @@
          <property name="spacing">
           <number>6</number>
          </property>
-         <item row="0" column="2">
-          <layout class="QGridLayout" name="newPosGrid_2" rowstretch="0,0,0,0,0,0,0,0">
+         <item row="0" column="1" colspan="2">
+          <layout class="QGridLayout" name="newPosGrid_2" rowstretch="0,0,0,0,0,0,0,0" columnstretch="0,1,1,1,0">
            <property name="leftMargin">
             <number>9</number>
            </property>
@@ -1288,8 +1288,8 @@
     <widget class="QGroupBox" name="statusBox">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>480</y>
+       <x>10</x>
+       <y>600</y>
        <width>711</width>
        <height>91</height>
       </rect>
@@ -1335,8 +1335,8 @@
     <widget class="QGroupBox" name="coordBox">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>410</y>
+       <x>10</x>
+       <y>520</y>
        <width>171</width>
        <height>61</height>
       </rect>
@@ -1367,33 +1367,11 @@
       </property>
      </widget>
     </widget>
-    <widget class="QPushButton" name="butTest">
-     <property name="geometry">
-      <rect>
-       <x>1040</x>
-       <y>430</y>
-       <width>101</width>
-       <height>25</height>
-      </rect>
-     </property>
-     <property name="locale">
-      <locale language="English" country="UnitedStates"/>
-     </property>
-     <property name="text">
-      <string>Test</string>
-     </property>
-     <property name="default">
-      <bool>false</bool>
-     </property>
-     <property name="flat">
-      <bool>false</bool>
-     </property>
-    </widget>
     <widget class="QLabel" name="statusimage">
      <property name="geometry">
       <rect>
-       <x>230</x>
-       <y>440</y>
+       <x>220</x>
+       <y>550</y>
        <width>18</width>
        <height>18</height>
       </rect>
@@ -1436,6 +1414,28 @@
     <attribute name="title">
      <string>Expert Control</string>
     </attribute>
+    <widget class="QPushButton" name="butTest">
+     <property name="geometry">
+      <rect>
+       <x>220</x>
+       <y>90</y>
+       <width>101</width>
+       <height>25</height>
+      </rect>
+     </property>
+     <property name="locale">
+      <locale language="English" country="UnitedStates"/>
+     </property>
+     <property name="text">
+      <string>Test</string>
+     </property>
+     <property name="default">
+      <bool>false</bool>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+    </widget>
    </widget>
   </widget>
   <action name="actionReference_drive">

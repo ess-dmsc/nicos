@@ -173,13 +173,13 @@ class HexapodPanel(Panel):
         code = round(code)
         self.hexStatus.setText(f"{code}: ")
         if code in error_val:
-            self.statusimage.setPixmap(self.statusIcon[ERROR].pixmap(16, 16))
+            self.statusimage.setPixmap(self.statusIcon[ERROR].pixmap(18, 18))
         elif code in ready_val:
-            self.statusimage.setPixmap(self.statusIcon[OK].pixmap(16, 16))
+            self.statusimage.setPixmap(self.statusIcon[OK].pixmap(18, 18))
         elif code in busy_val:
-            self.statusimage.setPixmap(self.statusIcon[BUSY].pixmap(16, 16))
+            self.statusimage.setPixmap(self.statusIcon[BUSY].pixmap(18, 18))
         else:
-            self.statusimage.setPixmap(self.statusIcon[UNKNOWN].pixmap(16, 16))
+            self.statusimage.setPixmap(self.statusIcon[UNKNOWN].pixmap(18, 18))
 
     def update_coord_window(self, value):
         # sometimes the mapping is odd for awhile, so checking for int or string and
