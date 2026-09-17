@@ -263,11 +263,6 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         ),
     }
 
-    def _getWaiters(self):
-        # Attached device linked_pumping gets automatically added
-        # to the list of waiters, but this device should not be waited up on
-        return []
-
     def _after_subscribe(self, mode):
         syringe_types = self._epics.get_channel_value_choices("syringe_type")
         self.parameters["syringe_type"].type = oneof(*syringe_types)
