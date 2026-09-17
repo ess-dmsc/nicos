@@ -3,7 +3,6 @@ from logging import WARNING
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
-from nicos.core.status import BUSY, ERROR, OK, UNKNOWN
 from nicos.guisupport.qt import pyqtSlot
 from nicos.protocols.cache import cache_load
 from nicos.utils import findResource
@@ -27,6 +26,7 @@ class HexapodPanel(Panel):
         self.devname = options.get("hexapod")
         self.status = options.get("status")
         self.coordSys = options.get("coord")
+        self.errdesc = options.get("errdesc")
         # Hexapod Controller Info
 
         # Error Handling
@@ -70,7 +70,11 @@ class HexapodPanel(Panel):
             self.update_position_info(cache_load(value))
             # can't seem to find it in cache
             # but is popagated into 'value' param just fine...
-            self.update_status_window(self.client.getDeviceParam(self.status, "value"))
+            self.update_status_window(
+                self.client.getDeviceParam(self.devname, "status"),
+                self.client.getDeviceParam(self.status, "value"),
+                self.client.getDeviceParam(self.errdesc, "value"),
+            )
             self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
 
     def on_client_message(self, message):
@@ -164,22 +168,15 @@ class HexapodPanel(Panel):
                 mini_dict.update({"devname": adevs[keys]})
                 self.adevs.update({f"{keys}": mini_dict})
 
-    def update_status_window(self, code):
+    def update_status_window(self, status, code, msg):
         # Use error type to change icon
-        error_val = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 42, 50, 63]
-        ready_val = [10, 11, 12, 13, 15, 16, 17, 70, 77]
-        busy_val = [40, 41, 43, 44, 45, 47, 48, 49, 64, 68, 69, 73]
-
         code = round(code)
-        self.hexStatus.setText(f"{code}: ")
-        if code in error_val:
-            self.statusimage.setPixmap(self.statusIcon[ERROR].pixmap(18, 18))
-        elif code in ready_val:
-            self.statusimage.setPixmap(self.statusIcon[OK].pixmap(18, 18))
-        elif code in busy_val:
-            self.statusimage.setPixmap(self.statusIcon[BUSY].pixmap(18, 18))
+        if msg:
+            self.hexStatus.setText(f"Code {code}: {msg}")
         else:
-            self.statusimage.setPixmap(self.statusIcon[UNKNOWN].pixmap(18, 18))
+            self.hexStatus.setText(f"Code {code}:")
+
+        self.statusimage.setPixmap(self.statusIcon[status[0]].pixmap(18, 18))
 
     def update_coord_window(self, value):
         # sometimes the mapping is odd for awhile, so checking for int or string and
@@ -261,8 +258,6 @@ class HexapodPanel(Panel):
     def on_refresh_pressed(self):
         # Sets the spin boxes to the current axis positions for easier absolute motion control
         values = self.client.getDeviceParam(self.devname, "value")
-        self.update_status_window(self.client.getDeviceParam(self.status, "value"))
-        self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
         self.update_position_info(values, "newVal")
 
     @pyqtSlot()
