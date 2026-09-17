@@ -1,10 +1,13 @@
 from unittest.mock import Mock
 
+import pytest
+
 from nicos_ess.devices.experiment import EssExperiment
 from nicos_ess.devices.sample import EssSample
 
 
-def test_new_experiment_from_cached_proposal(daemon_device_harness, monkeypatch):
+@pytest.fixture
+def experiment(daemon_device_harness, monkeypatch):
     sample = daemon_device_harness.create_master(
         EssSample,
         name="sample",
@@ -20,8 +23,11 @@ def test_new_experiment_from_cached_proposal(daemon_device_harness, monkeypatch)
         dataroot="",
         sample=sample,
     )
-
     experiment._yuos_client.update_cache()
+    return experiment
+
+
+def test_new_experiment_from_cached_proposal(experiment):
     result = experiment._queryProposals(kwds={"admin": True})[0]
     exp_args = {
         "proposal": result["proposal"],
@@ -65,5 +71,37 @@ def test_new_experiment_from_cached_proposal(daemon_device_harness, monkeypatch)
             "temperature": "0",
             "electric_field": "0",
             "magnetic_field": "0",
+        },
+    ]
+
+
+def test_update_experiment(experiment):
+    result = experiment._queryProposals(kwds={"admin": True})[0]
+    exp_args = {
+        "proposal": result["proposal"],
+        "title": result["title"],
+        "users": result["users"],
+    }
+    experiment.new(**exp_args)
+    new_exp_args = {
+        "title": "A new proposal title",
+        "users": [
+            {
+                "name": "JaneJane DoeDoe",
+                "email": "",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "janejanedoedoe",
+            },
+        ],
+    }
+    experiment.update(**new_exp_args)
+    assert experiment.proposal == "123456"
+    assert experiment.title == "A new proposal title"
+    assert experiment.users == [
+        {
+            "name": "JaneJane DoeDoe",
+            "email": "",
+            "affiliation": "European Spallation Source ERIC (ESS)",
+            "facility_user_id": "janejanedoedoe",
         },
     ]
