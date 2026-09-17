@@ -45,20 +45,25 @@ def test_new_experiment_from_cached_proposal(daemon_device_harness, monkeypatch)
             "facility_user_id": "johndoe",
         },
     ]
-    # experiment.sample.set_samples(result["samples"])
 
-
-def test_get_samples(daemon_device_harness, monkeypatch):
-    sample = daemon_device_harness.create_master(
-        EssSample,
-        name="sample",
-    )
-    experiment = daemon_device_harness.create_master(
-        EssExperiment,
-        name="experiment",
-        cache_filepath="test/nicos_ess/test_devices/data/cached_proposals/cached_proposals_1.json",
-        dataroot="",
-        sample=sample,
-    )
-    experiment.sample.set(0, {"name": "sample_a"})
-    assert experiment.get_samples() == [{"name": "sample_a"}]
+    # from ExpPanel._set_samples()
+    samples = {}
+    for index, sample in enumerate(result["samples"]):
+        if not sample.get("name", ""):
+            sample["name"] = f"sample {index + 1}"
+        samples[index] = sample
+    experiment.sample.set_samples(dict(samples))
+    assert experiment.get_samples() == [
+        {
+            "name": "cathode coin cell (Charged)",
+            "temperature": "0",
+            "electric_field": "0",
+            "magnetic_field": "0",
+        },
+        {
+            "name": "cathode coin cell (Discharged)",
+            "temperature": "0",
+            "electric_field": "0",
+            "magnetic_field": "0",
+        },
+    ]
