@@ -17,7 +17,11 @@ from nicos_ess.devices.epics.pva import (
 
 
 class NewportHexapod(Moveable):
-    """Virtual Hexapod with six axes of movement"""
+    """Virtual Hexapod with six axes of movement + Goniometer Control
+    Starting the Hexapod controls it via the MOVE_ALL function from the
+    controller. For individual axes control with relative motion, please use
+    the Hexapod Control tab in the GUI.
+    """
 
     parameter_overrides = {
         "fmtstr": Override(default="[%.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f]"),
@@ -89,7 +93,11 @@ class NewportHexapod(Moveable):
 
 
 class OldNewportHexapod(Moveable):
-    """Virtual Hexapod with six axes of movement"""
+    """Virtual Hexapod with six axes of movement + Goniometer Control
+    Starting the Hexapod controls it by moving each axes indivitually with
+    a pause between each motion. For individual axes control with relative motion,
+    please use the Hexapod Control tab in the GUI.
+    """
 
     parameter_overrides = {
         "fmtstr": Override(default="[%.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f]"),
