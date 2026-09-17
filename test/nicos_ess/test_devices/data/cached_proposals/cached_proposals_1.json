@@ -17,6 +17,75 @@
       ]
     ],
     "db_id": 0,
-    "samples": []
+    "samples": [
+      {
+        "id": "262e2b02-be1a-4dd8-8152-8ba9f1a37188",
+        "name": "cathode coin cell (Charged)",
+        "characteristics": {
+          "uos_sample_id": {
+            "human_name": "UOS Sample ID",
+            "value": 112
+          },
+          "uos_sample_lookup": {
+            "human_name": "UOS Sample Lookup",
+            "value": "352814-1-112"
+          },
+          "questionary_length": {
+            "human_name": "Number of questions in Questionary",
+            "value": 3
+          },
+          "sample_esi_basis": {
+            "human_name": "ESI label",
+            "value": "null"
+          },
+          "boolean_1602681963527": {
+            "human_name": "Are there any Radioactive hazards associated with your sample?",
+            "value": "false"
+          },
+          "text_input_1603713145780": {
+            "human_name": "Chemical formula",
+            "value": "\"$Na_3V_2(PO_4)_3$ \""
+          },
+          "sample_hash": {
+            "human_name": "Sample Hash",
+            "value": "aa82e80d811539b2e7c14d1ac77117e3"
+          }
+        }
+      },
+      {
+        "id": "beed135e-c839-4e04-a0c5-b944517f5490",
+        "name": "cathode coin cell (Discharged)",
+        "characteristics": {
+          "uos_sample_id": {
+            "human_name": "UOS Sample ID",
+            "value": 113
+          },
+          "uos_sample_lookup": {
+            "human_name": "UOS Sample Lookup",
+            "value": "352814-1-113"
+          },
+          "questionary_length": {
+            "human_name": "Number of questions in Questionary",
+            "value": 3
+          },
+          "sample_esi_basis": {
+            "human_name": "ESI label",
+            "value": "null"
+          },
+          "boolean_1602681963527": {
+            "human_name": "Are there any Radioactive hazards associated with your sample?",
+            "value": "true"
+          },
+          "text_input_1603713145780": {
+            "human_name": "Chemical formula",
+            "value": "\"$Na_3V_2(PO_4)_3$ \""
+          },
+          "sample_hash": {
+            "human_name": "Sample Hash",
+            "value": "aa0f2c2ad819b6e6e9b30543f700e372"
+          }
+        }
+      }
+    ]
   }
 }
