@@ -594,7 +594,7 @@
            <item row="8" column="0">
             <widget class="QPushButton" name="butStart">
              <property name="text">
-              <string>Start All</string>
+              <string>Move All</string>
              </property>
             </widget>
            </item>
