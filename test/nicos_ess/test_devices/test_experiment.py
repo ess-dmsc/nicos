@@ -20,14 +20,14 @@ def experiment(daemon_device_harness, monkeypatch):
         EssExperiment,
         name="experiment",
         cache_filepath="test/nicos_ess/test_devices/data/cached_proposals/cached_proposals_1.json",
-        dataroot="",
+        dataroot="test/nicos_ess/test_devices/data",
         sample=sample,
     )
-    experiment._yuos_client.update_cache()
     return experiment
 
 
 def test_new_experiment_from_cached_proposal(experiment):
+    experiment._yuos_client.update_cache()
     result = experiment._queryProposals(kwds={"admin": True})[0]
     exp_args = {
         "proposal": result["proposal"],
@@ -35,6 +35,14 @@ def test_new_experiment_from_cached_proposal(experiment):
         "users": result["users"],
     }
     experiment.new(**exp_args)
+    # from ExpPanel._set_samples()
+    samples = {}
+    for index, sample in enumerate(result["samples"]):
+        if not sample.get("name", ""):
+            sample["name"] = f"sample {index + 1}"
+        samples[index] = sample
+    experiment.sample.set_samples(dict(samples))
+
     assert experiment.proposal == "123456"
     assert experiment.title == "A test proposal"
     assert experiment.users == [
@@ -51,14 +59,6 @@ def test_new_experiment_from_cached_proposal(experiment):
             "facility_user_id": "johndoe",
         },
     ]
-
-    # from ExpPanel._set_samples()
-    samples = {}
-    for index, sample in enumerate(result["samples"]):
-        if not sample.get("name", ""):
-            sample["name"] = f"sample {index + 1}"
-        samples[index] = sample
-    experiment.sample.set_samples(dict(samples))
     assert experiment.get_samples() == [
         {
             "name": "cathode coin cell (Charged)",
@@ -76,6 +76,7 @@ def test_new_experiment_from_cached_proposal(experiment):
 
 
 def test_update_experiment(experiment):
+    experiment._yuos_client.update_cache()
     result = experiment._queryProposals(kwds={"admin": True})[0]
     exp_args = {
         "proposal": result["proposal"],
