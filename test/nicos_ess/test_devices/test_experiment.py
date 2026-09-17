@@ -106,3 +106,7 @@ def test_update_experiment(experiment):
             "facility_user_id": "janejanedoedoe",
         },
     ]
+
+
+def test_get_current_run_number(experiment):
+    assert experiment.get_current_run_number() == 1
