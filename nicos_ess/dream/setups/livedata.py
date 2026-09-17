@@ -1,63 +1,77 @@
 description = "The livedata interface for dream."
 
 devices = dict(
-    channel_1=device(
+    monitor_bunker_counts_total=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Livedata channel 1",
+        device_name="monitor_bunker_counts_total",
+        source_name="monitor_bunker",
+        workflow_id="dream/monitor_histogram/1",
         type="counter",
     ),
-    channel_2=device(
+    monitor_cave_counts_total=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Livedata channel 2",
+        device_name="monitor_cave_counts_total",
+        source_name="monitor_cave",
+        workflow_id="dream/monitor_histogram/1",
         type="counter",
     ),
-    channel_3=device(
+    mantle_detector_counts_total=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Livedata channel 3",
+        device_name="mantle_detector_counts_total",
+        source_name="mantle_detector",
+        workflow_id="dream/detector_projection/1",
         type="counter",
     ),
-    channel_4=device(
+    endcap_backward_detector_counts_total=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Livedata channel 4",
+        device_name="endcap_backward_detector_counts_total",
+        source_name="endcap_backward_detector",
+        workflow_id="dream/detector_projection/1",
         type="counter",
     ),
-    channel_5=device(
+    endcap_forward_detector_counts_total=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Livedata channel 5",
+        device_name="endcap_forward_detector_counts_total",
+        source_name="endcap_forward_detector",
+        workflow_id="dream/detector_projection/1",
         type="counter",
     ),
-    channel_6=device(
+    high_resolution_detector_counts_total=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Livedata channel 6",
+        device_name="high_resolution_detector_counts_total",
+        source_name="high_resolution_detector",
+        workflow_id="dream/detector_projection/1",
         type="counter",
     ),
-    channel_7=device(
+    sans_detector_counts_total=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Livedata channel 7",
-        type="counter",
-    ),
-    channel_8=device(
-        "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="Livedata channel 8",
+        device_name="sans_detector_counts_total",
+        source_name="sans_detector",
+        workflow_id="dream/detector_projection/1",
         type="counter",
     ),
     livedata_collector=device(
         "nicos_ess.devices.datasources.livedata.LiveDataCollector",
         description="The livedata detector collector",
         brokers=configdata("config.KAFKA_BROKERS"),
-        data_topics=["dream_livedata_data"],
-        status_topics=["dream_livedata_heartbeat"],
-        responses_topics=["dream_livedata_responses"],
+        data_topics=["dream_livedata_nicos_data"],
         commands_topic="dream_livedata_commands",
+        status_topics=["dream_livedata_heartbeat"],
         others=[
-            "channel_1",
-            "channel_2",
-            "channel_3",
-            "channel_4",
-            "channel_5",
-            "channel_6",
-            "channel_7",
-            "channel_8",
+            "monitor_bunker_counts_total",
+            "monitor_cave_counts_total",
+            "mantle_detector_counts_total",
+            "endcap_backward_detector_counts_total",
+            "endcap_forward_detector_counts_total",
+            "high_resolution_detector_counts_total",
+            "sans_detector_counts_total",
         ],
     ),
 )
