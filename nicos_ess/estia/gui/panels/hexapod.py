@@ -125,6 +125,7 @@ class HexapodPanel(Panel):
             self.coordBox.show()
             self.userModes.setTabVisible(1, 0)
             self.userModes.setTabVisible(2, 0)
+            self.statusimage.show()
         # better way to hide all this using another group box....but will do it later
         else:
             self.panelLabel.clear()
@@ -133,6 +134,7 @@ class HexapodPanel(Panel):
             self.newPos_2.hide()
             self.statusBox.hide()
             self.coordBox.hide()
+            self.statusimage.hide()
             self.userModes.setTabVisible(1, 0)
             self.userModes.setTabVisible(2, 0)
 
