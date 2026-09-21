@@ -362,7 +362,7 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
                     pv_prefix_attr="pvroot",
                     pv_suffix="IndependentSyringesEnbld",
                     cache_key="individual_syringe_enabled",
-                )
+                ),
             }
         )
         return epics_channels
