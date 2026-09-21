@@ -1,14 +1,16 @@
 description = "The cetoni pumps"
 
-pump1_pvroot = "B02-CSLab:SE-Pumps:SP1"
-pump2_pvroot = "B02-CSLab:SE-Pumps:SP2"
-linked_pvroot = "B02-CSLab:SE-Pumps:Lnkd"
+pvroot = "B02-CSLab:SE-Pumps:"
+pump1_pvroot = f"{pvroot}SP1"
+pump2_pvroot = f"{pvroot}SP2"
+linked_pvroot =  f"{pvroot}Lnkd"
 
 devices = dict(
     pump1=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpController",
         description="Control device for cetoni pump SP1",
-        pvroot=pump1_pvroot,
+        pvroot=pvroot,
+        pump_pvroot=pump1_pvroot,
         readpv=f"{pump1_pvroot}FilledVolume",
         writepv=f"{pump1_pvroot}FillVol-SP",
         home_warning_msg="Please make sure syringes are removed before homing",
@@ -18,7 +20,8 @@ devices = dict(
     pump2=device(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpController",
         description="Control device for cetoni pump SP2",
-        pvroot=pump2_pvroot,
+        pvroot=pvroot,
+        pump_pvroot=pump2_pvroot,
         readpv=f"{pump2_pvroot}FilledVolume",
         writepv=f"{pump2_pvroot}FillVol-SP",
         home_warning_msg="Please make sure syringes are removed before homing",

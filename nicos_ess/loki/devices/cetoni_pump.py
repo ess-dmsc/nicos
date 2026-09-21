@@ -217,6 +217,13 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
             settable=False,
             userparam=False,
         ),
+        "pump_pvroot": Param(
+            "The root of the individual pump pv",
+            type=str,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
         "flowrate": Param(
             description="Syringe flowrate",
             settable=True,
@@ -273,94 +280,92 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
             {
                 "flowrate": setpoint_channel(
                     cache_key="flowrate",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="FlowRate-SP",
                 ),
                 "flowrate_max": readback_channel(
                     cache_key="flowrate_max",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="MaxFlowRate",
                 ),
                 "pressure": readback_channel(
                     cache_key="pressure",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="Pressure",
                 ),
                 "pressure_max": readback_channel(
                     cache_key="pressure_max",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="MaxPressure",
                 ),
                 "home": command_channel(
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="InitPosition-Cmd",
                 ),
                 "innerdiameter": readback_channel(
                     cache_key="innerdiameter",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="SyrInnerDiam",
                 ),
                 "stroke_max": readback_channel(
                     cache_key="stroke_max",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="SyrMaxPstStrk",
                 ),
                 "max_vol": readback_channel(
                     cache_key="max_vol",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="MaxVol",
                 ),
                 "syringe_type": setpoint_channel(
                     cache_key="syringe_type",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="SyrType",
                     is_enum=True,
                 ),
                 "stop": command_channel(
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="Stop-Cmd",
                 ),
                 "fill_syringe": command_channel(
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="FillSyringe-Cmd",
                 ),
                 "empty_syringe": command_channel(
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="EmptySyringe-Cmd",
                 ),
                 "generate_flow": command_channel(
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="GenerateFlow-Cmd",
                 ),
                 "is_pumping": status_channel(
                     cache_key="is_pumping",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="IsPumping",
                 ),
                 "is_homed": status_channel(
                     cache_key="is_homed",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="RefPosInitd",
                 ),
                 "is_fault": status_channel(
                     cache_key="is_fault",
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="FaultState",
                 ),
                 "reset_fault": command_channel(
-                    pv_prefix_attr="pvroot",
+                    pv_prefix_attr="pump_pvroot",
                     pv_suffix="ResetFault-Cmd",
                 ),
                 "individual_syringe_enabled": status_channel(
-                    pv_name_attr=self._remove_pump_specifier_in_pvroot() + "IndependentSyringesEnbld",
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="IndependentSyringesEnbld",
                     cache_key="individual_syringe_enabled",
                 )
             }
         )
         return epics_channels
-
-    def _remove_pump_specifier_in_pvroot(self):
-        return self.pvroot.rsplit(":", 1)[0] + ":"
 
     def _on_channel_update(self, update):
         super()._on_channel_update(update)
