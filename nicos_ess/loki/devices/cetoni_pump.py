@@ -365,17 +365,14 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
             self._cache.put(self._name, "abslimits", (0, update.value), ts)
             self._cache.put(self._name, "userlimits", self.doReadUserlimits(), ts)
 
-    def _linked_mode_disabled(self):
+    def _linked_mode_enabled(self):
         if self._attached_linked_pumping is None:
-            return True
-        linked_mode_disabled = self._attached_linked_pumping._epics.get_channel_value(
-            "is_disabled"
-        )
-        if not linked_mode_disabled:
-            self.log.warning(
-                f"Please disable device: {self._attached_linked_pumping.name} first"
-            )
-        return linked_mode_disabled
+            return False
+        return self._attached_linked_pumping.status(0) != status.DISABLED
+
+    def _disable_linked_mode(self):
+        if self._attached_linked_pumping is not None:
+            self._attached_linked_pumping.disable()
 
     def doReadAbslimits(self):
         high_limit = self._epics.get_channel_value("max_vol")
@@ -421,44 +418,51 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         self._epics.put_channel_value("reset_fault", 1)
 
     def doStart(self, target):
-        if not self._linked_mode_disabled():
-            return
+        if self._linked_mode_enabled():
+            self._disable_linked_mode()
         self._epics.put_channel_value("write", target)
 
     def doStop(self):
-        if not self._linked_mode_disabled():
-            return
         self._epics.put_channel_value("stop", 1)
 
     def _compute_status(self, maxage=0):
         candidates = []
+
         is_in_fault = self._epics.get_channel_value("is_fault")
         if is_in_fault:
             candidates.append((status.ERROR, "In faulty state"))
+
         is_homed = self._epics.get_channel_value("is_homed")
         if not is_homed:
             candidates.append((status.WARN, "Not homed"))
+
+        status_msg = ""
+        if self._linked_mode_enabled():
+            status_msg += f"Controlled by {self._attached_linked_pumping.name}: "
         is_pumping = self._epics.get_channel_value("is_pumping")
         if is_pumping:
-            candidates.append((status.BUSY, "Pumping"))
+            status_msg += "Pumping"
+            candidates.append((status.BUSY, status_msg))
         else:
-            candidates.append((status.OK, "idle"))
+            status_msg += "Idle"
+            candidates.append((status.OK, status_msg))
+
         return worst_status(*candidates, self._read_primary_alarm(maxage=maxage))
 
     @usermethod
     def fill_syringe(self):
         if self._mode == SIMULATION:
             return
-        if not self._linked_mode_disabled():
-            return
+        if self._linked_mode_enabled():
+            self._disable_linked_mode()
         self._epics.put_channel_value("fill_syringe", 1)
 
     @usermethod
     def empty_syringe(self):
         if self._mode == SIMULATION:
             return
-        if not self._linked_mode_disabled():
-            return
+        if self._linked_mode_enabled():
+            self._disable_linked_mode()
         self._epics.put_channel_value("empty_syringe", 1)
 
     @usermethod
@@ -471,6 +475,6 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         """
         if self._mode == SIMULATION:
             return
-        if not self._linked_mode_disabled():
-            return
+        if self._linked_mode_enabled():
+            self._disable_linked_mode()
         self._epics.put_channel_value("generate_flow", target)
