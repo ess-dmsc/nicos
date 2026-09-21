@@ -242,7 +242,11 @@ class FileWriterStatus(KafkaStatusHandler):
             self._jobs[result.job_id].on_writing(self.statusinterval)
             self._jobs[result.job_id].service_id = result.service_id
         else:
-            self.log.error("request to start writing failed for job %s", result.job_id)
+            self.log.error(
+                "request to start writing failed for job %s with error: %s",
+                result.job_id,
+                result.message,
+            )
             self._jobs[result.job_id].no_start_ack(result.message)
 
     def _on_stop_response(self, result):
