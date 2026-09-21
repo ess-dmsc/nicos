@@ -150,6 +150,10 @@ class MultiTargetMapping(MappedMoveable):
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
 
+    def doReset(self):
+        for channel in self._attached_controlled_devices:
+            channel.reset()
+
     def doWriteMapping(self, mapping):
         self.valuetype = oneof(*sorted(mapping, key=num_sort))
 
