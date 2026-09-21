@@ -368,7 +368,7 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
     def _linked_mode_enabled(self):
         if self._attached_linked_pumping is None:
             return False
-        return self._attached_linked_pumping.status(0) != status.DISABLED
+        return self._attached_linked_pumping.status(0)[0] != status.DISABLED
 
     def _disable_linked_mode(self):
         if self._attached_linked_pumping is not None:
