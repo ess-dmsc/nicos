@@ -182,7 +182,7 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
             candidates.append((status.BUSY, "Pumping"))
         is_disabled = self._epics.get_channel_value("is_disabled")
         if is_disabled:
-            candidates.append((status.WARN, "Disabled"))
+            candidates.append((status.DISABLED, "Disabled"))
         else:
             candidates.append((status.OK, "Enabled"))
         return worst_status(*candidates, self._read_primary_alarm(maxage=maxage))
