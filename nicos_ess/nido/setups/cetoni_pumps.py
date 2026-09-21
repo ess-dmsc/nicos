@@ -3,7 +3,7 @@ description = "The cetoni pumps"
 pvroot = "B02-CSLab:SE-Pumps:"
 pump1_pvroot = f"{pvroot}SP1"
 pump2_pvroot = f"{pvroot}SP2"
-linked_pvroot =  f"{pvroot}Lnkd"
+linked_pvroot = f"{pvroot}Lnkd"
 
 devices = dict(
     pump1=device(
