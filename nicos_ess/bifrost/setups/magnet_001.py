@@ -55,12 +55,14 @@ devices = dict(
     ),
     mag_action=device(
         "nicos_ess.devices.epics.pva.EpicsStringMoveable",
+        visibility=(),
         description="Action. Permitted values: HOLD, RTOS, RTOZ, CLMP",
         readpv=f"{pv_root}Magnet-action-s",
         writepv=f"{pv_root}Magnet-action-s",
     ),
     mag_switch_heater=device(
         "nicos_ess.devices.epics.pva.EpicsStringMoveable",
+        visibility=(),
         description="Set switch heater. Permitted values: ON, OFF",
         readpv=f"{pv_root}Magnet-switchHeater-s",
         writepv=f"{pv_root}Magnet-switchHeater-s",
@@ -77,12 +79,14 @@ devices = dict(
     ),
     mag_field_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        visibility=(),
         description="Magnetic field setpoint",
         readpv=f"{pv_root}Magnet-FieldTarget-s",
         writepv=f"{pv_root}Magnet-FieldTarget-s",
     ),
     mag_current=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        visibility=(),
         description="mercuryips/current/Z",
         readpv=f"{pv_root}Magnet-Current-r",
     ),
@@ -98,12 +102,14 @@ devices = dict(
     ),
     mag_field_ramp_rate=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        visibility=(),
         description="Magnetic field ramp rate",
         readpv=f"{pv_root}Magnet-fieldRamprate-s",
         writepv=f"{pv_root}Magnet-fieldRamprate-s",
     ),
     mag_ramp_rate=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        visibility=(),
         description="Ramp rate",
         readpv=f"{pv_root}Magnet-ramprate-r",
     ),
@@ -128,11 +134,13 @@ devices = dict(
     ),
     mag_voltage=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        visibility=(),
         description="Voltage",
         readpv=f"{pv_root}Magnet-voltage-r",
     ),
     mag_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        visibility=(),
         description="The status of the instance",
         readpv=f"{pv_root}Magnet-MAG-001status-s",
         writepv=f"{pv_root}Magnet-MAG-001status-s",
