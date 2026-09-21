@@ -351,9 +351,16 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
                     pv_prefix_attr="pvroot",
                     pv_suffix="ResetFault-Cmd",
                 ),
+                "individual_syringe_enabled": status_channel(
+                    pv_name_attr=self._remove_pump_specifier_in_pvroot() + "IndependentSyringesEnbld",
+                    cache_key="individual_syringe_enabled",
+                )
             }
         )
         return epics_channels
+
+    def _remove_pump_specifier_in_pvroot(self):
+        return self.pvroot.rsplit(":", 1)[0] + ":"
 
     def _on_channel_update(self, update):
         super()._on_channel_update(update)
