@@ -4,6 +4,7 @@ import pytest
 
 from nicos_ess.devices.experiment import EssExperiment
 from nicos_ess.devices.sample import EssSample
+from nicos.core import UsageError
 
 
 @pytest.fixture
@@ -75,6 +76,40 @@ def test_new_experiment_from_cached_proposal(experiment):
     ]
 
 
+def test_new_experiment_from_cached_proposal_with_fed_id(experiment):
+    experiment._yuos_client.update_cache()
+    result = experiment._queryProposals(kwds={"fed_id": "johndoe"})[0]
+    exp_args = {
+        "proposal": result["proposal"],
+        "title": result["title"],
+        "users": result["users"],
+    }
+    experiment.new(**exp_args)
+
+    assert experiment.proposal == "123456"
+    assert experiment.title == "A test proposal"
+    assert experiment.users == [
+        {
+            "name": "Jane Doe",
+            "email": "",
+            "affiliation": "European Spallation Source ERIC (ESS)",
+            "facility_user_id": "janedoe",
+        },
+        {
+            "name": "John Doe",
+            "email": "",
+            "affiliation": "European Spallation Source ERIC (ESS)",
+            "facility_user_id": "johndoe",
+        },
+    ]
+
+
+def test_no_proposals_using_unknown_fed_id(experiment):
+    experiment._yuos_client.update_cache()
+    result = experiment._queryProposals(kwds={"fed_id": "unknownuser"})
+    assert len(result) == 0
+
+
 def test_update_experiment(experiment):
     experiment._yuos_client.update_cache()
     result = experiment._queryProposals(kwds={"admin": True})[0]
@@ -106,6 +141,98 @@ def test_update_experiment(experiment):
             "facility_user_id": "janejanedoedoe",
         },
     ]
+
+
+def test_update_experiment_fails_with_dict_of_users(experiment):
+    experiment._yuos_client.update_cache()
+    result = experiment._queryProposals(kwds={"admin": True})[0]
+    exp_args = {
+        "proposal": result["proposal"],
+        "title": result["title"],
+        "users": result["users"],
+    }
+    experiment.new(**exp_args)
+    new_exp_args = {
+        "title": "A new proposal title",
+        "users": {
+            "name": "JaneJane DoeDoe",
+            "email": "",
+            "affiliation": "European Spallation Source ERIC (ESS)",
+            "facility_user_id": "janejanedoedoe",
+        },
+    }
+    with pytest.raises(UsageError):
+        experiment.update(**new_exp_args)
+
+
+def test_update_experiment_fails_with_user_missing_name(experiment):
+    experiment._yuos_client.update_cache()
+    result = experiment._queryProposals(kwds={"admin": True})[0]
+    exp_args = {
+        "proposal": result["proposal"],
+        "title": result["title"],
+        "users": result["users"],
+    }
+    experiment.new(**exp_args)
+    new_exp_args = {
+        "title": "A new proposal title",
+        "users": [
+            {
+                "user": "JaneJane DoeDoe",
+                "email": "",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "janejanedoedoe",
+            },
+        ],
+    }
+    with pytest.raises(KeyError):
+        experiment.update(**new_exp_args)
+
+
+def test_update_experiment_fails_with_dict_of_local_contacts(experiment):
+    experiment._yuos_client.update_cache()
+    result = experiment._queryProposals(kwds={"admin": True})[0]
+    exp_args = {
+        "proposal": result["proposal"],
+        "title": result["title"],
+        "users": result["users"],
+    }
+    experiment.new(**exp_args)
+    new_exp_args = {
+        "title": "A new proposal title",
+        "localcontacts": {
+            "name": "JaneJane DoeDoe",
+            "email": "",
+            "affiliation": "European Spallation Source ERIC (ESS)",
+            "facility_user_id": "janejanedoedoe",
+        },
+    }
+    with pytest.raises(UsageError):
+        experiment.update(**new_exp_args)
+
+
+def test_update_experiment_fails_with_local_contact_missing_name(experiment):
+    experiment._yuos_client.update_cache()
+    result = experiment._queryProposals(kwds={"admin": True})[0]
+    exp_args = {
+        "proposal": result["proposal"],
+        "title": result["title"],
+        "users": result["users"],
+    }
+    experiment.new(**exp_args)
+    new_exp_args = {
+        "title": "A new proposal title",
+        "localcontacts": [
+            {
+                "contact": "JaneJane DoeDoe",
+                "email": "",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "janejanedoedoe",
+            },
+        ],
+    }
+    with pytest.raises(KeyError):
+        experiment.update(**new_exp_args)
 
 
 def test_get_current_run_number(experiment):
