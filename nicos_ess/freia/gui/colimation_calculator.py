@@ -1,21 +1,38 @@
-from logging import WARNING
-
 import numpy as np
 
-from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import pyqtSlot
-from nicos.protocols.cache import cache_load
+from nicos.guisupport.qt import (
+    QSplitter,
+    Qt,
+    QVBoxLayout,
+)
 from nicos.utils import findResource
 
-# https://www.sciencedirect.com/science/article/pii/S0921452604011792?pes=vor&utm_source=scopus&getft_integrator=scopus
 # Distribution Full-Width Half-Maximum Delta with rectangular distribution at Full-Width
 # Simplified from (2*np.sqrt(2*np.log(2))) * (1/(2*np.sqrt(3)))
 DISTRIBUTION = np.sqrt((2 * np.log(2)) / 3)
 
 
 class ColimationPanel(Panel):
+    panelName = "Freia Colimation Slit Calculator"
+
+    def __init__(self, parent, client, options):
+        Panel.__init__(self, parent, client, options)
+
+        self.initialize_ui()
+        self.build_ui()
+
+    def initialize_ui(self):
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+    def build_ui(self):
+        self.view_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.plot_splitter = QSplitter(Qt.Orientation.Horizontal)
+
+
+class OldColimationPanel(Panel):
     panelName = "Freia Colimation Slit Calculator"
 
     def __init__(self, parent, client, options):
@@ -50,7 +67,7 @@ class ColimationPanel(Panel):
 
         beam_height = slit2_m + dist_ratio * (slit1_m + slit2_m)
         penumbra = float((beam_height / sinIa) * 1000)
-        umbra = float((slit2_mm / sinIa))
+        umbra = float(slit2_mm / sinIa)
 
         # return percentage for slitDeltaTheta and resolution
         slitDeltaTheta = float(
@@ -81,11 +98,11 @@ class ColimationPanel(Panel):
             self.d1Out.setValue(d1)
             self.d2Out.setValue(d2)
 
-        elif self.opmode == "Slit to Resolution":
-            input = [self.l2In, self.l12In, self.thetaIn, self.d1In, self.d2In]
-            value = []
-        else:
-            self.showError("ERROR: No Opmode Found")
+        # elif self.opmode == "Slit to Resolution":
+        #     input = [self.l2In, self.l12In, self.thetaIn, self.d1In, self.d2In]
+        #     value = []
+        # else:
+        #     self.showError("ERROR: No Opmode Found")
 
     def on_calcMode_currentTextChanged(self):
         self.opmode = self.calcMode.currentText()
