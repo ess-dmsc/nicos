@@ -430,8 +430,11 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         self._epics.put_channel_value("reset_fault", 1)
 
     def doStart(self, target):
-        if self.status(0)[0] == status.BUSY:
-            # cannot start if linked pumping is already running
+        if not self._epics.get_channel_value("is_homed"):
+            self.log.warning("Cannot start because devices is not homed")
+            return
+        if self._linked_mode_enabled() and self.status(0)[0] == status.BUSY:
+            self.log.warning(f"Cannot start if {self._attached_linked_pumping.name} is already running")
             return
         if self._linked_mode_enabled():
             self._disable_linked_mode()
@@ -439,7 +442,7 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
 
     def doStop(self):
         if self._linked_mode_enabled():
-            # do not stop individual pump if linked pumping is running
+            self.log.warning(f"Cannot stop individual pump if {self._attached_linked_pumping.name} is running")
             return
         self._epics.put_channel_value("stop", 1)
 
