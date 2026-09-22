@@ -248,6 +248,8 @@ class FileWriterStatus(KafkaStatusHandler):
                 result.message,
             )
             self._jobs[result.job_id].no_start_ack(result.message)
+            self._job_stopped(result.job_id)
+            self._update_status()
 
     def _on_stop_response(self, result):
         if not self._jobs[result.job_id].stop_requested:
