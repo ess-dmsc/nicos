@@ -53,7 +53,8 @@ def pump_in_daemon(daemon_device_harness, fake_backend):
     return daemon_device_harness.create_master(
         CetoniPumpController,
         name="pump_in_daemon",
-        pvroot="SP1:",
+        pvroot="",
+        pump_pvroot="SP1:",
         readpv="SP1:FilledVolume",
         writepv="SP1:FillVol-SP",
     )
@@ -65,7 +66,8 @@ def pump_pair(device_harness, fake_backend):
         CetoniPumpController,
         name="pump",
         shared={
-            "pvroot": "SP1:",
+            "pvroot": "",
+            "pump_pvroot": "SP1:",
             "readpv": "SP1:FilledVolume",
             "writepv": "SP1:FillVol-SP",
         },
