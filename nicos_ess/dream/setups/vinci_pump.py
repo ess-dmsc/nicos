@@ -8,6 +8,20 @@ devices = dict(
         description="Pressure",
         readpv=f"{pv_root}Pressure-R",
         writepv=f"{pv_root}PM_Pressure-S",
+        nexus_config=[
+            {
+                "group_name": "vinci_pressure",
+                "nx_class": "NXcollection",
+                "units": "bar",
+                "suffix": "readback",
+                "source_name": f"{pv_root}Pressure-R",
+                "schema": "f144",
+                "topic": "dream_sample_env",
+                "dataset_type": "nx_log",
+                "protocol": "pva",
+                "periodic": 1,
+            },
+        ],
     ),
     vinci_pressure_SP=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -24,6 +38,20 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Transductor pressure",
         readpv="SE-PS:SE-PTRANS-001:Pressure-R",
+        nexus_config=[
+            {
+                "group_name": "transductor_pressure",
+                "nx_class": "NXcollection",
+                "units": "bar",
+                "suffix": "readback",
+                "source_name": "SE-PS:SE-PTRANS-001:Pressure-R",
+                "schema": "f144",
+                "topic": "dream_sample_env",
+                "dataset_type": "nx_log",
+                "protocol": "pva",
+                "periodic": 1,
+            },
+        ],
     ),
     vinci_flowrate=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
