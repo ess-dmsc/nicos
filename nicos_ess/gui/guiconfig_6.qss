@@ -1,5 +1,5 @@
 QWidget {
-    font-size: 14px;
+    font-size: 16px;
 }
 
 MainWindow {
@@ -59,6 +59,10 @@ QTabBar::tab:left {
     min-height: 5px;
 }
 
+QTabBar {
+    font: bold
+}
+
 /* We use disable tabs as spacers between the tab groups
 QTabBar::tab:left:disabled {
     border: transparent;
@@ -67,7 +71,7 @@ QTabBar::tab:left:disabled {
 
 /* Tabs that are not selected */
 QTabBar::tab:left:!selected:!disabled {
-    background: transparent;
+    background: #417c9b;
     margin-right: 1px;
 }
 
@@ -77,7 +81,7 @@ QTabBar::tab:left:!selected:hover {
 
 /* The selected tab */
 QTabBar::tab:left:selected {
-    background-color: white;
+    background-color: #2d73dc;
     border-right: 0px solid #1464A0;
 }
 
@@ -101,7 +105,7 @@ QTabBar::tab:top:disabled {
 }
 
 QTabBar::tab:top:selected {
-    background-color: #0094ca;
+    background-color: #2d73dc;
     color: #F0F0F0;
 }
 
