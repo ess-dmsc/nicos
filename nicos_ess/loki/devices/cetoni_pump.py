@@ -431,6 +431,7 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
 
     def doStart(self, target):
         if self.status(0)[0] == status.BUSY:
+            # cannot start if linked pumping is already running
             return
         if self._linked_mode_enabled():
             self._disable_linked_mode()
