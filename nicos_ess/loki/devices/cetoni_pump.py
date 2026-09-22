@@ -438,6 +438,9 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         self._epics.put_channel_value("write", target)
 
     def doStop(self):
+        if self._linked_mode_enabled():
+            # do not stop individual pump if linked pumping is running
+            return
         self._epics.put_channel_value("stop", 1)
 
     def _compute_status(self, maxage=0):
