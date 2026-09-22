@@ -32,7 +32,6 @@ def _import_instrument_commands(file_location):
 def import_instrument_commands():
     file = os.path.join(
         session.experiment.instrument_scripts_directory,
-        session.instrument.name.lower(),
         FILENAME,
     )
     if not os.path.isfile(file):
