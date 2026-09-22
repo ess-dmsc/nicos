@@ -29,19 +29,6 @@ QMenuBar::item:pressed {
     color:black;
 }
 
-/* ----- Burger Menu ----- */
-
-QMenu {
-     background-color: #ececec;
-     color: black;
-     margin: 0px;
-     border-radius: 5px;
-}
-
-QMenu::item:disabled {
-     color:#959ea7;
-}
-
 /* ----- Dashboard ----- */
 
 MainWindow > QToolBar {
