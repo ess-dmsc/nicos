@@ -430,6 +430,8 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         self._epics.put_channel_value("reset_fault", 1)
 
     def doStart(self, target):
+        if self.status(0)[0] == status.BUSY:
+            return
         if self._linked_mode_enabled():
             self._disable_linked_mode()
         self._epics.put_channel_value("write", target)
