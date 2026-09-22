@@ -9,7 +9,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGA",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_A",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -33,7 +33,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGB",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_B",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -57,7 +57,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGC1",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_C1",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -81,7 +81,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGC2",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_C2",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -105,7 +105,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGC3",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_C3",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -129,7 +129,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGC4",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_C4",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -153,7 +153,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGC5",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_C5",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -177,7 +177,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGD1",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_D1",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -201,7 +201,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGD2",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_D2",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -225,7 +225,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGD3",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_D3",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -249,7 +249,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGD4",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_D4",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
@@ -273,7 +273,7 @@ devices = dict(
         readpv=f"{pv_root}KRDGD5",
         nexus_config=[
             {
-                "group_name": "ls224_temperature_D5",
+                "group_name": "lakeshore224_1",
                 "nx_class": "NXcollection",
                 "units": "K",
                 "suffix": "readback",
