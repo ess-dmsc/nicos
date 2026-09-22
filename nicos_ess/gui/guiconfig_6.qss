@@ -43,13 +43,8 @@ MainWindow > QToolBar QWidget {
     background: transparent;
 }
 
-/* ----- All tab bars are bold ----- */
-
-QTabBar {
-    font: bold
-}
-
 /* ------ The main tab selector on the left ------ */
+/* Some styling is hard coded based on light or dark mode. See main.py. */
 
 /* Sets the overall shape of the tab buttons and spacing */
 QTabBar::tab:left {
@@ -69,12 +64,6 @@ QTabBar::tab:left {
 QTabBar::tab:left:disabled {
     border: transparent;
     background: transparent;
-}
-
-/* Tabs that are not selected */
-QTabBar::tab:left:!selected:!disabled {
-    background: #417c9b;
-    margin-right: 1px;
 }
 
 QTabBar::tab:left:!selected:hover {

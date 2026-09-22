@@ -45,6 +45,25 @@ except ImportError:
 log = None
 
 
+# Customisations to make widgets look right when in light or dark mode
+# NOTE: Qt6 only.
+LIGHT_MODE = """
+QTabWidget QMainWindow {background: #fffcfcfd;}
+QTabBar::tab:left:!selected:!disabled {
+    background: lightgray;
+    margin-right: 1px;
+}
+"""
+
+DARK_MODE = """
+QTabWidget QMainWindow {background: #333339;}
+QTabBar::tab:left:!selected:!disabled {
+    background: #417c9b;
+    margin-right: 1px;
+}
+"""
+
+
 def parseargs():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -161,9 +180,12 @@ def main(_argv):
     if gui_conf.options.get("facility") in ["ess", "sinq"]:
         if os.environ.get("NICOS_QT") == "5":
             gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig.qss")
+            base_style = ""
         else:
-            gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig.qss")
             gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig_6.qss")
+            base_style = LIGHT_MODE
+            if is_dark_mode_enabled():
+                base_style = DARK_MODE
 
     stylefiles = [
         path.join(userpath, "style-%s.qss" % sys.platform),
@@ -171,12 +193,6 @@ def main(_argv):
         path.splitext(opts.configfile)[0] + "-%s.qss" % sys.platform,
         path.splitext(opts.configfile)[0] + ".qss",
     ]
-
-    # Set the background of all the tabs to match light or dark mode.
-    # Default is light mode.
-    base_style = "QTabWidget QMainWindow {background: #fffcfcfd;} \n"
-    if is_dark_mode_enabled():
-        base_style = "QTabWidget QMainWindow {background: #333339;} \n"
 
     for stylefile in [gui_conf.stylefile] or stylefiles:
         if path.isfile(stylefile):
