@@ -143,19 +143,11 @@ class EssExperiment(Device):
             settable=True,
             internal=True,
         ),
-        "instrument_scripts_directory": Param(
-            "Path to the top directory where instrument scripts live",
+        "scripts_directory": Param(
+            "Path to the top directory where instrument and user scripts live",
             type=str,
             category="experiment",
-            default="/opt/instrument_scripts",
-            mandatory=False,
-            userparam=False,
-        ),
-        "user_scripts_directory": Param(
-            "Path to the top directory where user scripts live",
-            type=str,
-            category="experiment",
-            default="/opt/user_scripts",
+            default="/opt/instrument-nicos-scripts",
             mandatory=False,
             userparam=False,
         ),
@@ -305,7 +297,7 @@ class EssExperiment(Device):
         Returns: (the directory path, a list of files)
         """
         instrument = session.instrument.name.lower()
-        directory = os.path.join(self.instrument_scripts_directory, instrument)
+        directory = os.path.join(self.scripts_directory, instrument, "instrument")
         # Ignore any directories as we don't support directories for
         # instrument scripts.
         (files, _) = self._list_directory_files(directory, extension=".py")
@@ -319,7 +311,8 @@ class EssExperiment(Device):
 
         Returns: (the directory path, a list of files, a list of sub-directories)
         """
-        directory = os.path.join(self.user_scripts_directory, directory)
+        instrument = session.instrument.name.lower()
+        directory = os.path.join(self.scripts_directory, instrument, "user", directory)
         return directory, self._list_directory_files(directory, extension=".py")
 
     def _list_directory_files(self, directory, extension=""):
@@ -356,10 +349,11 @@ class EssExperiment(Device):
         if ".." in path:
             self.log.error("Relative paths are not allowed when creating directories.")
             return
-        path = os.path.join(self.user_scripts_directory, path)
+        instrument = session.instrument.name.lower()
+        directory = os.path.join(self.scripts_directory, instrument, "user", path)
 
-        if not os.path.exists(path):
-            os.makedirs(path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
     def _canQueryProposals(self):
         return self._yuos_client is not None
