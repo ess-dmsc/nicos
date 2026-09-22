@@ -76,4 +76,11 @@ devices = dict(
         readpv=f"{pv_root}Start-S",
         writepv=f"{pv_root}Start-S",
     ),
+    vinci_pump_mode=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Pump mode",
+        readpv=f"{pv_root}PumpMode-RB",
+        writepv=f"{pv_root}PumpMode-S",
+        visibility=(),
+    ),
 )
