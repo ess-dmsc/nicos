@@ -43,6 +43,12 @@ MainWindow > QToolBar QWidget {
     background: transparent;
 }
 
+/* ----- All tab bars are bold ----- */
+
+QTabBar {
+    font: bold
+}
+
 /* ------ The main tab selector on the left ------ */
 
 /* Sets the overall shape of the tab buttons and spacing */
@@ -59,11 +65,7 @@ QTabBar::tab:left {
     min-height: 5px;
 }
 
-QTabBar {
-    font: bold
-}
-
-/* We use disable tabs as spacers between the tab groups
+/* We use disabled tabs as spacers between the tab groups
 QTabBar::tab:left:disabled {
     border: transparent;
     background: transparent;
