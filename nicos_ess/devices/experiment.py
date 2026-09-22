@@ -289,6 +289,16 @@ class EssExperiment(Device):
         self.new(0, "Service mode")
         self.sample.set_samples({})
 
+    @property
+    def instrument_scripts_directory(self) -> str:
+        instrument = session.instrument.name.lower()
+        return os.path.join(self.scripts_directory, instrument, "instrument")
+
+    @property
+    def user_scripts_directory(self) -> str:
+        instrument = session.instrument.name.lower()
+        return os.path.join(self.scripts_directory, instrument, "user")
+
     def list_instrument_scripts_directory(self) -> (str, list[str]):
         """Fetches a list of files in the instrument scripts directory.
 
@@ -296,8 +306,7 @@ class EssExperiment(Device):
 
         Returns: (the directory path, a list of files)
         """
-        instrument = session.instrument.name.lower()
-        directory = os.path.join(self.scripts_directory, instrument, "instrument")
+        directory = self.instrument_scripts_directory
         # Ignore any directories as we don't support directories for
         # instrument scripts.
         (files, _) = self._list_directory_files(directory, extension=".py")
@@ -311,8 +320,7 @@ class EssExperiment(Device):
 
         Returns: (the directory path, a list of files, a list of sub-directories)
         """
-        instrument = session.instrument.name.lower()
-        directory = os.path.join(self.scripts_directory, instrument, "user", directory)
+        directory = os.path.join(self.user_scripts_directory, directory)
         return directory, self._list_directory_files(directory, extension=".py")
 
     def _list_directory_files(self, directory, extension=""):
@@ -349,8 +357,7 @@ class EssExperiment(Device):
         if ".." in path:
             self.log.error("Relative paths are not allowed when creating directories.")
             return
-        instrument = session.instrument.name.lower()
-        directory = os.path.join(self.scripts_directory, instrument, "user", path)
+        directory = os.path.join(self.user_scripts_directory, path)
 
         if not os.path.exists(directory):
             os.makedirs(directory)
