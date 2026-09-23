@@ -83,4 +83,10 @@ devices = dict(
         writepv=f"{pv_root}PumpMode-S",
         visibility=(),
     ),
+    vinci_pump_pressure_ramp=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Pressure setpoint",
+        readpv=f"{pv_root}PM_PressureRamp-RB",
+        writepv=f"{pv_root}PM_PressureRamp-S",
+    ),
 )
