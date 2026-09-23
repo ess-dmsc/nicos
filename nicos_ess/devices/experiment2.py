@@ -1,0 +1,327 @@
+import os
+import time
+from os import path
+
+from yuos_query.exceptions import BaseYuosException
+from yuos_query.yuos_client import YuosCacheClient
+
+from nicos import session
+from nicos.core import (
+    SIMULATION,
+    Override,
+    Param,
+    UsageError,
+    listof,
+    mailaddress,
+    none_or,
+)
+from nicos.devices.experiment import Experiment
+from nicos.utils import createThread, readFileCounter
+
+
+class EssExperiment(Experiment):
+    parameters = {
+        "run_title": Param(
+            "Title of the current run",
+            type=str,
+            settable=True,
+            default="",
+            category="experiment",
+        ),
+        "cache_filepath": Param(
+            "Path to the proposal cache",
+            type=str,
+            category="experiment",
+            mandatory=True,
+            userparam=False,
+        ),
+        "update_interval": Param(
+            "Time interval (in hrs.) for proposal cache updates",
+            default=1.0,
+            type=float,
+            userparam=False,
+        ),
+        "fixed_proposal_path": Param(
+            "Override the generated proposal file path",
+            default=None,
+            type=none_or(str),
+            userparam=False,
+        ),
+        "instrument_scripts_directory": Param(
+            "Path to the top directory where instrument scripts live",
+            type=str,
+            category="experiment",
+            default="/opt/instrument_scripts",
+            mandatory=False,
+            userparam=False,
+        ),
+        "user_scripts_directory": Param(
+            "Path to the top directory where user scripts live",
+            type=str,
+            category="experiment",
+            default="/opt/user_scripts",
+            mandatory=False,
+            userparam=False,
+        ),
+    }
+
+    parameter_overrides = {
+        "title": Override(settable=True),
+        "users": Override(default=[], type=listof(dict)),
+        "localcontact": Override(default=[], type=listof(dict)),
+        "scripts": Override(category="experiment"),
+        "errorbehavior": Override(default="abort", userparam=False),
+    }
+
+    def doInit(self, mode):
+        self._yuos_client = None
+        self._update_proposal_cache_worker = createThread(
+            "update_cache", self._update_proposal_cache, start=False
+        )
+        try:
+            self._yuos_client = YuosCacheClient.create(self.cache_filepath)
+            self._update_proposal_cache_worker.start()
+        except Exception as error:
+            self.log.warning("proposal look-up not available: %s", error)
+
+    def _update_proposal_cache(self):
+        while True:
+            self._yuos_client.update_cache()
+            time.sleep(self.update_interval * 3600)
+
+    def _canQueryProposals(self):
+        return self._yuos_client is not None
+
+    def _queryProposals(self, proposal=None, kwds=None):
+        if not kwds:
+            return []
+        if kwds.get("admin", False):
+            results = self._get_all_proposals()
+        else:
+            results = self._query_by_fed_id(kwds.get("fed_id", ""))
+
+        return [
+            {
+                "proposal": str(prop.id),
+                "title": prop.title,
+                "users": self._extract_users(prop),
+                "localcontacts": [],
+                "samples": self._extract_samples(prop),
+                "dataemails": [],
+                "notif_emails": [],
+                "errors": [],
+                "warnings": [],
+            }
+            for prop in results
+        ]
+
+    def _get_all_proposals(self):
+        try:
+            return self._yuos_client.all_proposals()
+        except BaseYuosException as error:
+            self.log.error("%s", error)
+            raise
+
+    def _query_by_fed_id(self, name):
+        try:
+            return self._yuos_client.proposals_for_user(name)
+        except BaseYuosException as error:
+            self.log.error("%s", error)
+            raise
+
+    def _extract_users(self, query_result):
+        users = []
+        for first, last, fed_id, org in query_result.users:
+            users.append(self._create_user(f"{first} {last}", "", org, fed_id))
+        if query_result.proposer:
+            first, last, fed_id, org = query_result.proposer
+            users.append(self._create_user(f"{first} {last}", "", org, fed_id))
+        return users
+
+    def _create_user(self, name, email, affiliation, fed_id):
+        return {
+            "name": name,
+            "email": email,
+            "affiliation": affiliation,
+            "facility_user_id": fed_id,
+        }
+
+    def _extract_samples(self, query_result):
+        samples = []
+        for sample in query_result.samples:
+            samples.append(
+                {
+                    "name": sample.name,
+                    "temperature": "0",
+                    "electric_field": "0",
+                    "magnetic_field": "0",
+                }
+            )
+        return samples
+
+    def new(self, proposal, title=None, localcontact=None, user=None, **kwds):
+        if self._mode == SIMULATION:
+            raise UsageError("Simulating switching experiments is not supported!")
+
+        proposal = str(proposal)
+
+        if not proposal.isnumeric():
+            raise UsageError("Proposal ID must be numeric")
+
+        # Handle back compatibility
+        users = user if user else kwds.get("users", [])
+        localcontacts = localcontact if localcontact else kwds.get("localcontacts", [])
+
+        self._check_users(users)
+        self._check_local_contacts(localcontacts)
+
+        # combine all arguments into the keywords dict
+        kwds["proposal"] = proposal
+        kwds["title"] = str(title) if title else ""
+        kwds["localcontacts"] = localcontacts
+        kwds["users"] = users
+
+        # give an opportunity to check proposal database etc.
+        propinfo = self._newPropertiesHook(proposal, kwds)
+        self._setROParam("propinfo", propinfo)
+        self._setROParam("proposal", proposal)
+
+        # Update cached values of the volatile parameters
+        self._pollParam("title")
+        self._pollParam("localcontact")
+        self._pollParam("users")
+        self._newSetupHook()
+        session.experimentCallback(self.proposal, None)
+
+    def update(self, title=None, users=None, localcontacts=None):
+        self._check_users(users)
+        self._check_local_contacts(localcontacts)
+        title = str(title) if title else ""
+        propinfo = dict(self.propinfo)
+        if title is not None:
+            propinfo["title"] = title
+        if users is not None:
+            propinfo["users"] = users
+        if localcontacts is not None:
+            propinfo["localcontacts"] = localcontacts
+        self._setROParam("propinfo", propinfo)
+        # Update cached values of the volatile parameters
+        self._pollParam("title")
+        self._pollParam("users")
+        self._pollParam("localcontact")
+
+    def finish(self):
+        self.new(0, "Service mode")
+        self.sample.set_samples({})
+
+    def _check_users(self, users):
+        if not users:
+            return
+        if not isinstance(users, list):
+            raise UsageError("users must be supplied as a list")
+
+        for user in users:
+            if not user.get("name"):
+                raise KeyError("user name must be supplied")
+            mailaddress(user.get("email", ""))
+
+    def _check_local_contacts(self, contacts):
+        if not contacts:
+            return
+        if not isinstance(contacts, list):
+            raise UsageError("local contacts must be supplied as a list")
+        for contact in contacts:
+            if not contact.get("name"):
+                raise KeyError("local contact name must be supplied")
+            mailaddress(contact.get("email", ""))
+
+    def doReadUsers(self):
+        return self.propinfo.get("users", [])
+
+    def doReadLocalcontact(self):
+        return self.propinfo.get("localcontacts", [])
+
+    @property
+    def sample(self):
+        return self._attached_sample
+
+    def get_samples(self):
+        return [dict(x) for x in self.sample.samples.values()]
+
+    def newSample(self, parameters):
+        # Do not try to create unwanted directories as
+        # in nicos/devices/experiment
+        pass
+
+    def get_current_run_number(self):
+        full_path = path.join(self.dataroot, self.counterfile)
+        if not path.isfile(full_path):
+            session.log.warning(f"No run number file found at: {full_path}")
+            return None
+        counterpath = path.normpath(full_path)
+        nextnum = readFileCounter(counterpath, "file")
+        return nextnum
+
+    def list_instrument_scripts_directory(self) -> (str, list[str]):
+        """Fetches a list of files in the instrument scripts directory.
+
+        Note: currently it should only be at most one file (commands.py).
+
+        Returns: (the directory path, a list of files)
+        """
+        instrument = session.instrument.name.lower()
+        directory = os.path.join(self.instrument_scripts_directory, instrument)
+        # Ignore any directories as we don't support directories for
+        # instrument scripts.
+        (files, _) = self._list_directory_files(directory, extension=".py")
+        return directory, (files, [])
+
+    def list_user_scripts_directory(self, directory="") -> (str, list[str]):
+        """Fetches a list of files in the specified user scripts directory.
+
+        Args:
+            directory: the sub-directory of the user scripts directory.
+
+        Returns: (the directory path, a list of files, a list of sub-directories)
+        """
+        directory = os.path.join(self.user_scripts_directory, directory)
+        return directory, self._list_directory_files(directory, extension=".py")
+
+    def _list_directory_files(self, directory, extension=""):
+        files = []
+        directories = []
+        for file in os.listdir(directory):
+            path = os.path.join(directory, file)
+            if os.path.isfile(path) and path.endswith(extension):
+                last_modified = int(os.path.getmtime(path))
+                files.append((file, last_modified))
+            elif os.path.isdir(path):
+                directories.append(file)
+        return files, directories
+
+    def read_server_file(self, filepath) -> str | None:
+        """Reads the specified file from the server and returns it."""
+        if ".." in filepath:
+            self.log.error("Relative filepaths are not allowed when reading files.")
+            return None
+        with open(filepath, encoding="utf-8") as f:
+            return f.read()
+
+    def write_server_file(self, filepath, contents):
+        """Write the contents to the specified file."""
+        if ".." in filepath:
+            self.log.error("Relative filepaths are not allowed when writing files.")
+            return
+        with open(filepath, "w", encoding="utf-8") as f:
+            # NOTE: contents are received as bytes, so must be decoded!
+            f.write(contents.decode())
+
+    def create_user_script_directory(self, path):
+        """Creates the specified user script directory."""
+        if ".." in path:
+            self.log.error("Relative paths are not allowed when creating directories.")
+            return
+        path = os.path.join(self.user_scripts_directory, path)
+
+        if not os.path.exists(path):
+            os.makedirs(path)
