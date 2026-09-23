@@ -89,7 +89,6 @@ main_window = docked(
             "History(TESTING)",
             panel("nicos_ess.gui.panels.history_pyqt.HistoryPanel"),
         ),
-        ("Hello World", panel("nicos_ess.gui.panels.hello_world.HelloWorld")),
         position="left",
         margins=(25, 10, 25, 35),
         textpadding=(30, 20),
