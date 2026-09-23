@@ -66,10 +66,6 @@ QTabBar::tab:left:disabled {
     background: transparent;
 }
 
-QTabBar::tab:left:!selected:hover {
-    background-color: #0094ca;
-}
-
 /* The selected tab */
 QTabBar::tab:left:selected {
     background-color: #2d73dc;
