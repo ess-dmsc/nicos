@@ -47,11 +47,6 @@ class HexapodPanel(Panel):
     def on_client_connected(self):
         self.get_hexapod_info()
 
-    def clear(self):
-        self.paraminfo.clear()
-        self.adevs.clear()
-        self.qtObj.clear()
-
     def on_client_cache(self, data):
         (time, key, op, value) = data
         if "/" not in key:
@@ -146,7 +141,7 @@ class HexapodPanel(Panel):
                 "newLabel": self.newRzLabel,
                 "newUnit": self.newRzUnit,
             },
-            "gmt": {
+            "tbl": {
                 "curVal": self.curTab,
                 "newVal": self.newTab,
                 "curLabel": self.curTabLabel,
@@ -158,10 +153,7 @@ class HexapodPanel(Panel):
 
     @pyqtSlot()
     def on_butStart_pressed(self):
-        target = []
-        for axis in self.qtObj:
-            target.append(self.qtObj[axis]["newVal"].value())
-        self.exec_command(f"move({self.devname}, ({target}))")
+        return
 
     @pyqtSlot()
     def on_butStop_pressed(self):
@@ -173,13 +165,6 @@ class HexapodPanel(Panel):
         # values = self.client.getDeviceParam(self.devname, "value")
         # self.update_position_info(values, "newVal")
         return
-
-    @pyqtSlot()
-    def on_butTest_pressed(self):
-        class_typ = "nicos_ess.devices.virtual.hexapod.TableHexapod"
-        self.test = self.client.getDeviceList(needs_class=class_typ)
-        self.showError(f"{self.test}")
-        # data = self.mainwindow.expertmode
 
     # absolute motion using move in GUI
     @pyqtSlot()
@@ -207,7 +192,7 @@ class HexapodPanel(Panel):
         return
 
     @pyqtSlot()
-    def on_abs_gmt_pressed(self):
+    def on_abs_tbl_pressed(self):
         return
 
     # relative motion using rmove in GUI
@@ -261,9 +246,9 @@ class HexapodPanel(Panel):
         return
 
     @pyqtSlot()
-    def on_relNeg_gmt_pressed(self):
+    def on_relNeg_tbl_pressed(self):
         return
 
     @pyqtSlot()
-    def on_relPos_gmt_pressed(self):
+    def on_relPos_tbl_pressed(self):
         return
