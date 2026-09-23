@@ -162,8 +162,8 @@ class HexapodPanel(Panel):
     @pyqtSlot()
     def on_refresh_pressed(self):
         # Sets the spin boxes to the current axis positions for easier absolute motion control
-        # values = self.client.getDeviceParam(self.devname, "value")
-        # self.update_position_info(values, "newVal")
+        values = self.client.getDeviceParam(self.devname, "value")
+        self.update_position_info(values, "newVal")
         return
 
     # absolute motion using move in GUI
