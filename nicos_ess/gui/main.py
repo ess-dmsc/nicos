@@ -52,7 +52,7 @@ QTabWidget QMainWindow {background: #fffcfcfd;}
 QTabBar::tab:left:!selected:!disabled {
     background: lightgray;
     margin-right: 1px;
-}
+}\n
 """
 
 DARK_MODE = """
@@ -60,7 +60,7 @@ QTabWidget QMainWindow {background: #333339;}
 QTabBar::tab:left:!selected:!disabled {
     background: #417c9b;
     margin-right: 1px;
-}
+}\n
 """
 
 
