@@ -38,7 +38,7 @@ devices = dict(
         description="The currently used sample",
     ),
     Exp=device(
-        "nicos_ess.devices.experiment.EssExperiment",
+        "nicos_ess.devices.experiment2.EssExperiment",
         description="experiment object",
         dataroot="/opt/nicos-data",
         sample="Sample",
