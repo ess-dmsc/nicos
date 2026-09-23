@@ -20,7 +20,6 @@ from nicos.guisupport.qt import (
     QTextEdit,
     pyqtSlot,
 )
-from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, chunks, findResource
 
 

@@ -19,7 +19,6 @@ from nicos.clients.gui.dialogs.instr_select import InstrSelectDialog
 from nicos.clients.gui.utils import DebugHandler
 from nicos_ess.gui.utils import is_dark_mode_enabled
 
-
 try:
     from nicos.guisupport.qt import QApplication
 except ImportError:
@@ -30,11 +29,7 @@ except ImportError:
 import nicos_ess
 from nicos.protocols.daemon.classic import DEFAULT_PORT
 from nicos.utils import importString, parseConnectionString
-from nicos.utils.loggers import (
-    ColoredConsoleHandler,
-    NicosLogger,
-    initLoggers,
-)
+from nicos.utils.loggers import ColoredConsoleHandler, NicosLogger, initLoggers
 
 # Work around a crash on Py3/Bionic when readline is imported later in
 # a callback from unpickling server data.
@@ -182,7 +177,7 @@ def main(_argv):
 
     if os.environ.get("NICOS_QT") == "6":
         gui_conf.stylefile = Path(
-            Path(nicos_ess.__file__).parent, f"gui/guiconfig_6.qss"
+            Path(nicos_ess.__file__).parent, "gui/guiconfig_6.qss"
         )
         base_style = LIGHT_MODE
         if is_dark_mode_enabled():
