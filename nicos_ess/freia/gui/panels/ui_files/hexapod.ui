@@ -1404,21 +1404,11 @@
       <bool>true</bool>
      </property>
     </widget>
-   </widget>
-   <widget class="QWidget" name="coordTab">
-    <attribute name="title">
-     <string>Coord System</string>
-    </attribute>
-   </widget>
-   <widget class="QWidget" name="expTab">
-    <attribute name="title">
-     <string>Expert Control</string>
-    </attribute>
     <widget class="QPushButton" name="butTest">
      <property name="geometry">
       <rect>
-       <x>220</x>
-       <y>90</y>
+       <x>320</x>
+       <y>550</y>
        <width>101</width>
        <height>25</height>
       </rect>

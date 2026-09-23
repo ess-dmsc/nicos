@@ -11,22 +11,18 @@ from nicos_ess.gui.panels.utils import attach_status_resources
 
 class HexapodPanel(Panel):
     panelName = "Hexapod Controller"
-    axis_names = ("tx", "ty", "tz", "rx", "ry", "rz", "gmt")
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         attach_status_resources(self)
-        loadUi(self, findResource("nicos_ess/estia/gui/panels/ui_files/hexapod.ui"))
+        loadUi(self, findResource("nicos_ess/freia/gui/panels/ui_files/hexapod.ui"))
         self.useicons = bool(options.get("icons", True))
 
         # Hexapod info
         self.paraminfo = {}
         self.adevs = {}
         self.qtObj = {}
-        self.devname = options.get("hexapod")
-        self.status = options.get("status")
-        self.coordSys = options.get("coord")
-        self.errdesc = options.get("errdesc")
+        self.devname = options.get("setups")
         # Hexapod Controller Info
 
         # Error Handling
@@ -37,19 +33,13 @@ class HexapodPanel(Panel):
 
         client.setup.connect(self.on_client_setup)
         client.connected.connect(self.on_client_connected)
-        client.disconnected.connect(self.on_client_disconnected)
         client.cache.connect(self.on_client_cache)
         client.message.connect(self.on_client_message)
-
-        self.show_controls(False)
+        self.panelLabel.setText(f"{self.devname.capitalize()}")
 
     def get_hexapod_info(self):
-        if self._is_hexapod_live():
-            self.get_hexapod_data()
-            self.setup_qt_vars()
-            self.show_controls(True)
-        else:
-            self.clear()
+        self.get_hexapod_data()
+        self.setup_qt_vars()
 
     def on_client_setup(self):
         self.get_hexapod_info()
@@ -57,8 +47,10 @@ class HexapodPanel(Panel):
     def on_client_connected(self):
         self.get_hexapod_info()
 
-    def on_client_disconnected(self):
-        self.clear()
+    def clear(self):
+        self.paraminfo.clear()
+        self.adevs.clear()
+        self.qtObj.clear()
 
     def on_client_cache(self, data):
         (time, key, op, value) = data
@@ -68,14 +60,6 @@ class HexapodPanel(Panel):
 
         if devname == self.devname and pname == "value":
             self.update_position_info(cache_load(value))
-            # can't seem to find it in cache
-            # but is popagated into 'value' param just fine...
-            self.update_status_window(
-                self.client.getDeviceParam(self.devname, "status"),
-                self.client.getDeviceParam(self.status, "value"),
-                self.client.getDeviceParam(self.errdesc, "value"),
-            )
-            self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
 
     def on_client_message(self, message):
         if message[5] != self._exec_reqid or message[2] < WARNING:
@@ -98,12 +82,6 @@ class HexapodPanel(Panel):
     def exec_command(self, command):
         self._exec_reqid = self.client.run(command)
 
-    def clear(self):
-        self.paraminfo.clear()
-        self.adevs.clear()
-        self.qtObj.clear()
-        self.show_controls(False)
-
     def update_position_info(self, values, valtype="curVal"):
         curval = 0
         for axis in self.qtObj:
@@ -115,75 +93,8 @@ class HexapodPanel(Panel):
                 raise NotImplementedError(f"valtype {valtype} is not a valid option")
             curval = curval + 1
 
-    def show_controls(self, visibility):
-        if visibility:
-            self.panelLabel.setText(f"{self.devname.capitalize()}")
-            self.curPos.show()
-            self.newPos.show()
-            self.newPos_2.show()
-            self.statusBox.show()
-            self.coordBox.show()
-            self.userModes.setTabVisible(1, 0)
-            self.userModes.setTabVisible(2, 0)
-            self.statusimage.show()
-        # better way to hide all this using another group box....but will do it later
-        else:
-            self.panelLabel.clear()
-            self.curPos.hide()
-            self.newPos.hide()
-            self.newPos_2.hide()
-            self.statusBox.hide()
-            self.coordBox.hide()
-            self.statusimage.hide()
-            self.userModes.setTabVisible(1, 0)
-            self.userModes.setTabVisible(2, 0)
-
-    def _is_hexapod_live(self):
-        # Annoying way to check if the setup is live or not
-        class_typ = "nicos_ess.estia.devices.newport.NewportHexapod"
-        name = self.client.getDeviceList(needs_class=class_typ)
-        # name returns as a list if something exists
-        if name:
-            return name[0] == self.devname
-        return False
-
     def get_hexapod_data(self):
-        if not self._is_hexapod_live():
-            return
-
-        # update adev dict
-        setup = self.client.eval("session.getSetupInfo()", {})
-        hexapod_info = {}
-
-        for key in setup:
-            if self.devname in setup[key]["devices"]:
-                hexapod_info = setup[key]
-
-        adevs = hexapod_info["devices"][self.devname][1]
-        hexapod_info = hexapod_info["devices"]
-        adevs.pop("description")
-        hexapod_info.pop(self.devname)
-
-        for keys in adevs:
-            if keys in self.axis_names:
-                mini_dict = {}
-                mini_dict.update({"devname": adevs[keys]})
-                self.adevs.update({f"{keys}": mini_dict})
-
-    def update_status_window(self, status, code, msg):
-        # Use error type to change icon
-        code = round(code)
-        if msg:
-            self.hexStatus.setText(f"Code {code}: {msg}")
-        else:
-            self.hexStatus.setText(f"Code {code}:")
-
-        self.statusimage.setPixmap(self.statusIcon[status[0]].pixmap(18, 18))
-
-    def update_coord_window(self, value):
-        # sometimes the mapping is odd for awhile, so checking for int or string and
-        # setting text accordingly
-        self.coordSyst.setText(f"{value}")
+        return
 
     def setup_qt_vars(self):
         self.qtObj = {
