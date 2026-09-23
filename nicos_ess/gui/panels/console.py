@@ -200,7 +200,7 @@ class ConsolePanel(Panel):
             with open(fn, "w", encoding=LOCALE_ENCODING) as f:
                 f.write(self.outView.getOutputString())
         except Exception as err:
-            QMessageBox.warning(self, "Error", "Writing file failed: %s" % err)
+            QMessageBox.warning(self, "Error", f"Writing file failed: {err}")
 
     @pyqtSlot()
     def on_actionCopy_triggered(self):
