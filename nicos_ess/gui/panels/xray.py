@@ -1,7 +1,5 @@
 """NICOS X-ray panel."""
 
-from PyQt5.QtCore import Qt
-
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import QSpinBox, QTimer
@@ -45,8 +43,7 @@ class XrayPanel(Panel):
 
         # Disable scrolling values for voltage and current.
         # Do the same for DoubleSpinBoxes or specific DoubleSpinBoxes if you wish.
-        opts = Qt.FindChildrenRecursively
-        spinboxes = self.findChildren(QSpinBox, options=opts)
+        spinboxes = self.findChildren(QSpinBox)
         for box in spinboxes:
             box.wheelEvent = lambda *event: None
 
