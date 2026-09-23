@@ -1,5 +1,6 @@
 """ESS Experiment device."""
 
+import os
 import time
 from os import path
 
@@ -142,6 +143,14 @@ class EssExperiment(Device):
             settable=True,
             internal=True,
         ),
+        "scripts_directory": Param(
+            "Path to the top directory where instrument and user scripts live",
+            type=str,
+            category="experiment",
+            default="/opt/instrument-nicos-scripts",
+            mandatory=False,
+            userparam=False,
+        ),
     }
 
     attached_devices = {
@@ -280,10 +289,81 @@ class EssExperiment(Device):
         self.new(0, "Service mode")
         self.sample.set_samples({})
 
+    @property
+    def instrument_scripts_directory(self) -> str:
+        instrument = session.instrument.name.lower()
+        return os.path.join(self.scripts_directory, instrument, "instrument")
+
+    @property
+    def user_scripts_directory(self) -> str:
+        instrument = session.instrument.name.lower()
+        return os.path.join(self.scripts_directory, instrument, "user")
+
+    def list_instrument_scripts_directory(self) -> (str, list[str]):
+        """Fetches a list of files in the instrument scripts directory.
+
+        Note: currently it should only be at most one file (commands.py).
+
+        Returns: (the directory path, a list of files)
+        """
+        directory = self.instrument_scripts_directory
+        # Ignore any directories as we don't support directories for
+        # instrument scripts.
+        (files, _) = self._list_directory_files(directory, extension=".py")
+        return directory, (files, [])
+
+    def list_user_scripts_directory(self, directory="") -> (str, list[str]):
+        """Fetches a list of files in the specified user scripts directory.
+
+        Args:
+            directory: the sub-directory of the user scripts directory.
+
+        Returns: (the directory path, a list of files, a list of sub-directories)
+        """
+        directory = os.path.join(self.user_scripts_directory, directory)
+        return directory, self._list_directory_files(directory, extension=".py")
+
+    def _list_directory_files(self, directory, extension=""):
+        files = []
+        directories = []
+        for file in os.listdir(directory):
+            path = os.path.join(directory, file)
+            if os.path.isfile(path) and path.endswith(extension):
+                last_modified = int(os.path.getmtime(path))
+                files.append((file, last_modified))
+            elif os.path.isdir(path):
+                directories.append(file)
+        return files, directories
+
+    def read_server_file(self, filepath) -> str | None:
+        """Reads the specified file from the server and returns it."""
+        if ".." in filepath:
+            self.log.error("Relative filepaths are not allowed when reading files.")
+            return None
+        with open(filepath, encoding="utf-8") as f:
+            return f.read()
+
+    def write_server_file(self, filepath, contents):
+        """Write the contents to the specified file."""
+        if ".." in filepath:
+            self.log.error("Relative filepaths are not allowed when writing files.")
+            return
+        with open(filepath, "w", encoding="utf-8") as f:
+            # NOTE: contents are received as bytes, so must be decoded!
+            f.write(contents.decode())
+
+    def create_user_script_directory(self, path):
+        """Creates the specified user script directory."""
+        if ".." in path:
+            self.log.error("Relative paths are not allowed when creating directories.")
+            return
+        directory = os.path.join(self.user_scripts_directory, path)
+
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
     def _canQueryProposals(self):
-        if self._yuos_client:
-            return True
-        return False
+        return self._yuos_client is not None
 
     def _update_proposal_cache(self):
         while True:
@@ -378,7 +458,7 @@ class EssExperiment(Device):
                 dlist.append(det)
         self.detlist = dlist
         # try to create them right now
-        self.detectors  # pylint: disable=pointless-statement
+        self.detectors  # noqa: B018
 
     @property
     def detectors(self):
@@ -467,7 +547,7 @@ class EssExperiment(Device):
                 dlist.append(dev)
         self.envlist = dlist
         # try to create them right now
-        self.sampleenv  # pylint: disable=pointless-statement
+        self.sampleenv  # noqa: B018
         session.elogEvent("environment", dlist)
 
     def doUpdateEnvlist(self, devices):

@@ -38,7 +38,9 @@ def structure_copy(structure: Dict[str, Any]) -> Dict[str, Any]:
     return copy.deepcopy(structure)
 
 
-def _children_of_named(struct: Dict[str, Any], path_map, named: str) -> List[Dict[str, Any]]:
+def _children_of_named(
+    struct: Dict[str, Any], path_map, named: str
+) -> List[Dict[str, Any]]:
     """Grab the 'children' list of a named group (by reference)."""
     grp = get_by_named_path(struct, path_map, named)
     assert is_group(grp)
@@ -53,7 +55,9 @@ def test_parse_dtype_variants() -> None:
     assert _parse_dtype([5]) == "int"
     assert _parse_dtype([3.14]) == "double"
     assert _parse_dtype([]) == "string"
+
     class Weird: ...
+
     assert _parse_dtype(Weird()) == "string"
 
 
@@ -133,6 +137,7 @@ def test_index_path_to_expr_roundtrip_tokens() -> None:
 
 def test_mapping_includes_at_least_one_dataset(structure: Dict[str, Any]) -> None:
     """Find any dataset in the raw tree and assert mapping exposes it."""
+
     def walk(node: Any, names: List[str]) -> Optional[str]:
         if isinstance(node, dict):
             if node.get("type") == "group" and isinstance(node.get("name"), str):
@@ -219,12 +224,16 @@ def test_remove_keeps_same_children_list_object(structure_copy: Dict[str, Any]) 
     assert all(c.get("name") != "id_check_remove" for c in children)
 
 
-def test_remove_dataset_under_mutates_parent_children_in_place(structure_copy: Dict[str, Any]) -> None:
+def test_remove_dataset_under_mutates_parent_children_in_place(
+    structure_copy: Dict[str, Any],
+) -> None:
     path_map = build_named_index_map(structure_copy, include_datasets=True)
 
     ds_paths = [
-        p for p in path_map
-        if p.count("/") >= 2 and is_dataset(get_by_named_path(structure_copy, path_map, p))
+        p
+        for p in path_map
+        if p.count("/") >= 2
+        and is_dataset(get_by_named_path(structure_copy, path_map, p))
     ]
     if not ds_paths:
         pytest.skip("No dataset found in test structure to remove.")
@@ -241,7 +250,8 @@ def test_remove_dataset_under_mutates_parent_children_in_place(structure_copy: D
 
     pre_len = len(children)
     pre_count = sum(
-        1 for c in children
+        1
+        for c in children
         if isinstance(c, dict)
         and c.get("module") == "dataset"
         and c.get("config", {}).get("name") == ds_name
@@ -255,33 +265,47 @@ def test_remove_dataset_under_mutates_parent_children_in_place(structure_copy: D
     assert removed == pre_count
     assert len(children) == pre_len - pre_count
     assert all(
-        not (c.get("module") == "dataset" and c.get("config", {}).get("name") == ds_name)
+        not (
+            c.get("module") == "dataset" and c.get("config", {}).get("name") == ds_name
+        )
         for c in children
     )
 
 
-def test_append_with_explicit_index_inserts_in_order(structure_copy: Dict[str, Any]) -> None:
+def test_append_with_explicit_index_inserts_in_order(
+    structure_copy: Dict[str, Any],
+) -> None:
     path_map = build_named_index_map(structure_copy, include_datasets=True)
 
     container = make_group("order_container", nx_class="NXcollection")
     _, path_map = append_group_under(structure_copy, path_map, "/entry", container)
 
-    cont_children = _children_of_named(structure_copy, path_map, "/entry/order_container")
+    cont_children = _children_of_named(
+        structure_copy, path_map, "/entry/order_container"
+    )
     assert len(cont_children) == 0
 
     gA = make_group("A", nx_class="NXlog")
     gB = make_group("B", nx_class="NXlog")
     gC = make_group("C", nx_class="NXlog")
 
-    _, path_map = append_group_under(structure_copy, path_map, "/entry/order_container", gA)               # [A]
-    _, path_map = append_group_under(structure_copy, path_map, "/entry/order_container", gB, insert_at=0) # [B, A]
-    _, path_map = append_group_under(structure_copy, path_map, "/entry/order_container", gC, insert_at=1) # [B, C, A]
+    _, path_map = append_group_under(
+        structure_copy, path_map, "/entry/order_container", gA
+    )  # [A]
+    _, path_map = append_group_under(
+        structure_copy, path_map, "/entry/order_container", gB, insert_at=0
+    )  # [B, A]
+    _, path_map = append_group_under(
+        structure_copy, path_map, "/entry/order_container", gC, insert_at=1
+    )  # [B, C, A]
 
     names = [n.get("name") for n in cont_children]
     assert names == ["B", "C", "A"]
 
 
-def test_refresh_map_false_updates_preheld_reference(structure_copy: Dict[str, Any]) -> None:
+def test_refresh_map_false_updates_preheld_reference(
+    structure_copy: Dict[str, Any],
+) -> None:
     path_map = build_named_index_map(structure_copy, include_datasets=True)
 
     entry = get_by_named_path(structure_copy, path_map, "/entry")

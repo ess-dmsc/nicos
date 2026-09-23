@@ -26,7 +26,6 @@ Tests for DeviceInfo
 """
 
 from nicos.core.utils import DeviceValue, DeviceValueDict
-
 from test.utils import raises
 
 

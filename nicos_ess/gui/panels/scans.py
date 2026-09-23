@@ -48,7 +48,6 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.utils import scaledFont
 from nicos.utils import findResource, safeName
-
 from nicos_ess.gui.utils import get_icon
 
 TIMEFMT = "%Y-%m-%d %H:%M:%S"
@@ -603,7 +602,7 @@ class ScansPanel(PlotPanel):
     def on_actionDeletePlot_triggered(self):
         if self.currentPlot.dataset.scaninfo != "combined set":
             if not self.askQuestion(
-                "This is not a combined set: still " "delete it from the list?"
+                "This is not a combined set: still delete it from the list?"
             ):
                 return
         current_set = self.setUidStack.pop()

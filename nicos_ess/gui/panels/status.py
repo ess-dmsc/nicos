@@ -31,7 +31,6 @@ from nicos.protocols.daemon import (
     STATUS_IDLEEXC,
 )
 from nicos.utils import findResource, formatEndtime
-
 from nicos_ess.gui.utils import get_icon
 
 

@@ -22,18 +22,18 @@ from nicos.protocols.cache import OP_TELL, cache_dump
 from nicos.protocols.daemon import (
     DAEMON_COMMANDS,
     DAEMON_EVENTS,
-    ClientTransport as BaseClientTransport,
     STATUS_IDLE,
+)
+from nicos.protocols.daemon import (
+    ClientTransport as BaseClientTransport,
 )
 from nicos.protocols.daemon.classic import PROTO_VERSION
 from nicos_ess.gui.panels.exp_panel import ExpPanel
-
 from test.nicos_ess.gui.doubles import (
-    DeviceSpec,
     EXP_PANEL_PROPOSAL_EVAL,
+    DeviceSpec,
     FakeClientTransport,
 )
-
 
 pytestmark = pytest.mark.usefixtures("allow_unpatched_message_boxes")
 
@@ -137,8 +137,8 @@ def _event_payloads(client, name):
 
 
 def test_protocol_names_used_by_the_gui_fake_are_real_daemon_contract_names():
-    assert GUI_COMMAND_CONTRACT <= set(DAEMON_COMMANDS)
-    assert GUI_EVENT_CONTRACT <= set(DAEMON_EVENTS)
+    assert set(DAEMON_COMMANDS) >= GUI_COMMAND_CONTRACT
+    assert set(DAEMON_EVENTS) >= GUI_EVENT_CONTRACT
 
 
 def test_fake_transport_implements_the_client_transport_method_contract():
@@ -218,7 +218,7 @@ def test_fake_daemon_returns_minimal_expected_command_shapes(monkeypatch, fake_d
     client = _connect_client(monkeypatch, fake_daemon)
     try:
         status = client.ask("getstatus")
-        assert STATUS_KEYS <= set(status)
+        assert set(status) >= STATUS_KEYS
         assert status["status"] == IDLE_STATUS
         assert status["mode"] == MASTER
         assert status["setups"] == (["instrument"], ["instrument"])

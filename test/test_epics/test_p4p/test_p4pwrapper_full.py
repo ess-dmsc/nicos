@@ -3,6 +3,8 @@ from __future__ import annotations
 import threading
 import time
 import uuid
+from collections.abc import Generator
+from contextlib import suppress
 from dataclasses import dataclass
 from unittest.mock import patch
 
@@ -12,7 +14,7 @@ from p4p.client.raw import Context as RawContext
 from p4p.client.thread import Context
 from p4p.server.thread import SharedPV
 
-from nicos.core import status
+from nicos.core import CommunicationError, status
 from nicos.devices.epics.pva.p4p import P4pWrapper
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
 from test.test_epics.test_p4p.utils.p4p_doubles import EventSink
@@ -61,7 +63,7 @@ class PvaRig:
 
 
 @pytest.fixture(scope="function")
-def pva_rig() -> Generator[PvaRig]:
+def pva_rig() -> Generator[PvaRig, None, None]:
     prefix = f"TEST:P4PWRAP:{uuid.uuid4().hex[:8]}"
 
     pvs: dict[str, SharedPV] = {
@@ -99,10 +101,8 @@ def pva_rig() -> Generator[PvaRig]:
         try:
             srv.stop()
         finally:
-            try:
+            with suppress(Exception):
                 ctx.close()
-            except Exception:
-                pass
 
 
 @pytest.fixture()
@@ -130,6 +130,33 @@ def test_get_smoke(pva_rig: PvaRig, pva_wrapper: P4pWrapper):
     # Enum: raw index, and as_string() maps via choices
     assert pva_wrapper.get_pv_value(pva_rig.name("Enum")) == 1
     assert pva_wrapper.get_pv_value(pva_rig.name("Enum"), as_string=True) == "Beta"
+
+
+def test_batch_readings_include_values_enums_and_alarms(
+    pva_rig: PvaRig, pva_wrapper: P4pWrapper
+):
+    pva_rig.pvs["Float"].post(2.5, severity=2, message="voltage alarm")
+    float_pv = pva_rig.name("Float")
+    enum_pv = pva_rig.name("Enum")
+
+    assert pva_wrapper.get_pv_readings({float_pv: False, enum_pv: True}) == {
+        float_pv: (2.5, (status.ERROR, "voltage alarm")),
+        enum_pv: ("Beta", (status.OK, "")),
+    }
+    assert pva_wrapper.get_pv_readings({enum_pv: False}) == {
+        enum_pv: (1, (status.OK, "")),
+    }
+
+
+def test_batch_readings_fail_when_one_pv_is_unavailable(pva_rig: PvaRig):
+    pva_wrapper = P4pWrapper(timeout=0.1, context=pva_rig.ctx)
+    with pytest.raises(CommunicationError, match="Missing"):
+        pva_wrapper.get_pv_readings(
+            {
+                pva_rig.name("Float"): False,
+                pva_rig.name("Missing"): False,
+            }
+        )
 
 
 def test_put_roundtrip_smoke_using_wrapper_put(

@@ -183,8 +183,9 @@ class StubKafkaMessage:
 class FakeKafkaError:
     """Minimal ``confluent_kafka.KafkaError`` stand-in for driving error paths."""
 
-    def __init__(self, code, name="FAKE", message="fake error",
-                 fatal=False, retriable=True):
+    def __init__(
+        self, code, name="FAKE", message="fake error", fatal=False, retriable=True
+    ):
         self._code = code
         self._name = name
         self._message = message

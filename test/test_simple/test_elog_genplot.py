@@ -30,7 +30,6 @@ import pytest
 from nicos.commands.scan import scan
 from nicos.core.data import ScanData
 from nicos.services.elog import genplot
-
 from test.utils import hasGnuplot, runtime_root
 
 session_setup = "scanning"

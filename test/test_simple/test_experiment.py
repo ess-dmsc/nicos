@@ -34,7 +34,6 @@ from nicos.commands.basic import run
 from nicos.commands.scan import scan
 from nicos.core.acquire import Average, DevStatistics
 from nicos.utils import enableDirectory, ensureDirectory, readFileCounter
-
 from test.utils import runtime_root
 
 year = time.strftime("%Y")
@@ -121,7 +120,7 @@ def test_experiment(session, cleanup):
     nr = readFileCounter(datapath("..", "counters"), "scan")
     fn = datapath("p999", "data", "p999_%08d.dat" % nr)
     assert path.isfile(fn)
-    with open(fn, "r", encoding="utf-8") as fp:
+    with open(fn, encoding="utf-8") as fp:
         assert "Meßzeit" in fp.read()
 
     # now, finish the experiment

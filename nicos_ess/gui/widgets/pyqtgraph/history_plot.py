@@ -2,31 +2,29 @@ import time
 from datetime import datetime
 
 import numpy as np
-
 import pyqtgraph as pg
-from pyqtgraph import mkPen, mkBrush
+from pyqtgraph import mkBrush, mkPen
 from qtgr import QWidget
 
 from nicos.guisupport.qt import (
-    QVBoxLayout,
-    pyqtSignal,
-    QHBoxLayout,
     QColor,
+    QFrame,
+    QHBoxLayout,
     QSplitter,
     Qt,
+    QVBoxLayout,
+    pyqtSignal,
     pyqtSlot,
-    QFrame,
 )
 from nicos_ess.gui.widgets.pyqtgraph.derived_history_widgets import (
     HistogramPlot,
     XYPlot,
 )
-
 from nicos_ess.gui.widgets.pyqtgraph.utils.utils import (
-    TimeAxisItem,
     ClickableLabel,
-    clear_layout,
     PlotTypes,
+    TimeAxisItem,
+    clear_layout,
 )
 
 pg.setConfigOption("background", "w")
@@ -39,7 +37,7 @@ class HistoryWidget(QWidget):
     derivedWidgetRemoved = pyqtSignal(str)
 
     def __init__(self, parent=None):
-        super(HistoryWidget, self).__init__(parent)
+        super().__init__(parent)
 
         self.left_view = pg.ViewBox()
         self.plotwidget_time = pg.PlotWidget(
@@ -427,9 +425,7 @@ class HistoryWidget(QWidget):
         scale = (right_max - right_min) / (left_max - left_min)
 
         right_ticks = [(right_min + (tick - left_min) * scale) for tick in left_ticks]
-        right_labels = [
-            "{:.8f}".format(tick).rstrip("0").rstrip(".") for tick in right_ticks
-        ]
+        right_labels = [f"{tick:.8f}".rstrip("0").rstrip(".") for tick in right_ticks]
         return list(zip(right_ticks, right_labels))
 
     def align_right_axis(self):

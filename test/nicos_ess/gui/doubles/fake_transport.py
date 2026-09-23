@@ -12,12 +12,13 @@ from typing import Any
 from nicos.core import MASTER
 from nicos.protocols.cache import OP_TELL, cache_dump
 from nicos.protocols.daemon import (
-    ClientTransport as BaseClientTransport,
     DAEMON_EVENTS,
     STATUS_IDLE,
 )
+from nicos.protocols.daemon import (
+    ClientTransport as BaseClientTransport,
+)
 from nicos.protocols.daemon.classic import PROTO_VERSION
-
 
 # Wakes ``recv_event()`` during disconnect without looking like a daemon event.
 _EVENT_SENTINEL = object()

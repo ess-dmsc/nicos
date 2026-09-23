@@ -33,7 +33,7 @@ class HistogramDataViewer(QWidget):
     """
 
     def __init__(self, parent=None):
-        super(HistogramDataViewer, self).__init__(parent)
+        super().__init__(parent)
 
         self.init_ui()
 
@@ -137,7 +137,7 @@ class TrendViewer(QWidget):
     """
 
     def __init__(self, parent=None):
-        super(TrendViewer, self).__init__(parent)
+        super().__init__(parent)
 
         self.init_ui()
         self.setup_connections()
@@ -335,7 +335,7 @@ class TrendViewer(QWidget):
             y_right = right_y_min + y_ratio * (right_y_max - right_y_min)
             right_tick_positions.append(y_right)
 
-        right_tick_labels = ["{:.2f}".format(y) for y in right_tick_positions]
+        right_tick_labels = [f"{y:.2f}" for y in right_tick_positions]
 
         right_axis = self.plot_widget.getAxis("right")
         right_ticks = [

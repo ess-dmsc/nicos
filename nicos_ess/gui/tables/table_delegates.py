@@ -2,16 +2,16 @@
 
 from nicos.guisupport.qt import (
     QAbstractSpinBox,
+    QApplication,
     QComboBox,
     QDoubleSpinBox,
     QItemDelegate,
-    Qt,
-    QStyledItemDelegate,
-    QStyleOptionButton,
-    QStyle,
-    QApplication,
     QPoint,
     QRect,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionButton,
+    Qt,
 )
 
 
@@ -25,11 +25,15 @@ class LimitsDelegate(QItemDelegate):
         return self._create_widget(parent)
 
     def _create_widget(self, parent):
+        # Use Spinbox as it allows us to set limits and ensures the value is
+        # numeric. However, disable incrementing/decrementing the value as we
+        # don't need that.
         spinbox = QDoubleSpinBox(parent)
         spinbox.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
         spinbox.setMinimum(self.limits[0])
         spinbox.setMaximum(self.limits[1])
         spinbox.setDecimals(self.precision)
+        spinbox.setSingleStep(0)
         return spinbox
 
 
@@ -51,7 +55,7 @@ class ComboBoxDelegate(QItemDelegate):
 
 class CheckboxDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
-        super(CheckboxDelegate, self).__init__(parent)
+        super().__init__(parent)
         self.model = None
 
     def paint(self, painter, option, index):
@@ -84,19 +88,19 @@ class CheckboxDelegate(QStyledItemDelegate):
         if (
             event.type() == event.Type.MouseButtonPress
             or event.type() == event.Type.MouseButtonRelease
-        ):
-            if event.button() != Qt.MouseButton.LeftButton:
-                return False
+        ) and event.button() != Qt.MouseButton.LeftButton:
+            return False
 
         if event.type() == event.Type.MouseButtonDblClick:
             return False
 
-        if event.type() == event.Type.MouseButtonRelease:
-            if self.getCheckBoxRect(option).contains(event.pos()):
-                checked = self.model.data(index, Qt.ItemDataRole.EditRole)
-                checked = checked == "False" or checked is False or checked == ""
-                self.model.setData(index, checked, Qt.ItemDataRole.EditRole)
-                return True
+        if event.type() == event.Type.MouseButtonRelease and self.getCheckBoxRect(
+            option
+        ).contains(event.pos()):
+            checked = self.model.data(index, Qt.ItemDataRole.EditRole)
+            checked = checked == "False" or checked is False or checked == ""
+            self.model.setData(index, checked, Qt.ItemDataRole.EditRole)
+            return True
         return False
 
     def getCheckBoxRect(self, option):

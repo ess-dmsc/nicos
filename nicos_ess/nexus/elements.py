@@ -1,6 +1,5 @@
 from nicos import session
 from nicos.core import ConfigurationError
-
 from nicos_ess.nexus.placeholder import DeviceValuePlaceholder, PlaceholderBase
 
 
@@ -34,7 +33,7 @@ class NXAttribute(NexusElementBase):
             info = self.value.fetch_info(metainfo)
             if not info:
                 session.log.warning(
-                    "Unable to fetch info for placeholder" " %s", self.value
+                    "Unable to fetch info for placeholder %s", self.value
                 )
                 return {}
             self.value = info[0]
@@ -67,7 +66,7 @@ class NXDataset(NexusElementBase):
             info = self.value.fetch_info(metainfo)
             if not info:
                 session.log.warning(
-                    "Unable to fetch info for placeholder" " %s", self.value
+                    "Unable to fetch info for placeholder %s", self.value
                 )
                 return {}
 
@@ -267,7 +266,7 @@ class CacheStream(DeviceValuePlaceholder, KafkaStream):
             nx = session.getDevice("NexusDataSink")
         except ConfigurationError:
             session.log.warning(
-                "NexusDataSink not found!! Can't track device " "%s..", self.device
+                "NexusDataSink not found!! Can't track device %s..", self.device
             )
             return
         self.set("broker", nx.brokers[0])

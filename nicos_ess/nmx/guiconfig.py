@@ -63,7 +63,7 @@ main_window = docked(
             ),
         ),
         position="left",
-        margins=(0, 0, 0, 0),
+        margins=(25, 10, 25, 35),
         textpadding=(30, 20),
     ),  # tabbed
 )  # docked

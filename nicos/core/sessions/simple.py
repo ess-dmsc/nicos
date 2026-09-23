@@ -127,6 +127,16 @@ class NoninteractiveSession(Session):
         maindev.start(*start_args)
 
         if daemon == "systemd":
+            if hasattr(maindev, "_ready_evt"):
+                timeout = 120
+                if not maindev._ready_evt.wait(timeout=timeout):
+                    session.log.error(
+                        f"Service {appname} did not start up within {timeout}s, exiting."
+                    )
+                    return 1
+            session.log.info(
+                f"Startup finished, signaling SystemD that service {appname} is ready"
+            )
             cls._notify_systemd(appname, "running", ready=True)
 
         # For services that don't run in a separate thread

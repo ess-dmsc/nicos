@@ -1,6 +1,5 @@
 from nicos import session
 from nicos.core.errors import NicosError
-
 from nicos_ess.nexus.elements import (
     KafkaStream,
     NXAttribute,
@@ -59,9 +58,9 @@ class NexusTemplateConverter:
                     child_nxname, child_value = self._populate(key, val)
                     if isinstance(child_value, NXGroup):
                         group.children.update({child_nxname: child_value})
-                elif isinstance(val, (NXGroup, NXLink, KafkaStream)):
-                    group.children[key] = val
-                elif isinstance(val, NXDataset):
+                elif isinstance(val, (NXGroup, NXLink, KafkaStream)) or isinstance(
+                    val, NXDataset
+                ):
                     group.children[key] = val
                 elif isinstance(val, NXAttribute):
                     group.attrs[key] = val

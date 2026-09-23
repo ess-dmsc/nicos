@@ -153,7 +153,7 @@ class TemperatureController(HasDisablePv, EpicsAnalogMoveable):
         :param pvparam: PV alias.
         :return: Actual PV name.
         """
-        record_prefix = getattr(self, "pvprefix")
+        record_prefix = self.pvprefix
         field = self._get_record_fields().get(pvparam)
 
         if field is not None:

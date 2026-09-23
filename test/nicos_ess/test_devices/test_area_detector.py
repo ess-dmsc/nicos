@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 from unittest.mock import patch
-import pytest
+
 import numpy as np
+import pytest
+
 from nicos.core.params import ArrayDesc
 from nicos_ess.devices.epics.area_detector import AreaDetector
 

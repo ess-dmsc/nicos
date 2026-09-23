@@ -182,7 +182,7 @@ class IDS3010Control(EpicsAnalogMoveable):
         return record_fields
 
     def _get_pv_name(self, pvparam):
-        prefix = getattr(self, "pvprefix")
+        prefix = self.pvprefix
         record_fields = self._get_record_fields()
         field = record_fields.get(pvparam)
 

@@ -210,7 +210,7 @@ class SeleneMover(Moveable):
         target = list(target)
         target[0] = target[0] - (425 * np.radians(target[4]))  # y = y - (450*Rz)
         target[1] = target[1] + (425 * np.radians(target[3]))  # z = z + (450*Ry)
-        self.log.info(f"SG1 target modified to: {target}")
+        self.log.warning(f"SG1 target modified to: {target} to account for SG1 center")
         return target
 
     def doStart(self, target):

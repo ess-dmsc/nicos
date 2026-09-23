@@ -29,7 +29,7 @@ from os import path
 from time import time as current_time
 
 from nicos.clients.flowui import uipath
-from nicos.clients.flowui.panels import get_icon, root_path
+from nicos.clients.flowui.panels import get_icon
 from nicos.clients.gui.mainwindow import MainWindow as DefaultMainWindow
 from nicos.guisupport.qt import (
     QApplication,
@@ -109,7 +109,7 @@ class MainWindow(DefaultMainWindow):
         self.experiment_label.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
-        self.experiment_label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
+        self.experiment_label.setStyleSheet("font-size: 17pt; font-weight: bold")
         self.toolBarMain.addWidget(self.experiment_label)
 
         self.experiment_text = QLabel()
@@ -124,7 +124,7 @@ class MainWindow(DefaultMainWindow):
         self.instrument_label.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
-        self.instrument_label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
+        self.instrument_label.setStyleSheet("font-size: 17pt; font-weight: bold")
         self.toolBarMain.addWidget(self.instrument_label)
 
         self.instrument_text = QLabel()
@@ -150,10 +150,7 @@ class MainWindow(DefaultMainWindow):
         self.toolBarMain.insertWidget(self.toolBarMain.actions()[0], spacer)
 
         nicos_label = QLabel()
-        pxr = decolor_logo(
-            QPixmap(path.join(root_path, "resources", "nicos-logo-high.svg")),
-            Qt.GlobalColor.white,
-        )
+        pxr = decolor_logo(QPixmap(":/nicos-logo-high"), Qt.GlobalColor.white)
         nicos_label.setPixmap(
             pxr.scaledToHeight(
                 self.toolBarMain.height(), Qt.TransformationMode.SmoothTransformation
@@ -165,19 +162,12 @@ class MainWindow(DefaultMainWindow):
         instrument = self.client.eval("session.instrument", None)
         self.instrument_label.setText("Instrument:")
         if instrument:
-            logo = decolor_logo(
-                QPixmap(path.join(root_path, "resources", f"{instrument}-logo.svg")),
-                Qt.GlobalColor.white,
-            )
-            if logo.isNull():
-                self.instrument_text.setText(instrument.upper())
-                return
-            self.instrument_text.setPixmap(
-                logo.scaledToHeight(
-                    self.toolBarMain.height(),
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-            )
+            self.instrument_text.setText(instrument.upper())
+            # Alternate with logo graphic
+            # logo = decolor_logo(QPixmap(...), Qt.GlobalColor.white)
+            # self.instrument_text.setPixmap(logo.scaledToHeight(
+            #     self.toolBarMain.height(),
+            #     Qt.TransformationMode.SmoothTransformation))
         else:
             self.instrument_text.setText("UNKNOWN")
 
@@ -201,7 +191,7 @@ class MainWindow(DefaultMainWindow):
 
     @staticmethod
     def setQSS(style_file):
-        with open(style_file, "r", encoding="utf-8") as fd:
+        with open(style_file, encoding="utf-8") as fd:
             try:
                 QApplication.instance().setStyleSheet(fd.read())
             except Exception as e:
@@ -233,7 +223,7 @@ class MainWindow(DefaultMainWindow):
         new_icon = QIcon()
         new_icon.addPixmap(pixmap, QIcon.Mode.Disabled)
         self.trayIcon.setIcon(new_icon)
-        self.trayIcon.setToolTip("%s status: %s" % (self.instrument, status))
+        self.trayIcon.setToolTip(f"{self.instrument} status: {status}")
         if self.showtrayicon:
             self.trayIcon.show()
         if self.promptWindow and status != "paused":

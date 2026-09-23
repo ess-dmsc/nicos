@@ -63,7 +63,6 @@ from nicos.commands.basic import (
     run,
     sleep,
 )
-from nicos.commands.device import set  # pylint: disable=redefined-builtin
 from nicos.commands.device import (
     ListDevices,
     ListMethods,
@@ -89,6 +88,7 @@ from nicos.commands.device import (
     resetlimits,
     rmaw,
     rmove,
+    set,  # pylint: disable=redefined-builtin
     setall,
     status,
     stop,
@@ -122,11 +122,12 @@ from nicos.core import (
     NicosError,
     NicosTimeoutError,
     UsageError,
+)
+from nicos.core import (
     status as devstatus,
 )
 from nicos.core.sessions.utils import MASTER, SLAVE
 from nicos.utils import ensureDirectory
-
 from test.utils import ErrorLogged, raises
 
 session_setup = "commands"

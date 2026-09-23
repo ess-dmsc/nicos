@@ -24,7 +24,6 @@
 
 from nicos.core import InvalidValueError, LimitError, MoveError, status
 from nicos.devices.generic.slit import Slit
-
 from test.utils import raises
 
 session_setup = "slit"

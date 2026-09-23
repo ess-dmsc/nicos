@@ -193,7 +193,7 @@ class EpicsMotor(
     def _build_epics_channels(self):
         epics_channels = {
             "value": readback_channel(".RBV", cache_key="value", primary=True),
-            "dialvalue": readback_channel(".DRBV"),
+            "dialvalue": readback_channel(".DRBV", subscribe=False),
             "target": setpoint_channel(".VAL", cache_key="target"),
             "stop": command_channel(".STOP"),
             "speed": readback_channel(".VELO"),
@@ -515,10 +515,11 @@ class EpicsMotor(
                     (status.BUSY, message or f"moving to {target}")
                 )
 
-        if self.has_powerauto:
-            powerauto_enabled = self._read_channel_cached("powerauto", maxage=maxage)
-        else:
-            powerauto_enabled = 0
+        powerauto_enabled = (
+            self._read_channel_cached("powerauto", maxage=maxage)
+            if self.has_powerauto
+            else 0
+        )
 
         if not powerauto_enabled and not self._read_channel_cached(
             "enable", maxage=maxage
@@ -870,10 +871,11 @@ class EpicsJogMotor(EpicsMotor):
         if done_moving == 0 or moving != 0:
             return status.BUSY, message or "moving"
 
-        if self.has_powerauto:
-            powerauto_enabled = self._read_channel_cached("powerauto", maxage=maxage)
-        else:
-            powerauto_enabled = 0
+        powerauto_enabled = (
+            self._read_channel_cached("powerauto", maxage=maxage)
+            if self.has_powerauto
+            else 0
+        )
 
         if not powerauto_enabled and not self._read_channel_cached(
             "enable", maxage=maxage

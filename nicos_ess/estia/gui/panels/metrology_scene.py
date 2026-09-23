@@ -179,10 +179,11 @@ class MetrologyScene(QGraphicsScene):
         outer = QGraphicsRectItem(-6, -6, 12, 24)
         outer.setBrush(STATUS_COLORS[UNKNOWN])
         group.addToGroup(outer)
-        if point_down:
-            inner = QGraphicsRectItem(-3, -21 - 14, 6, 14)
-        else:
-            inner = QGraphicsRectItem(-3, 21, 6, 14)
+        inner = (
+            QGraphicsRectItem(-3, -21 - 14, 6, 14)
+            if point_down
+            else QGraphicsRectItem(-3, 21, 6, 14)
+        )
         inner.setBrush(STATUS_COLORS[UNKNOWN])
         group.addToGroup(inner)
         text = QGraphicsSimpleTextItem(" " * 14)
@@ -209,10 +210,7 @@ class MetrologyScene(QGraphicsScene):
         return group, text
 
     def _draw_mirrors(self):
-        if self.selene != 2:
-            zpre = 1
-        else:
-            zpre = -1
+        zpre = 1 if self.selene != 2 else -1
         for group in range(15):
             center_x = 265 + group * 480
             xellipse = (group - 8) * 480
@@ -245,11 +243,11 @@ class MetrologyScene(QGraphicsScene):
                 qt_polygon, brush=QColor(255, 255, 255, 200)
             )
             if self.selene == 2:
-                text = self.addText("E02-12-%02i-VU" % (group + 1))
-                textH = self.addText("E02-12-%02i-HU" % (group + 1))
+                text = self.addText(f"E02-12-{group + 1}02i-VU")
+                textH = self.addText(f"E02-12-{group + 1}02i-HU")
             else:
-                text = self.addText("E02-06-%02i-VD" % (group + 1))
-                textH = self.addText("E02-06-%02i-HD" % (group + 1))
+                text = self.addText(f"E02-06-{group + 1}02i-VD")
+                textH = self.addText(f"E02-06-{group + 1}02i-HD")
 
             mp_minus = InteractiveEllipse(
                 "measurement position", x_start + 10, -15, 30, 30
@@ -347,9 +345,9 @@ class MetrologyScene(QGraphicsScene):
                 value = cache_load(value)
                 text = self.collimators[ldevname][1]
                 if text.x() < 0:
-                    text.setText("%12.3f" % value)
+                    text.setText(f"{value:12.3f}")
                 else:
-                    text.setText("%.3f" % value)
+                    text.setText(f"{value:.3f}")
                 if ldevname == self._currentSelection:
                     self.parent().lblSeleneSelection.setText(f"{ldevname}: {value}")
         elif ldevname == self.cart_position and subkey == "value":
@@ -369,11 +367,10 @@ class MetrologyScene(QGraphicsScene):
 
     def childActivated(self, name, control):
         if hasattr(
-            item, "measurement_position_group"
+            control, "measurement_position_group"
         ) and control.measurement_position_item in [-1, 0, 1]:
             # move to activated screw location
             self.client.tell(
                 "queue",
-                f"Moving to Measurement Position ({control.measurement_position_item},{control.measurement_position_group})",
                 f"maw(sm{self.selene}, ({control.measurement_position_item}, {control.measurement_position_group}))",
             )

@@ -20,9 +20,9 @@ class LokiBeamstopArmPositioner(MappedController):
         MappedController.doInit(self, mode)
 
     def doWriteMapping(self, mapping):
-        if sorted(mapping.keys()) != ["In beam", "Parked"]:
+        if sorted(mapping.keys()) != ["in-beam", "parked"]:
             raise ConfigurationError(
-                "Only 'In beam' and 'Parked' are allowed as mapped positions"
+                "Only 'in-beam' and 'parked' are allowed as mapped positions"
             )
         for position in mapping.values():
             self._check_limits(position)
@@ -34,12 +34,12 @@ class LokiBeamstopArmPositioner(MappedController):
                 if abs(v - value) < self._attached_controlled_device.precision:
                     return k
         inverse_mapping = {v: k for k, v in self.mapping.items()}
-        mapped_value = inverse_mapping.get(value, None)
+        mapped_value = inverse_mapping.get(value)
         if mapped_value:
             return mapped_value
-        if value > self.mapping["Parked"]:
+        if value > self.mapping["parked"]:
             return "Above park position"
-        if value < self.mapping["In beam"]:
+        if value < self.mapping["in-beam"]:
             return "Below in-beam position"
         return "In between"
 
@@ -83,9 +83,9 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
     def _mapReadValue(self, value):
         inverse_mapping = {v: k for k, v in self._full_mapping.items()}
-        mapped_value = inverse_mapping.get(value, None)
+        mapped_value = inverse_mapping.get(value)
         if not mapped_value:
-            return "In Between"
+            return "in-between"
         return mapped_value
 
     def doStart(self, target):
@@ -101,7 +101,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 raise MoveError(
                     self,
                     "Cannot start device, sequence is still "
-                    "running (at %s)!" % self._seq_status[1],
+                    f"running (at {self._seq_status[1]})!",
                 )
         self._startSequence(self._generateSequence(target))
 
@@ -111,7 +111,8 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         seq = []
         if requested_beamstop != active_beamstop:
             seq.extend(self._park_sequence())
-        seq.extend(self._beamstop_sequence(target))
+        if requested_beamstop != "Park":
+            seq.extend(self._beamstop_sequence(target))
         return seq
 
     def _get_beamstop_number(self, value):
@@ -156,94 +157,94 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
     def _get_mapped_positions(self):
         full_mapping = {
             "Park all beamstops": (
-                "Parked",
-                "In beam",
-                "Parked",
-                "Parked",
-                "Parked",
-                "Parked",
-                "Parked",
+                "parked",
+                "in-beam",
+                "parked",
+                "parked",
+                "parked",
+                "parked",
+                "parked",
             ),
             "Beamstop 1": (
-                "Xpos BS1",
-                "In beam",
-                "In beam",
-                "Parked",
-                "Parked",
-                "Parked",
-                "Parked",
+                "xpos bs1",
+                "in-beam",
+                "in-beam",
+                "parked",
+                "parked",
+                "parked",
+                "parked",
             ),
             "Beamstop 2": (
-                "Xpos BS2",
-                "In beam",
-                "Parked",
-                "In beam",
-                "Parked",
-                "Parked",
-                "Parked",
+                "xpos bs2",
+                "in-beam",
+                "parked",
+                "in-beam",
+                "parked",
+                "parked",
+                "parked",
             ),
             "Beamstop 2 + monitor": (
-                "Xpos BS2",
-                "In beam",
-                "In beam",
-                "In beam",
-                "Parked",
-                "Parked",
-                "Parked",
+                "xpos bs2",
+                "in-beam",
+                "in-beam",
+                "in-beam",
+                "parked",
+                "parked",
+                "parked",
             ),
             "Beamstop 3": (
-                "Xpos BS3",
-                "In beam",
-                "Parked",
-                "Parked",
-                "In beam",
-                "Parked",
-                "Parked",
+                "xpos bs3",
+                "in-beam",
+                "parked",
+                "parked",
+                "in-beam",
+                "parked",
+                "parked",
             ),
             "Beamstop 3 + monitor": (
-                "Xpos BS3",
-                "In beam",
-                "In beam",
-                "Parked",
-                "In beam",
-                "Parked",
-                "Parked",
+                "xpos bs3",
+                "in-beam",
+                "in-beam",
+                "parked",
+                "in-beam",
+                "parked",
+                "parked",
             ),
             "Beamstop 4": (
-                "Xpos BS4",
-                "In beam",
-                "Parked",
-                "Parked",
-                "Parked",
-                "In beam",
-                "Parked",
+                "xpos bs4",
+                "in-beam",
+                "parked",
+                "parked",
+                "parked",
+                "in-beam",
+                "parked",
             ),
             "Beamstop 4 + monitor": (
-                "Xpos BS4",
-                "In beam",
-                "In beam",
-                "Parked",
-                "Parked",
-                "In beam",
-                "Parked",
+                "xpos bs4",
+                "in-beam",
+                "in-beam",
+                "parked",
+                "parked",
+                "in-beam",
+                "parked",
             ),
             "Beamstop 5": (
-                "Xpos BS5",
-                "In beam",
-                "Parked",
-                "Parked",
-                "Parked",
-                "Parked",
-                "In beam",
+                "xpos bs5",
+                "in-beam",
+                "parked",
+                "parked",
+                "parked",
+                "parked",
+                "in-beam",
             ),
             "Beamstop 5 + monitor": (
-                "Xpos BS5",
-                "In beam",
-                "In beam",
-                "Parked",
-                "Parked",
-                "Parked",
-                "In beam",
+                "xpos bs5",
+                "in-beam",
+                "in-beam",
+                "parked",
+                "parked",
+                "parked",
+                "in-beam",
             ),
         }
         return full_mapping

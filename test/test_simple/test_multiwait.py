@@ -29,7 +29,6 @@ import pytest
 
 from nicos.core.errors import ComputationError, MoveError, NicosTimeoutError
 from nicos.core.utils import multiWait
-
 from test.utils import raises
 
 session_setup = "multiwait"

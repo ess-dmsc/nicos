@@ -1,22 +1,18 @@
 """Module for custom facility logger and formatter that logs via the syslog facilities."""
 
 import json
-from logging.handlers import SysLogHandler
+import sys
+import time
+import traceback
 from logging import (
+    CRITICAL,
     DEBUG,
     ERROR,
     INFO,
     WARNING,
     Formatter,
-    Handler,
-    Logger,
-    LogRecord,
-    addLevelName,
-    CRITICAL,
 )
-import sys
-import time
-import traceback
+from logging.handlers import SysLogHandler
 from typing import override
 
 from nicos.utils.loggers import ACTION, StreamHandler

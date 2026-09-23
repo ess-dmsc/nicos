@@ -209,7 +209,7 @@ class MultilineController(EpicsStringReadable, Waitable):
         return parameters
 
     def _get_pv_name(self, pvparam):
-        record_prefix = getattr(self, "pvprefix")
+        record_prefix = self.pvprefix
         field = self._record_fields.get(pvparam)
         if field is not None:
             return ":".join((record_prefix, field))

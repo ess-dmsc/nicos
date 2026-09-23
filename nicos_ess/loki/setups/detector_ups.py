@@ -6,7 +6,7 @@ devices = dict(
     battery_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the battery",
-        readpv="{}BatteryStatusStr-R".format(pv_root),
+        readpv=f"{pv_root}BatteryStatusStr-R",
         visibility=(),
     ),
 )

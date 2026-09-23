@@ -72,6 +72,8 @@ class EpicsShutter(EpicsMappedMoveable):
             cache_key="status_code",
             pv_name_attr="statuspv",
         )
+        if self.resetpv:
+            epics_channels["reset"] = command_channel("", pv_name_attr="resetpv")
         return epics_channels
 
     def _read_msgtxt(self, maxage=None):
@@ -115,6 +117,16 @@ class EpicsShutter(EpicsMappedMoveable):
         # Command and AuxBits07 labels are independent PLC configuration.
         # StatusCode is the only generic completion/error contract.
         return False
+
+    def doReset(self):
+        """Reset shutter state by writing on the configured 'resetpv' parameter"""
+
+        if self.resetpv:
+            self._epics.put_channel_value("reset", True)
+        else:
+            self.log.warning(
+                "Reset isn't available on device or the resetpv is missing"
+            )
 
 
 class EpicsHeavyShutter(EpicsMappedReadable):

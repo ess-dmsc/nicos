@@ -2,7 +2,6 @@
 
 import sys
 import traceback
-from os import path
 from time import strftime
 from time import time as current_time
 
@@ -10,6 +9,9 @@ if sys.version_info < (3, 10):
     from importlib_metadata import PackageNotFoundError, entry_points, version
 else:
     from importlib.metadata import PackageNotFoundError, entry_points, version
+
+
+from contextlib import suppress
 
 import gr
 
@@ -39,7 +41,6 @@ from nicos.guisupport.qt import (
     QT_VERSION_STR,
     QAction,
     QApplication,
-    QColorDialog,
     QDialog,
     QFontDialog,
     QGridLayout,
@@ -75,7 +76,7 @@ from nicos.utils import (
 from nicos_ess.gui.dialogs.auth import ConnectionDialog
 from nicos_ess.gui.dialogs.settings import SettingsDialog
 from nicos_ess.gui.panels.setups import SetupsPanel
-from nicos_ess.gui.utils import get_icon, root_path
+from nicos_ess.gui.utils import get_icon
 
 try:
     from nicos.clients.gui.dialogs.help import HelpWindow
@@ -462,7 +463,7 @@ class MainWindow(DlgUtils, QMainWindow):
 
         nicos_label = QLabel()
         pxr = decolor_logo(
-            QPixmap(path.join(root_path, "resources", "nicos-logo-high.svg")),
+            QPixmap(":/nicos-logo-high"),
             Qt.GlobalColor.white,
         )
         nicos_label.setPixmap(
@@ -493,7 +494,7 @@ class MainWindow(DlgUtils, QMainWindow):
 
             if value:
                 logo = decolor_logo(
-                    QPixmap(path.join(root_path, "resources", f"{value}-logo.svg")),
+                    QPixmap(f"{value}-logo"),
                     Qt.GlobalColor.white,
                 )
                 if logo.isNull():
@@ -513,7 +514,7 @@ class MainWindow(DlgUtils, QMainWindow):
 
     @staticmethod
     def setQSS(style_file):
-        with open(style_file, "r", encoding="utf-8") as fd:
+        with open(style_file, encoding="utf-8") as fd:
             try:
                 QApplication.instance().setStyleSheet(fd.read())
             except Exception as e:
@@ -629,17 +630,13 @@ class MainWindow(DlgUtils, QMainWindow):
                 return panelobj
 
     def initDataReaders(self):
-        try:
+        with suppress(ImportError):
             # just import to register all default readers
             import nicos.devices.datasinks  # noqa: F401 unused-import
-        except ImportError:
-            pass
         classes = self.gui_conf.options.get("reader_classes", [])
         for clsname in classes:
-            try:
+            with suppress(ImportError):
                 importString(clsname)
-            except ImportError:
-                pass
 
     def on_auxWindow_closed(self, window):
         del self.windows[window.type]
@@ -778,14 +775,10 @@ class MainWindow(DlgUtils, QMainWindow):
     def setTitlebar(self, connected):
         inststr = str(self.instrument) or "NICOS"
         if connected:
-            hoststr = "%s at %s:%s" % (
-                self.client.login,
-                self.client.host,
-                self.client.port,
-            )
-            self.setWindowTitle("%s - %s" % (inststr, hoststr))
+            hoststr = f"{self.client.login} at {self.client.host}:{self.client.port}"
+            self.setWindowTitle(f"{inststr} - {hoststr}")
         else:
-            self.setWindowTitle("%s - disconnected" % inststr)
+            self.setWindowTitle(f"{inststr} - disconnected")
 
     def setStatus(self, status, exception=False):
         if status == self.current_status:
@@ -813,7 +806,7 @@ class MainWindow(DlgUtils, QMainWindow):
         new_icon = QIcon()
         new_icon.addPixmap(pixmap, QIcon.Mode.Disabled)
         self.trayIcon.setIcon(new_icon)
-        self.trayIcon.setToolTip("%s status: %s" % (self.instrument, status))
+        self.trayIcon.setToolTip(f"{self.instrument} status: {status}")
         if self.showtrayicon:
             self.trayIcon.show()
         if self.promptWindow and status != "paused":
@@ -932,7 +925,7 @@ class MainWindow(DlgUtils, QMainWindow):
             )
 
     def on_client_plugplay(self, data):
-        hide = False if data[0] == "added" else True
+        hide = data[0] != "added"
         name = data[1]
 
         for panel in self.panels:
@@ -1054,14 +1047,8 @@ class MainWindow(DlgUtils, QMainWindow):
         dlg = dialogFromUi(self, "dialogs/about.ui")
         dlg.clientVersion.setText(nicos_version)
         dlg.pyVersion.setText(
-            "%s/%s/%s/%s/%s"
-            % (
-                sys.version.split()[0],
-                QT_VERSION_STR,
-                PYQT_VERSION_STR,
-                gr.runtime_version(),
-                gr.__version__,
-            )
+            f"{sys.version.split()[0]}/{QT_VERSION_STR}/"
+            f"{PYQT_VERSION_STR}/{gr.runtime_version()}/{gr.__version__}"
         )
         dlg.serverHost.setText(dinfo.get("server_host", "not connected"))
         dlg.nicosRoot.setText(dinfo.get("nicos_root", ""))
@@ -1069,7 +1056,8 @@ class MainWindow(DlgUtils, QMainWindow):
         dlg.customPath.setText(dinfo.get("custom_path", ""))
         dlg.customVersion.setText(dinfo.get("custom_version", ""))
         dlg.contributors.setPlainText(nicos.authors.authors_list)
-        # assemble all installed plugins defined via their entry points in the 'nicos.plugin' group:
+        # assemble all installed plugins defined via their entry points
+        # in the 'nicos.plugin' group:
         plugins = entry_points(group="nicos.plugins")
         plugin_summary = []
         for p in plugins:

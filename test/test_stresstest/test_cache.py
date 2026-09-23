@@ -26,14 +26,15 @@
 import os
 from time import sleep, time
 
-import pytest
 import numpy
+import pytest
 
 from nicos.devices.cacheclient import CacheError
 from nicos.protocols.cache import FLAG_NO_STORE
-
 from test.utils import (
     TestCacheClient as CacheClient,
+)
+from test.utils import (
     alt_cache_addr,
     killSubprocess,
     raises,

@@ -24,9 +24,9 @@
 """NICOS tests for the watchdog condition primitives."""
 
 from nicos.services.watchdog.conditions import (
+    ConditionWithPrecondition,
     DelayedTrigger,
     Expression,
-    ConditionWithPrecondition,
 )
 
 

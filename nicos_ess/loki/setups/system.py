@@ -13,7 +13,6 @@ sysconfig = dict(
 modules = [
     "nicos.commands.standard",
     "nicos_ess.commands",
-    "nicos_ess.loki.commands.scripting",
 ]
 
 devices = dict(
@@ -78,3 +77,10 @@ devices = dict(
         nexus="NexusStructure",
     ),
 )
+
+startupcode = """
+printinfo("============================================================")
+printinfo("Loading instrument specific commands.")
+printinfo("============================================================")
+import_instrument_commands()
+"""

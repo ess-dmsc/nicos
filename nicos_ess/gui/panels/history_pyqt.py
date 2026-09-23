@@ -1,41 +1,41 @@
 import json
 import pickle
+import random
 import time
 from collections import OrderedDict
-import random
 
 import numpy as np
 
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import DlgUtils, loadUi
 from nicos.guisupport.qt import (
-    QVBoxLayout,
-    pyqtSignal,
-    QObject,
-    QToolBar,
     QAction,
-    QIcon,
-    QListWidget,
-    QSplitter,
-    Qt,
+    QBrush,
+    QByteArray,
+    QColor,
+    QCompleter,
     QDateTime,
     QDialog,
-    QCompleter,
-    QListWidgetItem,
-    QStyledItemDelegate,
-    pyqtSlot,
+    QIcon,
     QInputDialog,
-    QTimer,
-    QByteArray,
+    QListWidget,
+    QListWidgetItem,
     QMainWindow,
-    QBrush,
-    QColor,
+    QObject,
+    QSplitter,
+    QStyledItemDelegate,
+    Qt,
+    QTimer,
+    QToolBar,
+    QVBoxLayout,
+    pyqtSignal,
+    pyqtSlot,
 )
 from nicos.guisupport.trees import BaseDeviceParamTree
-from nicos.utils import number_types, parseKeyExpression, parseDuration
+from nicos.utils import number_types, parseDuration, parseKeyExpression
 from nicos_ess.gui.utils import get_icon
 from nicos_ess.gui.widgets.pyqtgraph.history_plot import HistoryWidget
-from nicos_ess.gui.widgets.pyqtgraph.utils.utils import COLORS, clear_layout, PlotTypes
+from nicos_ess.gui.widgets.pyqtgraph.utils.utils import COLORS, PlotTypes, clear_layout
 
 
 class NoEditDelegate(QStyledItemDelegate):

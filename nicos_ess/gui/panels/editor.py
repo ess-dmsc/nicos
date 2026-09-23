@@ -50,7 +50,6 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, findResource, formatDuration, formatEndtime
-
 from nicos_ess.gui.utils import get_icon
 
 has_scintilla = QsciScintilla is not None
@@ -81,7 +80,7 @@ def find_all_nicos_commands():
         for file in files:
             if file == "__init__.py":
                 continue
-            with open(os.path.join(root, file), "r", encoding=LOCALE_ENCODING) as f:
+            with open(os.path.join(root, file), encoding=LOCALE_ENCODING) as f:
                 lines = f.readlines()
                 found_usercommand = False
                 for line in lines:
@@ -120,11 +119,8 @@ if has_scintilla:
             QsciPrinter.formatPage(self, painter, drawing, area, pagenr)
 
             fn = self.docName()
-            header = "File: %s    page %s    %s" % (
-                fn,
-                pagenr,
-                time.strftime("%Y-%m-%d %H:%M"),
-            )
+            cur_time = time.strftime("%Y-%m-%d %H:%M")
+            header = f"File: {fn}   page {pagenr}    {cur_time}"
             painter.save()
             pen = QPen(QColor(30, 30, 30))
             pen.setWidth(1)
@@ -481,9 +477,9 @@ class EditorPanel(Panel):
         self.actionPrint.setIcon(get_icon("print-24px.svg"))
         self.actionUndo.setIcon(get_icon("undo-24px.svg"))
         self.actionRedo.setIcon(get_icon("redo-24px.svg"))
-        self.actionCut.setIcon(get_icon("cut_24px.svg"))
+        self.actionCut.setIcon(get_icon("cut-24px.svg"))
         self.actionCopy.setIcon(get_icon("file_copy-24px.svg"))
-        self.actionPaste.setIcon(get_icon("paste_24px.svg"))
+        self.actionPaste.setIcon(get_icon("paste-24px.svg"))
         self.actionRun.setIcon(get_icon("play_arrow-24px.svg"))
         self.actionSimulate.setIcon(get_icon("play_arrow_outline-24px.svg"))
         self.actionGet.setIcon(get_icon("eject-24px.svg"))
@@ -580,7 +576,7 @@ class EditorPanel(Panel):
         self.enableFileActions(index >= 0)
         if index == -1:
             self.currentEditor = None
-            self.parent_window.setWindowTitle("%s editor" % self.mainwindow.instrument)
+            self.parent_window.setWindowTitle(f"{self.mainwindow.instrument} editor")
             return
         editor = self.editors[index]
         self.actionSave.setEnabled(editor.isModified())
@@ -629,10 +625,7 @@ class EditorPanel(Panel):
         )
 
     def requestClose(self):
-        for editor in self.editors:
-            if not self.checkDirty(editor):
-                return False
-        return True
+        return all(self.checkDirty(editor) for editor in self.editors)
 
     def createEditor(self):
         if has_scintilla:
@@ -869,7 +862,7 @@ class EditorPanel(Panel):
             printer = QPrinter()
             printer.setOutputFileName("")
             if QPrintDialog(printer, self).exec() == QDialog.DialogCode.Accepted:
-                getattr(self.currentEditor, "print")(printer)
+                self.currentEditor.print(printer)
 
     def validateScript(self):
         script = self.currentEditor.text()
@@ -885,16 +878,13 @@ class EditorPanel(Panel):
     @pyqtSlot()
     def on_actionRun_triggered(self):
         script = self.validateScript()
-        if script is None:
+        if script is None and not self.checkDirty(self.currentEditor, askonly=True):
             return
-        if not self.checkDirty(self.currentEditor, askonly=True):
+        if self.current_status != "idle" and not self.askQuestion(
+            "A script is currently running, do you want to queue this script?",
+            True,
+        ):
             return
-        if self.current_status != "idle":
-            if not self.askQuestion(
-                "A script is currently running, do you want to queue this script?",
-                True,
-            ):
-                return
         self.client.run(script, self.filenames[self.currentEditor])
 
     @pyqtSlot()
@@ -910,12 +900,12 @@ class EditorPanel(Panel):
             self.actionSimulate.setEnabled(False)
             self.simFrame.simuuid = simuuid
             self.simFrame.clear()
-            self.simPane.setWindowTitle("Dry run results - %s" % filename)
+            self.simPane.setWindowTitle(f"Dry run results - {filename}")
             self.simPane.show()
         else:
             if self.sim_window == "multi" or not self.simWindows:
                 window = SimResultFrame(None, self, self.client)
-                window.setWindowTitle("Dry run results - %s" % filename)
+                window.setWindowTitle(f"Dry run results - {filename}")
                 window.layout().setContentsMargins(6, 6, 6, 6)
                 window.simOutView.setFont(self.simFrame.simOutView.font())
                 window.simOutViewErrors.setFont(self.simFrame.simOutView.font())
@@ -924,7 +914,7 @@ class EditorPanel(Panel):
             else:
                 window = self.simWindows[0]
                 window.clear()
-                window.setWindowTitle("Dry run results - %s" % filename)
+                window.setWindowTitle(f"Dry run results - {filename}")
                 window.activateWindow()
             window.simuuid = simuuid
         self.client.tell("simulate", filename, script, simuuid)
@@ -957,7 +947,7 @@ class EditorPanel(Panel):
         if not editor.isModified():
             return True
         if self.filenames[editor]:
-            message = "Save changes in %s before closing?" % self.filenames[editor]
+            message = f"Save changes in {self.filenames[editor]} before closing?"
         else:
             message = "Save changes to new script file before closing?"
         buttons = (
@@ -974,15 +964,13 @@ class EditorPanel(Panel):
         rc = QMessageBox.question(self, "Script Editor", message, buttons)
         if rc in (QMessageBox.StandardButton.Save, QMessageBox.StandardButton.Yes):
             return self.saveFile(editor)
-        if rc in (QMessageBox.StandardButton.Discard, QMessageBox.StandardButton.No):
-            return True
-        return False
+        return rc in (QMessageBox.StandardButton.Discard, QMessageBox.StandardButton.No)
 
     def on_fileSystemWatcher_fileChanged(self, filename):
         if self.saving:
             return
         editor = watcher = None
-        for editor, watcher in self.watchers.items():
+        for _editor, watcher in self.watchers.items():
             if watcher is self.sender():
                 break
         else:
@@ -990,10 +978,10 @@ class EditorPanel(Panel):
         if editor.isModified():
             # warn the user
             self.warnText.setText(
-                "The file %r has changed on disk, but has also been edited"
+                f"The file {self.filenames[editor]} has changed on disk,"
+                " but has also been edited"
                 " here.\nPlease use either File-Reload to load the"
                 " version on disk or File-Save to save this version."
-                % self.filenames[editor]
             )
             self.warnWidget.show()
         else:
@@ -1050,10 +1038,10 @@ class EditorPanel(Panel):
         if not self.checkDirty(self.currentEditor):
             return
         try:
-            with open(fn, "r", encoding=LOCALE_ENCODING) as f:
+            with open(fn, encoding=LOCALE_ENCODING) as f:
                 text = f.read()
         except Exception as err:
-            return self.showError("Opening file failed: %s" % err)
+            return self.showError(f"Opening file failed: {err}")
         self.currentEditor.setText(text)
         self.simFrame.clear()
 
@@ -1069,7 +1057,7 @@ class EditorPanel(Panel):
         except Exception as err:
             if quiet:
                 return
-            return self.showError("Opening file failed: %s" % err)
+            return self.showError(f"Opening file failed: {err}")
 
         editor = self.createEditor()
         editor.setText(text)
@@ -1111,16 +1099,16 @@ class EditorPanel(Panel):
     def on_actionSave_triggered(self):
         self.saveFile(self.currentEditor)
         self.parent_window.setWindowTitle(
-            "%s[*] - %s editor"
-            % (self.filenames[self.currentEditor], self.mainwindow.instrument)
+            f"{self.filenames[self.currentEditor]}[*] -"
+            "{self.mainwindow.instrument} editor"
         )
 
     @pyqtSlot()
     def on_actionSaveAs_triggered(self):
         self.saveFileAs(self.currentEditor)
         self.parent_window.setWindowTitle(
-            "%s[*] - %s editor"
-            % (self.filenames[self.currentEditor], self.mainwindow.instrument)
+            f"{self.filenames[self.currentEditor]}[*] -"
+            " {self.mainwindow.instrument} editor"
         )
 
     def saveFile(self, editor):
@@ -1132,7 +1120,7 @@ class EditorPanel(Panel):
             with open(self.filenames[editor], "w", encoding=LOCALE_ENCODING) as f:
                 f.write(editor.text())
         except Exception as err:
-            self.showError("Writing file failed: %s" % err)
+            self.showError(f"Writing file failed: {err}")
             return False
         finally:
             self.saving = False
@@ -1190,10 +1178,7 @@ class EditorPanel(Panel):
         if self.currentEditor.hasSelectedText():
             # get the selection boundaries
             line1, index1, line2, index2 = self.currentEditor.getSelection()
-            if index2 == 0:
-                endLine = line2 - 1
-            else:
-                endLine = line2
+            endLine = line2 - 1 if index2 == 0 else line2
             assert endLine >= line1
 
             self.currentEditor.beginUndoAction()

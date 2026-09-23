@@ -15,7 +15,6 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.tablemodel import TableModel
 from nicos.utils import decodeAny, findResource
-
 from nicos_ess.gui.panels.panel import PanelBase
 
 USER_FIELDS = ["name", "email", "affiliation"]
@@ -284,7 +283,7 @@ class ExpPanel(PanelBase):
         users = [
             user
             for user in self.users_model.raw_data
-            if any((user.get(field) for field in self._user_fields))
+            if any(user.get(field) for field in self._user_fields)
         ]
 
         exp_args = {

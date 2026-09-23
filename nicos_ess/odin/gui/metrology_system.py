@@ -1,17 +1,15 @@
 """ODIN Metrology System Panel."""
 
 import csv
-
 from collections import OrderedDict, namedtuple
 
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QHeaderView, QTableView, pyqtSlot, QFileDialog, Qt
+from nicos.guisupport.qt import QFileDialog, QHeaderView, Qt, QTableView, pyqtSlot
 from nicos.utils import findResource
-
 from nicos_ess.gui.panels.panel import PanelBase
-from nicos_ess.loki.gui.sample_holder_config import ReadOnlyDelegate
-from nicos_ess.gui.tables.table_delegates import ComboBoxDelegate, CheckboxDelegate
+from nicos_ess.gui.tables.table_delegates import CheckboxDelegate, ComboBoxDelegate
 from nicos_ess.gui.tables.table_helper import Clipboard, TableHelper
+from nicos_ess.loki.gui.sample_holder_config import ReadOnlyDelegate
 from nicos_ess.odin.gui.metrology_system_model import OdinMetrologySystemModel
 
 COMPONENT_COLUMN_NAME = "Component"

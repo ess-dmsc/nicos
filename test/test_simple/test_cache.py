@@ -29,10 +29,9 @@ from time import sleep
 
 import pytest
 
-from nicos.core.errors import CommunicationError, LimitError, CacheLockError
+from nicos.core.errors import CacheLockError, CommunicationError, LimitError
 from nicos.devices.cacheclient import CacheClient
 from nicos.utils import readonlydict, readonlylist
-
 from test.utils import cache_addr, raises
 
 session_setup = "cachetests"
@@ -225,7 +224,7 @@ class TestCache:
             assert rd1.read() == testval
             sleep(0.71)  # sleep longer than ttl (0.1) + self.maxage (0.1) + 0.5
             with log.assert_warns(
-                "value timed out in cache, this should be " "considered as an error!"
+                "value timed out in cache, this should be considered as an error!"
             ):
                 rd1.read()
         finally:
@@ -250,7 +249,7 @@ class TestCache:
             cc2.flush()
             sleep(0.71)  # ttl+ wrt1.maxage
             with log.assert_warns(
-                "value timed out in cache, this should be " "considered as an error!"
+                "value timed out in cache, this should be considered as an error!"
             ):
                 wrt1.read()
             wrt1.move(10)

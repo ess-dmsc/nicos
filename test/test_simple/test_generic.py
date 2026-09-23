@@ -23,7 +23,8 @@
 
 """NICOS generic devices test suite."""
 
-import mock
+from unittest import mock
+
 import pytest
 
 from nicos.commands.measure import count
@@ -35,7 +36,6 @@ from nicos.core import (
     PositionError,
     status,
 )
-
 from test.utils import approx, raises
 
 session_setup = "generic"

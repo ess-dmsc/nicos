@@ -42,26 +42,26 @@ sinklist = [
 # Omit them from the datasinks list in that case.
 
 try:
-    import PIL  # pylint: disable=unused-import
+    import PIL  # noqa: F401 -- availability probe for the optional TIFF sink
 
     sinklist.append("tiffsink")
 except Exception:
     pass
 
 try:
-    import astropy.io.fits  # pylint: disable=unused-import
+    import astropy.io.fits  # noqa: F401 -- availability probe for the FITS sink
 
     sinklist.append("fitssink")
 except Exception:
     try:
-        import pyfits  # pylint: disable=unused-import,import-error
+        import pyfits  # noqa: F401 -- fallback availability probe for the FITS sink
 
         sinklist.append("fitssink")
     except Exception:
         pass
 
 try:
-    import quickyaml  # pylint: disable=unused-import
+    import quickyaml  # noqa: F401 -- availability probe for the optional YAML sink
 
     sinklist.append("yamlsink")
 except Exception:

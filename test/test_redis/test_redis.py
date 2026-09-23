@@ -2,9 +2,9 @@ import fnmatch
 import logging
 import time
 from typing import Union
+from unittest.mock import MagicMock
 
 import pytest
-from unittest.mock import MagicMock
 
 from nicos.protocols.cache import cache_dump, cache_load
 from nicos.services.cache.database import RedisCacheDatabase

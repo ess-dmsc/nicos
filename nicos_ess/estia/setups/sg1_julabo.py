@@ -46,6 +46,12 @@ devices = dict(
         readpv=f"{pv_root}TempSafetySensor-R",
         visibility=(),
     ),
+    julabo_1_safety_manual_limit=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The safety sensor temperature",
+        readpv=f"{pv_root}SafetyTempLimit-R",
+        visibility=(),
+    ),
     julabo_1_temperature_high_limit=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The high temp warning limit",

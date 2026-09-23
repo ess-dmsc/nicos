@@ -18,10 +18,8 @@ from streaming_data_types import serialise_hs01
 
 from nicos.commands.measure import count
 from nicos.commands.scan import scan
-
 from nicos_ess.devices.datasources import just_bin_it
 from nicos_ess.devices.kafka import status_handler
-
 from test.nicos_ess.command_helpers import loaded_setup, set_detectors, wait_until
 from test.nicos_ess.test_devices.doubles import (
     StubKafkaConsumer,
@@ -102,9 +100,7 @@ def jbi_backend(monkeypatch):
             if msg_id in acked_ids:
                 continue
             acked_ids.add(msg_id)
-            return json.dumps(
-                {"msg_id": msg_id, "response": "ACK"}
-            ).encode("utf-8")
+            return json.dumps({"msg_id": msg_id, "response": "ACK"}).encode("utf-8")
         return None
 
     consumer = StubKafkaConsumer(poll_hook=poll_hook)

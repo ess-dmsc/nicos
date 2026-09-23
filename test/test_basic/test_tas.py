@@ -26,7 +26,6 @@
 from nicos.commands.tas import Q
 from nicos.core import NicosError, UsageError
 from nicos.devices.tas import spacegroups
-
 from test.utils import raises
 
 

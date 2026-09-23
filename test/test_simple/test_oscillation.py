@@ -26,7 +26,6 @@
 import pytest
 
 from nicos.core import ConfigurationError, status
-
 from test.utils import raises
 
 session_setup = "oscillator"

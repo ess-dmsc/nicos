@@ -28,13 +28,9 @@ includes = ["stdsystem"]
 stressi_sinklist = ["csink"]
 
 try:
-    import quickyaml  # pylint: disable=unused-import
-
     stressi_sinklist.append("ysink")
 except Exception:
     try:
-        import yaml  # pylint: disable=unused-import
-
         stressi_sinklist.append("ysink")
     except Exception:
         pass

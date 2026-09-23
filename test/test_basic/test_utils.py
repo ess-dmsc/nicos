@@ -68,7 +68,6 @@ from nicos.utils import (
     updateFileCounter,
 )
 from nicos.utils.timer import Timer
-
 from test.utils import raises
 
 

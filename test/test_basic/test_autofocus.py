@@ -30,7 +30,6 @@ from scipy import ndimage
 pytest.importorskip("cv2")
 
 from nicos.utils.gammafilter import gam_rem_adp_log, scharr_filter
-
 from test.utils import approx
 
 

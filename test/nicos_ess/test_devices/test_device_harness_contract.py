@@ -35,11 +35,10 @@ import pytest
 
 from nicos import session as nicos_session
 from nicos.core import MAIN, MASTER, POLLER
-from nicos.devices.cacheclient import CacheClient
 from nicos.core.sessions import Session
+from nicos.devices.cacheclient import CacheClient
 from test.nicos_ess.device_harness import InMemoryCache, UnitTestSession
 from test.nicos_ess.test_devices.doubles import HarnessLinearAxis
-
 
 CACHE_METHODS = [
     "addCallback",

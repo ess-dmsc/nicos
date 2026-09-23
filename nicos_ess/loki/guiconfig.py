@@ -70,7 +70,7 @@ main_window = docked(
         ),
         (
             "Scripting",
-            panel("nicos_ess.gui.panels.editor.EditorPanel", tools=None),
+            panel("nicos_ess.gui.panels.remote_editor.EditorPanel", tools=None),
         ),
         (
             "History",
@@ -84,7 +84,7 @@ main_window = docked(
             ),
         ),
         position="left",
-        margins=(0, 0, 0, 0),
+        margins=(25, 10, 25, 35),
         textpadding=(30, 20),
     ),  # tabbed
 )  # docked

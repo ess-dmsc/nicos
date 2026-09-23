@@ -3,7 +3,6 @@ import numpy as np
 from nicos.guisupport.livewidget import IntegralLiveWidget
 from nicos.guisupport.plots import MaskedPlotCurve
 from nicos.guisupport.qt import QLabel, QSizePolicy, Qt, QVBoxLayout, QWidget
-
 from nicos_mlz.toftof.gui.resolutionpanel import COLOR_GREEN, PlotWidget
 
 

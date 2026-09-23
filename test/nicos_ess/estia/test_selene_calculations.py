@@ -1,19 +1,20 @@
 from unittest import TestCase
-import pytest
+
 import numpy as np
+import pytest
 from numpy import testing
-from nicos_ess.estia.devices.selene_calculations import SeleneCalculator
+
 from nicos.devices.generic import BaseSequencer
+from nicos_ess.estia.devices.selene_calculations import SeleneCalculator
 
 session_setup = "estia_selene_calculations"
+
 
 class FakeSeleneCalculator(SeleneCalculator, BaseSequencer):
     pass
 
 
-
 class TestCalculator(TestCase):
-
     @pytest.fixture(autouse=True)
     def prepare(self, session):
         self.session = session

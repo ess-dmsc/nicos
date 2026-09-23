@@ -12,7 +12,6 @@ from nicos.core import (
     oneof,
     status,
 )
-from nicos.core.utils import multiWait
 from nicos.devices.abstract import (
     MappedMoveable,
 )
@@ -75,7 +74,7 @@ class MappedController(MappedMoveable):
                 if abs(v - value) < self._attached_controlled_device.precision:
                     return k
         inverse_mapping = {v: k for k, v in self.mapping.items()}
-        mapped_value = inverse_mapping.get(value, None)
+        mapped_value = inverse_mapping.get(value)
         if not mapped_value:
             return "In Between"
         return mapped_value
@@ -107,7 +106,7 @@ class MappedControllerEngageDisengage(MappedController):
                     return k + "d"  # here we return it as past tense
 
         inverse_mapping = {v: k for k, v in self.mapping.items()}
-        mapped_value = inverse_mapping.get(value, None)
+        mapped_value = inverse_mapping.get(value)
         if not mapped_value:
             return "In Between"
         return mapped_value
@@ -151,6 +150,10 @@ class MultiTargetMapping(MappedMoveable):
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
 
+    def doReset(self):
+        for channel in self._attached_controlled_devices:
+            channel.reset()
+
     def doWriteMapping(self, mapping):
         self.valuetype = oneof(*sorted(mapping, key=num_sort))
 
@@ -183,7 +186,7 @@ class MultiTargetMapping(MappedMoveable):
                     return k
 
         inverse_mapping = {v: k for k, v in self.mapping.items()}
-        mapped_value = inverse_mapping.get(value, None)
+        mapped_value = inverse_mapping.get(value)
         if not mapped_value:
             return "In Between"
         return mapped_value

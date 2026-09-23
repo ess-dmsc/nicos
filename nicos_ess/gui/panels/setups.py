@@ -5,7 +5,6 @@ from nicos.clients.gui.panels.setup_panel import AliasWidget
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
     QListWidgetItem,
-    QPushButton,
     Qt,
     pyqtSlot,
 )
@@ -18,6 +17,14 @@ def iterChecked(listwidget):
         item = listwidget.item(i)
         if item.checkState() == Qt.CheckState.Checked:
             yield item
+
+
+def clearCheckedComponents(listwidget):
+    """Clear all checked devices in QListWidget"""
+    for i in range(listwidget.count()):
+        item = listwidget.item(i)
+        if item.checkState() == Qt.CheckState.Checked:
+            item.setCheckState(0)
 
 
 class SetupsPanel(Panel):
@@ -149,6 +156,11 @@ class SetupsPanel(Panel):
     def on_btn_apply_clicked(self):
         self.applyChanges()
 
+    @pyqtSlot()
+    def on_btn_clear_clicked(self):
+        # only clears selected optional setups
+        clearCheckedComponents(self.optSetups)
+
     def showSetupInfo(self, setup):
         info = self._setupinfo[str(setup)]
         devs = []
@@ -157,8 +169,7 @@ class SetupsPanel(Panel):
                 devs.append(devname)
         devs = ", ".join(sorted(devs))
         self.setupDescription.setText(
-            "<b>%s</b><br/>%s<br/><br/>"
-            "Devices: %s<br/>" % (setup, info["description"], devs)
+            f"<b>{setup}</b><br/>{info['description']}<br/><br/>Devices: {devs}<br/>"
         )
 
     def toggle_pnp_setup_visibility(self, name, hide):
@@ -169,10 +180,7 @@ class SetupsPanel(Panel):
 
     def _calculateSetups(self):
         cur = self.basicSetup.currentItem()
-        if cur:
-            basic = cur.text()
-        else:
-            basic = "<keep current>"
+        basic = cur.text() if cur else "<keep current>"
         # calculate the new setups
         setups = set()
         new_basic = False
@@ -264,7 +272,7 @@ class SetupsPanel(Panel):
             self.showError("Could not load setups, a script is running.")
             return
         for name, wid in self._aliasWidgets.items():
-            self.client.run("%s.alias = %r" % (name, wid.getSelection()))
+            self.client.run(f"{name}.alias = {wid.getSelection}")
         if to_add or to_remove or self._aliasWidgets:
             self.showInfo("New setups loaded.")
 

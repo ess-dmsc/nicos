@@ -26,6 +26,7 @@ from datetime import datetime
 from unittest import TestCase, mock
 
 import pytest
+
 pytest.importorskip("epics")
 pytest.importorskip("streaming_data_types")
 pytest.importorskip("confluent_kafka")
@@ -37,7 +38,6 @@ from streaming_data_types.fbschemas.action_response_answ.ActionOutcome import (
 from streaming_data_types.fbschemas.action_response_answ.ActionType import ActionType
 
 from nicos.core import MASTER
-
 from nicos_ess.devices.datasinks.file_writer import JobRecord, JobState
 
 # Set to None because we load the setup after the mocks are in place.

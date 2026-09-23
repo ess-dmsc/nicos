@@ -6,7 +6,7 @@ camera_system_pv_root = "TBL-DtCMOS:"
 camera_device_pv_root = "NDet-OrcF43:"
 camera_ndplugin_pv_root = "image1:"
 camera_kafkaplugin_pv_root = "Kfk1:"
-water_cooler_pv_root = "TBL-DtCMOS:NDet-FTCtrl-001:"
+water_cooler_pv_root = "TBL-DtCMOS:WtrC-TE-001:"
 
 devices = dict(
     watercooler_mode=device(
@@ -30,7 +30,7 @@ devices = dict(
         pv_root=f"{camera_system_pv_root}{camera_device_pv_root}",
         image_pv=f"{camera_system_pv_root}{camera_ndplugin_pv_root}ArrayData",
         topicpv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}KafkaTopic_RBV",
-        sourcepv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}SourceName_RBV",
+        sourcepv=f"{camera_system_pv_root}Schema:SourceName_RBV",
         unit="images",
         pva=True,
         monitor=True,

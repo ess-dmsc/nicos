@@ -5,10 +5,10 @@ import logging
 import os
 import sys
 import traceback
+from logging.handlers import RotatingFileHandler
 from os import path
 from pathlib import Path
 
-from logging.handlers import RotatingFileHandler
 from platformdirs import user_config_dir
 
 from nicos import config
@@ -23,7 +23,7 @@ try:
     from nicos.guisupport.qt import QApplication
 except ImportError:
     print(
-        f"Please install the optional 'gui' dependencies of NICOS to use this command. Refer to the README for details."
+        "Please install the optional 'gui' dependencies of NICOS to use this command. Refer to the README for details."
     )
     sys.exit(0)
 import nicos_ess

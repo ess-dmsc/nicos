@@ -9,7 +9,7 @@ icons_path = path.join(root_path, "resources", "material", "icons")
 
 
 def get_icon(icon_name):
-    return QIcon(path.join(icons_path, icon_name))
+    return QIcon(":/material/" + icon_name.removesuffix("-24px.svg"))
 
 
 class State(Enum):

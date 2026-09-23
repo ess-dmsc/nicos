@@ -6,41 +6,41 @@ devices = dict(
     rmm1_temperature=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The temperature of the hottest FPGA temperature sensor",
-        readpv="{}Temperature-R".format(pv_root_1),
+        readpv=f"{pv_root_1}MaxTemperature",
     ),
     rmm1_ring_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the ring",
-        readpv="{}RingStatus-R".format(pv_root_1),
+        readpv=f"{pv_root_1}RingStatus",
     ),
     rmm1_ring_bring_up_output=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The ring bring up output",
-        readpv="{}RingBringUpOutput-R".format(pv_root_1),
+        readpv=f"{pv_root_1}RingBringUpOutput",
     ),
     rmm1_config_message=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The configuration message",
-        readpv="{}ConfigMessage-R".format(pv_root_1),
+        readpv=f"{pv_root_1}ConfigMessage",
     ),
     rmm1_ref_clock_freq_ok=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the reference clock frequency",
-        readpv="{}RefClkFreqOk-R".format(pv_root_1),
+        readpv=f"{pv_root_1}RefClkFreqOk",
     ),
     rmm1_mrf_message=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The MRF message",
-        readpv="{}MrfMsg-R".format(pv_root_1),
+        readpv=f"{pv_root_1}MrfMsg",
     ),
     rmm1_timing_mode_source=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The mode of timing source (local/external/mrf)",
-        readpv="{}TimingModeSrc-R".format(pv_root_1),
+        readpv=f"{pv_root_1}TimingModeSrc",
     ),
     rmm1_timing_mode_sync=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The sync timing mode",
-        readpv="{}TimingModeSync-R".format(pv_root_1),
+        readpv=f"{pv_root_1}TimingModeSync",
     ),
 )
