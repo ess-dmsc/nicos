@@ -25,7 +25,6 @@ main_window = docked(
                             "Hexapod",
                             panel(
                                 "nicos_ess.freia.gui.panels.hexapod.HexapodPanel",
-                                hexapod="virtual_hexapod",
                                 setups="virtual_hexapod",
                             ),
                         ),
