@@ -185,10 +185,14 @@ def main(_argv):
 
     if gui_conf.options.get("facility") in ["ess", "sinq"]:
         if os.environ.get("NICOS_QT") == "5":
-            gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig.qss")
+            gui_conf.stylefile = Path(
+                Path(nicos_ess.__file__).parent, f"gui/guiconfig.qss"
+            )
             base_style = ""
         else:
-            gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig_6.qss")
+            gui_conf.stylefile = Path(
+                Path(nicos_ess.__file__).parent, f"gui/guiconfig_6.qss"
+            )
             base_style = LIGHT_MODE
             if is_dark_mode_enabled():
                 base_style = DARK_MODE
