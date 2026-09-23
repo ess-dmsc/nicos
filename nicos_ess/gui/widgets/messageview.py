@@ -152,10 +152,7 @@ class MessageView(QTextBrowser):
         # (logger, time, levelno, message, exc_text, reqid)
         fmt = None
         levelno = message[2]
-        if message[0] == "nicos":
-            name = ""
-        else:
-            name = "%-10s: " % message[0]
+        name = "" if message[0] == "nicos" else f"{message[0]}-10s: "
         if message[5] == "0":  # simulation result started by console
             name = "(sim) " + name
         if levelno == ACTION:
@@ -289,7 +286,7 @@ class MessageView(QTextBrowser):
         content = "\n".join(content)
         window = QMainWindow(self)
         window.resize(600, 800)
-        window.setWindowTitle("Lines matching %r" % what)
+        window.setWindowTitle(f"Lines matching {what!r}")
         widget = QTextEdit(window)
         widget.setFont(self.font())
         window.setCentralWidget(widget)

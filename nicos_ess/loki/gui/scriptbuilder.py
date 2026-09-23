@@ -9,7 +9,6 @@ from nicos.clients.gui.utils import loadUi
 from nicos.core import InvalidValueError
 from nicos.guisupport.qt import (
     QAction,
-    QApplication,
     QCursor,
     QFileDialog,
     QHeaderView,

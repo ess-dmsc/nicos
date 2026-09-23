@@ -6,7 +6,6 @@ from nicos.clients.gui.dialogs.traceback import TracebackDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import QDialogButtonBox
-from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import findResource
 
 
