@@ -2,9 +2,9 @@ from unittest.mock import Mock
 
 import pytest
 
+from nicos.core import UsageError
 from nicos_ess.devices.experiment import EssExperiment
 from nicos_ess.devices.sample import EssSample
-from nicos.core import UsageError
 
 
 @pytest.fixture
