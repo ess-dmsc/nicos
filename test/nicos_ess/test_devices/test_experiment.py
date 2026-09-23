@@ -3,7 +3,9 @@ from unittest.mock import Mock
 import pytest
 
 from nicos.core import UsageError
-from nicos_ess.devices.experiment import EssExperiment
+
+# from nicos_ess.devices.experiment import EssExperiment
+from nicos_ess.devices.experiment2 import EssExperiment
 from nicos_ess.devices.sample import EssSample
 
 
@@ -14,7 +16,7 @@ def experiment(daemon_device_harness, monkeypatch):
         name="sample",
     )
     monkeypatch.setattr(
-        "nicos_ess.devices.experiment.createThread",
+        "nicos_ess.devices.experiment2.createThread",
         Mock(),
     )
     experiment = daemon_device_harness.create_master(
@@ -25,6 +27,10 @@ def experiment(daemon_device_harness, monkeypatch):
         sample=sample,
     )
     return experiment
+
+
+def test_can_query_yuos(experiment):
+    assert experiment._canQueryProposals()
 
 
 def test_new_experiment_from_cached_proposal(experiment):
@@ -233,6 +239,28 @@ def test_update_experiment_fails_with_local_contact_missing_name(experiment):
     }
     with pytest.raises(KeyError):
         experiment.update(**new_exp_args)
+
+
+def test_finish_clears_experiment_proposal(experiment):
+    experiment._yuos_client.update_cache()
+    result = experiment._queryProposals(kwds={"admin": True})[0]
+    exp_args = {
+        "proposal": result["proposal"],
+        "title": result["title"],
+        "users": result["users"],
+    }
+    experiment.new(**exp_args)
+    # from ExpPanel._set_samples()
+    samples = {}
+    for index, sample in enumerate(result["samples"]):
+        if not sample.get("name", ""):
+            sample["name"] = f"sample {index + 1}"
+        samples[index] = sample
+    experiment.sample.set_samples(dict(samples))
+    experiment.finish()
+    assert experiment.proposal == "0"
+    assert experiment.users == []
+    assert experiment.get_samples() == []
 
 
 def test_get_current_run_number(experiment):
