@@ -2,6 +2,9 @@
 
 main_window = docked(
     tabbed(
+        ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
+        ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
+        ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
         (
             "Instrument interaction",
             hsplit(
@@ -67,16 +70,6 @@ main_window = docked(
                 ),
             ),  # hsplit
         ),
-        ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
-        (
-            "Logs",
-            tabbed(
-                ("Errors", panel("nicos_ess.gui.panels.errors.ErrorPanel")),
-                ("Log files", panel("nicos_ess.gui.panels.logviewer.LogViewerPanel")),
-            ),
-        ),
-        ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
-        ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
         (
             "Scripting",
             panel("nicos_ess.gui.panels.editor.EditorPanel", tools=None),
@@ -88,6 +81,13 @@ main_window = docked(
         (
             "History(TESTING)",
             panel("nicos_ess.gui.panels.history_pyqt.HistoryPanel"),
+        ),
+        (
+            "Logs",
+            tabbed(
+                ("Errors", panel("nicos_ess.gui.panels.errors.ErrorPanel")),
+                ("Log files", panel("nicos_ess.gui.panels.logviewer.LogViewerPanel")),
+            ),
         ),
         position="left",
         margins=(25, 10, 25, 35),
