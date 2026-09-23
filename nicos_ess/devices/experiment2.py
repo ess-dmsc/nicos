@@ -47,19 +47,11 @@ class EssExperiment(Experiment):
             type=none_or(str),
             userparam=False,
         ),
-        "instrument_scripts_directory": Param(
-            "Path to the top directory where instrument scripts live",
+        "scripts_directory": Param(
+            "Path to the top directory where instrument and user scripts live",
             type=str,
             category="experiment",
-            default="/opt/instrument_scripts",
-            mandatory=False,
-            userparam=False,
-        ),
-        "user_scripts_directory": Param(
-            "Path to the top directory where user scripts live",
-            type=str,
-            category="experiment",
-            default="/opt/user_scripts",
+            default="/opt/instrument-nicos-scripts",
             mandatory=False,
             userparam=False,
         ),
@@ -262,6 +254,16 @@ class EssExperiment(Experiment):
         nextnum = readFileCounter(counterpath, "file")
         return nextnum
 
+    @property
+    def instrument_scripts_directory(self) -> str:
+        instrument = session.instrument.name.lower()
+        return os.path.join(self.scripts_directory, instrument, "instrument")
+
+    @property
+    def user_scripts_directory(self) -> str:
+        instrument = session.instrument.name.lower()
+        return os.path.join(self.scripts_directory, instrument, "user")
+
     def list_instrument_scripts_directory(self) -> (str, list[str]):
         """Fetches a list of files in the instrument scripts directory.
 
@@ -269,8 +271,7 @@ class EssExperiment(Experiment):
 
         Returns: (the directory path, a list of files)
         """
-        instrument = session.instrument.name.lower()
-        directory = os.path.join(self.instrument_scripts_directory, instrument)
+        directory = self.instrument_scripts_directory
         # Ignore any directories as we don't support directories for
         # instrument scripts.
         (files, _) = self._list_directory_files(directory, extension=".py")
@@ -321,7 +322,7 @@ class EssExperiment(Experiment):
         if ".." in path:
             self.log.error("Relative paths are not allowed when creating directories.")
             return
-        path = os.path.join(self.user_scripts_directory, path)
+        directory = os.path.join(self.user_scripts_directory, path)
 
-        if not os.path.exists(path):
-            os.makedirs(path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
