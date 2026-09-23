@@ -1,6 +1,7 @@
 """NICOS GUI application startup."""
 
 import argparse
+import contextlib
 import logging
 import os
 import sys
@@ -37,10 +38,8 @@ from nicos.utils.loggers import (
 
 # Work around a crash on Py3/Bionic when readline is imported later in
 # a callback from unpickling server data.
-try:
-    import readline  # pylint: disable=unused-import
-except ImportError:
-    pass
+with contextlib.suppress(ImportError):
+    pass  # pylint: disable=unused-import
 
 log = None
 
@@ -125,10 +124,8 @@ def main(_argv):
     log.addHandler(ColoredConsoleHandler())
     # add log file handler, storing logs in user config dir
     log_path = path.join(userpath, "log")
-    try:
+    with contextlib.suppress(FileExistsError):
         os.mkdir(log_path)
-    except FileExistsError:
-        pass
     # limit file logging to 100MB in total (10x10MB)
     f_handler = RotatingFileHandler(
         filename=path.join(log_path, "gui"), maxBytes=int(10e6), backupCount=10
@@ -156,10 +153,8 @@ def main(_argv):
     opts = parseargs()
 
     if opts.configfile is None:
-        try:
+        with contextlib.suppress(RuntimeError):
             config.apply()
-        except RuntimeError:
-            pass
         # If "demo" is detected automatically, let the user choose their
         # instrument configuration.
         need_dialog = config.instrument is None or (
@@ -180,39 +175,24 @@ def main(_argv):
 
     with open(opts.configfile, "rb") as fp:
         configcode = fp.read()
+
     gui_conf = processGuiConfig(configcode)
-    gui_conf.stylefile = ""
+    gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, "gui/guiconfig.qss")
+    base_style = ""
 
-    if gui_conf.options.get("facility") in ["ess", "sinq"]:
-        if os.environ.get("NICOS_QT") == "5":
-            gui_conf.stylefile = Path(
-                Path(nicos_ess.__file__).parent, f"gui/guiconfig.qss"
-            )
-            base_style = ""
-        else:
-            gui_conf.stylefile = Path(
-                Path(nicos_ess.__file__).parent, f"gui/guiconfig_6.qss"
-            )
-            base_style = LIGHT_MODE
-            if is_dark_mode_enabled():
-                base_style = DARK_MODE
+    if os.environ.get("NICOS_QT") == "6":
+        gui_conf.stylefile = Path(
+            Path(nicos_ess.__file__).parent, f"gui/guiconfig_6.qss"
+        )
+        base_style = LIGHT_MODE
+        if is_dark_mode_enabled():
+            base_style = DARK_MODE
 
-    stylefiles = [
-        path.join(userpath, "style-%s.qss" % sys.platform),
-        path.join(userpath, "style.qss"),
-        path.splitext(opts.configfile)[0] + "-%s.qss" % sys.platform,
-        path.splitext(opts.configfile)[0] + ".qss",
-    ]
-
-    for stylefile in [gui_conf.stylefile] or stylefiles:
-        if path.isfile(stylefile):
-            try:
-                with open(stylefile, "r", encoding="utf-8") as fd:
-                    app.setStyleSheet(base_style + fd.read())
-                gui_conf.stylefile = stylefile
-                break
-            except Exception:
-                log.warning("Error setting user style sheet from %s", stylefile, exc=1)
+    try:
+        with open(gui_conf.stylefile, encoding="utf-8") as fd:
+            app.setStyleSheet(base_style + fd.read())
+    except Exception:
+        log.warning("Error setting user style sheet from %s", gui_conf.stylefile, exc=1)
 
     mainwindow_cls = importString(
         gui_conf.options.get("mainwindow_class", "nicos_ess.gui.mainwindow.MainWindow")
