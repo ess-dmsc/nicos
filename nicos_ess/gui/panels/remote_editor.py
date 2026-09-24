@@ -18,11 +18,9 @@ from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
     QAction,
     QActionGroup,
-    QByteArray,
     QColor,
     QDialog,
     QFileDialog,
-    QFileSystemModel,
     QFont,
     QFontMetrics,
     QHBoxLayout,
@@ -374,22 +372,6 @@ class EditorPanel(Panel):
         self.simPane.hide()
         self.simWindows = []
 
-        self.splitter.restoreState(self.splitterstate)
-        self.treeModel = QFileSystemModel()
-        idx = self.treeModel.setRootPath("/")
-        self.treeModel.setNameFilters(["*.py", "*.txt"])
-        self.treeModel.setNameFilterDisables(False)  # hide them
-        self.fileTree.setModel(self.treeModel)
-        self.fileTree.header().hideSection(1)
-        self.fileTree.header().hideSection(2)
-        self.fileTree.header().hideSection(3)
-        self.fileTree.header().hide()
-        self.fileTree.setRootIndex(idx)
-        if not options.get("show_browser", True):
-            self.scriptsPane.hide()
-        self.actionShowScripts = self.scriptsPane.toggleViewAction()
-        self.actionShowScripts.setText("Show Script Browser")
-
         self.activeGroup = QActionGroup(self)
         self.activeGroup.addAction(self.actionRun)
         self.activeGroup.addAction(self.actionSimulate)
@@ -615,11 +597,9 @@ class EditorPanel(Panel):
             self.tabber.setTabText(index, tt + (dirty and "*" or ""))
 
     def loadSettings(self, settings):
-        self.splitterstate = settings.value("splitter", "", QByteArray)
         self.openfiles = settings.value("openfiles") or []
 
     def saveSettings(self, settings):
-        settings.setValue("splitter", self.splitter.saveState())
         settings.setValue(
             "openfiles", [self.filenames[e] for e in self.editors if self.filenames[e]]
         )
@@ -813,16 +793,9 @@ class EditorPanel(Panel):
     def on_client_connected(self):
         self.loaded_devices = list(self.client.eval("session.devices", {}).keys())
         self.enableRemoteActions()
-        self._set_scriptdir()
 
     def on_client_disconnected(self):
         self.enableRemoteActions()
-
-    def _set_scriptdir(self):
-        initialdir = self.client.eval("session.experiment.scriptpath", "")
-        if initialdir:
-            idx = self.treeModel.setRootPath(initialdir)
-            self.fileTree.setRootIndex(idx)
 
     def on_client_cache(self, data):
         (_time, key, _op, _value) = data
@@ -835,7 +808,6 @@ class EditorPanel(Panel):
 
     def on_client_experiment(self, data):
         (_, proptype) = data
-        self._set_scriptdir()
         self.simPane.hide()
         if proptype == "user":
             # close existing tabs when switching TO a user experiment
@@ -844,14 +816,6 @@ class EditorPanel(Panel):
             # if all tabs have been closed, open a new file
             if not self.tabber.count():
                 self.on_actionNew_triggered()
-
-    def on_fileTree_doubleClicked(self, idx):
-        fpath = self.treeModel.filePath(idx)
-        for i, editor in enumerate(self.editors):
-            if self.filenames[editor] == fpath:
-                self.tabber.setCurrentIndex(i)
-                return
-        self.openFile(fpath)
 
     @pyqtSlot()
     def on_actionPrint_triggered(self):
