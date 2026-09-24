@@ -119,6 +119,22 @@ class FileTableModel(QAbstractTableModel):
         self._emit_update()
 
 
+class RelativePathTracker:
+    def __init__(self):
+        self._path = []
+        self._indexes = []
+
+    def push(self, directory, index):
+        self._path.append(directory)
+        self._indexes.append(index)
+
+    def pop(self):
+        return self._path.pop(), self._indexes.pop()
+
+    def path(self):
+        return os.path.join(*self._path) if self._path else ""
+
+
 class RemoteFileDialog(QDialog):
     @classmethod
     def get_file(cls, parent, client, directory="", save=False, admin=False, name=None):
@@ -135,8 +151,7 @@ class RemoteFileDialog(QDialog):
         self.save = save
         self.admin = admin
         self.is_inst_script = False
-        self.rel_directory = []
-        self.rel_directory_indexes = []
+        self.rel_path_tracker = RelativePathTracker()
 
         # We store the raw modification time but don't show it.
         # When we sort on modification time we use the raw value
@@ -218,7 +233,6 @@ class RemoteFileDialog(QDialog):
         if files_info is None:
             raise RuntimeError("Could not retrieve files from NICOS server")
 
-
         directories.sort()
         files_info.sort(key=lambda x: x[0])
         self.filenames = {x[0] for x in files_info}
@@ -266,7 +280,7 @@ class RemoteFileDialog(QDialog):
     def on_btn_new_folder_pressed(self):
         dialog = NewFolderDialog()
         if dialog.exec():
-            rel_path = os.path.join(*self.rel_directory) if self.rel_directory else ""
+            rel_path = self.rel_path_tracker.path()
             path = os.path.join(rel_path, dialog.txt_name.text())
             self.client.eval(
                 f"session.experiment.create_user_script_directory('{path}')", None
@@ -298,11 +312,8 @@ class RemoteFileDialog(QDialog):
 
         # Clicking 'open' on a folder should open the folder.
         if row_data[3]:
-            self.rel_directory.append(row_data[0])
-            self.rel_directory_indexes.append(row.row())
-
-            path = os.path.join(*self.rel_directory)
-            self._update_files_list(path)
+            self.rel_path_tracker.push(row_data[0], row.row())
+            self._update_files_list(self.rel_path.tracker.path())
             self._update_path_controls()
             return
 
@@ -337,23 +348,19 @@ class RemoteFileDialog(QDialog):
         )
 
         if is_dir:
-            self.rel_directory.append(filename)
-            self.rel_directory_indexes.append(index.row())
-            
-            path = "/".join(self.rel_directory)
-            self._update_files_list(path)
+            self.rel_path_tracker.push(filename, index.row())
+            self._update_files_list(self.rel_path_tracker.path())
             self._update_path_controls()
         else:
             self.txt_filename.setText(filename)
             self.on_btn_ok_pressed()
 
     def _update_path_controls(self):
-        path = "/".join(self.rel_directory)
+        path = self.rel_path_tracker.path()
         if path:
             self.txt_path.setVisible(True)
             self.lbl_path.setVisible(True)
             self.btn_up.setVisible(True)
-
             self.txt_path.setText(path)
         else:
             self.txt_path.setVisible(False)
@@ -362,8 +369,6 @@ class RemoteFileDialog(QDialog):
 
     @pyqtSlot()
     def on_btn_up_pressed(self):
-        self.rel_directory.pop()
-        idx = self.rel_directory_indexes.pop()
-        path = "/".join(self.rel_directory)
-        self._update_files_list(path, idx)
+        _, index = self.rel_path_tracker.pop()
+        self._update_files_list(self.rel_path_tracker.path(), index)
         self._update_path_controls()
