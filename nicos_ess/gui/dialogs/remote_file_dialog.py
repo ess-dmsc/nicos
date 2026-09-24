@@ -136,6 +136,7 @@ class RemoteFileDialog(QDialog):
         self.admin = admin
         self.is_inst_script = False
         self.rel_directory = []
+        self.rel_directory_indexes = []
 
         # We store the raw modification time but don't show it.
         # When we sort on modification time we use the raw value
@@ -203,7 +204,7 @@ class RemoteFileDialog(QDialog):
         self._update_files_list()
         self._update_path_controls()
 
-    def _update_files_list(self, directory=""):
+    def _update_files_list(self, directory="", index=0):
         if self.is_inst_script:
             self.abs_directory, (files_info, directories) = self.client.eval(
                 "session.experiment.list_instrument_scripts_directory()", (None, None)
@@ -216,6 +217,7 @@ class RemoteFileDialog(QDialog):
 
         if files_info is None:
             raise RuntimeError("Could not retrieve files from NICOS server")
+
 
         directories.sort()
         files_info.sort(key=lambda x: x[0])
@@ -241,9 +243,12 @@ class RemoteFileDialog(QDialog):
                 )
             )
 
+        self.file_table.clearSelection()
         self.table_model.set_data(raw_data)
-        if len(files_info):
-            self.file_table.clearSelection()
+        if raw_data:
+            index = index if index < len(raw_data) else 0
+            first_entry = self.table_model.index(index, 0)
+            self.file_table.setCurrentIndex(first_entry)
 
     def on_selection_changed(self, current, _previous):
         if len(current.indexes()) == 0:
@@ -289,17 +294,19 @@ class RemoteFileDialog(QDialog):
             return
 
         row = self.file_table.selectionModel().selectedRows()[0]
-        row = self.table_model.get_row(row.row())
+        row_data = self.table_model.get_row(row.row())
 
         # Clicking 'open' on a folder should open the folder.
-        if row[3]:
-            self.rel_directory.append(row[0])
+        if row_data[3]:
+            self.rel_directory.append(row_data[0])
+            self.rel_directory_indexes.append(row.row())
+
             path = os.path.join(*self.rel_directory)
             self._update_files_list(path)
             self._update_path_controls()
             return
 
-        self.txt_filename.setText(row[0])
+        self.txt_filename.setText(row_data[0])
         self.accept()
 
     @pyqtSlot()
@@ -331,6 +338,8 @@ class RemoteFileDialog(QDialog):
 
         if is_dir:
             self.rel_directory.append(filename)
+            self.rel_directory_indexes.append(index.row())
+            
             path = "/".join(self.rel_directory)
             self._update_files_list(path)
             self._update_path_controls()
@@ -354,6 +363,7 @@ class RemoteFileDialog(QDialog):
     @pyqtSlot()
     def on_btn_up_pressed(self):
         self.rel_directory.pop()
+        idx = self.rel_directory_indexes.pop()
         path = "/".join(self.rel_directory)
-        self._update_files_list(path)
+        self._update_files_list(path, idx)
         self._update_path_controls()
