@@ -254,14 +254,16 @@ class RemoteFileDialog(QDialog):
 
     def delete_item(self, row):
         row = self.table_model.get_row(row)
-        base_path = os.path.join(*self.rel_directory) if self.rel_directory else ""
+        base_path = self.rel_path_tracker.path()
         path = os.path.join(base_path, row[0])
 
         if row[3]:
             # Deleting folder so warn
             reply = QMessageBox.question(
-                self, "Warning", "Deleting a folder will delete all the contents. Are you sure?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                self,
+                "Warning",
+                "Deleting a folder will delete all the contents. Are you sure?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.No:
                 return
@@ -279,15 +281,16 @@ class RemoteFileDialog(QDialog):
 
     def rename_item(self, row):
         row = self.table_model.get_row(row)
-        base_path = os.path.join(*self.rel_directory) if self.rel_directory else ""
+        base_path = self.rel_path_tracker.path()
         old = os.path.join(base_path, row[0])
 
         # TODO: rename Newfolderdialog
-        # TODO: disable rename and delete for inst_scripts
         if row[3]:
             dialog = NewFolderDialog("Rename Folder", "Enter new name:", text=row[0])
         else:
-            dialog = NewFolderDialog("Rename Script", "Enter new name:", ".py", row[0].removesuffix(".py"))
+            dialog = NewFolderDialog(
+                "Rename Script", "Enter new name:", ".py", row[0].removesuffix(".py")
+            )
 
         if dialog.exec():
             new_name = dialog.txt_name.text()
