@@ -47,5 +47,5 @@ def is_dark_mode_enabled():
     try:
         scheme = QApplication.instance().styleHints().colorScheme()
         return scheme == Qt.ColorScheme.Dark
-    except RuntimeError:
+    except Exception:
         return False
