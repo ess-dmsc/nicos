@@ -390,7 +390,6 @@ class EssExperiment(Device):
             return
         old = os.path.join(self.user_scripts_directory, old)
         new = os.path.join(self.user_scripts_directory, new)
-        self.log.warn(old, new)
 
         if os.path.exists(old):
             os.rename(old, new)
