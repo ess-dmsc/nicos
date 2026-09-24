@@ -4,6 +4,7 @@ from nicos.core import (
     SIMULATION,
     Attach,
     CanDisable,
+    MoveError,
     Override,
     Param,
     oneof,
@@ -137,8 +138,7 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
     def doStart(self, target):
         is_disabled = self._epics.get_channel_value("is_disabled")
         if is_disabled:
-            self.log.warning(f'Please enable device: "{self.name}" before starting')
-            return
+            raise MoveError(self, f'Cannot start: Please enable device "{self.name}"')
         self._epics.put_channel_value("write", target)
         self._epics.put_channel_value("start", 1)
 
@@ -431,13 +431,12 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
 
     def doStart(self, target):
         if not self._epics.get_channel_value("is_homed"):
-            self.log.warning("Cannot start because devices is not homed")
-            return
+            raise MoveError(self, f"Cannot start: {self.name} is not homed")
         if self._linked_mode_enabled() and self.status(0)[0] == status.BUSY:
-            self.log.warning(
-                f"Cannot start if {self._attached_linked_pumping.name} is already running"
+            raise MoveError(
+                self,
+                f"Cannot start: {self._attached_linked_pumping.name} is already running",
             )
-            return
         if self._linked_mode_enabled():
             self._disable_linked_mode()
         self._epics.put_channel_value("write", target)
@@ -446,10 +445,10 @@ class CetoniPumpController(CanReferenceWithWarning, EpicsAnalogMoveable):
         if not self._epics.get_channel_value("is_pumping"):
             return
         if self._linked_mode_enabled():
-            self.log.warning(
-                f"Cannot stop individual pump if {self._attached_linked_pumping.name} is running"
+            raise MoveError(
+                self,
+                f"Cannot stop individual pump while {self._attached_linked_pumping.name} is running",
             )
-            return
         self._epics.put_channel_value("stop", 1)
 
     def _compute_status(self, maxage=0):
