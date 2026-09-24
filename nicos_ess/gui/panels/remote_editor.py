@@ -366,7 +366,6 @@ class EditorPanel(Panel):
         self.is_imported_script = defaultdict(lambda: False)  # editor -> bool
         self.currentEditor = None
 
-        self.saving = False  # True while saving
         self.warnWidget.hide()
 
         self.simFrame = SimResultFrame(self, None, self.client)
@@ -1075,21 +1074,22 @@ class EditorPanel(Panel):
         filename = self.filenames[editor]
 
         if not filename:
+            # It is a new file
             return self.saveFileAs(editor)
-
-        if self.is_imported_script[editor]:
+        elif self.is_imported_script[editor]:
             # Suggest the same name as it was imported as.
             name = os.path.basename(filename)
             return self.saveFileAs(editor, name=name)
-
-        # If file no longer exists on server, for example: someone renames the parent
-        # folder, use save as
-        if not self.client.eval(
-                f"session.experiment.user_script_file_exists('{filename}')",
-            ):
+        elif not self.client.eval(
+            f"session.experiment.user_script_file_exists('{filename}')",
+        ):
+            # If filepath no longer exists on server, for example: someone renames the parent
+            # folder, use save as
             return self.saveFileAs(editor)
 
-        self.saving = True
+        return self._save_file(filename, editor)
+
+    def _save_file(self, filename, editor):
         # The content must be sent as bytes because eval cannot handle strings
         # containing \n, \t, etc.
         content = editor.text().encode()
@@ -1100,8 +1100,6 @@ class EditorPanel(Panel):
         except Exception as err:
             self.showError(f"Saving file failed: {err}")
             return False
-        finally:
-            self.saving = False
 
         editor.setModified(False)
 
@@ -1120,7 +1118,7 @@ class EditorPanel(Panel):
         self.filenames[editor] = file
         self.is_imported_script[editor] = False
         self.tabber.setTabText(self.editors.index(editor), os.path.basename(file))
-        return self.saveFile(editor)
+        return self._save_file(file, editor)
 
     @pyqtSlot()
     def on_actionUndo_triggered(self):
