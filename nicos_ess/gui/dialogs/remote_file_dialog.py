@@ -31,7 +31,7 @@ FOLDER_ICON = get_icon("folder_open-24px.svg")
 FILE_ICON = get_icon("document-24px.svg")
 
 
-class NewFolderDialog(QDialog):
+class FilenameDialog(QDialog):
     def __init__(self, title, label_text, post_label_text="", text=""):
         super().__init__()
         self.setWindowTitle(title)
@@ -284,11 +284,10 @@ class RemoteFileDialog(QDialog):
         base_path = self.rel_path_tracker.path()
         old = os.path.join(base_path, row[0])
 
-        # TODO: rename Newfolderdialog
         if row[3]:
-            dialog = NewFolderDialog("Rename Folder", "Enter new name:", text=row[0])
+            dialog = FilenameDialog("Rename Folder", "Enter new name:", text=row[0])
         else:
-            dialog = NewFolderDialog(
+            dialog = FilenameDialog(
                 "Rename Script", "Enter new name:", ".py", row[0].removesuffix(".py")
             )
 
@@ -361,7 +360,7 @@ class RemoteFileDialog(QDialog):
 
     @pyqtSlot()
     def on_btn_new_folder_pressed(self):
-        dialog = NewFolderDialog("Enter Folder Name", "Enter folder name:")
+        dialog = FilenameDialog("Enter Folder Name", "Enter folder name:")
         if dialog.exec():
             rel_path = self.rel_path_tracker.path()
             path = os.path.join(rel_path, dialog.txt_name.text())
