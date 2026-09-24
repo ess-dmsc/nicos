@@ -216,8 +216,11 @@ class RemoteFileDialog(QDialog):
         self.txt_path.setSizePolicy(policy)
 
     def _show_context_menu(self, point):
+        if self.is_inst_script:
+            # Disallow deleting and renaming the instrument commands file.
+            return
+
         row = self.file_table.indexAt(point).row()
-        print(row)
         if row < 0:
             return
 
