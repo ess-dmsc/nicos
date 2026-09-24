@@ -59,39 +59,13 @@
        </layout>
       </widget>
      </widget>
-     <widget class="QSplitter" name="splitter">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+     <widget class="QFrame" name="mainFrame">
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
       </property>
-      <widget class="QDockWidget" name="scriptsPane">
-       <property name="features">
-        <set>QDockWidget::DockWidgetClosable</set>
-       </property>
-       <property name="allowedAreas">
-        <set>Qt::LeftDockWidgetArea</set>
-       </property>
-       <property name="windowTitle">
-        <string>Scripts</string>
-       </property>
-       <widget class="QWidget" name="dockWidgetContents">
-        <layout class="QVBoxLayout" name="verticalLayout_4">
-         <property name="margin" stdset="0">
-          <number>0</number>
-         </property>
-         <item>
-          <widget class="QTreeView" name="fileTree"/>
-         </item>
-        </layout>
-       </widget>
-      </widget>
-      <widget class="QFrame" name="mainFrame">
-       <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Raised</enum>
-       </property>
-      </widget>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
      </widget>
     </widget>
    </item>
