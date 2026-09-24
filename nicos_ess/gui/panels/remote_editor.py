@@ -18,11 +18,9 @@ from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
     QAction,
     QActionGroup,
-    QByteArray,
     QColor,
     QDialog,
     QFileDialog,
-    QFileSystemModel,
     QFont,
     QFontMetrics,
     QHBoxLayout,
