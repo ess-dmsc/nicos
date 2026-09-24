@@ -246,7 +246,7 @@ class RemoteFileDialog(QDialog):
             )
             if reply == QMessageBox.StandardButton.No:
                 return
-            
+
             self.client.eval(
                 f"session.experiment.delete_user_script_directory('{path}')",
                 None,
