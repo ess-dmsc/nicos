@@ -34,6 +34,28 @@ main_window = docked(
                             panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
                         ),
                         (
+                            "X-ray",
+                            panel(
+                                "nicos_ess.gui.panels.xray.XrayPanel",
+                                status="status_r",
+                                beam_align="beam_align_r",
+                                xray="xray",
+                                voltage="voltage",
+                                voltage_r="voltage_r",
+                                current="current",
+                                current_r="current_r",
+                                focus="focus",
+                                vacuum="vacuum_r",
+                                temperature="temperature_r",
+                                align_x="align_x",
+                                align_y="align_y",
+                                camera="ad_sim_detector",
+                                collector="ad_sim_detector_area_detector_collector",
+                                source_motor="source_motor",
+                                flatpanel_motor="flatpanel_motor",
+                            ),
+                        ),
+                        (
                             "Script Status",
                             panel(
                                 "nicos_ess.gui.panels.status.ScriptStatusPanel",

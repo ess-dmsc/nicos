@@ -175,10 +175,11 @@ class EpicsParameters(HasNexusConfig):
             value = tuple(value)
 
         try:
-            if isinstance(value, float):
-                ret = self._format_float_as_string(value, self.fmtstr)
-            else:
-                ret = self.fmtstr % value
+            ret = (
+                self._format_float_as_string(value, self.fmtstr)
+                if isinstance(value, float)
+                else self.fmtstr % value
+            )
         except (TypeError, ValueError):
             ret = str(value)
 
@@ -913,7 +914,7 @@ class EpicsDeviceBase(EpicsParameters):
                 "error handling update for EPICS channel %r (PV %s)",
                 update.channel,
                 update.pv_name,
-                exc_info=True,
+                exc_info=(type(err), err, err.__traceback__),
             )
 
     def _on_channel_update(self, update):
