@@ -2,9 +2,12 @@ from nicos.guisupport.qt import (
     QComboBox,
     QDialog,
     QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    Qt,
     QVBoxLayout,
     pyqtSignal,
 )
@@ -33,36 +36,25 @@ class CetoniLinkedDialog(QDialog):
         )
         self.setWindowTitle(f"Control {self.devname}")
 
-        # widgets
-        self.dialog_layout = QVBoxLayout()
+        self.build_ui()
 
-        ## status section
-        self.device_status_section = QVBoxLayout()
+    def build_ui(self):
+        self.create_widgets()
+        self.set_layout()
+        self.format_layout()
+
+    def create_widgets(self):
         self.device_name = QLabel(f"Device: {self.devname}")
         self.device_description = QLabel("(description)")
 
-        self.value_status_grid = QGridLayout()
         self.value_label = QLabel("Current value:")
         self.value_value = QLabel()
         self.status_label = QLabel("Status:")
         self.status_icon = QLabel()
         self.status_value = QLabel()
-        self.value_status_grid.addWidget(self.value_label, 0, 0)
-        self.value_status_grid.addWidget(self.value_value, 0, 2)
-        self.value_status_grid.addWidget(self.status_label, 1, 0)
-        self.value_status_grid.addWidget(self.status_icon, 1, 1)
-        self.value_status_grid.addWidget(self.status_value, 1, 2)
 
-        self.device_status_section.addWidget(self.device_name)
-        self.device_status_section.addWidget(self.device_description)
-        self.device_status_section.addLayout(self.value_status_grid)
-
-        ## control section
-        self.control_section = QVBoxLayout()
-        self.control_header = QLabel()
-        self.control_grid = QGridLayout()
         self.mode_label = QLabel("Mode:")
-        self.mode_value = QLineEdit()
+        self.mode_value = QComboBox()
         self.time_label = QLabel("Time:")
         self.time_value = QLineEdit()
         self.time_unit = QLabel()
@@ -80,32 +72,114 @@ class CetoniLinkedDialog(QDialog):
         self.vol_total_label = QLabel("Volume total:")
         self.vol_total_value = QLabel()
         self.vol_total_unit = QLabel()
+        self.button_apply = QPushButton("Apply settings")
+
+        self.button_more = QPushButton("More")
+        self.button_reset = QPushButton("Reset")
         self.button_start = QPushButton("Start")
+        self.button_stop = QPushButton("Stop")
 
-        self.control_grid.addWidget(self.mode_label, 0, 0)
-        self.control_grid.addWidget(self.mode_value, 0, 1)
-        self.control_grid.addWidget(self.time_label, 1, 0)
-        self.control_grid.addWidget(self.time_value, 1, 1)
-        self.control_grid.addWidget(self.time_unit, 1, 2)
-        self.control_grid.addWidget(self.first_fill_label, 2, 0)
-        self.control_grid.addWidget(self.first_fill_value, 2, 1)
-        self.control_grid.addWidget(self.flowrate_label, 3, 0)
-        self.control_grid.addWidget(self.flowrate_value, 3, 1)
-        self.control_grid.addWidget(self.flowrate_unit, 3, 2)
-        self.control_grid.addWidget(self.vol_sp1_label, 4, 0)
-        self.control_grid.addWidget(self.vol_sp1_value, 4, 1)
-        self.control_grid.addWidget(self.vol_sp1_unit, 4, 2)
-        self.control_grid.addWidget(self.vol_sp2_label, 5, 0)
-        self.control_grid.addWidget(self.vol_sp2_value, 5, 1)
-        self.control_grid.addWidget(self.vol_sp2_unit, 5, 2)
-        self.control_grid.addWidget(self.vol_total_label, 6, 0)
-        self.control_grid.addWidget(self.vol_total_value, 6, 1)
-        self.control_grid.addWidget(self.vol_total_unit, 6, 2)
-        self.control_grid.addWidget(self.button_start, 7, 1)
+        self.button_plot_hist = QPushButton("Plot history")
+        self.button_show_params = QPushButton("Show parameters")
+        self.button_close = QPushButton("Close")
 
-        self.control_section.addWidget(self.control_header)
-        self.control_section.addLayout(self.control_grid)
+    def set_layout(self):
+        self.dialog_layout = QVBoxLayout()
 
-        self.dialog_layout.addLayout(self.device_status_section)
-        self.dialog_layout.addLayout(self.control_section)
+        self.status_section = QVBoxLayout()
+        self.value_status_grid = QGridLayout()
+        self.value_status_grid.addWidget(self.value_label, 0, 0)
+        self.value_status_grid.addWidget(self.value_value, 0, 2)
+        self.value_status_grid.addWidget(self.status_label, 1, 0)
+        self.value_status_grid.addWidget(self.status_icon, 1, 1)
+        self.value_status_grid.addWidget(self.status_value, 1, 2)
+        self.status_section.addWidget(self.device_name)
+        self.status_section.addWidget(self.device_description)
+        self.status_section.addSpacing(6)
+        self.status_section.addLayout(self.value_status_grid)
+
+        self.settings_group = QGroupBox("Settings", self)
+        self.settings_section = QVBoxLayout()
+        self.settings_grid = QGridLayout()
+        self.settings_grid.addWidget(self.mode_label, 0, 0)
+        self.settings_grid.addWidget(
+            self.mode_value,
+            0,
+            1,
+        )
+        self.settings_grid.addWidget(self.time_label, 1, 0)
+        self.settings_grid.addWidget(self.time_value, 1, 1)
+        self.settings_grid.addWidget(self.time_unit, 1, 2)
+        self.settings_grid.addWidget(self.first_fill_label, 2, 0)
+        self.settings_grid.addWidget(self.first_fill_value, 2, 1)
+        self.settings_grid.addWidget(self.flowrate_label, 3, 0)
+        self.settings_grid.addWidget(self.flowrate_value, 3, 1)
+        self.settings_grid.addWidget(self.flowrate_unit, 3, 2)
+        self.settings_grid.addWidget(self.vol_sp1_label, 4, 0)
+        self.settings_grid.addWidget(self.vol_sp1_value, 4, 1)
+        self.settings_grid.addWidget(self.vol_sp1_unit, 4, 2)
+        self.settings_grid.addWidget(self.vol_sp2_label, 5, 0)
+        self.settings_grid.addWidget(self.vol_sp2_value, 5, 1)
+        self.settings_grid.addWidget(self.vol_sp2_unit, 5, 2)
+        self.settings_grid.addWidget(self.vol_total_label, 6, 0)
+        self.settings_grid.addWidget(self.vol_total_value, 6, 1)
+        self.settings_grid.addWidget(self.vol_total_unit, 6, 2)
+        self.settings_section.addLayout(self.settings_grid)
+        self.settings_section.addWidget(
+            self.button_apply, alignment=Qt.AlignmentFlag.AlignRight
+        )
+        self.settings_group.setLayout(self.settings_section)
+
+        self.controls_section = QHBoxLayout()
+        self.controls_section.addWidget(self.button_more)
+        self.controls_section.addWidget(self.button_reset)
+        self.controls_section.addStretch()
+        self.controls_section.addWidget(self.button_start)
+        self.controls_section.addWidget(self.button_stop)
+
+        self.bottom_section = QHBoxLayout()
+        self.bottom_section.addWidget(self.button_plot_hist)
+        self.bottom_section.addWidget(self.button_show_params)
+        self.bottom_section.addStretch()
+        self.bottom_section.addWidget(self.button_close)
+
+        self.dialog_layout.addLayout(self.status_section)
+        self.dialog_layout.addSpacing(14)
+        self.dialog_layout.addWidget(self.settings_group)
+        self.dialog_layout.addSpacing(14)
+        self.dialog_layout.addLayout(self.controls_section)
+        self.dialog_layout.addSpacing(14)
+        self.dialog_layout.addLayout(self.bottom_section)
         self.setLayout(self.dialog_layout)
+
+    def format_layout(self):
+        VALUE_FIELD_WIDTH = 120
+        UNIT_FIELD_WIDTH = 25
+
+        value_fields = [
+            self.mode_value,
+            self.time_value,
+            self.first_fill_value,
+            self.flowrate_value,
+            self.vol_sp1_value,
+            self.vol_sp2_value,
+            self.vol_sp2_value,
+            self.vol_total_value,
+        ]
+
+        unit_fields = [
+            self.time_unit,
+            self.flowrate_unit,
+            self.vol_sp1_unit,
+            self.vol_sp2_unit,
+            self.vol_total_unit,
+        ]
+
+        for widget in value_fields:
+            widget.setMaximumWidth(VALUE_FIELD_WIDTH)
+
+        for widget in unit_fields:
+            widget.setMaximumWidth(UNIT_FIELD_WIDTH)
+
+        for row in range(self.settings_grid.rowCount()):
+            self.settings_grid.setRowMinimumHeight(row, 24)
