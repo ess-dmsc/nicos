@@ -57,12 +57,23 @@ class CetoniLinkedDialog(QDialog):
                 return
 
         self._update_params()
+        self._set_dev_repr()
 
     def _update_params(self):
         self.client.eval(f"{self.devname}.pollParams()", None)
         params = self.client.getDeviceParams(self.devname)
         paraminfo = self.client.getDeviceParamInfo(self.devname)
         self.param_table.set_params(params, paraminfo)
+
+    def _set_dev_repr(self):
+        # check how to refer to the device in commands: if it is not in the
+        # namespace, we need to use quotes
+        self.devrepr = (
+            repr(self.devname)
+            if "namespace"
+            not in self.param_table.param_values.get("visibility", ("namespace",))
+            else self.devname
+        )
 
     def _create_widgets(self):
         self.device_name = QLabel(f"Device: {self.devname}")
