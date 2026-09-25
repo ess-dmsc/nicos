@@ -37,14 +37,14 @@ class CetoniLinkedDialog(QDialog):
         )
         self.setWindowTitle(f"Control {self.devname}")
 
-        self.build_ui()
+        self._build_ui()
 
-    def build_ui(self):
-        self.create_widgets()
-        self.set_layout()
-        self.format_layout()
+    def _build_ui(self):
+        self._create_widgets()
+        self._set_layout()
+        self._format_layout()
 
-    def create_widgets(self):
+    def _create_widgets(self):
         self.device_name = QLabel(f"Device: {self.devname}")
         self.device_description = QLabel("(description)")
 
@@ -88,7 +88,7 @@ class CetoniLinkedDialog(QDialog):
         self.button_show_params = QPushButton("Show parameters")
         self.button_close = QPushButton("Close")
 
-    def set_layout(self):
+    def _set_layout(self):
         self.dialog_layout = QVBoxLayout()
 
         self.status_section = QVBoxLayout()
@@ -157,7 +157,7 @@ class CetoniLinkedDialog(QDialog):
         self.dialog_layout.addLayout(self.bottom_section)
         self.setLayout(self.dialog_layout)
 
-    def format_layout(self):
+    def _format_layout(self):
         VALUE_FIELD_WIDTH = 120
         UNIT_FIELD_WIDTH = 25
         ROW_HEIGHT = 24
