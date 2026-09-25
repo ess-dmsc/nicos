@@ -44,7 +44,7 @@ devices = dict(
         path=None,
         minfree=5,
     ),
-    KafkaForwarderStatus=device(
+    KafkaForwarder=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
         description="Monitors the status of the Forwarder",
         statustopic=["estia_forwarder_dynamic_status"],

@@ -34,7 +34,6 @@ from streaming_data_types.logdata_f142 import serialise_f142
 from streaming_data_types.status_x5f2 import serialise_x5f2
 
 from nicos.core import MAIN, POLLER, ConfigurationError, status
-from nicos.utils import createThread
 from nicos_ess.devices.forwarder import EpicsKafkaForwarder
 
 try:
@@ -110,7 +109,7 @@ def create_pv_details_from_messages(messages):
     return pv_details
 
 
-class TestEpicsKafkaForwarderStatus(TestCase):
+class TestEpicsKafkaForwarder(TestCase):
     def create_patch(self, name):
         patcher = mock.patch(name)
         thing = patcher.start()
@@ -208,7 +207,6 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         self.motor.nexus_config = [nx_conf]
         self.device._producer = mock.Mock()
         self.device._stop_requested = False
-        thread = createThread("forwarder_updater", self.device._update_forwarded_pvs)
         for _ in range(10):
             if self.device._producer.produce.called:
                 break
