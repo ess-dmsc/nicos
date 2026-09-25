@@ -11,6 +11,7 @@ from nicos.guisupport.qt import (
     Qt,
     QVBoxLayout,
     pyqtSignal,
+    sip,
 )
 from nicos_ess.gui.panels.parameters_table import ParametersTable
 from nicos_ess.gui.panels.utils import attach_status_resources
@@ -38,11 +39,30 @@ class CetoniLinkedDialog(QDialog):
         self.setWindowTitle(f"Control {self.devname}")
 
         self._build_ui()
+        self._reinit()
 
     def _build_ui(self):
         self._create_widgets()
         self._set_layout()
         self._format_layout()
+
+    def _reinit(self):
+        if sip.isdeleted(self.devitem):
+            # The item we're controlling has been removed from the list (e.g.
+            # due to client reconnect), get it again.
+            self.devitem = self.devices_panel._devitems.get(self.devname.lower())
+            # No such device anymore...
+            if self.devitem is None:
+                self.close()
+                return
+
+        self._update_params()
+
+    def _update_params(self):
+        self.client.eval(f"{self.devname}.pollParams()", None)
+        params = self.client.getDeviceParams(self.devname)
+        paraminfo = self.client.getDeviceParamInfo(self.devname)
+        self.param_table.set_params(params, paraminfo)
 
     def _create_widgets(self):
         self.device_name = QLabel(f"Device: {self.devname}")
