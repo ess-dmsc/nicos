@@ -18,7 +18,7 @@ from nicos_ess.gui.panels.utils import attach_status_resources
 
 
 class CetoniLinkedDialog(QDialog):
-    """Dialog opened to control the Cetoni pumps running in linked pumping mode."""
+    """Dialog to control the Cetoni pumps running in linked pumping mode."""
 
     closed = pyqtSignal(object)
 
