@@ -1,6 +1,7 @@
 from nicos.guisupport.qt import (
     QComboBox,
     QDialog,
+    QDoubleValidator,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -73,6 +74,10 @@ class CetoniLinkedDialog(QDialog):
         self.vol_total_value = QLabel()
         self.vol_total_unit = QLabel()
         self.button_apply = QPushButton("Apply settings")
+
+        double_validator = QDoubleValidator()
+        self.time_value.setValidator(double_validator)
+        self.flowrate_value.setValidator(double_validator)
 
         self.button_more = QPushButton("More")
         self.button_reset = QPushButton("Reset")
