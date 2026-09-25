@@ -155,6 +155,7 @@ class CetoniLinkedDialog(QDialog):
     def format_layout(self):
         VALUE_FIELD_WIDTH = 120
         UNIT_FIELD_WIDTH = 25
+        ROW_HEIGHT = 24
 
         value_fields = [
             self.mode_value,
@@ -182,4 +183,4 @@ class CetoniLinkedDialog(QDialog):
             widget.setMaximumWidth(UNIT_FIELD_WIDTH)
 
         for row in range(self.settings_grid.rowCount()):
-            self.settings_grid.setRowMinimumHeight(row, 24)
+            self.settings_grid.setRowMinimumHeight(row, ROW_HEIGHT)
