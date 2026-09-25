@@ -58,6 +58,7 @@ class CetoniLinkedDialog(QDialog):
 
         self._update_params()
         self._set_dev_repr()
+        self._set_dialog_data()
 
     def _update_params(self):
         self.client.eval(f"{self.devname}.pollParams()", None)
@@ -75,8 +76,11 @@ class CetoniLinkedDialog(QDialog):
             else self.devname
         )
 
+    def _set_dialog_data(self):
+        self.device_name.setText(f"Device: {self.devname}")
+
     def _create_widgets(self):
-        self.device_name = QLabel(f"Device: {self.devname}")
+        self.device_name = QLabel()
         self.device_description = QLabel("(description)")
 
         self.value_label = QLabel("Current value:")
@@ -189,6 +193,8 @@ class CetoniLinkedDialog(QDialog):
         self.setLayout(self.dialog_layout)
 
     def _format_layout(self):
+        self.device_name.setStyleSheet("font-weight: bold;")
+
         VALUE_FIELD_WIDTH = 120
         UNIT_FIELD_WIDTH = 25
         ROW_HEIGHT = 24
