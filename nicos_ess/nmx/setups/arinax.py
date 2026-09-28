@@ -5,13 +5,13 @@ group = "optional"
 pv_root = "NMX-ExpSys::"  # EPICS proxy IOC that interfaces ARINAX PVs
 
 SAMPLE_STORAGE = {
-    f"Sample Storage {s} - SS{i}": (f"Sample_Storage_{s}", f"SS{i}")
+    f"Sample Storage {s} - SS{i}": f"Sample_Storage_{s} SS{i}"
     for s in range(1, 4)
     for i in range(1, 11)
 }
 
 UNIPUCKS = {
-    f"UniPuck {s} - UP{i}": (f"UniPuck{s}", f"UP{i}")
+    f"UniPuck {s} - UP{i}": f"UniPuck{s} UP{i}"
     for s in range(1, 3)
     for i in range(1, 17)
 }
