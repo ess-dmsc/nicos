@@ -5,7 +5,7 @@ from dataclasses import dataclass, replace
 from enum import Enum
 from functools import partial
 from time import time as currenttime
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable
 
 from streaming_data_types import DESERIALISERS
 from streaming_data_types.alarm_al00 import Severity
@@ -21,6 +21,7 @@ from nicos.core import (
     Override,
     Param,
     Readable,
+    Value,
     host,
     nonemptylistof,
     nonemptystring,
@@ -31,7 +32,7 @@ from nicos.core.utils import statusString
 from nicos.devices.generic import CounterChannelMixin, PassiveChannel
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 
-KafkaKey = Tuple[str, str]
+KafkaKey = tuple[str, str]
 
 
 class KafkaReadbackError(Enum):
@@ -55,13 +56,13 @@ class KafkaReadbackState:
     value: Any = None
     value_timestamp_ns: int = 0
     value_revision: int = 0
-    alarm: Optional[Severity] = None
+    alarm: Severity | None = None
     alarm_message: str = ""
     alarm_timestamp_ns: int = 0
-    connection: Optional[ConnectionInfo] = None
+    connection: ConnectionInfo | None = None
     connection_service: str = ""
     connection_timestamp_ns: int = 0
-    kafka_error: Optional[KafkaReadbackError] = None
+    kafka_error: KafkaReadbackError | None = None
     kafka_error_message: str = ""
     kafka_error_timestamp_ns: int = 0
 
@@ -102,12 +103,12 @@ class KafkaReadbackRouter(Device):
         ),
     }
 
-    _schema_specs: Dict[str, KafkaReadbackSchemaSpec] = {}
+    _schema_specs: dict[str, KafkaReadbackSchemaSpec] = {}
 
     def doPreinit(self, mode):
         self._kafka_subscribers = {}
-        self._latest: Dict[KafkaKey, KafkaReadbackState] = {}
-        self._callbacks: Dict[KafkaKey, List[Callable[[KafkaReadbackState], None]]] = {}
+        self._latest: dict[KafkaKey, KafkaReadbackState] = {}
+        self._callbacks: dict[KafkaKey, list[Callable[[KafkaReadbackState], None]]] = {}
         self._lock = threading.RLock()
 
         if mode == SIMULATION or session.sessiontype == POLLER:
@@ -316,7 +317,7 @@ class KafkaReadbackRouter(Device):
         if topic not in self.topics:
             raise ConfigurationError(
                 self,
-                "topic %r is not configured on %s" % (topic, self.name),
+                f"topic {topic!r} is not configured on {self.name}",
             )
 
     @staticmethod
@@ -401,8 +402,7 @@ class KafkaReadable(Readable):
         if snapshot is None or not snapshot.has_value:
             raise CommunicationError(
                 self,
-                "Could not read value from Kafka source %r/%r"
-                % (self.topic, self.source_name),
+                f"Could not read value from Kafka source {self.topic!r}/{self.source_name!r}",
             )
         return snapshot.value
 
@@ -518,6 +518,17 @@ class KafkaAccumulatorChannel(CounterChannelMixin, KafkaReadable, PassiveChannel
         "unit": Override(mandatory=True),
         "fmtstr": Override(mandatory=True),
     }
+
+    def valueInfo(self):
+        return (
+            Value(
+                self.name,
+                unit=self.unit,
+                errors="none",
+                type=self.type,
+                fmtstr=self.fmtstr,
+            ),
+        )
 
     def doPreinit(self, mode):
         KafkaReadable.doPreinit(self, mode)

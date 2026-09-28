@@ -842,9 +842,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         create_router_pair(device_harness)
-        readable, _poller = create_readable_pair(
-            device_harness, "first", "src:first"
-        )
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
         emit_readback_messages(
             device_harness,
