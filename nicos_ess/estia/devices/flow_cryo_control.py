@@ -43,10 +43,8 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             userparam=False,
         ),
         "ramp": Param(
-            "Ramping to start/stop heating",
-            type=oneof(
-                "Off", "Range1/Low", "Range2/Medium", "Range3/High", "Range4", "Range5"
-            ),
+            "Ramping macros",
+            type=oneof("Off", "Range1/Low", "Range2/Medium", "Range3/High"),
             mandatory=True,
             settable=True,
             default="Off",
@@ -73,6 +71,11 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
         if mode == SIMULATION:
             return
         EpicsDeviceBase.doPreinit(self, mode)
+
+    def init(self, mode):
+        # need to check if polling is ON and set it to ON if OFF
+        # this is due to if the physical device is restarted polling is OFF by default
+        return
 
     def _build_epics_channels(self):
         epics_channels = {
@@ -113,13 +116,12 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
         return Moveable.isAllowed(self, pos)
 
     def doStart(self, value):
+        # There is a level 4 and 5 but they do nothing
         ramp_enum = {
             "Off": 0,
             "Range1/Low": 1,
             "Range2/Medium": 2,
             "Range3/High": 3,
-            "Range4": 4,
-            "Range5": 5,
         }
         # determine ramp setting set by system, then set the pv to that value
         self.log.info(f"heating to target with ramp of {self.ramp}")
