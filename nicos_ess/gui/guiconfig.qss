@@ -2,6 +2,11 @@ QWidget {
     font-size: 16px;
 }
 
+/* ----- Set font size for device tree only ----- */
+QTreeWidget#tree {
+    qproperty-iconSize: 22px;
+}
+
 MainWindow,
 QMenuBar {
     background-color: #1f5366;
