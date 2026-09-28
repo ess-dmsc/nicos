@@ -14,7 +14,11 @@ from nicos.guisupport.qt import (
     sip,
 )
 from nicos_ess.gui.panels.parameters_table import ParametersTable
-from nicos_ess.gui.panels.utils import attach_status_resources
+from nicos_ess.gui.panels.utils import (
+    attach_status_resources,
+    setBackgroundBrush,
+    setForegroundBrush,
+)
 
 
 class CetoniLinkedDialog(QDialog):
@@ -62,22 +66,71 @@ class CetoniLinkedDialog(QDialog):
 
     def _update_params(self):
         self.client.eval(f"{self.devname}.pollParams()", None)
-        params = self.client.getDeviceParams(self.devname)
-        paraminfo = self.client.getDeviceParamInfo(self.devname)
-        self.param_table.set_params(params, paraminfo)
+        self.params = self.client.getDeviceParams(self.devname)
+        self.paraminfo = self.client.getDeviceParamInfo(self.devname)
+        self.param_table.set_params(self.params, self.paraminfo)
 
     def _set_dev_repr(self):
         # check how to refer to the device in commands: if it is not in the
         # namespace, we need to use quotes
         self.devrepr = (
             repr(self.devname)
-            if "namespace"
-            not in self.param_table.param_values.get("visibility", ("namespace",))
+            if "namespace" not in self.params.get("visibility", ("namespace",))
             else self.devname
         )
 
     def _set_dialog_data(self):
         self.device_name.setText(f"Device: {self.devname}")
+        if self.params.get("description"):
+            self.device_description.setText(self.params["description"])
+        else:
+            self.device_description.setVisible(False)
+        self._update_value()
+        self._update_status(*self.devinfo.status)
+        self._update_mode()
+        self._update_time()
+        self._update_first_fill_syringe()
+        self._update_flowrate()
+        self._update_total_vol()
+
+    def _update_value(self):
+        self.value_value.setText(self.devinfo.fmtValUnit())
+
+    def _update_status(self, status, message):
+        self.status_value.setText(message)
+        self.status_icon.setPixmap(self.statusIcon[status].pixmap(16, 16))
+        setForegroundBrush(self.status_value, self.fgBrush[status])
+        setBackgroundBrush(self.status_value, self.bgBrush[status])
+
+    def _update_mode(self):
+        if self.mode_value.count() == 0:
+            options = list(self.params["mapping"].keys())
+            self.mode_value.addItems(options)
+        self.mode_value.setCurrentText(self.params["target"])
+
+    def _update_time(self):
+        self.time_value.setText(str(self.params["max_dosing_time"]))
+        self.time_unit.setText(str(self.paraminfo["max_dosing_time"]["unit"]))
+
+    def _update_first_fill_syringe(self):
+        if self.first_fill_value.count() == 0:
+            options = list(self.paraminfo["first_fill_syringe"]["type"].vals)
+            self.first_fill_value.addItems(options)
+        self.first_fill_value.setCurrentText(self.params["first_fill_syringe"])
+
+    def _update_flowrate(self):
+        self.flowrate_label.setText(f"Flowrate (max {self.params['flowrate_max']}):")
+        self.flowrate_value.setText(str(self.params["flowrate"]))
+        self.flowrate_unit.setText(str(self.paraminfo["flowrate"]["unit"]))
+
+    def _update_flowrate(self):
+        self.flowrate_label.setText(f"Flowrate (max {self.params['flowrate_max']}):")
+        self.flowrate_value.setText(str(self.params["flowrate"]))
+        self.flowrate_unit.setText(str(self.paraminfo["flowrate"]["unit"]))
+
+    def _update_total_vol(self):
+        self.vol_total_value.setText(str(self.params["total_vol"]))
+        self.vol_total_unit.setText(str(self.paraminfo["total_vol"]["unit"]))
 
     def _create_widgets(self):
         self.device_name = QLabel()
@@ -99,12 +152,12 @@ class CetoniLinkedDialog(QDialog):
         self.flowrate_label = QLabel("Flowrate:")
         self.flowrate_value = QLineEdit()
         self.flowrate_unit = QLabel()
-        self.vol_sp1_label = QLabel("Volume SP1:")
-        self.vol_sp1_value = QLabel()
-        self.vol_sp1_unit = QLabel()
-        self.vol_sp2_label = QLabel("Volume SP2:")
-        self.vol_sp2_value = QLabel()
-        self.vol_sp2_unit = QLabel()
+        # self.vol_sp1_label = QLabel("Initial volume SP1:")
+        # self.vol_sp1_value = QLabel()
+        # self.vol_sp1_unit = QLabel()
+        # self.vol_sp2_label = QLabel("Initial volume SP2:")
+        # self.vol_sp2_value = QLabel()
+        # self.vol_sp2_unit = QLabel()
         self.vol_total_label = QLabel("Volume total:")
         self.vol_total_value = QLabel()
         self.vol_total_unit = QLabel()
@@ -160,15 +213,15 @@ class CetoniLinkedDialog(QDialog):
         self.settings_grid.addWidget(self.flowrate_label, 3, 0)
         self.settings_grid.addWidget(self.flowrate_value, 3, 1)
         self.settings_grid.addWidget(self.flowrate_unit, 3, 2)
-        self.settings_grid.addWidget(self.vol_sp1_label, 4, 0)
-        self.settings_grid.addWidget(self.vol_sp1_value, 4, 1)
-        self.settings_grid.addWidget(self.vol_sp1_unit, 4, 2)
-        self.settings_grid.addWidget(self.vol_sp2_label, 5, 0)
-        self.settings_grid.addWidget(self.vol_sp2_value, 5, 1)
-        self.settings_grid.addWidget(self.vol_sp2_unit, 5, 2)
-        self.settings_grid.addWidget(self.vol_total_label, 6, 0)
-        self.settings_grid.addWidget(self.vol_total_value, 6, 1)
-        self.settings_grid.addWidget(self.vol_total_unit, 6, 2)
+        # self.settings_grid.addWidget(self.vol_sp1_label, 4, 0)
+        # self.settings_grid.addWidget(self.vol_sp1_value, 4, 1)
+        # self.settings_grid.addWidget(self.vol_sp1_unit, 4, 2)
+        # self.settings_grid.addWidget(self.vol_sp2_label, 5, 0)
+        # self.settings_grid.addWidget(self.vol_sp2_value, 5, 1)
+        # self.settings_grid.addWidget(self.vol_sp2_unit, 5, 2)
+        self.settings_grid.addWidget(self.vol_total_label, 4, 0)
+        self.settings_grid.addWidget(self.vol_total_value, 4, 1)
+        self.settings_grid.addWidget(self.vol_total_unit, 4, 2)
         self.settings_section.addLayout(self.settings_grid)
         self.settings_section.addWidget(
             self.button_apply, alignment=Qt.AlignmentFlag.AlignRight
@@ -201,7 +254,7 @@ class CetoniLinkedDialog(QDialog):
         self.device_name.setStyleSheet("font-weight: bold;")
 
         VALUE_FIELD_WIDTH = 120
-        UNIT_FIELD_WIDTH = 25
+        UNIT_FIELD_WIDTH = 40
         ROW_HEIGHT = 24
 
         value_fields = [
@@ -209,17 +262,16 @@ class CetoniLinkedDialog(QDialog):
             self.time_value,
             self.first_fill_value,
             self.flowrate_value,
-            self.vol_sp1_value,
-            self.vol_sp2_value,
-            self.vol_sp2_value,
+            # self.vol_sp1_value,
+            # self.vol_sp2_value,
             self.vol_total_value,
         ]
 
         unit_fields = [
             self.time_unit,
             self.flowrate_unit,
-            self.vol_sp1_unit,
-            self.vol_sp2_unit,
+            # self.vol_sp1_unit,
+            # self.vol_sp2_unit,
             self.vol_total_unit,
         ]
 
