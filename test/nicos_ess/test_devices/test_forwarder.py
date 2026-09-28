@@ -110,7 +110,7 @@ def create_pv_details_from_messages(messages):
     return pv_details
 
 
-class TestEpicsKafkaForwarderStatus(TestCase):
+class TestEpicsKafkaForwarder(TestCase):
     def create_patch(self, name):
         patcher = mock.patch(name)
         thing = patcher.start()
@@ -208,7 +208,7 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         self.motor.nexus_config = [nx_conf]
         self.device._producer = mock.Mock()
         self.device._stop_requested = False
-        thread = createThread("forwarder_updater", self.device._update_forwarded_pvs)
+        createThread("forwarder_updater", self.device._update_forwarded_pvs)
         for _ in range(10):
             if self.device._producer.produce.called:
                 break
