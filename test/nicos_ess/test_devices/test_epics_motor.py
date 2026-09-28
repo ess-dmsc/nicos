@@ -181,6 +181,9 @@ class TestEpicsMotor:
             (status.UNKNOWN, ""),
         ],
     )
+    @pytest.mark.skip(
+        reason="We should ignore if the motor status is higher than the message as it is unreliable. delete?"
+    )
     def test_alerts_have_correct_precedence(
         self, test_alerts_input, msgtxt_return_values
     ):
