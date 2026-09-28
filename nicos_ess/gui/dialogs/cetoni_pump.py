@@ -129,10 +129,15 @@ class CetoniLinkedDialog(QDialog):
         self.status_section = QVBoxLayout()
         self.value_status_grid = QGridLayout()
         self.value_status_grid.addWidget(self.value_label, 0, 0)
-        self.value_status_grid.addWidget(self.value_value, 0, 2)
+        self.value_status_grid.addWidget(
+            self.value_value, 0, 2, alignment=Qt.AlignmentFlag.AlignLeft
+        )
         self.value_status_grid.addWidget(self.status_label, 1, 0)
         self.value_status_grid.addWidget(self.status_icon, 1, 1)
-        self.value_status_grid.addWidget(self.status_value, 1, 2)
+        self.value_status_grid.addWidget(
+            self.status_value, 1, 2, alignment=Qt.AlignmentFlag.AlignLeft
+        )
+        self.value_status_grid.setColumnStretch(2, 1)
         self.status_section.addWidget(self.device_name)
         self.status_section.addWidget(self.device_description)
         self.status_section.addSpacing(6)
