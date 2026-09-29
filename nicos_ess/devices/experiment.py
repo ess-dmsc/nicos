@@ -383,7 +383,9 @@ class EssExperiment(Device):
     def delete_user_script_directory(self, path):
         """Deletes the specified directory and contents"""
         path = self._sanitise_path(self.user_scripts_directory, path)
-        # TODO check is not parent
+        parent = Path(self.user_scripts_directory)
+        if path == parent:
+            raise ValueError("Cannot delete top-level directory")
 
         if os.path.exists(path):
             shutil.rmtree(path, ignore_errors=True)
