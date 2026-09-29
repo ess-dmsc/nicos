@@ -2,8 +2,8 @@
 
 import os
 import time
-from pathlib import Path
 from os import path
+from pathlib import Path
 
 from yuos_query.exceptions import BaseYuosException
 from yuos_query.yuos_client import YuosCacheClient
