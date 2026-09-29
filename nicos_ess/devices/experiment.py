@@ -336,28 +336,34 @@ class EssExperiment(Device):
                 directories.append(file)
         return files, directories
 
+    def _file_path_allowed(self, filepath) -> bool:
+        if ".." in filepath:
+            self.log.error("Paths containing '..' are not allowed.")
+            return False
+        return True
+
     def read_server_file(self, filepath) -> str | None:
         """Reads the specified file from the server and returns it."""
-        if ".." in filepath:
-            self.log.error("Filepaths containing '..' are not allowed.")
+        if not self._file_path_allowed(filepath):
             return None
+
         with open(filepath, encoding="utf-8") as f:
             return f.read()
 
     def write_server_file(self, filepath, contents):
         """Write the contents to the specified file."""
-        if ".." in filepath:
-            self.log.error("Filepaths containing '..' are not allowed.")
-            return
+        if not self._file_path_allowed(filepath):
+            return None
+
         with open(filepath, "w", encoding="utf-8") as f:
             # NOTE: contents are received as bytes, so must be decoded!
             f.write(contents.decode())
 
     def create_user_script_directory(self, path):
         """Creates the specified user script directory."""
-        if ".." in path:
-            self.log.error("Filepaths containing '..' are not allowed.")
-            return
+        if not self._file_path_allowed(path):
+            return None
+        
         directory = os.path.join(self.user_scripts_directory, path)
 
         if not os.path.exists(directory):
@@ -365,9 +371,9 @@ class EssExperiment(Device):
 
     def delete_user_script_file(self, path):
         """Deletes the specified file"""
-        if ".." in path:
-            self.log.error("Filepaths containing '..' are not allowed.")
-            return
+        if not self._file_path_allowed(path):
+            return None
+        
         path = os.path.join(self.user_scripts_directory, path)
 
         if os.path.exists(path):
@@ -375,9 +381,9 @@ class EssExperiment(Device):
 
     def delete_user_script_directory(self, path):
         """Deletes the specified directory and contents"""
-        if ".." in path:
-            self.log.error("Filepaths containing '..' are not allowed.")
-            return
+        if not self._file_path_allowed(path):
+            return None
+
         path = os.path.join(self.user_scripts_directory, path)
 
         if os.path.exists(path):
@@ -385,9 +391,9 @@ class EssExperiment(Device):
 
     def rename_user_script_file(self, old, new):
         """Renames the file/directory to the new name"""
-        if ".." in old or ".." in new:
-            self.log.error("Filepaths containing '..' are not allowed.")
-            return
+        if not self._file_path_allowed(old) or not self._file_path_allowed(new):
+            return None
+
         old = os.path.join(self.user_scripts_directory, old)
         new = os.path.join(self.user_scripts_directory, new)
 
