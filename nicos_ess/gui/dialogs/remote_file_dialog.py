@@ -268,12 +268,12 @@ class RemoteFileDialog(QDialog):
             if reply == QMessageBox.StandardButton.No:
                 return
 
-            self.client.eval(
+            self.call_eval(
                 f"session.experiment.delete_user_script_directory('{path}')",
                 None,
             )
         else:
-            self.client.eval(
+            self.call_eval(
                 f"session.experiment.delete_user_script_file('{path}')",
                 None,
             )
@@ -295,19 +295,30 @@ class RemoteFileDialog(QDialog):
             new_name = dialog.txt_name.text()
             new_name += ".py" if not row[3] else ""
             new = os.path.join(base_path, new_name)
-            self.client.eval(
+
+            if self.client.eval(
+                f"session.experiment.user_script_file_exists('{new}')", None
+            ):
+                QMessageBox.error(
+                    self,
+                    "Already exists",
+                    "The entered name is already in use, so cannot rename selected item",
+                )
+                return
+
+            self.call_eval(
                 f"session.experiment.rename_user_script_file('{old}', '{new}')", None
             )
 
             self._update_files_list(base_path)
 
-    def _update_files_list(self, directory="", index=0):
+    def _update_files_list(self, directory=""):
         if self.is_inst_script:
-            self.abs_directory, (files_info, directories) = self.client.eval(
+            files_info, directories = self.call_eval(
                 "session.experiment.list_instrument_scripts_directory()", (None, None)
             )
         else:
-            self.abs_directory, (files_info, directories) = self.client.eval(
+            files_info, directories = self.call_eval(
                 f"session.experiment.list_user_scripts_directory('{directory}')",
                 (None, None),
             )
@@ -341,10 +352,6 @@ class RemoteFileDialog(QDialog):
 
         self.file_table.clearSelection()
         self.table_model.set_data(raw_data)
-        if raw_data:
-            index = index if index < len(raw_data) else 0
-            first_entry = self.table_model.index(index, 0)
-            self.file_table.setCurrentIndex(first_entry)
 
     def on_selection_changed(self, current, _previous):
         if len(current.indexes()) == 0:
@@ -364,7 +371,7 @@ class RemoteFileDialog(QDialog):
         if dialog.exec():
             rel_path = self.rel_path_tracker.path()
             path = os.path.join(rel_path, dialog.txt_name.text())
-            self.client.eval(
+            self.call_eval(
                 f"session.experiment.create_user_script_directory('{path}')", None
             )
             self._update_files_list(rel_path)
@@ -453,5 +460,19 @@ class RemoteFileDialog(QDialog):
     @pyqtSlot()
     def on_btn_up_pressed(self):
         _, index = self.rel_path_tracker.pop()
-        self._update_files_list(self.rel_path_tracker.path(), index)
+        self._update_files_list(self.rel_path_tracker.path())
         self._update_path_controls()
+        # When going up the stack highlight the route
+        index = index if index < self.table_model.rowCount(0) else 0
+        first_entry = self.table_model.index(index, 0)
+        self.file_table.setCurrentIndex(first_entry)
+
+    def call_eval(self, command, default=None):
+        try:
+            return self.client.eval(
+                command,
+                default,
+            )
+        except Exception as err:
+            QMessageBox.error(self, "Error", f"{err}")
+            return default

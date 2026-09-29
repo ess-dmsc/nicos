@@ -326,7 +326,7 @@ class EssExperiment(Device):
         # Ignore any directories as we don't support directories for
         # instrument scripts.
         (files, _) = self._list_directory_files(directory, extension=".py")
-        return directory, (files, [])
+        return files, []
 
     def list_user_scripts_directory(self, directory="") -> (str, list[str]):
         """Fetches a list of files in the specified user scripts directory.
@@ -337,7 +337,7 @@ class EssExperiment(Device):
         Returns: (the directory path, a list of files, a list of sub-directories)
         """
         directory = os.path.join(self.user_scripts_directory, directory)
-        return directory, self._list_directory_files(directory, extension=".py")
+        return self._list_directory_files(directory, extension=".py")
 
     def _list_directory_files(self, directory, extension=""):
         files = []
@@ -361,7 +361,7 @@ class EssExperiment(Device):
     def write_user_script_file(self, path, contents):
         """Write the contents to the specified file."""
         path = self._sanitise_path(self.user_scripts_directory, path)
-        
+
         with open(path, "w", encoding="utf-8") as f:
             # NOTE: contents are received as bytes, so must be decoded!
             f.write(contents.decode())
