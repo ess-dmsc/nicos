@@ -363,7 +363,7 @@ class EssExperiment(Device):
         """Creates the specified user script directory."""
         if not self._file_path_allowed(path):
             return None
-        
+
         directory = os.path.join(self.user_scripts_directory, path)
 
         if not os.path.exists(directory):
@@ -373,7 +373,7 @@ class EssExperiment(Device):
         """Deletes the specified file"""
         if not self._file_path_allowed(path):
             return None
-        
+
         path = os.path.join(self.user_scripts_directory, path)
 
         if os.path.exists(path):
