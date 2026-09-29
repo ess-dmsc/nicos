@@ -4,11 +4,11 @@ sysconfig = dict(
 
 devices = dict(
     Exp=device(
-        "nicos_ess.devices.experiment.EssExperiment",
+        "nicos_ess.devices.experiment2.EssExperiment",
         description="experiment object",
-        dataroot="data",
+        dataroot="test/nicos_ess/test_devices/data",
         sample="Sample",
-        cache_filepath="",
+        cache_filepath="test/nicos_ess/test_devices/data/cached_proposals/cached_proposals_1.json",
     ),
     Sample=device(
         "nicos_ess.devices.sample.EssSample",
