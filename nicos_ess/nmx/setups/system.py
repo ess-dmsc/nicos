@@ -38,7 +38,7 @@ devices = dict(
     liveview=device(
         "nicos.devices.datasinks.LiveViewSink",
     ),
-    KafkaForwarderStatus=device(
+    KafkaForwarder=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
         description="Monitors the status of the Forwarder",
         statustopic=["nmx_forwarder_dynamic_status"],

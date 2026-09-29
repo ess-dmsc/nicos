@@ -395,7 +395,7 @@ class RemoteFileDialog(QDialog):
         # Clicking 'open' on a folder should open the folder.
         if row_data[3]:
             self.rel_path_tracker.push(row_data[0], row.row())
-            self._update_files_list(self.rel_path.tracker.path())
+            self._update_files_list(self.rel_path_tracker.path())
             self._update_path_controls()
             return
 
@@ -407,7 +407,8 @@ class RemoteFileDialog(QDialog):
         self.reject()
 
     def _get_sanitised_filename(self):
-        filename = os.path.join(self.abs_directory, self.txt_filename.text().strip())
+        rel_path = self.rel_path_tracker.path()
+        filename = os.path.join(rel_path, self.txt_filename.text().strip())
         if not filename.endswith(".py"):
             filename += ".py"
         return filename

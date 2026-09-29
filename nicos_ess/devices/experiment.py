@@ -4,6 +4,7 @@ import os
 import shutil
 import time
 from os import path
+from pathlib import Path
 
 from yuos_query.exceptions import BaseYuosException
 from yuos_query.yuos_client import YuosCacheClient
@@ -300,6 +301,20 @@ class EssExperiment(Device):
         instrument = session.instrument.name.lower()
         return os.path.join(self.scripts_directory, instrument, "user")
 
+    def _sanitise_path(self, root, path) -> Path:
+        root = Path(root).resolve()
+
+        candidate = Path(path)
+        if candidate.is_absolute():
+            raise ValueError("Absolute paths are not allowed")
+
+        target = (root / candidate).resolve()
+
+        if not target.is_relative_to(root):
+            raise ValueError("Path is outside the allowed scripts directory")
+
+        return target
+
     def list_instrument_scripts_directory(self) -> (str, list[str]):
         """Fetches a list of files in the instrument scripts directory.
 
@@ -336,78 +351,70 @@ class EssExperiment(Device):
                 directories.append(file)
         return files, directories
 
-    def _file_path_allowed(self, filepath) -> bool:
-        if ".." in filepath:
-            self.log.error("Paths containing '..' are not allowed.")
-            return False
-        return True
-
-    def read_server_file(self, filepath) -> str | None:
+    def read_user_script_file(self, path) -> str | None:
         """Reads the specified file from the server and returns it."""
-        if not self._file_path_allowed(filepath):
-            return None
+        path = self._sanitise_path(self.user_scripts_directory, path)
 
-        with open(filepath, encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return f.read()
 
-    def write_server_file(self, filepath, contents):
+    def write_user_script_file(self, path, contents):
         """Write the contents to the specified file."""
-        if not self._file_path_allowed(filepath):
-            return None
-
-        with open(filepath, "w", encoding="utf-8") as f:
+        path = self._sanitise_path(self.user_scripts_directory, path)
+        
+        with open(path, "w", encoding="utf-8") as f:
             # NOTE: contents are received as bytes, so must be decoded!
             f.write(contents.decode())
 
     def create_user_script_directory(self, path):
         """Creates the specified user script directory."""
-        if not self._file_path_allowed(path):
-            return None
+        path = self._sanitise_path(self.user_scripts_directory, path)
 
-        directory = os.path.join(self.user_scripts_directory, path)
-
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        if not os.path.exists(path):
+            os.makedirs(path)
 
     def delete_user_script_file(self, path):
         """Deletes the specified file"""
-        if not self._file_path_allowed(path):
-            return None
-
-        path = os.path.join(self.user_scripts_directory, path)
+        path = self._sanitise_path(self.user_scripts_directory, path)
 
         if os.path.exists(path):
             os.remove(path)
 
     def delete_user_script_directory(self, path):
         """Deletes the specified directory and contents"""
-        if not self._file_path_allowed(path):
-            return None
-
-        path = os.path.join(self.user_scripts_directory, path)
+        path = self._sanitise_path(self.user_scripts_directory, path)
+        # TODO check is not parent
 
         if os.path.exists(path):
             shutil.rmtree(path, ignore_errors=True)
 
     def rename_user_script_file(self, old, new):
         """Renames the file/directory to the new name"""
-        if not self._file_path_allowed(old) or not self._file_path_allowed(new):
-            return None
-
-        old = os.path.join(self.user_scripts_directory, old)
-        new = os.path.join(self.user_scripts_directory, new)
+        old = self._sanitise_path(self.user_scripts_directory, old)
+        new = self._sanitise_path(self.user_scripts_directory, new)
 
         if os.path.exists(old):
             os.rename(old, new)
 
     def user_script_file_exists(self, path):
         """Does the specified file exist?"""
-        if ".." in path:
-            self.log.error("Filepaths containing '..' are not allowed.")
-            return
-        path = os.path.join(self.user_scripts_directory, path)
+        path = self._sanitise_path(self.user_scripts_directory, path)
 
         return os.path.exists(path)
+
+    def read_instrument_script_file(self, path) -> str | None:
+        """Reads the specified file from the server and returns it."""
+        path = self._sanitise_path(self.instrument_scripts_directory, path)
+
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    def write_instrument_script_file(self, path, contents):
+        """Write the contents to the specified file."""
+        path = self._sanitise_path(self.instrument_scripts_directory, path)
+        with open(path, "w", encoding="utf-8") as f:
+            # NOTE: contents are received as bytes, so must be decoded!
+            f.write(contents.decode())
 
     def _canQueryProposals(self):
         return self._yuos_client is not None
