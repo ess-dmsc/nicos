@@ -973,26 +973,27 @@ class EditorPanel(Panel):
         self.simFrame.clear()
 
     def openFile(self, fn, is_inst_script=False, is_import=False):
-        def _open_local(filename):
+        def _open_local():
             with open(
                 fn.encode(sys.getfilesystemencoding()), encoding=LOCALE_ENCODING
             ) as f:
                 return f.read()
 
-        def _open_remote(filename):
-            if is_inst_script:
-                return self.client.eval(
-                    f"session.experiment.read_instrument_script_file('{fn}')", None
-                )
-            else:
-                return self.client.eval(
-                    f"session.experiment.read_user_script_file('{fn}')", None
-                )
+        def _open_remote():
+            command = (
+                "read_instrument_script_file"
+                if is_inst_script
+                else "read_user_script_file"
+            )
+            return self.client.eval(
+                f"session.experiment.{command}('{fn}')",
+            )
 
         try:
-            text = _open_local(fn) if is_import else _open_remote(fn)
+            text = _open_local() if is_import else _open_remote()
         except Exception as err:
-            return self.showError(f"Opening file failed: {err}")
+            self.showError(f"Opening file failed: {err}")
+            return
 
         editor = self.createEditor()
         editor.setText(text)
