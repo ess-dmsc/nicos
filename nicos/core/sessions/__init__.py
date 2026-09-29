@@ -30,6 +30,7 @@ Only for internal usage by functions and methods.
 """
 
 import builtins
+import contextlib
 import copy
 import inspect
 import logging
@@ -38,7 +39,8 @@ import stat
 import sys
 from os import path
 from shutil import which
-from time import sleep, time as currenttime
+from time import sleep
+from time import time as currenttime
 
 import numpy
 
@@ -75,18 +77,16 @@ from nicos.devices.cacheclient import CacheClient, CacheLockError, SyncCacheClie
 from nicos.devices.instrument import Instrument
 from nicos.devices.notifiers import Notifier
 
-try:
+with contextlib.suppress(ImportError):
     from nicos_ess.devices.sample import EssSample
-except ImportError:
-    pass
 from nicos.protocols.cache import FLAG_NO_STORE
 from nicos.utils import fixupScript, formatArgs, formatDocstring, formatScriptError
 from nicos.utils.loggers import (
+    ColoredConsoleHandler,
     NicosLogfileHandler,
     NicosLogger,
     get_facility_log_handlers,
     initLoggers,
-    ColoredConsoleHandler,
 )
 
 
@@ -246,10 +246,10 @@ class Session:
         if mode == oldmode:
             return
         if mode not in EXECUTIONMODES:
-            raise UsageError("mode %r does not exist" % mode)
+            raise UsageError(f"mode {mode!r} does not exist")
         if oldmode in [SIMULATION, MAINTENANCE]:
             # no way to switch back from special modes
-            raise ModeError("switching from %s mode is not supported" % oldmode)
+            raise ModeError(f"switching from {oldmode} mode is not supported")
         if mode == MASTER:
             # switching from slave to master
             if not cache:
@@ -261,8 +261,7 @@ class Session:
                     cache.lock("master", cache._mastertimeout)
                 except CacheLockError as err:
                     raise ModeError(
-                        "another master is already active: %s"
-                        % sessionInfo(err.locked_by)
+                        f"another master is already active: {sessionInfo(err.locked_by)}"
                     ) from err
                 else:
                     cache._ismaster = True
@@ -359,7 +358,7 @@ class Session:
         self.simulation_db = None  # clear cache for getSyncDb
         # set alias parameter first, needed to set parameters on alias devices
         for devname, dev in self.devices.items():
-            aliaskey = "%s/alias" % devname.lower()
+            aliaskey = f"{devname.lower()}/alias"
             if isinstance(dev, DeviceAlias) and aliaskey in db:
                 dev.alias = db[aliaskey]
         # cache keys are always lowercase, while device names can be mixed,
@@ -552,9 +551,9 @@ class Session:
 
         def add_setup(name, include_chain):
             if name not in self._setup_info:
-                msg = "Setup '%s' does not exist" % name
+                msg = f"Setup '{name}' does not exist"
                 if include_chain:
-                    msg += " (included by %s)" % "->".join(include_chain)
+                    msg += " (included by {})".format("->".join(include_chain))
                 raise ConfigurationError(msg)
             all_setups.add(name)
             include_chain.append(name)
@@ -607,10 +606,7 @@ class Session:
         if not self._setup_info:
             self.readSetups()
 
-        if isinstance(setupnames, str):
-            setupnames = [setupnames]
-        else:
-            setupnames = list(setupnames)
+        setupnames = [setupnames] if isinstance(setupnames, str) else list(setupnames)
 
         for setupname in setupnames[:]:
             if setupname in self.loaded_setups:
@@ -622,13 +618,12 @@ class Session:
                 setupnames.remove(setupname)
             elif self._setup_info.get(setupname, Ellipsis) is None:
                 raise ConfigurationError(
-                    "Setup '%s' exists, but could not be read (see above); "
-                    "please fix the file and try again" % setupname
+                    f"Setup '{setupname}' exists, but could not be read (see above); "
+                    "please fix the file and try again"
                 )
             elif setupname not in self._setup_info:
                 raise ConfigurationError(
-                    "Setup '%s' does not exist (setup paths are %s)"
-                    % (
+                    "Setup '{}' does not exist (setup paths are {})".format(
                         setupname,
                         ", ".join(path.normpath(p) for p in self._setup_paths),
                     )
@@ -664,7 +659,7 @@ class Session:
                 if key == "datasinks":
                     if not isinstance(value, list):
                         raise ConfigurationError(
-                            "sysconfig entry '%s' must be a list" % key
+                            f"sysconfig entry '{key}' must be a list"
                         )
                     old.setdefault("datasinks", set()).update(value)
                 elif key == "notifiers":
@@ -678,8 +673,8 @@ class Session:
             info = self._setup_info[name]
             if info is None:
                 raise ConfigurationError(
-                    "Setup '%s' exists, but could not be read; "
-                    "please fix the file and try again" % setupname
+                    f"Setup '{setupname}' exists, but could not be read; "
+                    "please fix the file and try again"
                 )
             if name not in setupnames:
                 self.log.debug(
@@ -687,20 +682,20 @@ class Session:
                 )
             if name in self.excluded_setups:
                 raise ConfigurationError(
-                    "Cannot load setup '%s', it is "
+                    f"Cannot load setup '{name}', it is "
                     "excluded by one of the current "
-                    "setups" % name
+                    "setups"
                 )
 
             if info["group"] == "special" and not allow_special:
-                raise ConfigurationError("Cannot load special setup '%s'" % name)
+                raise ConfigurationError(f"Cannot load special setup '{name}'")
             if info["group"] == "configdata":
-                raise ConfigurationError("Cannot load data-only setup '%s'" % name)
+                raise ConfigurationError(f"Cannot load data-only setup '{name}'")
             for exclude in info["excludes"]:
                 if exclude in self.loaded_setups:
                     raise ConfigurationError(
-                        "Cannot load setup '%s' when "
-                        "setup '%s' is already loaded" % (name, exclude)
+                        f"Cannot load setup '{name}' when "
+                        f"setup '{exclude}' is already loaded"
                     )
 
             self.loaded_setups.add(name)
@@ -883,7 +878,7 @@ class Session:
                     dev.log.error("can not unload, dependency still active!")
                 raise NicosError(
                     "Deadlock detected! Session.unloadSetup "
-                    "failed on these devices: '%s'" % devs
+                    f"failed on these devices: '{devs}'"
                 )
 
         already_shutdown.update(self.device_failures)
@@ -936,9 +931,8 @@ class Session:
             if warn:
                 self.log.warning("unexport: name '%s' not in namespace", name)
             return
-        if name not in self._exported_names:
-            if warn:
-                self.log.warning("unexport: name '%s' not exported by NICOS", name)
+        if name not in self._exported_names and warn:
+            self.log.warning("unexport: name '%s' not exported by NICOS", name)
         self.namespace.removeForbidden(name)
         del self.namespace[name]
         self._exported_names.discard(name)
@@ -1038,7 +1032,7 @@ class Session:
         """
         command = command.strip()
         if command.startswith("#"):
-            return compiler("LogEntry(%r)" % command[1:].strip())
+            return compiler(f"LogEntry({command[1:].strip()!r})")
         if self._spmode:
             if command.startswith("."):
                 command = command[1:]
@@ -1048,13 +1042,13 @@ class Session:
         except SyntaxError:
             # shortcut for integrated help
             if command.endswith("?") or command.startswith("?"):
-                return compiler("help(%s)" % command.strip("?"))
+                return compiler("help({})".format(command.strip("?")))
             # shortcut for running commands in simple mode
             if command.startswith("."):
                 return compiler(self._spmhandler.handle_line(command[1:]))
             # shortcut for simulation mode
             if command.startswith(":"):
-                return compiler("sim(%r)" % command[1:].rstrip())
+                return compiler(f"sim({command[1:].rstrip()!r})")
             raise
 
     def scriptHandler(self, script, filename, compiler):
@@ -1102,10 +1096,11 @@ class Session:
         else:
             # for functions, print arguments and docstring
             real_func = getattr(obj, "real_func", obj)
-            if hasattr(real_func, "help_arglist"):
-                argspec = "(%s)" % real_func.help_arglist
-            else:
-                argspec = formatArgs(real_func)
+            argspec = (
+                f"({real_func.help_arglist})"
+                if hasattr(real_func, "help_arglist")
+                else formatArgs(real_func)
+            )
             self.log.info("Usage: " + real_func.__name__ + argspec)
             for line in formatDocstring(real_func.__doc__ or "", "   "):
                 self.log.info(line)
@@ -1171,8 +1166,8 @@ class Session:
                 return cls.__name__
 
             if isinstance(cls, tuple):
-                raise UsageError(source, "device must be one of %s" % clsrep(cls))
-            raise UsageError(source, "device must be a %s" % (cls or Device).__name__)
+                raise UsageError(source, f"device must be one of {clsrep(cls)}")
+            raise UsageError(source, f"device must be a {(cls or Device).__name__}")
         return dev
 
     def clearSampleFields(self, fields):
@@ -1196,7 +1191,7 @@ class Session:
         be overridden in subclasses to extend behavior.
         """
         raise ConfigurationError(
-            source, "device '%s' not found in configuration" % devname
+            source, f"device '{devname}' not found in configuration"
         )
 
     def importDevice(self, devname, replace_classes=None):
@@ -1211,12 +1206,12 @@ class Session:
             devcls = self._nicos_import(modname, clsname)
         except (ImportError, AttributeError) as err:
             raise ConfigurationError(
-                "failed to import device class '%s': %s" % (devclsname, err)
+                f"failed to import device class '{devclsname}': {err}"
             ) from err
         if not isinstance(devcls, DeviceMeta):
             raise ConfigurationError(
-                "configured device class '%s' is not a "
-                "Device or derived class" % devclsname
+                f"configured device class '{devclsname}' is not a "
+                "Device or derived class"
             )
         if replace_classes is not None:
             for orig_class, replace_class, class_config in replace_classes:
@@ -1246,11 +1241,12 @@ class Session:
                     found_in.append(sname)
             if found_in:
                 raise ConfigurationError(
-                    "device '%s' not found in configuration, but you can load "
-                    "one of these setups with AddSetup to create it: %s"
-                    % (devname, ", ".join(map(repr, found_in)))
+                    "device '{}' not found in configuration, but you can load "
+                    "one of these setups with AddSetup to create it: {}".format(
+                        devname, ", ".join(map(repr, found_in))
+                    )
                 )
-            raise ConfigurationError("device '%s' not found in configuration" % devname)
+            raise ConfigurationError(f"device '{devname}' not found in configuration")
         if devname in self.devices:
             if not recreate:
                 if explicit:
@@ -1372,10 +1368,11 @@ class Session:
             self.watchdogEvent(key.rsplit("/")[-1], *value)
         elif key.endswith("/pausecount"):
             # value is just a string
-            if self.experiment and self.mode == MASTER:
-                self.experiment.pausecount = value
-                if value:
-                    self.countloop_request = ("pause", value)
+            if not self.experiment or self.mode != MASTER:
+                return
+            self.experiment.pausecount = value
+            if value:
+                self.countloop_request = ("pause", value)
 
     def watchdogEvent(self, event, time, data, entry_id):
         if event == "warning":
@@ -1445,10 +1442,13 @@ class Session:
         if exc_info is None:
             exc_info = sys.exc_info()
         self._lastUnhandled = exc_info
-        if isinstance(exc_info[1], NicosError):
-            if isinstance(exc_info[1].device, Device) and exc_info[1].device.log:
-                exc_info[1].device.log.error(exc_info=exc_info)
-                return
+        if (
+            isinstance(exc_info[1], NicosError)
+            and isinstance(exc_info[1].device, Device)
+            and exc_info[1].device.log
+        ):
+            exc_info[1].device.log.error(exc_info=exc_info)
+            return
         if cut_frames:
             etype, evalue, tb = exc_info
             while cut_frames:
@@ -1661,9 +1661,8 @@ class Session:
 
         This is called by the `nicos.core.device.requires` decorator.
         """
-        if "mode" in required:
-            if self.mode != required["mode"]:
-                raise AccessError("requires %s mode" % required["mode"])
+        if "mode" in required and self.mode != required["mode"]:
+            raise AccessError("requires {} mode".format(required["mode"]))
         return True
 
     def checkParallel(self):
