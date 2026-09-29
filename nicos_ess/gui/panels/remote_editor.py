@@ -980,9 +980,14 @@ class EditorPanel(Panel):
                 return f.read()
 
         def _open_remote(filename):
-            return self.client.eval(
-                f"session.experiment.read_server_file('{fn}')", None
-            )
+            if is_inst_script:
+                return self.client.eval(
+                    f"session.experiment.read_instrument_script_file('{fn}')", None
+                )
+            else:
+                return self.client.eval(
+                    f"session.experiment.read_user_script_file('{fn}')", None
+                )
 
         try:
             text = _open_local(fn) if is_import else _open_remote(fn)
@@ -1049,9 +1054,14 @@ class EditorPanel(Panel):
         # The content must be sent as bytes because eval cannot handle strings
         # containing \n, \t, etc.
         content = editor.text().encode()
+        command = (
+            "write_instrument_script_file"
+            if self.is_instrument_script[editor]
+            else "write_user_script_file"
+        )
         try:
             self.client.eval(
-                f"session.experiment.write_server_file('{filename}', {content})",
+                f"session.experiment.{command}('{filename}', {content})",
             )
         except Exception as err:
             self.showError(f"Saving file failed: {err}")
