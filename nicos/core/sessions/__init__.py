@@ -461,7 +461,7 @@ class Session:
     def _createSysconfig(self, key):
         cls, is_list = {
             "instrument": (Instrument, False),
-            "experiment": (Device, False),
+            "experiment": (Experiment, False),
             "datasinks": (DataSink, True),
             "notifiers": (Notifier, True),
         }[key]
