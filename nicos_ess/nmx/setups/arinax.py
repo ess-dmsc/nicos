@@ -17,6 +17,7 @@ UNIPUCKS = {
 }
 
 ZOOM_LEVELS = {f"Zoom level {i}": i for i in range(1, 8)}
+PRECISION = 0.001
 
 devices = dict(
     # General statue/status of ARINAX system
@@ -122,18 +123,21 @@ devices = dict(
         description="ARINAX sample centring motor Phi",
         readpv=f"{pv_root}getPhiPosition",
         writepv=f"{pv_root}setPhiPosition",
+        precision=PRECISION,
     ),
     sample_centring_2_chi=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample centring motor Chi",
         readpv=f"{pv_root}getChiPosition",
         writepv=f"{pv_root}setChiPosition",
+        precision=PRECISION,
     ),
     sample_centring_3_theta=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample centring motor Theta",
         readpv=f"{pv_root}getThetaPosition",
         writepv=f"{pv_root}setThetaPosition",
+        precision=PRECISION,
     ),
     # Alignment table motion
     alignment_table_x=device(
@@ -141,36 +145,42 @@ devices = dict(
         description="ARINAX alignment table motor X",
         readpv=f"{pv_root}getAlignmentTableXPosition",
         writepv=f"{pv_root}setAlignmentTableXPosition",
+        precision=PRECISION,
     ),
     alignment_table_y=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Y",
         readpv=f"{pv_root}getAlignmentTableYPosition",
         writepv=f"{pv_root}setAlignmentTableYPosition",
+        precision=PRECISION,
     ),
     alignment_table_z=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Z",
         readpv=f"{pv_root}getAlignmentTableZPosition",
         writepv=f"{pv_root}setAlignmentTableZPosition",
+        precision=PRECISION,
     ),
     alignment_table_vx=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Vx",
         readpv=f"{pv_root}getAlignmentTableVxPosition",
         writepv=f"{pv_root}setAlignmentTableVxPosition",
+        precision=PRECISION,
     ),
     alignment_table_vy=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Vy",
         readpv=f"{pv_root}getAlignmentTableVyPosition",
         writepv=f"{pv_root}setAlignmentTableVyPosition",
+        precision=PRECISION,
     ),
     alignment_table_vFocus=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Vfocus",
         readpv=f"{pv_root}getAlignmentTableVfocusPosition",
         writepv=f"{pv_root}setAlignmentTableVfocusPosition",
+        precision=PRECISION,
     ),
     # Centring table motion
     centring_table_x=device(
@@ -178,12 +188,14 @@ devices = dict(
         description="ARINAX centring table motor X",
         readpv=f"{pv_root}getCentringTableXPosition",
         writepv=f"{pv_root}setCentringTableXPosition",
+        precision=PRECISION,
     ),
     centring_table_y=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX centring table motor Y",
         readpv=f"{pv_root}getCentringTableYPosition",
         writepv=f"{pv_root}setCentringTableYPosition",
+        precision=PRECISION,
     ),
     # Backlight
     # TODO: Changed to a manual mapping once we know the step size.
