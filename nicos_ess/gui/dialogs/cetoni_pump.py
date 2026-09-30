@@ -1,4 +1,5 @@
 from nicos.guisupport.qt import (
+    QAction,
     QComboBox,
     QDialog,
     QDoubleValidator,
@@ -7,10 +8,12 @@ from nicos.guisupport.qt import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     Qt,
     QVBoxLayout,
     pyqtSignal,
+    pyqtSlot,
     sip,
 )
 from nicos_ess.gui.panels.parameters_table import ParametersTable
@@ -132,6 +135,14 @@ class CetoniLinkedDialog(QDialog):
         self.vol_total_value.setText(str(self.params["total_vol"]))
         self.vol_total_unit.setText(str(self.paraminfo["total_vol"]["unit"]))
 
+    @pyqtSlot()
+    def on_actionEnable_triggered(self):
+        self.devices_panel.exec_command(f"enable({self.devrepr})")
+
+    @pyqtSlot()
+    def on_actionDisable_triggered(self):
+        self.devices_panel.exec_command(f"disable({self.devrepr})")
+
     def _create_widgets(self):
         self.device_name = QLabel()
         self.device_description = QLabel("(description)")
@@ -175,6 +186,15 @@ class CetoniLinkedDialog(QDialog):
         self.button_plot_hist = QPushButton("Plot history")
         self.button_show_params = QPushButton("Show parameters")
         self.button_close = QPushButton("Close")
+
+        self.menu = QMenu()
+        self.action_enable = QAction("Enable", self)
+        self.action_disable = QAction("Disable", self)
+        self.action_enable.triggered.connect(self.on_actionEnable_triggered)
+        self.action_disable.triggered.connect(self.on_actionDisable_triggered)
+        self.menu.addAction(self.action_enable)
+        self.menu.addAction(self.action_disable)
+        self.button_more.setMenu(self.menu)
 
     def _set_layout(self):
         self.dialog_layout = QVBoxLayout()
