@@ -55,6 +55,8 @@ class KafkaReadbackState:
     has_value: bool = False
     value: Any = None
     value_timestamp_ns: int = 0
+    # Incremented for each accepted f144 update so accumulators can distinguish
+    # new values from cached values included in status-only notifications.
     value_revision: int = 0
     alarm: Severity | None = None
     alarm_message: str = ""
@@ -589,14 +591,8 @@ class KafkaAccumulatorChannel(CounterChannelMixin, KafkaReadable, PassiveChannel
                 timestamp,
             )
 
-    @staticmethod
-    def _status_from_started(started):
-        if started:
-            return status.BUSY, "counting"
-        return status.OK, ""
-
     def _combined_status_from_snapshot(self, snapshot):
-        local_status = self._status_from_started(self.started)
+        local_status = (status.BUSY, "counting") if self.started else (status.OK, "")
         kafka_status = self._status_from_snapshot(snapshot)
         if kafka_status is None:
             return local_status
