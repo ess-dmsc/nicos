@@ -1,6 +1,7 @@
 """ESS Experiment device."""
 
 import os
+import shutil
 import time
 from os import path
 from pathlib import Path
@@ -325,7 +326,7 @@ class EssExperiment(Device):
         # Ignore any directories as we don't support directories for
         # instrument scripts.
         (files, _) = self._list_directory_files(directory, extension=".py")
-        return directory, (files, [])
+        return files, []
 
     def list_user_scripts_directory(self, directory="") -> (str, list[str]):
         """Fetches a list of files in the specified user scripts directory.
@@ -336,7 +337,7 @@ class EssExperiment(Device):
         Returns: (the directory path, a list of files, a list of sub-directories)
         """
         directory = os.path.join(self.user_scripts_directory, directory)
-        return directory, self._list_directory_files(directory, extension=".py")
+        return self._list_directory_files(directory, extension=".py")
 
     def _list_directory_files(self, directory, extension=""):
         files = []
@@ -360,6 +361,7 @@ class EssExperiment(Device):
     def write_user_script_file(self, path, contents):
         """Write the contents to the specified file."""
         path = self._sanitise_path(self.user_scripts_directory, path)
+
         with open(path, "w", encoding="utf-8") as f:
             # NOTE: contents are received as bytes, so must be decoded!
             f.write(contents.decode())
@@ -367,10 +369,40 @@ class EssExperiment(Device):
     def create_user_script_directory(self, path):
         """Creates the specified user script directory."""
         path = self._sanitise_path(self.user_scripts_directory, path)
-        directory = os.path.join(self.user_scripts_directory, path)
 
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+    def delete_user_script_file(self, path):
+        """Deletes the specified file"""
+        path = self._sanitise_path(self.user_scripts_directory, path)
+
+        if os.path.exists(path):
+            os.remove(path)
+
+    def delete_user_script_directory(self, path):
+        """Deletes the specified directory and contents"""
+        path = self._sanitise_path(self.user_scripts_directory, path)
+        parent = Path(self.user_scripts_directory)
+        if path == parent:
+            raise ValueError("Cannot delete top-level directory")
+
+        if os.path.exists(path):
+            shutil.rmtree(path, ignore_errors=True)
+
+    def rename_user_script_file(self, old, new):
+        """Renames the file/directory to the new name"""
+        old = self._sanitise_path(self.user_scripts_directory, old)
+        new = self._sanitise_path(self.user_scripts_directory, new)
+
+        if os.path.exists(old):
+            os.rename(old, new)
+
+    def user_script_file_exists(self, path):
+        """Does the specified file exist?"""
+        path = self._sanitise_path(self.user_scripts_directory, path)
+
+        return os.path.exists(path)
 
     def read_instrument_script_file(self, path) -> str | None:
         """Reads the specified file from the server and returns it."""
