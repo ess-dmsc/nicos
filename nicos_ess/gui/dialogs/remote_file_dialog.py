@@ -299,7 +299,7 @@ class RemoteFileDialog(QDialog):
             if self.client.eval(
                 f"session.experiment.user_script_file_exists('{new}')", None
             ):
-                QMessageBox.error(
+                QMessageBox.warning(
                     self,
                     "Already exists",
                     "The entered name is already in use, so cannot rename selected item",
@@ -474,5 +474,5 @@ class RemoteFileDialog(QDialog):
                 default,
             )
         except Exception as err:
-            QMessageBox.error(self, "Error", f"{err}")
+            QMessageBox.warning(self, "Error", f"{err}")
             return default
