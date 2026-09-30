@@ -42,10 +42,24 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             settable=False,
             userparam=False,
         ),
-        "ramp": Param(
-            "Ramping macros",
+        "range_ctrl": Param(
+            "Range speed macro control",
             type=oneof("Off", "Range1/Low", "Range2/Medium", "Range3/High"),
-            mandatory=True,
+            mandatory=False,
+            settable=True,
+            default="Off",
+        ),
+        "ramp_val": Param(
+            "Designated Ramping speed",
+            type=float,
+            mandatory=False,
+            settable=True,
+            default=1.0,
+        ),
+        "ramp_ctrl": Param(
+            "to turn off ramping",
+            type=oneof("On", "Off"),
+            mandatory=False,
             settable=True,
             default="Off",
         ),
@@ -59,7 +73,7 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             volatile=True,
         ),
         "abslimits": Override(volatile=True, mandatory=False),
-        "userlimits": Override(volatile=False, chatty=False),
+        "userlimits": Override(volatile=True, chatty=False),
     }
 
     _default_pv_prefix_attr = "pvroot"
@@ -72,10 +86,9 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             return
         EpicsDeviceBase.doPreinit(self, mode)
 
-    def init(self, mode):
-        # need to check if polling is ON and set it to ON if OFF
-        # this is due to if the physical device is restarted polling is OFF by default
-        return
+    def doInit(self, mode):
+        if mode == SIMULATION:
+            return
 
     def _build_epics_channels(self):
         epics_channels = {
@@ -85,12 +98,17 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             "alarm": readback_channel(f"Alarm{self.input_pos}-Summary"),
             "highlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.HIGH"),
             "lowlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.LOW"),
-            "hwhighlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.HIHI"),
-            "hwlowlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.LOLO"),
-            "target": setpoint_channel(f"Setp{self.output_num}-SP"),
+            "hwhighlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.HI"),
+            "hwlowlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.LO"),
+            "target": setpoint_channel(f"Setp{self.output_num}-SP", cache_key="target"),
             "target_rb": readback_channel(f"Setp{self.output_num}-RB"),
-            "ramp": setpoint_channel(f"Range{self.output_num}-SP"),
-            "ramp_rb": readback_channel(f"Range{self.output_num}-RB"),
+            "range": setpoint_channel(f"Range{self.output_num}-SP"),
+            "range_rb": readback_channel(f"Range{self.output_num}-RB"),
+            "ramp": setpoint_channel(f"Ramp{self.output_num}-SP"),
+            "ramp_rb": readback_channel(f"Ramp{self.output_num}-RB"),
+            "ramp_ctrl_sp": setpoint_channel(f"RampStatus{self.output_num}-SP"),
+            "ramp_ctrl_rb": readback_channel(f"RampStatus{self.output_num}-RB"),
+            "polling": setpoint_channel(f"Disable{self.input_pos}"),
         }
         return epics_channels
 
@@ -104,29 +122,37 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             return status.ERROR, "ALARM"
 
     def doReadAbslimits(self):
-        abs_min = self._epics.get_channel_value("hwlowlimit")
-        abs_max = self._epics.get_channel_value("hwhighlimit")
+        abs_min = self._epics.get_channel_value("highlimit")
+        abs_max = self._epics.get_channel_value("lowlimit")
         return abs_min, abs_max
 
     def isAllowed(self, pos):
-        if self.ramp == "OFF":
-            why = "Ramping was commanded to start but chosen setting is OFF! \
-                    Please select a new ramp speed in parameters"
-            return False, why
         return Moveable.isAllowed(self, pos)
 
     def doStart(self, value):
-        # There is a level 4 and 5 but they do nothing
-        ramp_enum = {
+        self._epics.put_channel_value("target", value)
+
+    def doStop(self):
+        # the lakeshore is stopped by taking the current temperature and setting it again as the setpoint
+        curval = self._epics.get_channel_value("value")
+        self._epics.put_channel_value("target", curval)
+
+    def doWriteRange(self, value):
+        # Epics module has a ramp 4 & 5, but they do nothing
+        range_enum = {
             "Off": 0,
             "Range1/Low": 1,
             "Range2/Medium": 2,
             "Range3/High": 3,
         }
-        # determine ramp setting set by system, then set the pv to that value
-        self.log.info(f"heating to target with ramp of {self.ramp}")
-        self._epics.put_channel_value("target", value)
-        self._epics.put_channel_value("ramp", ramp_enum[self.ramp])
+        self._epics.put_channel_value("range", range_enum[value])
 
-    def doStop(self):
-        self._epics.put_channel_value("ramp", 0)
+    def doWriteRamp(self, value):
+        self._epics.put_channel_value("ramp", value)
+
+    def doWriteRamp_Ctrl(self, value):
+        ramp_enum = {
+            "Off": 0,
+            "On": 1,
+        }
+        self._epics.put_channel_value("ramp", ramp_enum[value])
