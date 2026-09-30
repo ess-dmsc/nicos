@@ -50,6 +50,7 @@ class CetoniLinkedDialog(QDialog):
 
     def _build_ui(self):
         self._create_widgets()
+        self._add_signals()
         self._set_layout()
         self._format_layout()
 
@@ -135,6 +136,28 @@ class CetoniLinkedDialog(QDialog):
         self.vol_total_value.setText(str(self.params["total_vol"]))
         self.vol_total_unit.setText(str(self.paraminfo["total_vol"]["unit"]))
 
+    def reset(self):
+        self.devices_panel.exec_command(f"reset({self.devrepr})")
+
+    def stop(self):
+        self.devices_panel.exec_command(f"stop({self.devrepr})", immediate=True)
+
+    def start(self):
+        # todo: change device start
+        pass
+
+    @pyqtSlot()
+    def on_btn_reset_pressed(self):
+        self.reset()
+
+    @pyqtSlot()
+    def on_btn_stop_pressed(self):
+        self.stop()
+
+    @pyqtSlot()
+    def on_btn_start_pressed(self):
+        self.start()
+
     @pyqtSlot()
     def on_actionEnable_triggered(self):
         self.devices_panel.exec_command(f"enable({self.devrepr})")
@@ -190,11 +213,15 @@ class CetoniLinkedDialog(QDialog):
         self.menu = QMenu()
         self.action_enable = QAction("Enable", self)
         self.action_disable = QAction("Disable", self)
-        self.action_enable.triggered.connect(self.on_actionEnable_triggered)
-        self.action_disable.triggered.connect(self.on_actionDisable_triggered)
         self.menu.addAction(self.action_enable)
         self.menu.addAction(self.action_disable)
         self.button_more.setMenu(self.menu)
+
+    def _add_signals(self):
+        self.button_reset.clicked.connect(self.on_btn_reset_pressed)
+        self.button_stop.clicked.connect(self.on_btn_stop_pressed)
+        self.action_enable.triggered.connect(self.on_actionEnable_triggered)
+        self.action_disable.triggered.connect(self.on_actionDisable_triggered)
 
     def _set_layout(self):
         self.dialog_layout = QVBoxLayout()
