@@ -42,21 +42,21 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             settable=False,
             userparam=False,
         ),
-        "range_ctrl": Param(
+        "range": Param(
             "Range speed macro control",
             type=oneof("Off", "Range1/Low", "Range2/Medium", "Range3/High"),
             mandatory=False,
             settable=True,
             default="Off",
         ),
-        "ramp_val": Param(
+        "ramp": Param(
             "Designated Ramping speed",
             type=float,
             mandatory=False,
             settable=True,
             default=1.0,
         ),
-        "ramp_ctrl": Param(
+        "ramp_map": Param(
             "to turn off ramping",
             type=oneof("On", "Off"),
             mandatory=False,
@@ -74,6 +74,19 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
         ),
         "abslimits": Override(volatile=True, mandatory=False),
         "userlimits": Override(volatile=True, chatty=False),
+    }
+
+    # some parameters are mapped enums in EPICS
+    range_enum = {
+        "Off": 0,
+        "Range1/Low": 1,
+        "Range2/Medium": 2,
+        "Range3/High": 3,
+    }
+
+    ramp_enum = {
+        "Off": 0,
+        "On": 1,
     }
 
     _default_pv_prefix_attr = "pvroot"
@@ -112,47 +125,52 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
         }
         return epics_channels
 
-    # TODO: Compute proper status
-    def _compute_status(self, maxage=0):
-        msg = self._read_channel_cached("alarm")
-        if msg == 0:
-            return status.OK, " "
-        else:
-            # TODO: Error Catching to determine where error is coming from
-            return status.ERROR, "ALARM"
-
-    def doReadAbslimits(self):
-        abs_min = self._epics.get_channel_value("highlimit")
-        abs_max = self._epics.get_channel_value("lowlimit")
-        return abs_min, abs_max
+    def doStart(self, value):
+        self._epics.put_channel_value("target", value)
 
     def isAllowed(self, pos):
         return Moveable.isAllowed(self, pos)
-
-    def doStart(self, value):
-        self._epics.put_channel_value("target", value)
 
     def doStop(self):
         # the lakeshore is stopped by taking the current temperature and setting it again as the setpoint
         curval = self._epics.get_channel_value("value")
         self._epics.put_channel_value("target", curval)
 
+    def _compute_status(self, maxage=0):
+        # TODO: No proper alarm summary enabled in epics. Catch where the
+        # error is coming from here (for now...)
+        msg = self._read_channel_cached("alarm")
+        if msg == "":
+            return status.OK, msg
+        else:
+            return status.ERROR, msg
+
+    def _mapReadValue(self, value, mapping):
+        inverse_mapping = {v: k for k, v in mapping.items()}
+        mapped_value = inverse_mapping.get(value)
+        return mapped_value
+
     def doWriteRange(self, value):
-        # Epics module has a ramp 4 & 5, but they do nothing
-        range_enum = {
-            "Off": 0,
-            "Range1/Low": 1,
-            "Range2/Medium": 2,
-            "Range3/High": 3,
-        }
-        self._epics.put_channel_value("range", range_enum[value])
+        self._epics.put_channel_value("range", self.range_enum[value])
+
+    def doReadRange(self):
+        value = self._read_channel_cached("range_rb")
+        return self._mapReadValue(value, self.range_enum)
 
     def doWriteRamp(self, value):
         self._epics.put_channel_value("ramp", value)
 
-    def doWriteRamp_Ctrl(self, value):
-        ramp_enum = {
-            "Off": 0,
-            "On": 1,
-        }
-        self._epics.put_channel_value("ramp", ramp_enum[value])
+    def doReadRamp(self):
+        return self._read_channel_cached("ramp_rb")
+
+    def doWriteRamp_Map(self, value):
+        self._epics.put_channel_value("ramp", self.ramp_enum[value])
+
+    def doReadRamp_Map(self):
+        value = self._read_channel_cached("ramp_ctrl_rb")
+        return self._mapReadValue(value, self.ramp_enum)
+
+    def doReadAbslimits(self):
+        abs_min = self._epics.get_channel_value("highlimit")
+        abs_max = self._epics.get_channel_value("lowlimit")
+        return abs_min, abs_max
