@@ -151,7 +151,7 @@ class TestEpicsMotorCommandsAndMotion:
             ),
             pytest.param(
                 (status.ERROR, "record alarm"),
-                {},
+                {"-MsgTxt": "invalid move", "-MsgTxt.SEVR": 3},
                 MoveError,
                 id="error_raises_moveerror",
             ),
