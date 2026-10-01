@@ -230,7 +230,7 @@ STATUS_SEVERITY_AND_MESSAGE_PRECEDENCE_CASES = [
         status.WARN,
         "minor issue",
         False,
-        id="motor_alarm_and_msgtxt_both_shown_when_same_severity",
+        id="only_msgtxt_shown_when_same_severity",
     ),
     pytest.param(
         (status.WARN, "record alarm"),
@@ -240,7 +240,7 @@ STATUS_SEVERITY_AND_MESSAGE_PRECEDENCE_CASES = [
         status.ERROR,
         "major issue",
         False,
-        id="motor_alarm_and_msgtxt_both_shown_when_msgtxt_more_severe",
+        id="only_msgtxt_shown_when_msgtxt_more_severe",
     ),
     pytest.param(
         (status.OK, ""),
