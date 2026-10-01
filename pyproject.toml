@@ -105,6 +105,7 @@ members = ["nicos_ess", "nicos_demo"]
 
 [project.optional-dependencies]
 gui = [
+    "flake8",
     "gr>=1.23.2",
     "html2text>=2025.4.15",
     "keyring==24.3.0",
@@ -130,6 +131,7 @@ gui = [
 ]
 
 gui_qt6 = [
+    "flake8",
     "gr>=1.23.2",
     "html2text>=2025.4.15",
     "keyring==24.3.0",
