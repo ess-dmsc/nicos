@@ -1,5 +1,6 @@
 import threading
 from dataclasses import FrozenInstanceError
+from logging import Logger
 
 import pytest
 
@@ -10,6 +11,7 @@ from nicos.core import (
     Readable,
     status,
 )
+from nicos.utils.loggers import NicosLogger
 from nicos_ess.devices.epics.pva.epics_common import (
     LOST_CONNECTION_STATUS,
     ChannelUpdate,
@@ -724,8 +726,11 @@ class TestDeviceGlue:
             ("error", "value (failed)"),
         ]
 
-    def test_callback_error_caches_visible_unknown_status(self):
+    @pytest.mark.parametrize("logger_class", [Logger, NicosLogger])
+    def test_callback_error_caches_visible_unknown_status(self, caplog, logger_class):
         probe = FailingUpdateProbe()
+        probe.log = logger_class("epics_callback_test")
+        probe.log.addHandler(caplog.handler)
 
         probe._dispatch_channel_update(
             ChannelUpdate(
@@ -739,12 +744,15 @@ class TestDeviceGlue:
         assert severity == status.UNKNOWN
         assert "error handling update for EPICS channel 'value'" in message
         assert "bad callback data" in message
-        assert probe.log.messages == [
-            (
-                "warning",
-                "error handling update for EPICS channel 'value' (PV SIM:M1.RBV)",
-            )
-        ]
+        (record,) = caplog.records
+        assert record.levelname == "WARNING"
+        assert (
+            "error handling update for EPICS channel 'value' (PV SIM:M1.RBV)"
+            in record.getMessage()
+        )
+        assert record.exc_info[0] is RuntimeError
+        assert str(record.exc_info[1]) == "bad callback data"
+        assert record.exc_info[2] is not None
 
     def test_value_only_channel_does_not_recompute_status(self):
         def compute(maxage=0):

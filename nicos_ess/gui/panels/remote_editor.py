@@ -18,11 +18,9 @@ from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
     QAction,
     QActionGroup,
-    QByteArray,
     QColor,
     QDialog,
     QFileDialog,
-    QFileSystemModel,
     QFont,
     QFontMetrics,
     QHBoxLayout,
@@ -366,29 +364,12 @@ class EditorPanel(Panel):
         self.is_imported_script = defaultdict(lambda: False)  # editor -> bool
         self.currentEditor = None
 
-        self.saving = False  # True while saving
         self.warnWidget.hide()
 
         self.simFrame = SimResultFrame(self, None, self.client)
         self.simPaneFrame.layout().addWidget(self.simFrame)
         self.simPane.hide()
         self.simWindows = []
-
-        self.splitter.restoreState(self.splitterstate)
-        self.treeModel = QFileSystemModel()
-        idx = self.treeModel.setRootPath("/")
-        self.treeModel.setNameFilters(["*.py", "*.txt"])
-        self.treeModel.setNameFilterDisables(False)  # hide them
-        self.fileTree.setModel(self.treeModel)
-        self.fileTree.header().hideSection(1)
-        self.fileTree.header().hideSection(2)
-        self.fileTree.header().hideSection(3)
-        self.fileTree.header().hide()
-        self.fileTree.setRootIndex(idx)
-        if not options.get("show_browser", True):
-            self.scriptsPane.hide()
-        self.actionShowScripts = self.scriptsPane.toggleViewAction()
-        self.actionShowScripts.setText("Show Script Browser")
 
         self.activeGroup = QActionGroup(self)
         self.activeGroup.addAction(self.actionRun)
@@ -605,6 +586,12 @@ class EditorPanel(Panel):
         if editor in self.error_messages:
             del self.error_messages[editor]
         self.tabber.removeTab(index)
+        if len(self.editors) == 0:
+            self.actionSave.setEnabled(False)
+            self.actionSaveAs.setEnabled(False)
+            self.actionSimulate.setEnabled(False)
+            self.actionRun.setEnabled(False)
+            self.actionUpdate.setEnabled(False)
 
     def setDirty(self, editor, dirty):
         if editor is self.currentEditor:
@@ -615,11 +602,9 @@ class EditorPanel(Panel):
             self.tabber.setTabText(index, tt + (dirty and "*" or ""))
 
     def loadSettings(self, settings):
-        self.splitterstate = settings.value("splitter", "", QByteArray)
         self.openfiles = settings.value("openfiles") or []
 
     def saveSettings(self, settings):
-        settings.setValue("splitter", self.splitter.saveState())
         settings.setValue(
             "openfiles", [self.filenames[e] for e in self.editors if self.filenames[e]]
         )
@@ -813,16 +798,9 @@ class EditorPanel(Panel):
     def on_client_connected(self):
         self.loaded_devices = list(self.client.eval("session.devices", {}).keys())
         self.enableRemoteActions()
-        self._set_scriptdir()
 
     def on_client_disconnected(self):
         self.enableRemoteActions()
-
-    def _set_scriptdir(self):
-        initialdir = self.client.eval("session.experiment.scriptpath", "")
-        if initialdir:
-            idx = self.treeModel.setRootPath(initialdir)
-            self.fileTree.setRootIndex(idx)
 
     def on_client_cache(self, data):
         (_time, key, _op, _value) = data
@@ -835,7 +813,6 @@ class EditorPanel(Panel):
 
     def on_client_experiment(self, data):
         (_, proptype) = data
-        self._set_scriptdir()
         self.simPane.hide()
         if proptype == "user":
             # close existing tabs when switching TO a user experiment
@@ -844,14 +821,6 @@ class EditorPanel(Panel):
             # if all tabs have been closed, open a new file
             if not self.tabber.count():
                 self.on_actionNew_triggered()
-
-    def on_fileTree_doubleClicked(self, idx):
-        fpath = self.treeModel.filePath(idx)
-        for i, editor in enumerate(self.editors):
-            if self.filenames[editor] == fpath:
-                self.tabber.setCurrentIndex(i)
-                return
-        self.openFile(fpath)
 
     @pyqtSlot()
     def on_actionPrint_triggered(self):
@@ -1009,21 +978,27 @@ class EditorPanel(Panel):
         self.simFrame.clear()
 
     def openFile(self, fn, is_inst_script=False, is_import=False):
-        def _open_local(filename):
+        def _open_local():
             with open(
                 fn.encode(sys.getfilesystemencoding()), encoding=LOCALE_ENCODING
             ) as f:
                 return f.read()
 
-        def _open_remote(filename):
+        def _open_remote():
+            command = (
+                "read_instrument_script_file"
+                if is_inst_script
+                else "read_user_script_file"
+            )
             return self.client.eval(
-                f"session.experiment.read_server_file('{fn}')", None
+                f"session.experiment.{command}('{fn}')",
             )
 
         try:
-            text = _open_local(fn) if is_import else _open_remote(fn)
+            text = _open_local() if is_import else _open_remote()
         except Exception as err:
-            return self.showError(f"Opening file failed: {err}")
+            self.showError(f"Opening file failed: {err}")
+            return
 
         editor = self.createEditor()
         editor.setText(text)
@@ -1072,28 +1047,42 @@ class EditorPanel(Panel):
             self.saveFileAs(self.currentEditor)
 
     def saveFile(self, editor):
-        if not self.filenames[editor]:
+        filename = self.filenames[editor]
+
+        if self.is_instrument_script[editor]:
+            pass
+        elif not filename:
+            # It is a new file
+            return self.saveFileAs(editor)
+        elif self.is_imported_script[editor]:
+            # Suggest the same name as it was imported as.
+            name = os.path.basename(filename)
+            return self.saveFileAs(editor, name=name)
+        elif not self.client.eval(
+            f"session.experiment.user_script_file_exists('{filename}')",
+        ):
+            # If filepath no longer exists on server, for example: someone renames the parent
+            # folder, use save as
             return self.saveFileAs(editor)
 
-        if self.is_imported_script[editor]:
-            # Suggest the same name as it was imported as.
-            name = os.path.basename(self.filenames[editor])
-            return self.saveFileAs(editor, name=name)
+        return self._save_file(filename, editor)
 
-        self.saving = True
-        filename = self.filenames[editor]
+    def _save_file(self, filename, editor):
         # The content must be sent as bytes because eval cannot handle strings
         # containing \n, \t, etc.
         content = editor.text().encode()
+        command = (
+            "write_instrument_script_file"
+            if self.is_instrument_script[editor]
+            else "write_user_script_file"
+        )
         try:
             self.client.eval(
-                f"session.experiment.write_server_file('{filename}', {content})",
+                f"session.experiment.{command}('{filename}', {content})",
             )
         except Exception as err:
             self.showError(f"Saving file failed: {err}")
             return False
-        finally:
-            self.saving = False
 
         editor.setModified(False)
 
@@ -1112,7 +1101,7 @@ class EditorPanel(Panel):
         self.filenames[editor] = file
         self.is_imported_script[editor] = False
         self.tabber.setTabText(self.editors.index(editor), os.path.basename(file))
-        return self.saveFile(editor)
+        return self._save_file(file, editor)
 
     @pyqtSlot()
     def on_actionUndo_triggered(self):

@@ -5,12 +5,15 @@ from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
     QAbstractItemView,
     QAbstractTableModel,
+    QAction,
+    QCursor,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMenu,
     QMessageBox,
     QRegularExpression,
     QRegularExpressionValidator,
@@ -28,16 +31,18 @@ FOLDER_ICON = get_icon("folder_open-24px.svg")
 FILE_ICON = get_icon("document-24px.svg")
 
 
-class NewFolderDialog(QDialog):
-    def __init__(self):
+class FilenameDialog(QDialog):
+    def __init__(self, title, label_text, post_label_text="", text=""):
         super().__init__()
-        self.setWindowTitle("Enter Folder Name")
+        self.setWindowTitle(title)
         self.layout = QVBoxLayout()
 
-        label = QLabel("Enter folder name:")
+        label = QLabel(label_text)
+        post_label = QLabel(post_label_text)
         self.txt_name = QLineEdit()
+        self.txt_name.setText(text)
 
-        # Limit what chars are acceptable in a folder
+        # Limit what chars are acceptable in a folder/filename
         self.txt_name.setValidator(
             QRegularExpressionValidator(QRegularExpression(r"[A-Za-z0-9_-]+"), self)
         )
@@ -46,6 +51,8 @@ class NewFolderDialog(QDialog):
         hlayout = QHBoxLayout()
         hlayout.addWidget(label)
         hlayout.addWidget(self.txt_name)
+        if post_label_text:
+            hlayout.addWidget(post_label)
 
         self.button_box = QDialogButtonBox()
         self.button_box.addButton(QDialogButtonBox.StandardButton.Cancel)
@@ -119,6 +126,22 @@ class FileTableModel(QAbstractTableModel):
         self._emit_update()
 
 
+class RelativePathTracker:
+    def __init__(self):
+        self._path = []
+        self._indexes = []
+
+    def push(self, directory, index):
+        self._path.append(directory)
+        self._indexes.append(index)
+
+    def pop(self):
+        return self._path.pop(), self._indexes.pop()
+
+    def path(self):
+        return os.path.join(*self._path) if self._path else ""
+
+
 class RemoteFileDialog(QDialog):
     @classmethod
     def get_file(cls, parent, client, directory="", save=False, admin=False, name=None):
@@ -135,7 +158,7 @@ class RemoteFileDialog(QDialog):
         self.save = save
         self.admin = admin
         self.is_inst_script = False
-        self.rel_directory = []
+        self.rel_path_tracker = RelativePathTracker()
 
         # We store the raw modification time but don't show it.
         # When we sort on modification time we use the raw value
@@ -202,14 +225,100 @@ class RemoteFileDialog(QDialog):
 
         self._update_files_list()
         self._update_path_controls()
+        self.file_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.file_table.customContextMenuRequested.connect(self._show_context_menu)
+        policy = self.txt_path.sizePolicy()
+        policy.setRetainSizeWhenHidden(True)
+        self.txt_path.setSizePolicy(policy)
+
+    def _show_context_menu(self, point):
+        if self.is_inst_script:
+            # Disallow deleting and renaming the instrument commands file.
+            return
+
+        row = self.file_table.indexAt(point).row()
+        if row < 0:
+            return
+
+        rename_action = QAction("Rename...", self)
+        rename_action.triggered.connect(lambda: self.rename_item(row))
+
+        delete_action = QAction("Delete", self)
+        delete_action.triggered.connect(lambda: self.delete_item(row))
+        delete_action.setIcon(get_icon("delete-24px.svg"))
+
+        menu = QMenu()
+        menu.addAction(rename_action)
+        menu.addAction(delete_action)
+        menu.exec(QCursor.pos())
+
+    def delete_item(self, row):
+        row = self.table_model.get_row(row)
+        base_path = self.rel_path_tracker.path()
+        path = os.path.join(base_path, row[0])
+
+        if row[3]:
+            # Deleting folder so warn
+            reply = QMessageBox.question(
+                self,
+                "Warning",
+                "Deleting a folder will delete all the contents. Are you sure?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply == QMessageBox.StandardButton.No:
+                return
+
+            self.call_eval(
+                f"session.experiment.delete_user_script_directory('{path}')",
+                None,
+            )
+        else:
+            self.call_eval(
+                f"session.experiment.delete_user_script_file('{path}')",
+                None,
+            )
+        self._update_files_list(base_path)
+
+    def rename_item(self, row):
+        row = self.table_model.get_row(row)
+        base_path = self.rel_path_tracker.path()
+        old = os.path.join(base_path, row[0])
+
+        if row[3]:
+            dialog = FilenameDialog("Rename Folder", "Enter new name:", text=row[0])
+        else:
+            dialog = FilenameDialog(
+                "Rename Script", "Enter new name:", ".py", row[0].removesuffix(".py")
+            )
+
+        if dialog.exec():
+            new_name = dialog.txt_name.text()
+            new_name += ".py" if not row[3] else ""
+            new = os.path.join(base_path, new_name)
+
+            if self.client.eval(
+                f"session.experiment.user_script_file_exists('{new}')", None
+            ):
+                QMessageBox.warning(
+                    self,
+                    "Already exists",
+                    "The entered name is already in use, so cannot rename selected item",
+                )
+                return
+
+            self.call_eval(
+                f"session.experiment.rename_user_script_file('{old}', '{new}')", None
+            )
+
+            self._update_files_list(base_path)
 
     def _update_files_list(self, directory=""):
         if self.is_inst_script:
-            self.abs_directory, (files_info, directories) = self.client.eval(
+            files_info, directories = self.call_eval(
                 "session.experiment.list_instrument_scripts_directory()", (None, None)
             )
         else:
-            self.abs_directory, (files_info, directories) = self.client.eval(
+            files_info, directories = self.call_eval(
                 f"session.experiment.list_user_scripts_directory('{directory}')",
                 (None, None),
             )
@@ -241,9 +350,8 @@ class RemoteFileDialog(QDialog):
                 )
             )
 
+        self.file_table.clearSelection()
         self.table_model.set_data(raw_data)
-        if len(files_info):
-            self.file_table.clearSelection()
 
     def on_selection_changed(self, current, _previous):
         if len(current.indexes()) == 0:
@@ -259,11 +367,11 @@ class RemoteFileDialog(QDialog):
 
     @pyqtSlot()
     def on_btn_new_folder_pressed(self):
-        dialog = NewFolderDialog()
+        dialog = FilenameDialog("Enter Folder Name", "Enter folder name:")
         if dialog.exec():
-            rel_path = os.path.join(*self.rel_directory) if self.rel_directory else ""
+            rel_path = self.rel_path_tracker.path()
             path = os.path.join(rel_path, dialog.txt_name.text())
-            self.client.eval(
+            self.call_eval(
                 f"session.experiment.create_user_script_directory('{path}')", None
             )
             self._update_files_list(rel_path)
@@ -289,17 +397,16 @@ class RemoteFileDialog(QDialog):
             return
 
         row = self.file_table.selectionModel().selectedRows()[0]
-        row = self.table_model.get_row(row.row())
+        row_data = self.table_model.get_row(row.row())
 
         # Clicking 'open' on a folder should open the folder.
-        if row[3]:
-            self.rel_directory.append(row[0])
-            path = os.path.join(*self.rel_directory)
-            self._update_files_list(path)
+        if row_data[3]:
+            self.rel_path_tracker.push(row_data[0], row.row())
+            self._update_files_list(self.rel_path_tracker.path())
             self._update_path_controls()
             return
 
-        self.txt_filename.setText(row[0])
+        self.txt_filename.setText(row_data[0])
         self.accept()
 
     @pyqtSlot()
@@ -307,7 +414,8 @@ class RemoteFileDialog(QDialog):
         self.reject()
 
     def _get_sanitised_filename(self):
-        filename = os.path.join(self.abs_directory, self.txt_filename.text().strip())
+        rel_path = self.rel_path_tracker.path()
+        filename = os.path.join(rel_path, self.txt_filename.text().strip())
         if not filename.endswith(".py"):
             filename += ".py"
         return filename
@@ -330,21 +438,19 @@ class RemoteFileDialog(QDialog):
         )
 
         if is_dir:
-            self.rel_directory.append(filename)
-            path = "/".join(self.rel_directory)
-            self._update_files_list(path)
+            self.rel_path_tracker.push(filename, index.row())
+            self._update_files_list(self.rel_path_tracker.path())
             self._update_path_controls()
         else:
             self.txt_filename.setText(filename)
             self.on_btn_ok_pressed()
 
     def _update_path_controls(self):
-        path = "/".join(self.rel_directory)
+        path = self.rel_path_tracker.path()
         if path:
             self.txt_path.setVisible(True)
             self.lbl_path.setVisible(True)
             self.btn_up.setVisible(True)
-
             self.txt_path.setText(path)
         else:
             self.txt_path.setVisible(False)
@@ -353,7 +459,20 @@ class RemoteFileDialog(QDialog):
 
     @pyqtSlot()
     def on_btn_up_pressed(self):
-        self.rel_directory.pop()
-        path = "/".join(self.rel_directory)
-        self._update_files_list(path)
+        _, index = self.rel_path_tracker.pop()
+        self._update_files_list(self.rel_path_tracker.path())
         self._update_path_controls()
+        # When going up the stack highlight the route
+        index = index if index < self.table_model.rowCount(0) else 0
+        first_entry = self.table_model.index(index, 0)
+        self.file_table.setCurrentIndex(first_entry)
+
+    def call_eval(self, command, default=None):
+        try:
+            return self.client.eval(
+                command,
+                default,
+            )
+        except Exception as err:
+            QMessageBox.warning(self, "Error", f"{err}")
+            return default
