@@ -63,6 +63,7 @@ class NewportHexapod(Moveable):
     # stopping any axes will stop the entire hexapod, choosing to use the same axes as EPICS
     def doStop(self):
         self._adevs["tx"].stop()
+        self._adevs["gmt"].stop()
 
     def doIsCompleted(self):
         self._adevs["move_all"].move("Off")
