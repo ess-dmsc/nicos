@@ -10,6 +10,7 @@ devices = dict(
     m2_beam_monitor_positioner=device(
         "nicos_ess.devices.mapped_controller.MappedController",
         controlled_device="m2_beam_monitor",
+        description="No description available.",
         mapping={"in-beam": 1, "out-of-beam": 70},
     ),
     # m3_in_beam_positioner=device(

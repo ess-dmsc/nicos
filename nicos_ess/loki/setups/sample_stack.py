@@ -23,6 +23,7 @@ devices = dict(
     ),
     sample_stack_positioner=device(
         "nicos_ess.devices.mapped_controller.MultiTargetMapping",
+        description="No description available.",
         controlled_devices=[
             "sample_stack_x",
             "sample_stack_y",

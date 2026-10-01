@@ -12,6 +12,7 @@ devices = dict(
     alignment_laser_mirror_positioner=device(
         "nicos_ess.devices.mapped_controller.MappedController",
         controlled_device="alignment_laser_mirror",
+        description="No description available.",
         mapping={"in-beam": 2, "out-of-beam": 96},
     ),
 )
