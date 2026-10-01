@@ -86,6 +86,7 @@ devices = dict(
             "axis_attenuator_changer",
             "axis_pinhole_changer",
         ],
+        description="No description available.",
         mapping=collimator_map,
     ),
     mapping_composer=device(
@@ -97,6 +98,7 @@ devices = dict(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
         composer="mapping_composer",
         idx=0,
+        description="No description available.",
         mapping={
             "Large collimator": "L",
             "3 mm collimator": "3",
@@ -107,6 +109,7 @@ devices = dict(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
         composer="mapping_composer",
         idx=1,
+        description="No description available.",
         mapping={
             "No attenuator": "N",
             "Small attenuator": "S",
@@ -118,6 +121,7 @@ devices = dict(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
         composer="mapping_composer",
         idx=2,
+        description="No description available.",
         mapping={
             "No pinhole": "N",
             "1 mm pinhole": "1",

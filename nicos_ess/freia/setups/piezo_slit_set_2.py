@@ -75,7 +75,7 @@ devices = dict(
         motorpv=f"{prefix}SlYp-01:Mtr",
         visibility=(),
     ),
-    neutron_slit_2=device(
+    neutron_ps_slit_2=device(
         "nicos.devices.generic.slit.HorizontalGap",
         description="Main Horizontal Piezo Slit Controller",
         opmode="2blades_opposite",

@@ -93,5 +93,6 @@ devices = dict(
         "nicos_ess.beer.devices.slit_mapped_controller.CenteredSlitMappedController",
         controlled_device="slit_1",
         mapping=slit_1_mode_map,
+        description="No description available.",
     ),
 )
