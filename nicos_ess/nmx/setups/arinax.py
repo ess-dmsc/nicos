@@ -211,10 +211,12 @@ devices = dict(
         mapping=LIGHT_LEVELS,
     ),
     backlight_position=device(
-        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU backlight position",
         readpv=f"{pv_root}getBackLightPOS",
         writepv=f"{pv_root}setBackLightPOS",
+        fmtstr="%d",
+        mapping={"Out": 0, "In": 1},
     ),
     # Zoom
     zoom_level=device(
