@@ -80,7 +80,6 @@
     <addaction name="actionViewOnly"/>
     <addaction name="actionExpert"/>
     <addaction name="separator"/>
-    <addaction name="actionFont"/>
     <addaction name="actionPreferences"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -218,11 +217,6 @@
    </property>
    <property name="menuRole">
     <enum>QAction::QuitRole</enum>
-   </property>
-  </action>
-  <action name="actionFont">
-   <property name="text">
-    <string>&amp;Font...</string>
    </property>
   </action>
   <action name="actionColor">
