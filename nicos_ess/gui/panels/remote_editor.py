@@ -470,9 +470,9 @@ class EditorPanel(Panel):
     def _get_font_sizes(self, font_family):
         # Handle Qt5 and Qt6 differences.
         # For Qt6 PointSizes has become a static method
-        if os.environ.get("NICOS_QT") == "5":
-            return QFontDatabase().pointSizes(font_family)
-        return QFontDatabase.pointSizes(font_family)
+        if os.environ.get("NICOS_QT") == "6":
+            return QFontDatabase.pointSizes(font_family)
+        return QFontDatabase().pointSizes(font_family)
 
     def _change_font_size(self, value):
         self.custom_font.setPointSize(int(value))
