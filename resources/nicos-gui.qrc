@@ -137,6 +137,7 @@
     <file alias="sync_orange">material/icons/sync_orange-24px.svg</file>
     <file alias="tune">material/icons/tune-24px.svg</file>
     <file alias="undo">material/icons/undo-24px.svg</file>
+    <file alias="undo_white">material/icons/undo_white-24px.svg</file>
     <file alias="warning_orange">material/icons/warning_orange-24px.svg</file>
     <file alias="warning_yellow">material/icons/warning_yellow-24px.svg</file>
     <file alias="zoom_out">material/icons/zoom_out-24px.svg</file>

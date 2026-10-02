@@ -14,6 +14,7 @@ from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.clients.gui.widgets.qscintillacompat import QScintillaCompatible
 from nicos.core.utils import ADMIN
+from nicos_ess.gui.utils import is_dark_mode_enabled
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
     QAction,
@@ -445,13 +446,15 @@ class EditorPanel(Panel):
         return bar
 
     def get_icons(self):
+        mode = "_white" if is_dark_mode_enabled() else ""
+
         self.actionNew.setIcon(get_icon("add_circle_outline-24px.svg"))
         self.actionOpen.setIcon(get_icon("folder_open-24px.svg"))
         self.actionImport.setIcon(get_icon("get-24px.svg"))
         self.actionSave.setIcon(get_icon("save-24px.svg"))
         self.actionSaveAs.setIcon(get_icon("save_as-24px.svg"))
         self.actionPrint.setIcon(get_icon("print-24px.svg"))
-        self.actionUndo.setIcon(get_icon("undo-24px.svg"))
+        self.actionUndo.setIcon(get_icon(f"undo{mode}-24px.svg"))
         self.actionRedo.setIcon(get_icon("redo-24px.svg"))
         self.actionCut.setIcon(get_icon("cut-24px.svg"))
         self.actionCopy.setIcon(get_icon("file_copy-24px.svg"))
