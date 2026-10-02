@@ -17,7 +17,7 @@ UNIPUCKS = {
 }
 
 ZOOM_LEVELS = {f"Zoom level {i}": i for i in range(1, 8)}
-LIGHT_LEVELS = {f"Light level {i}": i * 10 for i in range(0, 11)}
+LIGHT_LEVELS = {f"Light level {i}": i * 5 for i in range(0, 11)}
 PRECISION = 0.001
 
 devices = dict(
@@ -200,6 +200,8 @@ devices = dict(
     # Backlight
     backlight_level=device(
         # This PV goes from 0 to 100, but steps of 10 makes more sense.
+        # NOTE: The control is for now setting double of the input value,
+        # e.g., setting 5 makes the control goes to 10. Checking if it's an issue.
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="ARINAX SPU backlight level",
         readpv=f"{pv_root}getBackLightLevel",
