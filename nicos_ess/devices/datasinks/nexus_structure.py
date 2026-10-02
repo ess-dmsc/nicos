@@ -224,9 +224,9 @@ class NexusStructureJsonFile(NexusStructureProvider):
         units = cfg.get("units", "")
         if cfg["dataset_type"] == "static_read":
             return generate_dataset_json(name, dev.read(0), units)
-        if cfg["dataset_type"] == "static_value":
+        elif cfg["dataset_type"] == "static_value":
             return generate_dataset_json(name, cfg["value"], units)
-        if "source_name" in cfg:
+        elif "source_name" in cfg:
             return generate_nxlog_json(
                 name, cfg["schema"], cfg["source_name"], cfg["topic"], units
             )
