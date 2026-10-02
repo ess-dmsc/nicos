@@ -28,6 +28,8 @@ The nicos package contains all standard NICOS commands and devices.
 import sys
 from logging import getLogger
 
+import numpy
+
 # Provide the config object.
 from nicos.configmod import config
 
@@ -42,11 +44,6 @@ except importlib.metadata.PackageNotFoundError:
     __version__ = nicos_version = get_nicos_version()
 except Exception:
     __version__ = nicos_version = "0.0.0"  # Fallback for development mode
-
-
-# Check for Python version 3.6+.
-if sys.version_info[:2] < (3, 6):
-    raise ImportError("NICOS requires Python 3.6 or higher")
 
 
 # Create the nicos session object here to allow the import of submodules.
@@ -65,10 +62,8 @@ def get_custom_version():
         return None
 
 
-try:
-    # numpy 1.14+ compat
-    import numpy
-
-    numpy.set_printoptions(sign=" ")
-except Exception:
-    pass
+# Use legacy print behavior, two things are relevant here:
+# - keep space in front of positive numbers where the negative sign would be
+# - don't add the numpy type information, Numpy 2 default is "np.float64(0.0)"
+np_legacy_print_option = "1.13"
+numpy.set_printoptions(legacy=np_legacy_print_option)
