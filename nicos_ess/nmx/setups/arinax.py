@@ -17,6 +17,7 @@ UNIPUCKS = {
 }
 
 ZOOM_LEVELS = {f"Zoom level {i}": i for i in range(1, 8)}
+LIGHT_LEVELS = {f"Light level {i}": i * 10 for i in range(0, 11)}
 PRECISION = 0.001
 
 devices = dict(
@@ -197,17 +198,17 @@ devices = dict(
         precision=PRECISION,
     ),
     # Backlight
-    # TODO: Changed to a manual mapping once we know the step size.
     backlight_level=device(
-        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
+        # This PV goes from 0 to 100, but steps of 10 makes more sense.
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="ARINAX SPU backlight level",
         readpv=f"{pv_root}getBackLightLevel",
         writepv=f"{pv_root}setBackLightLevel",
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        userlimits=[0, 100],
         fmtstr="%d",
+        mapping=LIGHT_LEVELS,
     ),
     backlight_position=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
