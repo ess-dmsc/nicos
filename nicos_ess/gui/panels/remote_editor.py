@@ -460,6 +460,7 @@ class EditorPanel(Panel):
         showToolText(bar, self.actionUpdate)
         bar.addSeparator()
         bar.addAction(self.actionShowFind)
+        bar.addSeparator()
         showToolText(bar, self.actionShowFind)
         sizes = self._get_font_sizes(self.custom_font.family())
         current = sizes.index(self.custom_font.pointSize())
