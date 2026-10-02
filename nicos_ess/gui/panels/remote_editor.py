@@ -151,7 +151,6 @@ class FontSizeSelector(QWidget):
         super().__init__(*args, **kwargs)
         layout = QHBoxLayout()
         font_size = QComboBox()
-        # font_size.setStyleSheet("background: transparent; color: red")
         font_size.addItems([str(s) for s in sizes])
         font_size.setCurrentIndex(current)
         font_size.currentTextChanged.connect(change_handler)
@@ -510,7 +509,7 @@ class EditorPanel(Panel):
         self.current_status = status
 
     def _create_default_font(self):
-        # Use monospace as editing Python with a non-monospace
+        # Use monospace as writing Python with a non-monospace
         # font is evil.
         font = QFont()
         font.setFamily("Monospace")
