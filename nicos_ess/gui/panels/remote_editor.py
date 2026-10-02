@@ -19,13 +19,16 @@ from nicos.guisupport.qt import (
     QAction,
     QActionGroup,
     QColor,
+    QComboBox,
     QDialog,
     QFileDialog,
     QFont,
+    QFontDatabase,
     QFontMetrics,
     QHBoxLayout,
     QHeaderView,
     QInputDialog,
+    QLabel,
     QLineEdit,
     QMessageBox,
     QPen,
@@ -46,7 +49,6 @@ from nicos.guisupport.qt import (
     QWidget,
     pyqtSlot,
 )
-from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, findResource, formatDuration, formatEndtime
 from nicos_ess.gui.dialogs.remote_file_dialog import RemoteFileDialog
 from nicos_ess.gui.utils import get_icon
@@ -142,6 +144,19 @@ if has_scintilla:
     class QsciScintillaCustom(QsciScintilla):
         def moveToEnd(self):
             self.SendScintilla(self.SCI_DOCUMENTEND)
+
+
+class FontSizeSelector(QWidget):
+    def __init__(self, sizes, current, change_handler, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        layout = QHBoxLayout()
+        font_size = QComboBox()
+        font_size.addItems([str(s) for s in sizes])
+        font_size.setCurrentIndex(current)
+        font_size.currentTextChanged.connect(change_handler)
+        layout.addWidget(QLabel("Font size:"))
+        layout.addWidget(font_size)
+        self.setLayout(layout)
 
 
 class FindReplaceWidget(QWidget):
@@ -394,6 +409,10 @@ class EditorPanel(Panel):
         client.cache.connect(self.on_client_cache)
         client.experiment.connect(self.on_client_experiment)
 
+        self.custom_font = self._create_default_font()
+        self.simFrame.simOutView.setFont(self.custom_font)
+        self.simFrame.simOutViewErrors.setFont(self.custom_font)
+
         self.newFile()
 
         self.layout().setMenuBar(self.createPanelToolbar())
@@ -441,8 +460,24 @@ class EditorPanel(Panel):
         showToolText(bar, self.actionUpdate)
         bar.addSeparator()
         bar.addAction(self.actionShowFind)
+        bar.addSeparator()
         showToolText(bar, self.actionShowFind)
+        sizes = self._get_font_sizes(self.custom_font.family())
+        current = sizes.index(self.custom_font.pointSize())
+        bar.addWidget(FontSizeSelector(sizes, current, self._change_font_size))
         return bar
+
+    def _get_font_sizes(self, font_family):
+        # Handle Qt5 and Qt6 differences.
+        # For Qt6 PointSizes has become a static method
+        if os.environ.get("NICOS_QT") == "6":
+            return QFontDatabase.pointSizes(font_family)
+        return QFontDatabase().pointSizes(font_family)
+
+    def _change_font_size(self, value):
+        self.custom_font.setPointSize(int(value))
+        for editor in self.editors:
+            self._updateStyle(editor)
 
     def get_icons(self):
         self.actionNew.setIcon(get_icon("add_circle_outline-24px.svg"))
@@ -474,17 +509,21 @@ class EditorPanel(Panel):
     def updateStatus(self, status, exception=False):
         self.current_status = status
 
+    def _create_default_font(self):
+        # Use monospace as writing Python with a non-monospace
+        # font is evil.
+        font = QFont()
+        font.setFamily("Monospace")
+        font.setItalic(False)
+        font.setBold(False)
+        font.setPointSize(16)
+        return font
+
     def setCustomStyle(self, font, back):
-        self.custom_font = font
-        self.custom_back = back
-        self.simFrame.simOutView.setFont(font)
-        self.simFrame.simOutViewErrors.setFont(font)
-        for editor in self.editors:
-            self._updateStyle(editor)
+        # Ignore the global style update as we handle it ourselves.
+        pass
 
     def _updateStyle(self, editor):
-        if self.custom_font is None:
-            return
         bold = QFont(self.custom_font)
         bold.setBold(True)
         if has_scintilla:
@@ -492,13 +531,11 @@ class EditorPanel(Panel):
             lexer.setDefaultFont(self.custom_font)
             for i in range(20):
                 lexer.setFont(self.custom_font, i)
-                lexer.setPaper(self.custom_back, i)
             # make keywords bold
             lexer.setFont(bold, 5)
-            lexer.setDefaultPaper(self.custom_back)
         else:
             editor.setFont(self.custom_font)
-            setBackgroundColor(editor, self.custom_back)
+            editor.document().setDefaultFont(self.custom_font)
 
     def enableFileActions(self, on):
         for action in [

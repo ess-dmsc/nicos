@@ -42,7 +42,6 @@ from nicos.guisupport.qt import (
     QAction,
     QApplication,
     QDialog,
-    QFontDialog,
     QGridLayout,
     QIcon,
     QLabel,
@@ -1099,15 +1098,6 @@ class MainWindow(DlgUtils, QMainWindow):
         ret = dlg.exec()
         if ret == QDialog.DialogCode.Accepted:
             dlg.saveSettings()
-
-    @pyqtSlot()
-    def on_actionFont_triggered(self):
-        font, ok = QFontDialog.getFont(self.user_font, self)
-        if not ok:
-            return
-        for panel in self.panels:
-            panel.setCustomStyle(font, self.user_color)
-        self.user_font = font
 
     @pyqtSlot()
     def on_actionUser_triggered(self):
