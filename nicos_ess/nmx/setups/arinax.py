@@ -2,7 +2,7 @@ description = "ARINAX controls (sample exposure system)"
 
 group = "optional"
 
-pv_root = "NMX-ExpSys::"  # EPICS proxy IOC that interfaces ARINAX PVs
+pv_root = "NMX-ExpSys::"  # The EPICS proxy IOC that interfaces ARINAX PVs.
 
 SAMPLE_STORAGE = {
     f"Sample Storage {s} - SS{i}": f"Sample_Storage_{s} SS{i}"
@@ -47,7 +47,6 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    # SPU Config
     config_sample_holder_position=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU Configuration",
