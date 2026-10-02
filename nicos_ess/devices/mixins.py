@@ -108,12 +108,12 @@ class nexusconfiglist:
                 # accept bool or int 0/1, and strings that cast to 0/1
                 try:
                     periodic = int(periodic)
+                    if periodic not in (0, 1):
+                        raise RuntimeError()
                 except Exception:
                     raise ValueError(
                         f"nexus_config[{idx}].periodic must be 0 or 1"
                     ) from None
-                if periodic not in (0, 1):
-                    raise ValueError(f"nexus_config[{idx}].periodic must be 0 or 1")
                 out["periodic"] = periodic
 
             if "nexus_path" in raw:
