@@ -27,6 +27,7 @@
 
 from time import sleep
 
+import numpy as np
 import pytest
 
 from nicos.core.errors import CacheLockError, CommunicationError, LimitError
@@ -38,6 +39,35 @@ session_setup = "cachetests"
 
 
 class TestCache:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param(np.float64(1.5), id="numpy-scalar"),
+            pytest.param({"values": [np.float64(1.5)]}, id="numpy-nested"),
+        ],
+    )
+    def test_numpy_value_through_cache_server(self, session, value):
+        # Keep deliberately unreadable wire values outside the shared "nicos"
+        # prefix so other suite clients never receive this test's updates.
+        cc = CacheClient(
+            name="numpy_cache", prefix="numpy-regression", cache=cache_addr
+        )
+        try:
+            with np.printoptions(legacy=False):
+                cc.put("testcache", "numpyvalue", value)
+            cc.flush()
+
+            # Read explicitly from the server, rather than the client's local copy.
+            received = cc.get_explicit("testcache", "numpyvalue", None)[2]
+            np.testing.assert_equal(received, value)
+        finally:
+            try:
+                # Failed round trips must not leave malformed entries in the server.
+                cc.delete("testcache", "numpyvalue")
+                cc.flush()
+            finally:
+                cc.shutdown()
+
     def test_float_literals(self, session):
         cc = session.cache
         for fv in [float("+inf"), float("-inf"), float("nan")]:
@@ -154,8 +184,8 @@ class TestCache:
         rol = cc.get_explicit("testcache", "rolist", None)
         assert rol[2] is not None
         print(type(rol1), type(testval1))
-        assert type(rol1) == type(testval1)
-        assert type(rol[2]) == type(testval1)
+        assert type(rol1) is type(testval1)
+        assert type(rol[2]) is type(testval1)
 
         testval2 = readonlydict((("A", "B"), ("C", "D")))
         cc.put("testcache", "rodict", testval2)
@@ -163,7 +193,7 @@ class TestCache:
         rod = cc.get_explicit("testcache", "rodict", None)
         assert rod[2] is not None
         print(type(rod[2]), type(testval2))
-        assert type(rod[2]) == type(testval2)
+        assert type(rod[2]) is type(testval2)
 
         testval3 = readonlylist((testval1, testval2, "C"))
         cc.put("testcache", "rolist2", testval3)
@@ -171,9 +201,9 @@ class TestCache:
         rol = cc.get_explicit("testcache", "rolist2", None)
         assert rol[2] is not None
         print(type(rol[2]), type(testval3))
-        assert type(rol[2]) == type(testval3)
-        assert type(rol[2][0]) == type(testval1)
-        assert type(rol[2][1]) == type(testval2)
+        assert type(rol[2]) is type(testval3)
+        assert type(rol[2][0]) is type(testval1)
+        assert type(rol[2][1]) is type(testval2)
 
         testval4 = readonlydict((("A", testval1), ("B", testval2), ("C", "D")))
         cc.put("testcache", "rodict2", testval4)
@@ -181,9 +211,9 @@ class TestCache:
         rod = cc.get_explicit("testcache", "rodict2", None)
         assert rod[2] is not None
         print(type(rod[2]), type(testval4))
-        assert type(rod[2]) == type(testval4)
-        assert type(rod[2]["A"]) == type(testval1)
-        assert type(rod[2]["B"]) == type(testval2)
+        assert type(rod[2]) is type(testval4)
+        assert type(rod[2]["A"]) is type(testval1)
+        assert type(rod[2]["B"]) is type(testval2)
 
     def test_cache_reader(self, session, log):
         rd1 = session.getDevice("reader1")
