@@ -221,13 +221,14 @@ devices = dict(
     # Zoom
     zoom_level=device(
         # The zoom range is on the :getZoomRange PV.
-        "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="ARINAX SPU zoom level",
         readpv=f"{pv_root}getZoomLevel",
         writepv=f"{pv_root}setZoomLevel",
         monitor=True,
         pollinterval=0.5,
         maxage=None,
+        fmtstr="%d",
         mapping=ZOOM_LEVELS,
     ),
 )
