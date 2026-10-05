@@ -45,6 +45,11 @@ from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
 
 
+# When stoptime is not defined use an easily recognisable timestamp
+# far far in the future.
+LATE_OCT_2191 = datetime.fromtimestamp(7_000_000_000)
+
+
 class AlreadyWritingException(Exception):
     """Raised when a new job is requested while another job is active."""
 
@@ -376,7 +381,7 @@ class FileWriterController:
             job_id = self._generate_uuid("ffffffff")  # this should look weird
 
         if not stop_time:
-            stop_time = start_time + timedelta(days=365.25 * 10)
+            stop_time = LATE_OCT_2191
 
         message = serialise_pl72(
             job_id,
