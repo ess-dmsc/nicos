@@ -68,6 +68,11 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
             volatile=True,
             settable=True,
         ),
+        "pump_mode": Param(
+            description="Pumping mode",
+            settable=True,
+            type=str,
+        ),
     }
 
     parameter_overrides = {
@@ -77,6 +82,8 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
     def _after_subscribe(self, mode):
         first_fill_syringe = self._epics.get_channel_value_choices("first_fill_syringe")
         self.parameters["first_fill_syringe"].type = oneof(*first_fill_syringe)
+        pump_mode = self._epics.get_channel_value_choices("pump_mode")
+        self.parameters["pump_mode"].type = oneof(*pump_mode)
         super()._after_subscribe(mode)
 
     def _build_epics_channels(self):
@@ -102,6 +109,12 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
                     cache_key="first_fill_syringe",
                     pv_prefix_attr="pvroot",
                     pv_suffix="FillingSyringeIdx-SP",
+                    is_enum=True,
+                ),
+                "pump_mode": setpoint_channel(
+                    cache_key="pump_mode",
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="StopMode-SP",
                     is_enum=True,
                 ),
                 "max_dosing_time": setpoint_channel(
@@ -168,6 +181,12 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
 
     def doWriteFirst_Fill_Syringe(self, target):
         self._epics.put_channel_value("first_fill_syringe", target)
+
+    def doReadPump_Mode(self):
+        return self._epics.get_channel_value("pump_mode")
+
+    def doWritePump_Mode(self, target):
+        self._epics.put_channel_value("pump_mode", target)
 
     def doEnable(self, on=False):
         self._epics.put_channel_value("enable", 1 if on else 0)
