@@ -40,7 +40,7 @@ from nicos_ess.gui.panels.utils import (
     setBackgroundBrush,
     setForegroundBrush,
 )
-from nicos_ess.gui.utils import get_icon
+from nicos_ess.gui.utils import get_icon, is_dark_mode_enabled
 
 # QTreeWidgetItem types
 SETUP_TYPE = QTreeWidgetItem.ItemType.UserType
@@ -154,7 +154,8 @@ class DevicesPanel(Panel):
 
     @property
     def groupIcon(self):
-        return get_icon("group_work-24px.svg")
+        mode = "_white" if is_dark_mode_enabled() else ""
+        return get_icon(f"group_work{mode}-24px.svg")
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
