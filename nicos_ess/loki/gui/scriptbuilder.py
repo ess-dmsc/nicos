@@ -161,45 +161,47 @@ class LokiScriptBuilderPanel(PanelBase):
             self.model.update_all_samples(raise_error=False)
 
     def _create_actions(self):
+        mode = "_white" if is_dark_mode_enabled() else ""
+
         self.open_action = QAction("Open", self)
         self.open_action.triggered.connect(self._open_file)
-        self.open_action.setIcon(get_icon("folder_open-24px.svg"))
+        self.open_action.setIcon(get_icon(f"folder_open{mode}-24px.svg"))
 
         self.save_action = QAction("Save", self)
         self.save_action.triggered.connect(self._save_table)
-        self.save_action.setIcon(get_icon("save-24px.svg"))
+        self.save_action.setIcon(get_icon(f"save{mode}-24px.svg"))
 
         self.copy_action = QAction("Copy", self)
         self.copy_action.triggered.connect(self.table_helper.copy_selected_to_clipboard)
-        self.copy_action.setIcon(get_icon("file_copy-24px.svg"))
+        self.copy_action.setIcon(get_icon(f"file_copy{mode}-24px.svg"))
 
         self.cut_action = QAction("Cut", self)
         self.cut_action.triggered.connect(self.table_helper.cut_selected_to_clipboard)
-        self.cut_action.setIcon(get_icon("cut-24px.svg"))
+        self.cut_action.setIcon(get_icon(f"cut{mode}-24px.svg"))
 
         self.paste_action = QAction("Paste", self)
         self.paste_action.triggered.connect(self.table_helper.paste_from_clipboard)
-        self.paste_action.setIcon(get_icon("paste-24px.svg"))
+        self.paste_action.setIcon(get_icon(f"paste{mode}-24px.svg"))
 
         self.quick_fill_action = QAction("Quick\nFill", self)
         self.quick_fill_action.triggered.connect(self._quick_fill)
-        self.quick_fill_action.setIcon(get_icon("get-24px.svg"))
+        self.quick_fill_action.setIcon(get_icon(f"get{mode}-24px.svg"))
 
         self.add_row_above_action = QAction("Add Row\nAbove", self)
         self.add_row_above_action.triggered.connect(self._insert_row_above)
-        self.add_row_above_action.setIcon(get_icon("add_row_above-24px.svg"))
+        self.add_row_above_action.setIcon(get_icon(f"add_row_above{mode}-24px.svg"))
 
         self.add_row_below_action = QAction("Add Row\nBelow", self)
         self.add_row_below_action.triggered.connect(self._insert_row_below)
-        self.add_row_below_action.setIcon(get_icon("add_row_below-24px.svg"))
+        self.add_row_below_action.setIcon(get_icon(f"add_row_below{mode}-24px.svg"))
 
         self.delete_row_action = QAction("Delete\nRow(s)", self)
         self.delete_row_action.triggered.connect(self._delete_rows)
-        self.delete_row_action.setIcon(get_icon("delete_row-24px.svg"))
+        self.delete_row_action.setIcon(get_icon(f"delete_row{mode}-24px.svg"))
 
         self.clear_action = QAction("Clear\nTable", self)
         self.clear_action.triggered.connect(self.model.clear)
-        self.clear_action.setIcon(get_icon("delete-24px.svg"))
+        self.clear_action.setIcon(get_icon(f"delete{mode}-24px.svg"))
 
     def _create_toolbar(self):
         self.toolbar = QToolBar("Builder")

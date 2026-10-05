@@ -51,7 +51,7 @@ from nicos.utils import (
     parseKeyExpression,
     safeName,
 )
-from nicos_ess.gui.utils import get_icon
+from nicos_ess.gui.utils import get_icon, is_dark_mode_enabled
 
 
 class NoEditDelegate(QStyledItemDelegate):
@@ -1029,13 +1029,15 @@ class HistoryPanel(BaseHistoryWindow, PlotPanel):
         return bar
 
     def set_icons(self):
-        self.actionNew.setIcon(get_icon("add_circle_outline-24px.svg"))
-        self.actionEditView.setIcon(get_icon("edit-24px.svg"))
-        self.actionSavePlot.setIcon(get_icon("save-24px.svg"))
-        self.actionPrint.setIcon(get_icon("print-24px.svg"))
-        self.actionUnzoom.setIcon(get_icon("reset_zoom-24px.svg"))
-        self.actionSaveData.setIcon(get_icon("archive-24px.svg"))
-        self.actionDeleteView.setIcon(get_icon("delete-24px.svg"))
+        mode = "_white" if is_dark_mode_enabled() else ""
+
+        self.actionNew.setIcon(get_icon(f"add_circle_outline{mode}-24px.svg"))
+        self.actionEditView.setIcon(get_icon(f"edit{mode}-24px.svg"))
+        self.actionSavePlot.setIcon(get_icon(f"save{mode}-24px.svg"))
+        self.actionPrint.setIcon(get_icon(f"print{mode}-24px.svg"))
+        self.actionUnzoom.setIcon(get_icon(f"reset_zoom{mode}-24px.svg"))
+        self.actionSaveData.setIcon(get_icon(f"archive{mode}-24px.svg"))
+        self.actionDeleteView.setIcon(get_icon(f"delete{mode}-24px.svg"))
 
     def setCustomStyle(self, font, back):
         self.user_font = font

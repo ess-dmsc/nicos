@@ -99,6 +99,7 @@
     <file alias="add_circle_outline">material/icons/add_circle_outline-24px.svg</file>
     <file alias="add_circle_outline_white">material/icons/add_circle_outline_white-24px.svg</file>
     <file alias="archive">material/icons/archive-24px.svg</file>
+    <file alias="archive_white">material/icons/archive_white-24px.svg</file>
     <file alias="cancel">material/icons/cancel-24px.svg</file>
     <file alias="cancel_red">material/icons/cancel_red-24px.svg</file>
     <file alias="check_circle_green">material/icons/check_circle_green-24px.svg</file>
@@ -108,6 +109,7 @@
     <file alias="document">material/icons/document-24px.svg</file>
     <file alias="done">material/icons/done-24px.svg</file>
     <file alias="edit">material/icons/edit-24px.svg</file>
+    <file alias="edit_white">material/icons/edit_white-24px.svg</file>
     <file alias="eject">material/icons/eject-24px.svg</file>
     <file alias="eject_white">material/icons/eject_white-24px.svg</file>
     <file alias="error">material/icons/error-24px.svg</file>
@@ -141,6 +143,7 @@
     <file alias="refresh_white">material/icons/refresh_white-24px.svg</file>
     <file alias="remove">material/icons/remove-24px.svg</file>
     <file alias="reset_zoom">material/icons/reset_zoom-24px.svg</file>
+    <file alias="reset_zoom_white">material/icons/reset_zoom_white-24px.svg</file>
     <file alias="save">material/icons/save-24px.svg</file>
     <file alias="save_white">material/icons/save_white-24px.svg</file>
     <file alias="save_as">material/icons/save_as-24px.svg</file>
@@ -156,9 +159,13 @@
     <file alias="warning_yellow">material/icons/warning_yellow-24px.svg</file>
     <file alias="zoom_out">material/icons/zoom_out-24px.svg</file>
     <file alias="add_row_above">material/icons/add_row_above-24px.svg</file>
+    <file alias="add_row_above_white">material/icons/add_row_above_white-24px.svg</file>
     <file alias="add_row_below">material/icons/add_row_below-24px.svg</file>
+    <file alias="add_row_below_white">material/icons/add_row_below_white-24px.svg</file>
     <file alias="delete">material/icons/delete-24px.svg</file>
+    <file alias="delete_white">material/icons/delete_white-24px.svg</file>
     <file alias="delete_row">material/icons/delete_row-24px.svg</file>
+    <file alias="delete_row_white">material/icons/delete_row_white-24px.svg</file>
     <file alias="emergency_stop_cross">material/icons/emergency_stop_cross-24px.svg</file>
     <file alias="emergency_stop_cross_red">material/icons/emergency_stop_cross_red-24px.svg</file>
     <file alias="get">material/icons/get-24px.svg</file>
