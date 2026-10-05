@@ -136,6 +136,9 @@ class CetoniLinkedDialog(QDialog):
         self.vol_total_value.setText(str(self.params["total_vol"]))
         self.vol_total_unit.setText(str(self.paraminfo["total_vol"]["unit"]))
 
+    def apply_settings(self):
+        print(self.mode_value.currentText())
+
     def reset(self):
         self.devices_panel.exec_command(f"reset({self.devrepr})")
 
@@ -145,6 +148,10 @@ class CetoniLinkedDialog(QDialog):
     def start(self):
         # todo: change device start
         pass
+
+    @pyqtSlot()
+    def on_btn_apply_pressed(self):
+        self.apply_settings()
 
     @pyqtSlot()
     def on_btn_reset_pressed(self):
@@ -216,6 +223,7 @@ class CetoniLinkedDialog(QDialog):
         self.button_stop.clicked.connect(self.on_btn_stop_pressed)
         self.action_enable.triggered.connect(self.on_action_enable_triggered)
         self.action_disable.triggered.connect(self.on_action_disable_triggered)
+        self.button_apply.clicked.connect(self.on_btn_apply_pressed)
 
     def _set_layout(self):
         self.dialog_layout = QVBoxLayout()
