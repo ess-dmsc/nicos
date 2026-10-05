@@ -159,11 +159,11 @@ class CetoniLinkedDialog(QDialog):
         self.start()
 
     @pyqtSlot()
-    def on_actionEnable_triggered(self):
+    def on_action_enable_triggered(self):
         self.devices_panel.exec_command(f"enable({self.devrepr})")
 
     @pyqtSlot()
-    def on_actionDisable_triggered(self):
+    def on_action_disable_triggered(self):
         self.devices_panel.exec_command(f"disable({self.devrepr})")
 
     def _create_widgets(self):
@@ -220,8 +220,8 @@ class CetoniLinkedDialog(QDialog):
     def _add_signals(self):
         self.button_reset.clicked.connect(self.on_btn_reset_pressed)
         self.button_stop.clicked.connect(self.on_btn_stop_pressed)
-        self.action_enable.triggered.connect(self.on_actionEnable_triggered)
-        self.action_disable.triggered.connect(self.on_actionDisable_triggered)
+        self.action_enable.triggered.connect(self.on_action_enable_triggered)
+        self.action_disable.triggered.connect(self.on_action_disable_triggered)
 
     def _set_layout(self):
         self.dialog_layout = QVBoxLayout()
