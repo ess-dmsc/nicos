@@ -3,9 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from nicos.core import UsageError
-
-# from nicos_ess.devices.experiment import EssExperiment
-from nicos_ess.devices.experiment2 import EssExperiment
+from nicos_ess.devices.experiment import EssExperiment
 from nicos_ess.devices.sample import EssSample
 
 
@@ -16,7 +14,7 @@ def experiment(daemon_device_harness, monkeypatch):
         name="sample",
     )
     monkeypatch.setattr(
-        "nicos_ess.devices.experiment2.createThread",
+        "nicos_ess.devices.experiment.createThread",
         Mock(),
     )
     experiment = daemon_device_harness.create_master(
