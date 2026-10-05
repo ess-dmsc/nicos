@@ -186,12 +186,6 @@ class CetoniLinkedDialog(QDialog):
         self.flowrate_label = QLabel("Flowrate:")
         self.flowrate_value = QLineEdit()
         self.flowrate_unit = QLabel()
-        # self.vol_sp1_label = QLabel("Initial volume SP1:")
-        # self.vol_sp1_value = QLabel()
-        # self.vol_sp1_unit = QLabel()
-        # self.vol_sp2_label = QLabel("Initial volume SP2:")
-        # self.vol_sp2_value = QLabel()
-        # self.vol_sp2_unit = QLabel()
         self.vol_total_label = QLabel("Volume total:")
         self.vol_total_value = QLabel()
         self.vol_total_unit = QLabel()
@@ -260,12 +254,6 @@ class CetoniLinkedDialog(QDialog):
         self.settings_grid.addWidget(self.flowrate_label, 3, 0)
         self.settings_grid.addWidget(self.flowrate_value, 3, 1)
         self.settings_grid.addWidget(self.flowrate_unit, 3, 2)
-        # self.settings_grid.addWidget(self.vol_sp1_label, 4, 0)
-        # self.settings_grid.addWidget(self.vol_sp1_value, 4, 1)
-        # self.settings_grid.addWidget(self.vol_sp1_unit, 4, 2)
-        # self.settings_grid.addWidget(self.vol_sp2_label, 5, 0)
-        # self.settings_grid.addWidget(self.vol_sp2_value, 5, 1)
-        # self.settings_grid.addWidget(self.vol_sp2_unit, 5, 2)
         self.settings_grid.addWidget(self.vol_total_label, 4, 0)
         self.settings_grid.addWidget(self.vol_total_value, 4, 1)
         self.settings_grid.addWidget(self.vol_total_unit, 4, 2)
@@ -309,16 +297,12 @@ class CetoniLinkedDialog(QDialog):
             self.time_value,
             self.first_fill_value,
             self.flowrate_value,
-            # self.vol_sp1_value,
-            # self.vol_sp2_value,
             self.vol_total_value,
         ]
 
         unit_fields = [
             self.time_unit,
             self.flowrate_unit,
-            # self.vol_sp1_unit,
-            # self.vol_sp2_unit,
             self.vol_total_unit,
         ]
 
