@@ -448,22 +448,22 @@ class EditorPanel(Panel):
     def get_icons(self):
         mode = "_white" if is_dark_mode_enabled() else ""
 
-        self.actionNew.setIcon(get_icon("add_circle_outline-24px.svg"))
-        self.actionOpen.setIcon(get_icon("folder_open-24px.svg"))
-        self.actionImport.setIcon(get_icon("get-24px.svg"))
-        self.actionSave.setIcon(get_icon("save-24px.svg"))
-        self.actionSaveAs.setIcon(get_icon("save_as-24px.svg"))
-        self.actionPrint.setIcon(get_icon("print-24px.svg"))
+        self.actionNew.setIcon(get_icon(f"add_circle_outline{mode}-24px.svg"))
+        self.actionOpen.setIcon(get_icon(f"folder_open{mode}-24px.svg"))
+        self.actionImport.setIcon(get_icon(f"get{mode}-24px.svg"))
+        self.actionSave.setIcon(get_icon(f"save{mode}-24px.svg"))
+        self.actionSaveAs.setIcon(get_icon(f"save_as{mode}-24px.svg"))
+        self.actionPrint.setIcon(get_icon(f"print{mode}-24px.svg"))
         self.actionUndo.setIcon(get_icon(f"undo{mode}-24px.svg"))
-        self.actionRedo.setIcon(get_icon("redo-24px.svg"))
-        self.actionCut.setIcon(get_icon("cut-24px.svg"))
-        self.actionCopy.setIcon(get_icon("file_copy-24px.svg"))
-        self.actionPaste.setIcon(get_icon("paste-24px.svg"))
-        self.actionRun.setIcon(get_icon("play_arrow-24px.svg"))
-        self.actionSimulate.setIcon(get_icon("play_arrow_outline-24px.svg"))
-        self.actionGet.setIcon(get_icon("eject-24px.svg"))
-        self.actionUpdate.setIcon(get_icon("refresh-24px.svg"))
-        self.actionShowFind.setIcon(get_icon("find-24px.svg"))
+        self.actionRedo.setIcon(get_icon(f"redo{mode}-24px.svg"))
+        self.actionCut.setIcon(get_icon(f"cut{mode}-24px.svg"))
+        self.actionCopy.setIcon(get_icon(f"file_copy{mode}-24px.svg"))
+        self.actionPaste.setIcon(get_icon(f"paste{mode}-24px.svg"))
+        self.actionRun.setIcon(get_icon(f"play_arrow{mode}-24px.svg"))
+        self.actionSimulate.setIcon(get_icon(f"play_arrow_outline{mode}-24px.svg"))
+        self.actionGet.setIcon(get_icon(f"eject{mode}-24px.svg"))
+        self.actionUpdate.setIcon(get_icon(f"refresh{mode}-24px.svg"))
+        self.actionShowFind.setIcon(get_icon(f"find{mode}-24px.svg"))
 
     def getToolbars(self):
         return []
