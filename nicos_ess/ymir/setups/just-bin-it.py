@@ -38,6 +38,12 @@ devices = dict(
         readpv="YMIR-TS:Ctrl-EVR-01:EvtACnt-I",
         fmtstr="%d",
     ),
+    pulse_charge_counter=device(
+        "nicos_ess.devices.epics.pulse_charge_counter.PulseChargeCounter",
+        description="Charge counter",
+        readpv="YMIR:PBI-IOC-001:QSum",
+        fmtstr="%d",
+    ),
     det=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItDetector",
         description="The just-bin-it histogrammer",
@@ -48,7 +54,7 @@ devices = dict(
         statustopic=["ymir_jbi_heartbeat"],
         images=["det_image1", "det_image2"],
         timers=["timer"],
-        counters=["pulse_counter"],
+        counters=["pulse_counter", "pulse_charge_counter"],
         hist_schema="hs01",
     ),
 )
