@@ -4,7 +4,7 @@ sysconfig = dict(
 
 devices = dict(
     Exp=device(
-        "nicos_ess.devices.experiment2.EssExperiment",
+        "nicos_ess.devices.experiment.EssExperiment",
         description="experiment object",
         dataroot="test/nicos_ess/test_devices/data",
         sample="Sample",

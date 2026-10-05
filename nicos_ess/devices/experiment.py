@@ -12,65 +12,26 @@ from yuos_query.yuos_client import YuosCacheClient
 from nicos import session
 from nicos.core import (
     SIMULATION,
-    Attach,
-    Device,
-    DevStatistics,
-    Measurable,
     Param,
-    Readable,
     UsageError,
     listof,
     mailaddress,
     none_or,
-    oneof,
 )
-from nicos.core.params import expanded_path, subdir
-from nicos.devices.sample import Sample
+from nicos.core.params import Override
+from nicos.devices.experiment import Experiment
 from nicos.utils import createThread, readFileCounter
-from nicos_ess.devices.datamanager import DataManager
 
 
-class EssExperiment(Device):
+class EssExperiment(Experiment):
     """Hold proposal, user, sample and counter context for ESS runs."""
 
     parameters = {
-        "proposal": Param(
-            "Current proposal number or proposal string",
-            type=str,
-            category="experiment",
-        ),
-        "propinfo": Param(
-            "Dict of info for the current proposal",
-            type=dict,
-            default={},
-            internal=True,
-        ),
-        "title": Param(
-            "Proposal title",
-            type=str,
-            volatile=True,
-            category="experiment",
-            settable=True,
-        ),
         "run_title": Param(
             "Title of the current run",
             type=str,
             settable=True,
             default="",
-            category="experiment",
-        ),
-        "users": Param(
-            "User names and emails for the proposal",
-            default=[],
-            type=listof(dict),
-            volatile=True,
-            category="experiment",
-        ),
-        "localcontact": Param(
-            "Local contacts for current experiment",
-            default=[],
-            type=listof(dict),
-            volatile=True,
             category="experiment",
         ),
         "cache_filepath": Param(
@@ -92,59 +53,6 @@ class EssExperiment(Device):
             type=none_or(str),
             userparam=False,
         ),
-        "counterfile": Param(
-            "Name of the file with data counters in dataroot and datapath",
-            default="counters",
-            userparam=False,
-            type=subdir,
-        ),
-        "lastpoint": Param(
-            "Last used value of the point counter - ONLY for display purposes",
-            type=int,
-            internal=True,
-        ),
-        "lastscan": Param(
-            "Last used value of the scan counter - ONLY for display purposes",
-            type=int,
-            internal=True,
-        ),
-        "forcescandata": Param(
-            "If true, force scan datasets to be created also for single counts",
-            type=bool,
-            default=False,
-        ),
-        "dataroot": Param(
-            "Root data path under which all proposal specific paths are created",
-            mandatory=True,
-            type=expanded_path,
-        ),
-        "scripts": Param(
-            "Currently executed scripts",
-            type=listof(str),
-            settable=True,
-            internal=True,
-            no_sim_restore=True,
-            category="experiment",
-        ),
-        "errorbehavior": Param(
-            "Behavior on unhandled errors in commands",
-            type=oneof("abort", "report"),
-            default="abort",
-            settable=True,
-            userparam=False,
-        ),
-        "detlist": Param(
-            "List of default detector device names",
-            type=listof(str),
-            settable=True,
-            internal=True,
-        ),
-        "envlist": Param(
-            "List of default environment device names to read at every scan point",
-            type=listof(str),
-            settable=True,
-            internal=True,
-        ),
         "scripts_directory": Param(
             "Path to the top directory where instrument and user scripts live",
             type=str,
@@ -155,14 +63,13 @@ class EssExperiment(Device):
         ),
     }
 
-    attached_devices = {
-        "sample": Attach("The device object representing the sample", Sample),
+    parameter_overrides = {
+        "title": Override(settable=True),
+        "users": Override(default=[], type=listof(dict)),
+        "localcontact": Override(default=[], type=listof(dict)),
+        "scripts": Override(category="experiment"),
+        "errorbehavior": Override(default="abort", userparam=False),
     }
-
-    datamanager_class = DataManager
-
-    def doPreinit(self, mode):
-        self.__dict__["data"] = self.datamanager_class()
 
     def doInit(self, mode):
         self._yuos_client = None
@@ -174,9 +81,6 @@ class EssExperiment(Device):
             self._update_proposal_cache_worker.start()
         except Exception as error:
             self.log.warning("proposal look-up not available: %s", error)
-
-    def doReadTitle(self):
-        return self.propinfo.get("title", "")
 
     def doReadUsers(self):
         return self.propinfo.get("users", [])
@@ -227,18 +131,6 @@ class EssExperiment(Device):
         self._newSetupHook()
         session.experimentCallback(self.proposal, None)
 
-    def _newPropertiesHook(self, proposal, kwds):
-        """Hook for querying a database for proposal related data.
-
-        Should return an updated kwds dictionary.
-        """
-        return kwds
-
-    def _newSetupHook(self):
-        """Hook for doing additional setup work on new experiments,
-        after everything has been set up.
-        """
-
     def update(self, title=None, users=None, localcontacts=None):
         self._check_users(users)
         self._check_local_contacts(localcontacts)
@@ -255,16 +147,6 @@ class EssExperiment(Device):
         self._pollParam("title")
         self._pollParam("users")
         self._pollParam("localcontact")
-
-    def proposalpath_of(self, proposal):
-        """Return the File Writer path for *proposal*.
-
-        ``fixed_proposal_path`` takes precedence. Otherwise the path is
-        ``<instrument-device>/<proposal>/raw``.
-        """
-        if self.fixed_proposal_path is not None:
-            return self.fixed_proposal_path
-        return path.join(session.instrument.name.lower(), proposal, "raw")
 
     def _check_users(self, users):
         if not users:
@@ -504,107 +386,3 @@ class EssExperiment(Device):
         # Do not try to create unwanted directories as
         # in nicos/devices/experiment
         pass
-
-    def setDetectors(self, detectors):
-        dlist = []
-        for det in detectors:
-            if isinstance(det, Device):
-                det = det.name
-            if det not in dlist:
-                dlist.append(det)
-        self.detlist = dlist
-        # try to create them right now
-        self.detectors  # noqa: B018
-
-    @property
-    def detectors(self):
-        if self._detlist is not None:
-            return self._detlist[:]
-        detlist = []
-        all_created = True
-        for detname in self.detlist:
-            try:
-                det = session.getDevice(detname, source=self)
-            except Exception:
-                self.log.warning("could not create %r detector device", detname, exc=1)
-                all_created = False
-            else:
-                if not isinstance(det, Measurable):
-                    self.log.warning(
-                        "cannot use device %r as a detector: it is not a Measurable",
-                        det,
-                    )
-                    all_created = False
-                else:
-                    detlist.append(det)
-        if all_created:
-            self._detlist = detlist
-        return detlist[:]
-
-    def doUpdateDetlist(self, detectors):
-        self._detlist = None  # clear list of actual devices
-
-    def _scrubDetEnvLists(self):
-        """Remove devices from detlist that don't exist anymore
-        after a setup change.
-        """
-        newlist = []
-        for devname in self.detlist:
-            if devname not in session.configured_devices:
-                self.log.warning(
-                    "removing device %r from detector list, it "
-                    "does not exist in any loaded setup",
-                    devname,
-                )
-            else:
-                newlist.append(devname)
-        self.detlist = newlist
-
-    @property
-    def sampleenv(self):
-        if self._envlist is not None:
-            return self._envlist[:]
-        devlist = []
-        all_created = True
-        for devname in self.envlist:
-            try:
-                if ":" in devname:
-                    devname, stat = devname.split(":")
-                    dev = session.getDevice(devname, source=self)
-                    dev = DevStatistics.subclasses[stat](dev)
-                else:
-                    dev = session.getDevice(devname, source=self)
-            except Exception:
-                self.log.warning(
-                    "could not create %r environment device", devname, exc=1
-                )
-                all_created = False
-            else:
-                if not isinstance(dev, (Readable, DevStatistics)):
-                    self.log.warning(
-                        "cannot use device %r as environment: it is not a Readable",
-                        dev,
-                    )
-                    all_created = False
-                else:
-                    devlist.append(dev)
-        if all_created:
-            self._envlist = devlist
-        return devlist[:]
-
-    def setEnvironment(self, devices):
-        dlist = []
-        for dev in devices:
-            if isinstance(dev, Device):
-                dev = dev.name
-            elif isinstance(dev, DevStatistics):
-                dev = str(dev)
-            if dev not in dlist:
-                dlist.append(dev)
-        self.envlist = dlist
-        # try to create them right now
-        self.sampleenv  # noqa: B018
-        session.elogEvent("environment", dlist)
-
-    def doUpdateEnvlist(self, devices):
-        self._envlist = None  # clear list of actual devices
