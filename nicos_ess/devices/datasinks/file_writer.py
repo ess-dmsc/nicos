@@ -6,7 +6,7 @@ import threading
 import time
 import uuid
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from os import path
 from time import time as currenttime
