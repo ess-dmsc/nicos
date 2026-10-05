@@ -11,7 +11,7 @@ from nicos.core import (
     status,
     usermethod,
 )
-from nicos_ess.devices.epics.pva import EpicsAnalogMoveable, EpicsMappedMoveable
+from nicos_ess.devices.epics.pva import EpicsAnalogMoveable, EpicsManualMappedMoveable
 from nicos_ess.devices.epics.pva.epics_common import (
     command_channel,
     readback_channel,
@@ -22,7 +22,7 @@ from nicos_ess.devices.epics.pva.epics_common import (
 from nicos_ess.devices.mixins import CanReferenceWithWarning
 
 
-class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
+class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
     """Control linked pumping between two Cetoni syringes.
 
     Liquid is transferred back and forth between the syringes at the
@@ -153,7 +153,6 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
         is_disabled = self._epics.get_channel_value("is_disabled")
         if is_disabled:
             raise MoveError(self, f'Cannot start: Please enable device "{self.name}"')
-        self._epics.put_channel_value("write", target)
         self._epics.put_channel_value("start", 1)
 
     def doReadMax_Dosing_Time(self):
