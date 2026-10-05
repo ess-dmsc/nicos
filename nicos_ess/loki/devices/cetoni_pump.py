@@ -71,6 +71,7 @@ class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
         "pump_mode": Param(
             description="Pumping mode",
             settable=True,
+            volatile=True,
             type=str,
         ),
     }
