@@ -91,6 +91,12 @@ class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
         epics_channels = super()._build_epics_channels()
         epics_channels.update(
             {
+                "readpv": readback_channel(
+                    pv_prefix_attr="pvroot",
+                    pv_suffix="StopMode-SP",
+                    is_enum=True,
+                    primary=True,
+                ),
                 "flowrate": setpoint_channel(
                     cache_key="flowrate",
                     pv_prefix_attr="pvroot",
