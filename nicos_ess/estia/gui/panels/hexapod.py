@@ -173,10 +173,7 @@ class HexapodPanel(Panel):
     def update_status_window(self, status, code, msg):
         # Use error type to change icon
         code = round(code)
-        if msg:
-            self.hexStatus.setText(f"Code {code}: {msg}")
-        else:
-            self.hexStatus.setText(f"Code {code}:")
+        self.hexStatus.setText(f"Code: {code}\n\n{msg}")
 
         self.statusimage.setPixmap(self.statusIcon[status[0]].pixmap(18, 18))
 

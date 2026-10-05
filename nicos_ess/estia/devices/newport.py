@@ -57,16 +57,15 @@ class NewportHexapod(Moveable):
         # set all setpoints to their target position then start with move_all
         for name, input in zip(self.sp_names, target[:-1]):
             self._adevs[name].start(input)
+        sleep(1)
         self._adevs["move_all"].move("On")
+        self._adevs["move_all"].move("Off")
         self._adevs["gmt"].start(target[-1])
 
     # stopping any axes will stop the entire hexapod, choosing to use the same axes as EPICS
     def doStop(self):
         self._adevs["tx"].stop()
         self._adevs["gmt"].stop()
-
-    def doIsCompleted(self):
-        self._adevs["move_all"].move("Off")
 
     def doRead(self, maxage=0):
         pos = [self._adevs[name].read(maxage) for name in self.axis_names]
@@ -77,7 +76,7 @@ class NewportHexapod(Moveable):
         msg = self._adevs["errmsg"].read()
         for states in self.status_table:
             if value in self.status_table[states][0]:
-                return (self.status_table[states][1], value)
+                return (self.status_table[states][1], (value, msg))
         return (status.UNKNOWN, value, msg)
 
     def doIsAllowed(self, target):
