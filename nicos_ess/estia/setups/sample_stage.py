@@ -113,11 +113,13 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="NewPort Status",
         readpv=f"{hex_root}STATUS",
+        visibility=(),
     ),
     hexapod_error_msg=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="NewPort Status",
         readpv=f"{hex_root}ERR_DESC",
+        visibility=(),
     ),
     hexapod_coord_mode=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",

@@ -76,8 +76,8 @@ class NewportHexapod(Moveable):
         msg = self._adevs["errmsg"].read()
         for states in self.status_table:
             if value in self.status_table[states][0]:
-                return (self.status_table[states][1], (value, msg))
-        return (status.UNKNOWN, value, msg)
+                return (self.status_table[states][1], msg)
+        return (status.UNKNOWN, msg)
 
     def doIsAllowed(self, target):
         for name, pos in zip(self.axis_names, target):
