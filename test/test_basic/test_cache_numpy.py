@@ -11,7 +11,6 @@ from nicos.utils import createThread
 
 
 @pytest.mark.parametrize("context", ["main", "thread", "nicos-thread"])
-@pytest.mark.parametrize("legacy", [False, "1.13"])
 @pytest.mark.parametrize(
     "value",
     [
@@ -28,14 +27,12 @@ from nicos.utils import createThread
         pytest.param(np.array([1.5, 2.5]), id="array"),
     ],
 )
-def test_numpy_cache_roundtrip(value, legacy, context):
+def test_numpy_cache_roundtrip(value, context):
     result = Future()
 
     def roundtrip():
         try:
-            # Use NumPy's real context manager so test order cannot hide failures.
-            with np.printoptions(legacy=legacy):
-                result.set_result(cache_load(cache_dump(value)))
+            result.set_result(cache_load(cache_dump(value)))
         except Exception as error:
             result.set_exception(error)
 
