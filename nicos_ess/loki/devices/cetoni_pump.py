@@ -152,7 +152,7 @@ class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
         return epics_channels
 
     def doRead(self, maxage=0):
-        self.doReadPump_Mode()
+        return self.doReadPump_Mode()
 
     def doStart(self, target):
         is_disabled = self._epics.get_channel_value("is_disabled")
