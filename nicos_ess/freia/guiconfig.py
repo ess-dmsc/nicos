@@ -31,7 +31,7 @@ main_window = docked(
                         (
                             "Colimation",
                             panel(
-                                "nicos_ess.freia.gui.colimation_calculator.ColimationPanel"
+                                "nicos_ess.freia.gui.panels.colimation_calculator.CollimationPanel"
                             ),
                         ),
                         (
