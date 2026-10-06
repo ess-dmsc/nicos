@@ -151,7 +151,7 @@ class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
         )
         return epics_channels
 
-    def doRead(self):
+    def doRead(self, maxage=0):
         self.doReadPump_Mode()
 
     def doStart(self, target):
