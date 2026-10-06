@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from nicos.core import MAIN, POLLER
+from nicos.core import MAIN, POLLER, ConfigurationError
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureJsonFile
 from nicos_ess.loki.devices.thermostated_cellholder import ThermoStatedCellHolder
 from nicos_ess.utilities.json_utils import (
@@ -191,6 +191,70 @@ class TestDynamicNexusBuilding(TestCase):
         with mock.patch.object(self.nexus._obj.log, "warning") as warning:
             self.nexus._nexus_config_groups()
         warning.assert_called_once()
+
+    def test_name_replaces_device_name(self):
+        self.motor.nexus_config = [
+            {
+                "group_name": "motor1",
+                "nx_class": "NXsensor",
+                "name": "value_log",
+                "dataset_type": "nx_log",
+            }
+        ]
+        [nxlog] = self._motor1_children()
+        assert nxlog["name"] == "value_log"
+        assert nxlog["children"][0]["config"]["source"] == "motor1"
+
+    def test_empty_name_is_rejected(self):
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [
+                {
+                    "group_name": "motor1",
+                    "nx_class": "NXsensor",
+                    "name": "",
+                    "dataset_type": "nx_log",
+                }
+            ]
+
+    def test_dynamic_build_adds_to_existing_and_nested_groups(self):
+        self.motor.nexus_config = [
+            {
+                "nexus_path": "/entry/sample/temperature_env",
+                "group_name": "sensor",
+                "nx_class": "NXsensor",
+                "name": "value_log",
+                "dataset_type": "nx_log",
+            },
+            {
+                "nexus_path": "/entry/sample",
+                "group_name": "temperature_env",
+                "nx_class": "NXenvironment",
+                "name": "name",
+                "value": "cryostat",
+                "dataset_type": "static_value",
+            },
+            {
+                "nexus_path": "/entry",
+                "group_name": "sample",
+                "nx_class": "NXsample",
+                "name": "temperature",
+                "dataset_type": "nx_log",
+            },
+        ]
+
+        doc = json.loads(self.nexus.get_structure(_minimal_metainfo(), counter=1))
+
+        entry = doc["children"][0]
+        samples = [c for c in entry["children"] if c.get("name") == "sample"]
+        assert len(samples) == 1
+        path_map = build_named_index_map(doc, include_datasets=True)
+        for path in (
+            "/entry/sample/name",
+            "/entry/sample/temperature",
+            "/entry/sample/temperature_env/name",
+            "/entry/sample/temperature_env/sensor/value_log",
+        ):
+            assert get_by_named_path(doc, path_map, path) is not None
 
     def test_dynamic_build_places_groups_by_path(self):
         """Motor nexus_config → NexusStructure insertion under correct paths."""

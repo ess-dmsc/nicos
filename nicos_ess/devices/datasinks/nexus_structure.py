@@ -193,8 +193,12 @@ class NexusStructureJsonFile(NexusStructureProvider):
                 "component_tracker", "NXcollection", groups
             )
 
-        for path, groups in by_path.items():
-            for node in groups.values():
+        for path, groups in sorted(by_path.items()):
+            for name, node in groups.items():
+                if f"{path}/{name}" in self._path_map:
+                    existing = self._get_node(structure, f"{path}/{name}")
+                    existing["children"].extend(node["children"])
+                    continue
                 try:
                     _, self._path_map = append_group_under(
                         structure, self._path_map, path, node, refresh_map=True
@@ -220,7 +224,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return by_path
 
     def _nexus_config_node(self, dev, cfg):
-        name = f"{dev.name}_{cfg['suffix']}" if cfg.get("suffix") else dev.name
+        name = cfg.get("name") or "_".join(filter(None, (dev.name, cfg.get("suffix"))))
         units = cfg.get("units", "")
         if cfg["dataset_type"] == "static_read":
             return generate_dataset_json(name, dev.read(0), units)
