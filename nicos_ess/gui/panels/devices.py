@@ -31,6 +31,7 @@ from nicos.guisupport.typedvalue import (
 )
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
+from nicos_ess.gui.dialogs.cetoni_pump import CetoniLinkedDialog
 from nicos_ess.gui.dialogs.homing_check import HomingCheckDialog
 from nicos_ess.gui.dialogs.motor import MotorDialog
 from nicos_ess.gui.panels.parameters_table import ParametersTable
@@ -726,13 +727,13 @@ class DevicesPanel(Panel):
             dlg = MotorDialog(
                 self, devname, devinfo, item, self.log, self._show_lowlevel
             )
-        # elif (
-        #     classes
-        #     and classes[0] == "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode"
-        # ):
-        #     dlg = CetoniLinkedDialog(
-        #         self, devname, devinfo, item, self.log, self._show_lowlevel
-        #     )
+        elif (
+            classes
+            and classes[0] == "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode"
+        ):
+            dlg = CetoniLinkedDialog(
+                self, devname, devinfo, item, self.log, self._show_lowlevel
+            )
         else:
             dlg = ControlDialog(
                 self, devname, devinfo, item, self.log, self._show_lowlevel
