@@ -1,7 +1,10 @@
 import numpy as np
 
+# References
+# Distribution: https://www.sciencedirect.com/science/article/abs/pii/S0921452604011792
+# Reolution to Slit:https://docs.mantidproject.org/nightly/algorithms/CalculateSlits-v1.html
+
 # Simplified from (2*sqrt(2*og(2))) * (1/(2*sqrt(3)))
-# Reference: https://www.sciencedirect.com/science/article/abs/pii/S0921452604011792
 DISTRIBUTION = np.sqrt((2 * np.log(2)) / 3)
 
 
