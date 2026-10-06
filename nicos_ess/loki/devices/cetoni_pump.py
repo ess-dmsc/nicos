@@ -87,7 +87,8 @@ class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
         epics_channels = super()._build_epics_channels()
         epics_channels.update(
             {
-                "readpv": readback_channel(
+                "read": readback_channel(
+                    cache_key="value",
                     pv_prefix_attr="pvroot",
                     pv_suffix="StopMode-SP",
                     is_enum=True,
@@ -150,9 +151,6 @@ class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
             }
         )
         return epics_channels
-
-    def doRead(self, maxage=0):
-        return self.doReadPump_Mode()
 
     def doStart(self, target):
         is_disabled = self._epics.get_channel_value("is_disabled")
