@@ -1,6 +1,6 @@
 """Simulated sample temperature environment for Coda NeXus tests."""
 
-description = "Simulated cryostat with a logged sample thermometer"
+description = "Simulated cryostat with logged temperatures and controller metadata"
 group = "optional"
 
 devices = dict(
@@ -14,21 +14,43 @@ devices = dict(
         precision=0.1,
         window=30,
     ),
-    simulated_sample_temperature=device(
+)
+
+# Each numeric parameter gets its own scalar NICOS stream. Capture the string
+# mode once when building the NeXus structure, using static_read.
+for name, parameter, unit in [
+    ("sample_temperature", "sample", "K"),
+    ("regulator_temperature", "regulation", "K"),
+    ("setpoint", "setpoint", "K"),
+    ("target", "target", "K"),
+    ("ramp", "ramp", "K/min"),
+    ("pid_p", "p", "%/K"),
+    ("pid_i", "i", "%/Ks"),
+    ("pid_d", "d", "%s/K"),
+    ("heater_output", "heater", "%"),
+    ("heater_power", "heaterpower", "W"),
+    ("max_heater_power", "maxpower", "W"),
+    ("loop_delay", "loopdelay", "s"),
+    ("speedup", "speedup", ""),
+    ("jitter", "jitter", "K"),
+    ("precision", "precision", "K"),
+    ("window", "window", "s"),
+    ("mode", "mode", ""),
+]:
+    devices["simulated_" + name] = device(
         "nicos_ess.coda.devices.simulated_cryostat.SimulatedCryostatParameter",
-        description="Simulated sample temperature",
+        description="Simulated cryostat " + name.replace("_", " "),
         device="simulated_cryostat",
-        parameter="sample",
-        unit="K",
+        parameter=parameter,
+        unit=unit,
         pollinterval=1,
         nexus_config=[
-            {
-                "nexus_path": "/entry/sample",
-                "group_name": "simulated_cryostat",
-                "nx_class": "NXenvironment",
-                "dataset_type": "nx_log",
-                "units": "K",
-            },
+            dict(
+                nexus_path="/entry/sample",
+                group_name="simulated_cryostat",
+                nx_class="NXenvironment",
+                dataset_type="static_read" if parameter == "mode" else "nx_log",
+                units=unit,
+            ),
         ],
-    ),
-)
+    )
