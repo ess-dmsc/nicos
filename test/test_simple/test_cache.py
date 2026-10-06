@@ -53,8 +53,7 @@ class TestCache:
             name="numpy_cache", prefix="numpy-regression", cache=cache_addr
         )
         try:
-            with np.printoptions(legacy=False):
-                cc.put("testcache", "numpyvalue", value)
+            cc.put("testcache", "numpyvalue", value)
             cc.flush()
 
             # Read explicitly from the server, rather than the client's local copy.
