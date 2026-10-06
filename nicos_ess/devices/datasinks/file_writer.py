@@ -6,7 +6,7 @@ import threading
 import time
 import uuid
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from os import path
 from time import time as currenttime
@@ -43,6 +43,10 @@ from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
+
+# When stoptime is not defined use an easily recognisable timestamp
+# far far in the future.
+LATE_OCT_2191 = datetime.fromtimestamp(7_000_000_000)
 
 
 class AlreadyWritingException(Exception):
@@ -376,7 +380,7 @@ class FileWriterController:
             job_id = self._generate_uuid("ffffffff")  # this should look weird
 
         if not stop_time:
-            stop_time = start_time + timedelta(days=365.25 * 10)
+            stop_time = LATE_OCT_2191
 
         message = serialise_pl72(
             job_id,
