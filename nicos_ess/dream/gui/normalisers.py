@@ -2,6 +2,10 @@ from enum import Enum
 
 import numpy as np
 
+# use Numpy v2 interface with fallback for Numpy v1
+# TODO: remove once we drop support for Numpy v1
+_trapezoid_fcn = getattr(np, "trapezoid", None) or np.trapz
+
 
 class NormaliserType(Enum):
     NONORMALISER = 0
@@ -18,7 +22,7 @@ class IntegralNormaliser:
         if not np.any(y):
             # if all entries are zero return the original array
             return y
-        integ = np.trapezoid(y, x)
+        integ = _trapezoid_fcn(y, x)
         if integ == 0:
             # Don't normalize if area under curve is zero.
             return y
