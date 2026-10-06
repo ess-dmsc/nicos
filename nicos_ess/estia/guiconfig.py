@@ -1,7 +1,7 @@
 # ruff: noqa: F821
 """NICOS GUI default configuration."""
 
-main_window = vsplit(
+main_window = vbox(
     panel("nicos_ess.gui.panels.dashboard.Dashboard"),
     tabbed(
         ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
