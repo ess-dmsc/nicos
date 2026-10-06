@@ -274,7 +274,7 @@ class TimeSeries:
                 )
                 n = self.n = self.real_n = new_data.shape[0]
                 # can resize in place here
-                new_data.resize(self.data, (n * 2, 2))
+                new_data.resize((n * 2, 2))
                 self.data = new_data
             else:
                 # can't resize in place
