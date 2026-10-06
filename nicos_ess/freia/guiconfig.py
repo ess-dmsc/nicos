@@ -28,12 +28,12 @@ main_window = docked(
                                 setups="virtual_hexapod",
                             ),
                         ),
-                        (
-                            "Colimation",
-                            panel(
-                                "nicos_ess.freia.gui.panels.colimation_calculator.CollimationPanel"
-                            ),
-                        ),
+                        # (
+                        #     "Colimation",
+                        #     panel(
+                        #         "nicos_ess.freia.gui.panels.colimation_calculator.CollimationPanel"
+                        #     ),
+                        # ),
                         (
                             "Detector Image",
                             panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
