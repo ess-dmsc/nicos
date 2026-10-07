@@ -122,6 +122,7 @@ Run pytest against an externally managed Kafka broker:
 NICOS_RUN_SMOKE_INTEGRATION=1 \
 NICOS_SMOKE_MANAGE_KAFKA=0 \
 NICOS_SMOKE_KAFKA_BOOTSTRAP=kafka:9092 \
+NICOS_SMOKE_KAFKA_SASL_BOOTSTRAP=kafka:9094 \
 uv run pytest -q integration_test/smoke/test_smoke.py
 ```
 
@@ -144,6 +145,25 @@ after teardown. CI sets this inside the test container to
 build logs, compose logs, compose state, and `smoke-junit.xml` in the repo-root
 `smoke-artifacts/` directory.
 
+## Canary Credentials
+
+The run plants fake credentials where NICOS holds real ones in production:
+
+- the Kafka SASL password, in the keystore; the NICOS services reach Kafka only
+  through a SASL listener, so they have to load it,
+- the daemon login password of the smoke client,
+- `YUOS_TOKEN`, in the environment of every service.
+
+After teardown the runner searches every file below the runtime root for these
+values and fails the run if one is found, naming the file and line. That covers
+the NICOS log files, the stdout/stderr of each service, the data directory, and
+`daemon-messages.json` and `cache-dump.json`, which hold the message backlog
+and the cache content that the daemon serves to its clients.
+
+The values are defined in `CANARIES` in `smoke/run_smoke_stack.py`. A new kind
+of credential should get a canary there and be planted the way production
+provides it.
+
 ## Configuration
 
 Common environment variables:
@@ -151,6 +171,8 @@ Common environment variables:
 - `NICOS_SMOKE_MANAGE_KAFKA`: defaults to true. Set to `0` for external Kafka.
 - `NICOS_SMOKE_KAFKA_BOOTSTRAP`: bootstrap servers for external Kafka, or an
   override for the managed Kafka host port.
+- `NICOS_SMOKE_KAFKA_SASL_BOOTSTRAP`: bootstrap servers of the SASL listener
+  that NICOS uses, with the same external/managed meaning.
 - `NICOS_SMOKE_RUNTIME_ROOT`: optional runtime directory.
 - `NICOS_SMOKE_ARTIFACT_ROOT`: optional artifact copy destination.
 - `NICOS_SMOKE_CACHE_HOST`: optional `host:port` override for `nicos-cache`.

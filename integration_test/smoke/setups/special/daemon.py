@@ -7,7 +7,8 @@ devices = dict(
         hashing="md5",
         passwd=[
             ("guest", "", "guest"),
-            ("user", "ee11cbb19052e40b07aac0ca060c23ee", "user"),
+            # md5 of CANARY_LOGIN_PASSWORD in run_smoke_stack.py
+            ("user", "b4bac7706b62a5f8e82b523bcc08ba43", "user"),
             ("admin", "21232f297a57a5a743894a0e4a801fc3", "admin"),
         ],
     ),

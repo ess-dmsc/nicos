@@ -207,6 +207,8 @@ lint.select = [
     "SIM",
     # isort
     "I",
+    # flake8-print: stdout of the services ends up in logs and GUI clients
+    "T20",
 ]
 
 # Per-file ignores
@@ -237,7 +239,20 @@ lint.select = [
     "E741", # Ambiguous variable name
     "E731", # Do not assign a lambda expression, use a def
     "F841", # Local variable is assigned to but never used
-    "F405"  # Name may be undefined, or defined from star imports
+    "F405", # Name may be undefined, or defined from star imports
+    "T20"   # print found
+]
+"nicos_ess/**/gui/**/*.py" = [
+    "T20"   # print found
+]
+"**/scripts/**/*.py" = [
+    "T20"   # print found
+]
+"test/**/*.py" = [
+    "T20"   # print found
+]
+"integration_test/**/*.py" = [
+    "T20"   # print found
 ]
 
 [tool.ruff-format]

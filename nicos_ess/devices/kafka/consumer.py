@@ -1628,7 +1628,9 @@ if __name__ == "__main__":
         """Demo callback that prints message timestamps and lengths."""
         for ts, val in msgs:
             ttype, tval = ts
-            print(f"msg ts={ttype}:{tval} len={len(val) if val is not None else 0}")
+            print(  # noqa: T201
+                f"msg ts={ttype}:{tval} len={len(val) if val is not None else 0}"
+            )
 
     def print_no_messages():
         """Demo no-messages callback (no-op)."""

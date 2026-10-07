@@ -11,7 +11,7 @@ DAEMON_HOST = os.environ["NICOS_SMOKE_DAEMON_HOST"]
 def _kafka_brokers():
     return [
         entry.strip()
-        for entry in os.environ["NICOS_SMOKE_KAFKA_BOOTSTRAP"].split(",")
+        for entry in os.environ["NICOS_SMOKE_KAFKA_SASL_BOOTSTRAP"].split(",")
         if entry.strip()
     ]
 

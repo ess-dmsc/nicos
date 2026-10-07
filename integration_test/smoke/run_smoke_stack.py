@@ -29,6 +29,7 @@ from integration_test.doubles.pva_server import SmokePvaServer
 from nicos.clients.base import ConnectionData, NicosClient
 from nicos.protocols.daemon import STATUS_IDLE, STATUS_IDLEEXC
 from nicos.utils import parseConnectionString
+from nicos.utils.credentials.keystore import NicosKeyRing
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SMOKE_ROOT = Path(__file__).resolve().parent
@@ -38,6 +39,20 @@ ROOT_NICOS_CONF = REPO_ROOT / "nicos.conf"
 SMOKE_SETUP_PACKAGE = "nicos_smoke_runtime"
 SMOKE_INSTRUMENT = f"{SMOKE_SETUP_PACKAGE}.smoke"
 DEFAULT_KAFKA_BOOTSTRAP = "localhost:19092"
+DEFAULT_KAFKA_SASL_BOOTSTRAP = "localhost:19094"
+
+KAFKA_SASL_USER = "nicos_smoke"
+
+# Fake credentials planted into the running stack. No output of the run may
+# contain them, see _find_canary_leaks. They are alphanumeric so that repr,
+# JSON and URL encoding leave them unchanged.
+CANARIES = {
+    # Must match docker-compose.yml.
+    "kafka sasl password": "CANARYkafka7f3a9c1e5b2d",
+    # Must match the hash in setups/special/daemon.py.
+    "daemon login password": "CANARYlogin4d8e2a6c9f1b",
+    "YUOS_TOKEN": "CANARYyuos0b5c3e7a1d9f",
+}
 
 SMOKE_FILEWRITER_INSTRUMENT_TOPIC = "test_smoke_filewriter"
 SMOKE_FILEWRITER_STATUS_TOPIC = "test_smoke_filewriter_status"
@@ -283,8 +298,11 @@ def _env_flag(name: str, *, default: bool) -> bool:
     return raw_value.strip().lower() not in {"0", "false", "no", "off"}
 
 
-def _kafka_bootstrap(default: str = DEFAULT_KAFKA_BOOTSTRAP) -> str:
-    value = os.environ.get("NICOS_SMOKE_KAFKA_BOOTSTRAP", default)
+def _kafka_bootstrap(
+    default: str = DEFAULT_KAFKA_BOOTSTRAP,
+    env_name: str = "NICOS_SMOKE_KAFKA_BOOTSTRAP",
+) -> str:
+    value = os.environ.get(env_name, default)
     endpoints = [entry.strip() for entry in value.split(",") if entry.strip()]
     if not endpoints:
         return default
@@ -379,10 +397,10 @@ EPICS_CA_AUTO_ADDR_LIST = "NO"
 EPICS_CA_ADDR_LIST = "127.0.0.1"
 EPICS_PVA_AUTO_ADDR_LIST = "NO"
 EPICS_PVA_ADDR_LIST = "127.0.0.1"
-KAFKA_SSL_PROTOCOL = ""
-KAFKA_SSL_MECHANISM = ""
+KAFKA_SSL_PROTOCOL = "SASL_PLAINTEXT"
+KAFKA_SSL_MECHANISM = "PLAIN"
 KAFKA_CERT_PATH = ""
-KAFKA_USER = ""
+KAFKA_USER = {json.dumps(KAFKA_SASL_USER)}
 """.lstrip(),
         encoding="utf-8",
     )
@@ -417,10 +435,17 @@ def _ensure_runtime_files(runtime_root: Path, clean: bool) -> None:
         counters_file.write_text("scan 0\nfile 0", encoding="utf-8")
 
 
+def _write_keystore(runtime_root: Path) -> None:
+    ring = NicosKeyRing(str(runtime_root / "keystore"))
+    ring.keyring_key = "nicos"
+    ring.set_password("nicos", "kafka_auth", CANARIES["kafka sasl password"])
+
+
 def _prepare_runtime(clean: bool) -> SmokeRuntime:
     runtime_root = _runtime_root()
     _ensure_runtime_dirs(runtime_root, clean)
     _ensure_runtime_files(runtime_root, clean)
+    _write_keystore(runtime_root)
     _prepare_runtime_package(runtime_root)
 
     cache_endpoint = os.environ.get(
@@ -787,6 +812,33 @@ def _copy_runtime_artifacts(runtime: SmokeRuntime) -> None:
             shutil.copy2(source, target)
 
 
+def _dump_daemon_state(client: SmokeClient, log_root: Path) -> None:
+    """Save what the daemon serves to its clients, so the leak scan sees it."""
+    dumps = {
+        "daemon-messages.json": client.ask("getmessages", "*", quiet=True, default=[]),
+        "cache-dump.json": client.ask("getcachekeys", "", quiet=True, default=[]),
+    }
+    for name, content in dumps.items():
+        (log_root / name).write_text(
+            json.dumps(content, default=repr), encoding="utf-8"
+        )
+
+
+def _find_canary_leaks(runtime_root: Path) -> list[str]:
+    """Return the places below the runtime root that contain a canary."""
+    leaks = []
+    for path in sorted(runtime_root.rglob("*")):
+        if not path.is_file():
+            continue
+        for lineno, line in enumerate(path.read_bytes().splitlines(), 1):
+            leaks.extend(
+                f"{name} in {path.relative_to(runtime_root)}:{lineno}"
+                for name, value in CANARIES.items()
+                if value.encode() in line
+            )
+    return leaks
+
+
 def _smoke_assertions(client: SmokeClient) -> None:
     from integration_test.smoke.test_smoke import (
         test_full_experiment_workflow_with_filewriter_scan,
@@ -802,8 +854,11 @@ def _compose_project_name(runtime_root: Path) -> str:
     return f"nicos-smoke-{suffix or 'run'}"
 
 
-def _compose_env(runtime_root: Path, kafka_bootstrap: str) -> dict[str, str]:
+def _compose_env(
+    runtime_root: Path, kafka_bootstrap: str, kafka_sasl_bootstrap: str
+) -> dict[str, str]:
     host, port = _first_bootstrap_endpoint(kafka_bootstrap)
+    _, sasl_port = _first_bootstrap_endpoint(kafka_sasl_bootstrap)
     bind_host = "127.0.0.1" if host == "localhost" else host
     env = os.environ.copy()
     # Isolate compose resources so parallel smoke runs do not share containers.
@@ -812,6 +867,8 @@ def _compose_env(runtime_root: Path, kafka_bootstrap: str) -> dict[str, str]:
     env["NICOS_SMOKE_KAFKA_HOST_PORT"] = str(port)
     env["NICOS_SMOKE_KAFKA_ADVERTISED_HOST"] = host
     env["NICOS_SMOKE_KAFKA_ADVERTISED_PORT"] = str(port)
+    env["NICOS_SMOKE_KAFKA_SASL_HOST_PORT"] = str(sasl_port)
+    env["NICOS_SMOKE_KAFKA_SASL_ADVERTISED_PORT"] = str(sasl_port)
     return env
 
 
@@ -830,9 +887,20 @@ def smoke_client_session(
         else DEFAULT_KAFKA_BOOTSTRAP
     )
     kafka_bootstrap = _kafka_bootstrap(kafka_default)
+    kafka_host, _ = _first_bootstrap_endpoint(kafka_bootstrap)
+    kafka_sasl_bootstrap = _kafka_bootstrap(
+        _endpoint(kafka_host, _free_tcp_port())
+        if manage_kafka
+        else DEFAULT_KAFKA_SASL_BOOTSTRAP,
+        "NICOS_SMOKE_KAFKA_SASL_BOOTSTRAP",
+    )
     compose_base = _compose_base_cmd() if manage_kafka else None
     runtime = _prepare_runtime(clean_runtime)
-    compose_env = _compose_env(runtime.root, kafka_bootstrap) if manage_kafka else None
+    compose_env = (
+        _compose_env(runtime.root, kafka_bootstrap, kafka_sasl_bootstrap)
+        if manage_kafka
+        else None
+    )
 
     pva_server = None
     managed: list[ManagedProcess] = []
@@ -852,6 +920,8 @@ def smoke_client_session(
         runtime.daemon_host, runtime.daemon_port
     )
     base_env["NICOS_SMOKE_KAFKA_BOOTSTRAP"] = kafka_bootstrap
+    base_env["NICOS_SMOKE_KAFKA_SASL_BOOTSTRAP"] = kafka_sasl_bootstrap
+    base_env["YUOS_TOKEN"] = CANARIES["YUOS_TOKEN"]
     base_env["NICOS_SMOKE_FILEWRITER_POOL_TOPIC"] = SMOKE_FILEWRITER_POOL_TOPIC
     base_env["NICOS_SMOKE_FILEWRITER_STATUS_TOPIC"] = SMOKE_FILEWRITER_STATUS_TOPIC
     base_env["NICOS_SMOKE_FILEWRITER_INSTRUMENT_TOPIC"] = (
@@ -973,7 +1043,9 @@ def smoke_client_session(
         )
 
         conn = parseConnectionString(
-            f"user:user@{runtime.daemon_host}:{runtime.daemon_port}", 0
+            f"user:{CANARIES['daemon login password']}"
+            f"@{runtime.daemon_host}:{runtime.daemon_port}",
+            0,
         )
         client.connect(ConnectionData(**conn))
         if not client.isconnected:
@@ -989,6 +1061,7 @@ def smoke_client_session(
         raise
     finally:
         if client.isconnected:
+            _dump_daemon_state(client, runtime.log_root)
             client._disconnecting = True
             client.disconnect()
 
@@ -1003,6 +1076,13 @@ def smoke_client_session(
         if manage_kafka and not keep_kafka:
             compose_base, compose_env = _require_compose(compose_base, compose_env)
             _compose(compose_base, "down", "-v", check=False, env=compose_env)
+
+        leaks = _find_canary_leaks(runtime.root)
+        if leaks:
+            raise RuntimeError(
+                "canary credentials leaked into the smoke run output:\n"
+                + "\n".join(leaks)
+            )
 
 
 def run_smoke(
