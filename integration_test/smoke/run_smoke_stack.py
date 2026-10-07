@@ -378,6 +378,7 @@ def _prepare_runtime_package(runtime_root: Path) -> None:
         ignore=shutil.ignore_patterns("__pycache__"),
     )
     smoke_root.mkdir(parents=True, exist_ok=True)
+    shutil.copy(SMOKE_ROOT / "frame_probe.py", runtime_root / "sitecustomize.py")
     (package_root / "__init__.py").write_text("", encoding="utf-8")
     (smoke_root / "__init__.py").write_text("", encoding="utf-8")
     (smoke_root / "nicos.conf").write_text(
@@ -830,11 +831,13 @@ def _find_canary_leaks(runtime_root: Path) -> list[str]:
     for path in sorted(runtime_root.rglob("*")):
         if not path.is_file():
             continue
-        for lineno, line in enumerate(path.read_bytes().splitlines(), 1):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for lineno, line in enumerate(text.splitlines(), 1):
             leaks.extend(
-                f"{name} in {path.relative_to(runtime_root)}:{lineno}"
+                f"{name} in {path.relative_to(runtime_root)}:{lineno}: "
+                f"{line.replace(value, '****')[:200]}"
                 for name, value in CANARIES.items()
-                if value.encode() in line
+                if value in line
             )
     return leaks
 
@@ -922,6 +925,7 @@ def smoke_client_session(
     base_env["NICOS_SMOKE_KAFKA_BOOTSTRAP"] = kafka_bootstrap
     base_env["NICOS_SMOKE_KAFKA_SASL_BOOTSTRAP"] = kafka_sasl_bootstrap
     base_env["YUOS_TOKEN"] = CANARIES["YUOS_TOKEN"]
+    base_env["NICOS_SMOKE_CANARIES"] = " ".join(CANARIES.values())
     base_env["NICOS_SMOKE_FILEWRITER_POOL_TOPIC"] = SMOKE_FILEWRITER_POOL_TOPIC
     base_env["NICOS_SMOKE_FILEWRITER_STATUS_TOPIC"] = SMOKE_FILEWRITER_STATUS_TOPIC
     base_env["NICOS_SMOKE_FILEWRITER_INSTRUMENT_TOPIC"] = (

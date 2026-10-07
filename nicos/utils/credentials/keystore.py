@@ -86,9 +86,9 @@ class EncryptedNicosKeyStore(NicosKeyStore):
 
     def getCredential(self, credid, domain="nicos"):
         for ring in self.keyrings:
-            pw = ring.get_password(domain, credid)
-            if pw is not None:
-                return pw
+            password = ring.get_password(domain, credid)
+            if password is not None:
+                return password
         return None
 
     def setCredential(self, credid, passwd, domain="nicos"):

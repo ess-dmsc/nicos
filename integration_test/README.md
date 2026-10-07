@@ -45,6 +45,7 @@ is used.
   setup package.
 - `smoke/nexus/smoke_nexus.json`: minimal smoke-owned NeXus structure, copied
   into the generated runtime setup package.
+- `smoke/frame_probe.py`: finds credentials that a traceback would leak.
 - `doubles/filewriter.py`: standalone Kafka filewriter double.
 - `doubles/pva_server.py`: in-process PVA server double for smoke PVs.
 
@@ -159,6 +160,16 @@ values and fails the run if one is found, naming the file and line. That covers
 the NICOS log files, the stdout/stderr of each service, the data directory, and
 `daemon-messages.json` and `cache-dump.json`, which hold the message backlog
 and the cache content that the daemon serves to its clients.
+
+A credential can also leak without showing up in a passing run: NICOS log
+files contain the local variables of every `nicos*` frame of a traceback, so a
+credential held in a local is written out once something raises there.
+`smoke/frame_probe.py` covers that case. The runner installs it as
+`sitecustomize` for the services, where it checks the locals of every NICOS
+function on exit and renders the ones holding a canary the way the log files
+would. What survives that is written to `log/frame-locals-<pid>.log` and
+reported by the scan. The probe only looks into strings, bytes, dicts, lists,
+tuples and sets; a canary inside another kind of object is not seen.
 
 The values are defined in `CANARIES` in `smoke/run_smoke_stack.py`. A new kind
 of credential should get a canary there and be planted the way production
