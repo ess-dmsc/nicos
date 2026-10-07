@@ -825,6 +825,17 @@ def _dump_daemon_state(client: SmokeClient, log_root: Path) -> None:
         )
 
 
+def _services_without_frame_probe(
+    managed: list[ManagedProcess], log_root: Path
+) -> list[str]:
+    """Return the services in which frame_probe.py did not load."""
+    return [
+        proc.name
+        for proc in managed
+        if not (log_root / f"frame-locals-{proc.process.pid}.log").exists()
+    ]
+
+
 def _find_canary_leaks(runtime_root: Path) -> list[str]:
     """Return the places below the runtime root that contain a canary."""
     leaks = []
@@ -1080,6 +1091,12 @@ def smoke_client_session(
         if manage_kafka and not keep_kafka:
             compose_base, compose_env = _require_compose(compose_base, compose_env)
             _compose(compose_base, "down", "-v", check=False, env=compose_env)
+
+        unprobed = _services_without_frame_probe(managed, runtime.log_root)
+        if unprobed:
+            raise RuntimeError(
+                "the frame probe did not load in: " + ", ".join(unprobed)
+            )
 
         leaks = _find_canary_leaks(runtime.root)
         if leaks:

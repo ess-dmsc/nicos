@@ -169,7 +169,9 @@ credential held in a local is written out once something raises there.
 function on exit and renders the ones holding a canary the way the log files
 would. What survives that is written to `log/frame-locals-<pid>.log` and
 reported by the scan. The probe only looks into strings, bytes, dicts, lists,
-tuples and sets; a canary inside another kind of object is not seen.
+tuples and sets; a canary inside another kind of object is not seen. Each
+process creates its report file on load, and the run fails if a service has
+none, so a probe that stopped loading is not mistaken for a clean result.
 
 The values are defined in `CANARIES` in `smoke/run_smoke_stack.py`. A new kind
 of credential should get a canary there and be planted the way production

@@ -9,8 +9,11 @@ raises in that function. This checks the locals of each frame when the frame
 exits, which finds those functions without the exception having to happen.
 
 A local that holds a canary is rendered with the formatter the log files use.
-If the canary survives that, the line is written to the log directory, where
-the canary scan of the runner picks it up.
+If the canary survives that, the line is written to the report file in the
+log directory, where the canary scan of the runner picks it up.
+
+The report file is created on load, also when there is nothing to report. The
+runner takes a missing file as a probe that did not load.
 """
 
 import os
@@ -24,6 +27,8 @@ REPORT = os.path.join(
     os.environ["NICOS_SMOKE_RUNTIME_ROOT"], "log", f"frame-locals-{os.getpid()}.log"
 )
 reported = set()
+
+open(REPORT, "a", encoding="utf-8").close()  # noqa: SIM115
 
 
 def holds_canary(value, depth=3):
