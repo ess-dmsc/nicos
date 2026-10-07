@@ -141,6 +141,8 @@ class KafkaConsumer:
         consumer_factory:
             Callable that receives the merged config dict and returns a
             confluent-kafka Consumer-like object. Used for DI/testing.
+            Secrets in the dict are ``SecretStr``; pass it through
+            ``reveal_secrets`` in the call to the client.
         topic_partition_factory:
             Callable used to construct ``TopicPartition`` objects.
         now:

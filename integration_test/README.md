@@ -153,7 +153,8 @@ The run plants fake credentials where NICOS holds real ones in production:
 - the Kafka SASL password, in the keystore; the NICOS services reach Kafka only
   through a SASL listener, so they have to load it,
 - the daemon login password of the smoke client,
-- `YUOS_TOKEN`, in the environment of every service.
+- `YUOS_TOKEN`, in the environment of every service. No smoke setup reads it,
+  so this one only catches output of the whole environment.
 
 After teardown the runner searches every file below the runtime root for these
 values and fails the run if one is found, naming the file and line. That covers
@@ -169,7 +170,8 @@ credential held in a local is written out once something raises there.
 function on exit and renders the ones holding a canary the way the log files
 would. What survives that is written to `log/frame-locals-<pid>.log` and
 reported by the scan. The probe only looks into strings, bytes, dicts, lists,
-tuples and sets; a canary inside another kind of object is not seen. Each
+tuples and sets; a canary inside another kind of object is not seen, and
+neither is a local that is rebound or deleted before the function exits. Each
 process creates its report file on load, and the run fails if a service has
 none, so a probe that stopped loading is not mistaken for a clean result.
 
