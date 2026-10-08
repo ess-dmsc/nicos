@@ -16,6 +16,7 @@ from nicos.guisupport.qt import (
     pyqtSlot,
     sip,
 )
+from nicos.protocols.cache import cache_load
 from nicos_ess.gui.panels.parameters_table import ParametersTable
 from nicos_ess.gui.panels.utils import (
     attach_status_resources,
@@ -96,6 +97,7 @@ class CetoniLinkedDialog(QDialog):
         self._update_first_fill_syringe()
         self._update_flowrate()
         self._update_total_vol()
+        self._update_units()
 
     def _update_value(self):
         self.value_value.setText(self.devinfo.fmtValUnit())
@@ -114,7 +116,6 @@ class CetoniLinkedDialog(QDialog):
 
     def _update_time(self):
         self.time_value.setText(str(self.params["max_dosing_time"]))
-        self.time_unit.setText(str(self.paraminfo["max_dosing_time"]["unit"]))
 
     def _update_first_fill_syringe(self):
         if self.first_fill_value.count() == 0:
@@ -125,14 +126,19 @@ class CetoniLinkedDialog(QDialog):
     def _update_flowrate(self):
         self.flowrate_label.setText(f"Flowrate (max {self.params['flowrate_max']}):")
         self.flowrate_value.setText(str(self.params["flowrate"]))
-        self.flowrate_unit.setText(str(self.paraminfo["flowrate"]["unit"]))
 
     def _update_total_vol(self):
         self.vol_total_value.setText(str(self.params["total_vol"]))
+
+    def _update_units(self):
+        self.flowrate_unit.setText(str(self.paraminfo["flowrate"]["unit"]))
+        self.time_unit.setText(str(self.paraminfo["max_dosing_time"]["unit"]))
         self.vol_total_unit.setText(str(self.paraminfo["total_vol"]["unit"]))
 
     def apply_settings(self):
-        print(self.mode_value.currentText())
+        self.devices_panel.exec_command(
+            f"set({self.devrepr}, 'pump_mode', '{self.mode_value.currentText()}')"
+        )
 
     def reset(self):
         self.devices_panel.exec_command(f"reset({self.devrepr})")
@@ -167,6 +173,15 @@ class CetoniLinkedDialog(QDialog):
     @pyqtSlot()
     def on_action_disable_triggered(self):
         self.devices_panel.exec_command(f"disable({self.devrepr})")
+
+    def on_cache_params(self, subkey, value):
+        if subkey not in self.params:
+            return
+        if not value:
+            return
+        value = cache_load(value)
+        self.params[subkey] = value
+        self.param_table.update_param(subkey, str(value))
 
     def _create_widgets(self):
         self.device_name = QLabel()
