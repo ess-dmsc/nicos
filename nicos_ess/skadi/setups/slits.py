@@ -6,25 +6,25 @@ slit_set_2_pv_root = f"{pv_root}-ColSl2:"
 
 devices = dict(
     # Slit 1 blades
-    slit_set_1_left_blade=device(
+    slit_set_1_blade_left=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation slit set 1 left blade",
         motorpv=f"{slit_set_1_pv_root}MC-SlYp-01:Mtr",
         monitor_deadband=0.01,
     ),
-    slit_set_1_right_blade=device(
+    slit_set_1_blade_right=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation slit set 1 right blade",
         motorpv=f"{slit_set_1_pv_root}MC-SlYm-01:Mtr",
         monitor_deadband=0.01,
     ),
-    slit_set_1_upper_blade=device(
+    slit_set_1_blade_upper=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation slit set 1 upper blade",
         motorpv=f"{slit_set_1_pv_root}MC-SlZp-01:Mtr",
         monitor_deadband=0.01,
     ),
-    slit_set_1_lower_blade=device(
+    slit_set_1_blade_lower=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation slit set 1 lower blade",
         motorpv=f"{slit_set_1_pv_root}MC-SlZm-01:Mtr",
@@ -56,25 +56,25 @@ devices = dict(
         monitor_deadband=0.01,
     ),
     # Slit 2 blades
-    slit_set_2_left_blade=device(
+    slit_set_2_blade_left=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation slit set 2 left blade",
         motorpv=f"{slit_set_2_pv_root}MC-SlYp-01:Mtr",
         monitor_deadband=0.01,
     ),
-    slit_set_2_right_blade=device(
+    slit_set_2_blade_right=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation slit set 2 right blade",
         motorpv=f"{slit_set_2_pv_root}MC-SlYm-01:Mtr",
         monitor_deadband=0.01,
     ),
-    slit_set_2_upper_blade=device(
+    slit_set_2_blade_upper=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation slit set 2 upper blade",
         motorpv=f"{slit_set_2_pv_root}MC-SlZp-01:Mtr",
         monitor_deadband=0.01,
     ),
-    slit_set_2_lower_blade=device(
+    slit_set_2_blade_lower=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation slit set 2 lower blade",
         motorpv=f"{slit_set_2_pv_root}MC-SlZm-01:Mtr",
