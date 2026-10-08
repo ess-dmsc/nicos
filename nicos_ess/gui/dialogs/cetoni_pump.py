@@ -156,8 +156,7 @@ class CetoniLinkedDialog(QDialog):
         self.devices_panel.exec_command(f"stop({self.devrepr})", immediate=True)
 
     def start(self):
-        # todo: change device start
-        pass
+        self.devices_panel.exec_command(f"start({self.devrepr}, 1)")
 
     @pyqtSlot()
     def on_btn_apply_clicked(self):
@@ -205,7 +204,6 @@ class CetoniLinkedDialog(QDialog):
             return
         if subkey == "value":
             self._update_value()
-            print(value)
         elif subkey == "status":
             status, message = self.devinfo.status
             self._update_status(status, message)
