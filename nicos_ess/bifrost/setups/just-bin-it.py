@@ -1,7 +1,9 @@
 description = "The just-bin-it histogrammer."
 
+excludes = ["livedata"]
+
 devices = dict(
-    det_image1=device(
+    detector_image=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="bifrost_visualisation",
@@ -14,7 +16,7 @@ devices = dict(
         det_range=(1, 13500),
         tof_range=(0, 71428571),
     ),
-    det_image2=device(
+    detector_tof=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="bifrost_visualisation",
@@ -27,7 +29,7 @@ devices = dict(
         det_range=(1, 13500),
         tof_range=(0, 71428571),
     ),
-    mon_1=device(
+    psc_monitor=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="bifrost_visualisation",
@@ -42,13 +44,13 @@ devices = dict(
         input_schema="da00",
         source="cbm1",
     ),
-    mon_2=device(
+    overlap_monitor=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="bifrost_visualisation",
         data_topic="bifrost_beam_monitor",
         brokers=configdata("config.KAFKA_BROKERS"),
-        unit="AU",
+        unit="ADC counts",
         hist_type="1-D TOF",
         det_width=1,
         det_height=1,
@@ -57,13 +59,13 @@ devices = dict(
         input_schema="da00",
         source="cbm2",
     ),
-    mon_3=device(
+    bandwidth_monitor=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="bifrost_visualisation",
         data_topic="bifrost_beam_monitor",
         brokers=configdata("config.KAFKA_BROKERS"),
-        unit="AU",
+        unit="ADC counts",
         hist_type="1-D TOF",
         det_width=1,
         det_height=1,
@@ -72,7 +74,7 @@ devices = dict(
         input_schema="da00",
         source="cbm3",
     ),
-    mon_4=device(
+    normalization_monitor=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="bifrost_visualisation",
@@ -88,7 +90,7 @@ devices = dict(
         input_schema="ev44",
         source="cbm4",
     ),
-    mon_5=device(
+    elastic_monitor=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="bifrost_visualisation",
@@ -115,13 +117,13 @@ devices = dict(
         response_topic="bifrost_jbi_responses",
         statustopic=["bifrost_jbi_heartbeat"],
         images=[
-            "det_image1",
-            "det_image2",
-            "mon_1",
-            "mon_2",
-            "mon_3",
-            "mon_4",
-            "mon_5",
+            "detector_image",
+            "detector_tof",
+            "psc_monitor",
+            "overlap_monitor",
+            "bandwidth_monitor",
+            "normalization_monitor",
+            "elastic_monitor",
         ],
         timers=["timer"],
     ),
