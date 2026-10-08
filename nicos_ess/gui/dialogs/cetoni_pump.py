@@ -160,19 +160,19 @@ class CetoniLinkedDialog(QDialog):
         pass
 
     @pyqtSlot()
-    def on_btn_apply_pressed(self):
+    def on_btn_apply_clicked(self):
         self.apply_settings()
 
     @pyqtSlot()
-    def on_btn_reset_pressed(self):
+    def on_btn_reset_clicked(self):
         self.reset()
 
     @pyqtSlot()
-    def on_btn_stop_pressed(self):
+    def on_btn_stop_clicked(self):
         self.stop()
 
     @pyqtSlot()
-    def on_btn_start_pressed(self):
+    def on_btn_start_clicked(self):
         self.start()
 
     @pyqtSlot()
@@ -182,6 +182,14 @@ class CetoniLinkedDialog(QDialog):
     @pyqtSlot()
     def on_action_disable_triggered(self):
         self.devices_panel.exec_command(f"disable({self.devrepr})")
+
+    @pyqtSlot()
+    def on_btn_close_clicked(self):
+        self.close()
+
+    def closeEvent(self, event):
+        event.accept()
+        self.closed.emit(self.devname.lower())
 
     def on_cache_params(self, subkey, value):
         if subkey not in self.params:
@@ -195,17 +203,12 @@ class CetoniLinkedDialog(QDialog):
     def on_cache(self, time, subkey, op, value):
         if time < self.devinfo.valtime:
             return
-
         if subkey == "value":
             self._update_value()
             print(value)
         elif subkey == "status":
             status, message = self.devinfo.status
             self._update_status(status, message)
-        elif subkey == "alias":
-            if not value:
-                return
-            self._reinit()
 
     def _create_widgets(self):
         self.device_name = QLabel()
@@ -253,11 +256,12 @@ class CetoniLinkedDialog(QDialog):
         self.button_more.setMenu(self.menu)
 
     def _add_signals(self):
-        self.button_reset.clicked.connect(self.on_btn_reset_pressed)
-        self.button_stop.clicked.connect(self.on_btn_stop_pressed)
+        self.button_reset.clicked.connect(self.on_btn_reset_clicked)
+        self.button_stop.clicked.connect(self.on_btn_stop_clicked)
         self.action_enable.triggered.connect(self.on_action_enable_triggered)
         self.action_disable.triggered.connect(self.on_action_disable_triggered)
-        self.button_apply.clicked.connect(self.on_btn_apply_pressed)
+        self.button_apply.clicked.connect(self.on_btn_apply_clicked)
+        self.button_close.clicked.connect(self.on_btn_close_clicked)
 
     def _set_layout(self):
         self.dialog_layout = QVBoxLayout()
