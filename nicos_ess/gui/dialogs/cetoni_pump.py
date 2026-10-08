@@ -127,11 +127,6 @@ class CetoniLinkedDialog(QDialog):
         self.flowrate_value.setText(str(self.params["flowrate"]))
         self.flowrate_unit.setText(str(self.paraminfo["flowrate"]["unit"]))
 
-    def _update_flowrate(self):
-        self.flowrate_label.setText(f"Flowrate (max {self.params['flowrate_max']}):")
-        self.flowrate_value.setText(str(self.params["flowrate"]))
-        self.flowrate_unit.setText(str(self.paraminfo["flowrate"]["unit"]))
-
     def _update_total_vol(self):
         self.vol_total_value.setText(str(self.params["total_vol"]))
         self.vol_total_unit.setText(str(self.paraminfo["total_vol"]["unit"]))
