@@ -242,7 +242,6 @@ class CetoniLinkedDialog(QDialog):
         self.button_start = QPushButton("Start")
         self.button_stop = QPushButton("Stop")
 
-        self.button_plot_hist = QPushButton("Plot history")
         self.button_show_params = QPushButton("Show parameters")
         self.button_close = QPushButton("Close")
 
@@ -315,7 +314,6 @@ class CetoniLinkedDialog(QDialog):
         self.controls_section.addWidget(self.button_stop)
 
         self.bottom_section = QHBoxLayout()
-        self.bottom_section.addWidget(self.button_plot_hist)
         self.bottom_section.addWidget(self.button_show_params)
         self.bottom_section.addStretch()
         self.bottom_section.addWidget(self.button_close)
