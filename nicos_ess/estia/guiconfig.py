@@ -37,6 +37,7 @@ main_window = docked(
                                 hexapod="estia_hexapod",
                                 status="hexapod_status",
                                 errdesc="hexapod_error_msg",
+                                statusdesc="hexapod_status_msg",
                                 coord="hexapod_coord_mode",
                             ),
                         ),

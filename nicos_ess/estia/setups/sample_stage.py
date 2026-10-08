@@ -121,6 +121,12 @@ devices = dict(
         readpv=f"{hex_root}ERR_DESC",
         visibility=(),
     ),
+    hexapod_status_msg=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="NewPort Status",
+        readpv=f"{hex_root}STATUS_DESC",
+        visibility=(),
+    ),
     hexapod_coord_mode=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Current coordinate system",

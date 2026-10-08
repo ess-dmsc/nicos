@@ -27,6 +27,7 @@ class HexapodPanel(Panel):
         self.status = options.get("status")
         self.coordSys = options.get("coord")
         self.errdesc = options.get("errdesc")
+        self.statusdesc = options.get("statusdesc")
         # Hexapod Controller Info
 
         # Error Handling
@@ -74,6 +75,7 @@ class HexapodPanel(Panel):
                 self.client.getDeviceParam(self.devname, "status"),
                 self.client.getDeviceParam(self.status, "value"),
                 self.client.getDeviceParam(self.errdesc, "value"),
+                self.client.getDeviceParam(self.statusdesc, "value"),
             )
             self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
 
@@ -170,10 +172,10 @@ class HexapodPanel(Panel):
                 mini_dict.update({"devname": adevs[keys]})
                 self.adevs.update({f"{keys}": mini_dict})
 
-    def update_status_window(self, status, code, msg):
+    def update_status_window(self, status, code, errmsg, statmsg):
         # Use error type to change icon
         code = round(code)
-        self.hexStatus.setText(f"Code: {code}\n\n{msg}")
+        self.hexStatus.setText(f"Code {code}: {statmsg}\n\n{errmsg}")
 
         self.statusimage.setPixmap(self.statusIcon[status[0]].pixmap(18, 18))
 
