@@ -108,9 +108,9 @@ class CetoniLinkedDialog(QDialog):
 
     def _update_mode(self):
         if self.mode_value.count() == 0:
-            options = list(self.params["mapping"].keys())
+            options = list(self.paraminfo["pump_mode"]["type"].vals)
             self.mode_value.addItems(options)
-        self.mode_value.setCurrentText(self.params["target"])
+        self.mode_value.setCurrentText(self.params["pump_mode"])
 
     def _update_time(self):
         self.time_value.setText(str(self.params["max_dosing_time"]))
