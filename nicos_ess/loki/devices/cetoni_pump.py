@@ -81,6 +81,10 @@ class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
         self.parameters["first_fill_syringe"].type = oneof(*first_fill_syringe)
         pump_mode = self._epics.get_channel_value_choices("pump_mode")
         self.parameters["pump_mode"].type = oneof(*pump_mode)
+        time_unit = self._epics.get_channel_units(
+            self._epics_channels["max_dosing_time"]
+        )
+        self.parameters["max_dosing_time"].unit = time_unit
         super()._after_subscribe(mode)
 
     def _build_epics_channels(self):
