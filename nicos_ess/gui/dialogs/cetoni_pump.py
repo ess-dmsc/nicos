@@ -139,6 +139,15 @@ class CetoniLinkedDialog(QDialog):
         self.devices_panel.exec_command(
             f"set({self.devrepr}, 'pump_mode', '{self.mode_value.currentText()}')"
         )
+        self.devices_panel.exec_command(
+            f"set({self.devrepr}, 'max_dosing_time', '{self.time_value.text()}')"
+        )
+        self.devices_panel.exec_command(
+            f"set({self.devrepr}, 'first_fill_syringe', '{self.first_fill_value.currentText()}')"
+        )
+        self.devices_panel.exec_command(
+            f"set({self.devrepr}, 'flowrate', '{self.flowrate_value.text()}')"
+        )
 
     def reset(self):
         self.devices_panel.exec_command(f"reset({self.devrepr})")
@@ -182,6 +191,21 @@ class CetoniLinkedDialog(QDialog):
         value = cache_load(value)
         self.params[subkey] = value
         self.param_table.update_param(subkey, str(value))
+
+    def on_cache(self, time, subkey, op, value):
+        if time < self.devinfo.valtime:
+            return
+
+        if subkey == "value":
+            self._update_value()
+            print(value)
+        elif subkey == "status":
+            status, message = self.devinfo.status
+            self._update_status(status, message)
+        elif subkey == "alias":
+            if not value:
+                return
+            self._reinit()
 
     def _create_widgets(self):
         self.device_name = QLabel()
