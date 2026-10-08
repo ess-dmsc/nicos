@@ -66,12 +66,13 @@ class TestDynamicNexusBuilding(TestCase):
         return thing
 
     @pytest.fixture(autouse=True)
-    def prepare(self, session, monkeypatch):
+    def prepare(self, session, log, monkeypatch):
         # Ensure relative paths in setups resolve from repo root
         repo_root = Path(__file__).resolve().parents[3]
         monkeypatch.chdir(repo_root)
 
         self.session = session
+        self.log = log
         self.session.sessiontype = POLLER
 
         # Patch KafkaConsumer so loading the forwarder setup doesn't try to connect
@@ -89,6 +90,7 @@ class TestDynamicNexusBuilding(TestCase):
         self.session.loadSetup("ess_forwarder", {})
         self.session.loadSetup("ess_motors", {})
         self.session.loadSetup("ess_nexus_structure", {})
+        self.session.loadSetup("ess_nexus_aliases", {})
 
         # Devices under test
         self.forwarder = self.session.getDevice("KafkaForwarder")
@@ -215,6 +217,67 @@ class TestDynamicNexusBuilding(TestCase):
                     "dataset_type": "nx_log",
                 }
             ]
+
+    def _value_log(self, group_name="motor1"):
+        return {
+            "group_name": group_name,
+            "nx_class": "NXsensor",
+            "name": "value_log",
+            "dataset_type": "nx_log",
+        }
+
+    def test_same_name_twice_in_a_group_is_rejected(self):
+        self.motor.nexus_config = [self._value_log(), self._value_log()]
+        with pytest.raises(ConfigurationError, match="motor1/value_log"):
+            self.nexus._nexus_config_groups()
+
+    def test_name_already_in_the_template_is_rejected(self):
+        self.motor.nexus_config = [
+            {
+                "nexus_path": "/entry",
+                "group_name": "sample",
+                "nx_class": "NXsample",
+                "name": "depends_on",
+                "value": "other",
+                "dataset_type": "static_value",
+            }
+        ]
+        with pytest.raises(ConfigurationError, match="/entry/sample/depends_on"):
+            self.nexus.get_structure(_minimal_metainfo(), counter=1)
+
+    def test_alias_is_not_written_again(self):
+        self.motor.nexus_config = [self._value_log()]
+        self.session.getDevice("motor_alias").alias = "motor1"
+        assert len(self._motor1_children()) == 1
+
+    def test_sample_info_does_not_repeat_an_existing_field(self):
+        self.motor.nexus_config = [
+            {
+                "nexus_path": "/entry",
+                "group_name": "sample",
+                "nx_class": "NXsample",
+                "name": "temperature",
+                "dataset_type": "nx_log",
+            }
+        ]
+        metainfo = _minimal_metainfo()
+        metainfo[("Sample", "samples")] = (
+            {0: {"name": "SampleA", "temperature": "0"}},
+            "",
+            "",
+            "sample",
+        )
+
+        with self.log.assert_warns("sample field 'temperature' is not written"):
+            doc = json.loads(self.nexus.get_structure(metainfo, counter=1))
+
+        sample = get_by_named_path(
+            doc, build_named_index_map(doc, include_datasets=False), "/entry/sample"
+        )
+        assert [c.get("name") for c in sample["children"]].count("temperature") == 1
+        assert not any(
+            c.get("config", {}).get("name") == "temperature" for c in sample["children"]
+        )
 
     def test_dynamic_build_adds_to_existing_and_nested_groups(self):
         self.motor.nexus_config = [

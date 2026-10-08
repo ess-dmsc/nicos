@@ -14,6 +14,7 @@ from nicos.core import (
     oneof,
     relative_path,
 )
+from nicos.core.device import DeviceAlias
 from nicos_ess.devices.mixins import HasNexusConfig
 from nicos_ess.nexus.converter import NexusTemplateConverter
 from nicos_ess.utilities.json_utils import (
@@ -40,6 +41,10 @@ ALLOWED_INSTRUMENT_NAMES = [
     "tbl",
     "ymir",
 ]
+
+
+def _node_name(node):
+    return node.get("name") or node.get("config", {}).get("name")
 
 
 class NexusStructureProvider(Device):
@@ -197,6 +202,14 @@ class NexusStructureJsonFile(NexusStructureProvider):
             for name, node in groups.items():
                 if f"{path}/{name}" in self._path_map:
                     existing = self._get_node(structure, f"{path}/{name}")
+                    taken = {_node_name(child) for child in existing["children"]}
+                    for child in node["children"]:
+                        if _node_name(child) in taken:
+                            raise ConfigurationError(
+                                self,
+                                f"'{path}/{name}/{_node_name(child)}' is already "
+                                "in the NeXus template",
+                            )
                     existing["children"].extend(node["children"])
                     continue
                 try:
@@ -213,14 +226,23 @@ class NexusStructureJsonFile(NexusStructureProvider):
         """Build {nexus_path: {group_name: group node}} from all nexus_configs."""
         by_path = defaultdict(dict)
         for dev in session.devices.values():
-            if not isinstance(dev, HasNexusConfig):
+            # An alias has the nexus_config of the device it points to.
+            if isinstance(dev, DeviceAlias) or not isinstance(dev, HasNexusConfig):
                 continue
             for cfg in dev.nexus_config:
-                group = by_path[cfg.get("nexus_path", "/entry/instrument")].setdefault(
+                path = cfg.get("nexus_path", "/entry/instrument")
+                group = by_path[path].setdefault(
                     cfg["group_name"],
                     generate_group_json(cfg["group_name"], cfg["nx_class"], []),
                 )
-                group["children"].append(self._nexus_config_node(dev, cfg))
+                node = self._nexus_config_node(dev, cfg)
+                if any(_node_name(node) == _node_name(c) for c in group["children"]):
+                    raise ConfigurationError(
+                        dev,
+                        f"'{path}/{cfg['group_name']}/{_node_name(node)}' is "
+                        "already written to the NeXus file by another nexus_config",
+                    )
+                group["children"].append(node)
         return by_path
 
     def _nexus_config_node(self, dev, cfg):
@@ -389,7 +411,17 @@ class NexusStructureJsonFile(NexusStructureProvider):
                 attr.get("name") == "NX_class" and attr.get("values") == "NXsample"
                 for attr in child["attributes"]
             ):
-                child.setdefault("children", []).extend(samples_list)
+                children = child.setdefault("children", [])
+                taken = {_node_name(c) for c in children}
+                for node in samples_list:
+                    if _node_name(node) in taken:
+                        self.log.warning(
+                            "sample field '%s' is not written, the NeXus sample "
+                            "group already has an entry of that name",
+                            _node_name(node),
+                        )
+                        continue
+                    children.append(node)
                 self._refresh_map(structure)
                 return structure
 
