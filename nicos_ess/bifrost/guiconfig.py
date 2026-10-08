@@ -9,9 +9,6 @@ main_window = docked(
             "Instrument interaction",
             hsplit(
                 vbox(
-                    panel(
-                        "nicos_ess.gui.panels.cmdbuilder.CommandPanel",
-                    ),
                     tabbed(
                         (
                             "Output",
@@ -40,6 +37,9 @@ main_window = docked(
                                 eta=True,
                             ),
                         ),
+                    ),
+                    panel(
+                        "nicos_ess.gui.panels.cmdbuilder.CommandPanel",
                     ),
                 ),  # vsplit
                 panel(
