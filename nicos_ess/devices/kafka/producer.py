@@ -4,7 +4,7 @@ from confluent_kafka import Producer
 
 from nicos.core import DeviceMixinBase, Param, host, listof
 from nicos.core.constants import SIMULATION
-from nicos_ess.devices.kafka.utils import create_sasl_config
+from nicos_ess.devices.kafka.utils import create_sasl_config, reveal_secrets
 
 MAX_MESSAGE_SIZE = 209_715_200
 
@@ -39,7 +39,7 @@ class KafkaProducer:
             "batch.num.messages": 10000,
             "message.timeout.ms": 60000,
         }
-        self._producer = Producer({**config, **options})
+        self._producer = Producer(reveal_secrets({**config, **options}))
 
     def produce(
         self,
@@ -60,9 +60,16 @@ class KafkaProducer:
         :param partition: Which partition to send to. Optional.
         :param key: The key to assign. Optional
         :param on_delivery_callback: The delivery callback. Optional.
-        :param auto_flush: Whether to flush after producing. If False, the caller is responsible for calling flush() to ensure messages are sent.
-        :param flush_timeout: If auto_flush is True, how long to block for the flush (in seconds). None means block indefinitely until all messages are flushed.
-        :param poll_before_produce: Whether to call poll() before producing to serve delivery reports and internal events. This is important to do if auto_flush is False, otherwise delivery callbacks may not be called.
+        :param auto_flush: Whether to flush after producing. If False, the
+            caller is responsible for calling flush() to ensure messages are
+            sent.
+        :param flush_timeout: If auto_flush is True, how long to block for the
+            flush (in seconds). None means block indefinitely until all
+            messages are flushed.
+        :param poll_before_produce: Whether to call poll() before producing to
+            serve delivery reports and internal events. This is important to
+            do if auto_flush is False, otherwise delivery callbacks may not be
+            called.
 
         Backwards compatible:
           - auto_flush=True -> same semantics as before (produce + flush)
