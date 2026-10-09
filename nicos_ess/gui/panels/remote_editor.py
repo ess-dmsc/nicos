@@ -14,7 +14,6 @@ from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
-from nicos.clients.gui.widgets.qscintillacompat import QScintillaCompatible
 from nicos.core.utils import ADMIN
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
@@ -35,7 +34,6 @@ from nicos.guisupport.qt import (
     QMessageBox,
     QPen,
     QPrintDialog,
-    QPrinter,
     QPushButton,
     QsciLexerPython,
     QsciPrinter,
@@ -681,9 +679,7 @@ class EditorPanel(Panel):
         editor.setIndentationGuidesForegroundColor(QColor("#CCC"))
         editor.setWrapMode(QsciScintilla.WrapMode.WrapCharacter)
         editor.setMarginLineNumbers(1, True)
-        editor.setMarginWidth(
-            1, 5 + 4 * QFontMetrics(editor.font()).averageCharWidth()
-        )
+        editor.setMarginWidth(1, 5 + 4 * QFontMetrics(editor.font()).averageCharWidth())
         # colors in dark mode,
         if not colors.is_light:
             editor.setCaretForegroundColor(colors.text)
