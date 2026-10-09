@@ -3,25 +3,26 @@ description = "A list of SKADI motion devices"
 pv_root = "SKADI-"
 
 devices = dict(
-    polarization_guide_change=device(
+    polarizer_guide=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Polariser guide changer",
+        description="Polarisation Guide Changer",
         motorpv=f"{pv_root}PolChg:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
     ),
-    laser_attenuator_sledge=device(
+    attenuator=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Laser attenuator sledge",
+        description="Laser+Attenuator sledge",
         motorpv=f"{pv_root}AttCh1:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
     ),
     # TODO: Not connecting
-    attenuator_frame_translation=device(
+    attenuation_setting=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Attenuator frame translation",
         motorpv=f"{pv_root}AttAdj:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
     ),
+    # TODO: Check user name and desc in ToM
     collimation_changer_1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation Changer 1",
@@ -64,6 +65,7 @@ devices = dict(
         motorpv=f"{pv_root}ColCh7:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
     ),
+    # TODO: Check user name and desc in ToM
     translation_X_detector_LA=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Detector Carriage 1",
@@ -114,7 +116,7 @@ devices = dict(
     ),
     M3_in_beam_positioner=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
-        description="Experiment Shutter",
+        description="M3 In-beam positioner",
         writepv=f"{pv_root}InBmM3:MC-Pne-01:ShtOpen",
         readpv=f"{pv_root}InBmM3:MC-Pne-01:ShtAuxBits07",
         statuspv=f"{pv_root}InBmM3:MC-Pne-01:ShtStatusCode",
@@ -123,7 +125,7 @@ devices = dict(
     ),
     detector_tank_window_cover=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
-        description="Experiment Shutter",
+        description="Detector Tank Window Cover",
         writepv=f"{pv_root}InBmWC:MC-Pne-01:ShtOpen",
         readpv=f"{pv_root}InBmWC:MC-Pne-01:ShtAuxBits07",
         statuspv=f"{pv_root}InBmWC:MC-Pne-01:ShtStatusCode",
