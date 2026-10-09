@@ -81,7 +81,8 @@ def linked_pumping_in_daemon(daemon_device_harness, fake_backend):
         name="linked",
         pvroot="Lnkd",
         readpv="LnkdStopMode-SP",
-        writepv="LnkdStopMode-SP",
+        writepv="LnkdStart-Cmd",
+        mapping={"Start": 1},
     )
 
 
@@ -151,6 +152,5 @@ class TestCetoniPumpController:
         assert linked_pumping_in_daemon.status()[0] == status.OK
 
     def test_linked_start_updates_pvs(self, linked_pumping_in_daemon, fake_backend):
-        linked_pumping_in_daemon.start("Time")
-        assert fake_backend.values["LnkdStopMode-SP"] == "Time"
+        linked_pumping_in_daemon.start("Start")
         assert fake_backend.values["LnkdStart-Cmd"] == 1
