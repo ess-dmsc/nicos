@@ -517,8 +517,7 @@ class EditorPanel(Panel):
     def _create_default_font(self):
         # Use monospace as writing Python with a non-monospace
         # font is evil.
-        font = QFont()
-        font.setFamily("Monospace")
+        font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         font.setItalic(False)
         font.setBold(False)
         sizes = self._get_font_sizes(font.family())
