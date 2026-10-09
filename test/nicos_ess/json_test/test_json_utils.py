@@ -1,7 +1,7 @@
 import copy
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pytest
 
@@ -25,7 +25,7 @@ from nicos_ess.utilities.json_utils import (
 
 
 @pytest.fixture
-def structure() -> Dict[str, Any]:
+def structure() -> dict[str, Any]:
     """Load the test_structure.json located alongside this test file."""
     p = Path(__file__).parent / "test_structure.json"
     with p.open("r", encoding="utf-8") as f:
@@ -33,14 +33,14 @@ def structure() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def structure_copy(structure: Dict[str, Any]) -> Dict[str, Any]:
+def structure_copy(structure: dict[str, Any]) -> dict[str, Any]:
     """Deep copy of the loaded structure for mutation tests."""
     return copy.deepcopy(structure)
 
 
 def _children_of_named(
-    struct: Dict[str, Any], path_map, named: str
-) -> List[Dict[str, Any]]:
+    struct: dict[str, Any], path_map, named: str
+) -> list[dict[str, Any]]:
     """Grab the 'children' list of a named group (by reference)."""
     grp = get_by_named_path(struct, path_map, named)
     assert is_group(grp)
@@ -74,6 +74,14 @@ def test_generate_dataset_json_shape_and_dtype() -> None:
     assert node2["attributes"][0]["values"] == ""  # None -> ""
 
 
+def test_generate_dataset_json_string_without_unit_has_no_units() -> None:
+    assert generate_dataset_json("name", "cryostat", "")["attributes"] == []
+    assert generate_dataset_json("names", ["a", "b"], None)["attributes"] == []
+    assert generate_dataset_json("label", "five", "K")["attributes"] == [
+        {"name": "units", "dtype": "string", "values": "K"}
+    ]
+
+
 def test_generate_group_json() -> None:
     child = generate_dataset_json("x", 1, "a.u.")
     grp = generate_group_json("sample", "NXsample", [child])
@@ -95,7 +103,7 @@ def test_generate_nxlog_json() -> None:
 
 
 def test_build_json_from_groups() -> None:
-    groups: Dict[str, Dict[str, Any]] = {
+    groups: dict[str, dict[str, Any]] = {
         "entry": {
             "nx_class": "NXentry",
             "children": [generate_group_json("instrument", "NXinstrument", [])],
@@ -111,7 +119,7 @@ def test_build_json_from_groups() -> None:
     assert {"entry", "sample"} <= names
 
 
-def test_build_named_index_map_contains_core_groups(structure: Dict[str, Any]) -> None:
+def test_build_named_index_map_contains_core_groups(structure: dict[str, Any]) -> None:
     path_map = build_named_index_map(structure, include_datasets=True)
     assert "/entry" in path_map
     assert "/entry/instrument" in path_map
@@ -120,7 +128,7 @@ def test_build_named_index_map_contains_core_groups(structure: Dict[str, Any]) -
         assert is_group(node)
 
 
-def test_get_by_named_and_index_path_agree(structure: Dict[str, Any]) -> None:
+def test_get_by_named_and_index_path_agree(structure: dict[str, Any]) -> None:
     path_map = build_named_index_map(structure, include_datasets=True)
     instr = get_by_named_path(structure, path_map, "/entry/instrument")
     idx_tokens = path_map["/entry/instrument"]
@@ -130,15 +138,15 @@ def test_get_by_named_and_index_path_agree(structure: Dict[str, Any]) -> None:
 
 
 def test_index_path_to_expr_roundtrip_tokens() -> None:
-    tokens: List[Any] = ["children", 0, "children", 3, "config"]
+    tokens: list[Any] = ["children", 0, "children", 3, "config"]
     expr = index_path_to_expr(tokens)
     assert expr == "['children'][0]['children'][3]['config']"
 
 
-def test_mapping_includes_at_least_one_dataset(structure: Dict[str, Any]) -> None:
+def test_mapping_includes_at_least_one_dataset(structure: dict[str, Any]) -> None:
     """Find any dataset in the raw tree and assert mapping exposes it."""
 
-    def walk(node: Any, names: List[str]) -> Optional[str]:
+    def walk(node: Any, names: list[str]) -> Optional[str]:
         if isinstance(node, dict):
             if node.get("type") == "group" and isinstance(node.get("name"), str):
                 names = names + [node["name"]]
@@ -182,7 +190,7 @@ def test_build_named_index_map_on_conflict_list() -> None:
     assert len(val) == 2  # two separate index paths
 
 
-def test_append_keeps_same_children_list_object(structure_copy: Dict[str, Any]) -> None:
+def test_append_keeps_same_children_list_object(structure_copy: dict[str, Any]) -> None:
     path_map = build_named_index_map(structure_copy, include_datasets=True)
 
     entry = get_by_named_path(structure_copy, path_map, "/entry")
@@ -200,7 +208,7 @@ def test_append_keeps_same_children_list_object(structure_copy: Dict[str, Any]) 
     assert children[-1] is g
 
 
-def test_remove_keeps_same_children_list_object(structure_copy: Dict[str, Any]) -> None:
+def test_remove_keeps_same_children_list_object(structure_copy: dict[str, Any]) -> None:
     path_map = build_named_index_map(structure_copy, include_datasets=True)
 
     tmp = make_group("id_check_remove", nx_class="NXlog")
@@ -225,7 +233,7 @@ def test_remove_keeps_same_children_list_object(structure_copy: Dict[str, Any]) 
 
 
 def test_remove_dataset_under_mutates_parent_children_in_place(
-    structure_copy: Dict[str, Any],
+    structure_copy: dict[str, Any],
 ) -> None:
     path_map = build_named_index_map(structure_copy, include_datasets=True)
 
@@ -273,7 +281,7 @@ def test_remove_dataset_under_mutates_parent_children_in_place(
 
 
 def test_append_with_explicit_index_inserts_in_order(
-    structure_copy: Dict[str, Any],
+    structure_copy: dict[str, Any],
 ) -> None:
     path_map = build_named_index_map(structure_copy, include_datasets=True)
 
@@ -304,7 +312,7 @@ def test_append_with_explicit_index_inserts_in_order(
 
 
 def test_refresh_map_false_updates_preheld_reference(
-    structure_copy: Dict[str, Any],
+    structure_copy: dict[str, Any],
 ) -> None:
     path_map = build_named_index_map(structure_copy, include_datasets=True)
 
