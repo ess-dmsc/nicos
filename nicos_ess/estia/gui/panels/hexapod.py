@@ -262,6 +262,7 @@ class HexapodPanel(Panel):
         # Sets the spin boxes to the current axis positions for easier absolute motion control
         values = self.client.getDeviceParam(self.devname, "value")
         self.update_position_info(values, "newVal")
+        self.update_position_info(values, "curVal")
 
     @pyqtSlot()
     def on_butTest_pressed(self):
