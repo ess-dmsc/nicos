@@ -4,7 +4,9 @@ import os
 import subprocess
 import sys
 import time
+from bisect import bisect
 from collections import defaultdict
+from contextlib import suppress
 from logging import WARNING
 from uuid import uuid1
 
@@ -59,6 +61,8 @@ COMMENT_STR = "# "
 
 INDICATOR_RED = (255, 0, 0)
 INDICATOR_GREEN = (0, 165, 0)
+
+DEFAULT_FONT_SIZE = 16
 
 
 class FlakeCodes:
@@ -409,7 +413,7 @@ class EditorPanel(Panel):
         client.cache.connect(self.on_client_cache)
         client.experiment.connect(self.on_client_experiment)
 
-        self.custom_font = self._create_default_font()
+        self.custom_font, self.font_sizes = self._create_default_font()
         self.simFrame.simOutView.setFont(self.custom_font)
         self.simFrame.simOutViewErrors.setFont(self.custom_font)
 
@@ -462,15 +466,16 @@ class EditorPanel(Panel):
         bar.addAction(self.actionShowFind)
         bar.addSeparator()
         showToolText(bar, self.actionShowFind)
-        sizes = self._get_font_sizes(self.custom_font.family())
-        current = sizes.index(self.custom_font.pointSize())
-        bar.addWidget(FontSizeSelector(sizes, current, self._change_font_size))
+        current = self.font_sizes.index(self.custom_font.pointSize())
+        bar.addWidget(
+            FontSizeSelector(self.font_sizes, current, self._change_font_size)
+        )
         return bar
 
     def _get_font_sizes(self, font_family):
         # Handle Qt5 and Qt6 differences.
         # For Qt6 PointSizes has become a static method
-        if os.environ.get("NICOS_QT") == "6":
+        with suppress(Exception):
             return QFontDatabase.pointSizes(font_family)
         return QFontDatabase().pointSizes(font_family)
 
@@ -516,8 +521,14 @@ class EditorPanel(Panel):
         font.setFamily("Monospace")
         font.setItalic(False)
         font.setBold(False)
-        font.setPointSize(16)
-        return font
+        sizes = self._get_font_sizes(font.family())
+        point_size = DEFAULT_FONT_SIZE
+        if point_size not in sizes:
+            # If size does not exist, use one that is close.
+            position = min(bisect(sizes, point_size), len(sizes) - 1)
+            point_size = sizes[position]
+        font.setPointSize(point_size)
+        return font, sizes
 
     def setCustomStyle(self, font, back):
         # Ignore the global style update as we handle it ourselves.
