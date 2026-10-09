@@ -64,4 +64,52 @@ devices = dict(
         motorpv=f"{pv_root}-ColCh7:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
     ),
+    translation_X_detector_LA=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Detector Carriage 1",
+        motorpv=f"{pv_root}-DtCar1:MC-LinX-01:Mtr",
+        monitor_deadband=0.01,
+    ),
+    translation_X_detector_MA=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Detector Carriage 2",
+        motorpv=f"{pv_root}-DtCar2:MC-LinX-01:Mtr",
+        monitor_deadband=0.01,
+    ),
+    translation_Y_detector_LA=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Detector Carriage 1",
+        motorpv=f"{pv_root}-DtCar1:MC-LinY-01:Mtr",
+        monitor_deadband=0.01,
+    ),
+    translation_Z_detector_LA=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Detector Carriage 1",
+        motorpv=f"{pv_root}-DtCar1:MC-LftZ-01:Mtr",
+        monitor_deadband=0.01,
+    ),
+    translation_Y_detector_MA=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Detector Carriage 2",
+        motorpv=f"{pv_root}-DtCar2:MC-LinY-01:Mtr",
+        monitor_deadband=0.01,
+    ),
+    translation_Z_detector_MA=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Detector Carriage 2",
+        motorpv=f"{pv_root}-DtCar2:MC-LftZ-01:Mtr",
+        monitor_deadband=0.01,
+    ),
+    translation_Y_beamstop=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Beam Stop Positioning",
+        motorpv=f"{pv_root}-DtBS1:MC-LinY-01:Mtr",
+        monitor_deadband=0.01,
+    ),
+    translation_Z_beamstop=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Beam Stop Positioning",
+        motorpv=f"{pv_root}-DtBS1:MC-LinZ-01:Mtr",
+        monitor_deadband=0.01,
+    ),
 )
