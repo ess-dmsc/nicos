@@ -112,4 +112,32 @@ devices = dict(
         motorpv=f"{pv_root}-DtBS1:MC-LinZ-01:Mtr",
         monitor_deadband=0.01,
     ),
+    M3_in_beam_positioner=device(
+        "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
+        description="Experiment Shutter",
+        writepv=f"{pv_root}-InBmM3:MC-Pne-01:ShtOpen",
+        readpv=f"{pv_root}-InBmM3:MC-Pne-01:ShtAuxBits07",
+        statuspv=f"{pv_root}-InBmM3:MC-Pne-01:ShtStatusCode",
+        resetpv=f"{pv_root}-InBmM3:MC-Pne-01:ShtErrRst",
+        msgtxt=f"{pv_root}-InBmM3:MC-Pne-01:ShtMsgTxt",
+    ),
+    detector_tank_window_cover=device(
+        "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
+        description="Experiment Shutter",
+        writepv=f"{pv_root}-InBmWC:MC-Pne-01:ShtOpen",
+        readpv=f"{pv_root}-InBmWC:MC-Pne-01:ShtAuxBits07",
+        statuspv=f"{pv_root}-InBmWC:MC-Pne-01:ShtStatusCode",
+        resetpv=f"{pv_root}-InBmWC:MC-Pne-01:ShtErrRst",
+        msgtxt=f"{pv_root}-InBmWC:MC-Pne-01:ShtMsgTxt",
+    ),
+    # TODO: Not connecting
+    sample_stack_height=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Sample stack linear z main",
+        motorpv=f"{pv_root}-SpSt1I:MC-LftZ-02:Mtr",
+        monitor_deadband=0.01,
+    ),
+    # TODO: Anciliary?
+    # TODO: Hexapode?
+    # TODO: Snout?
 )
