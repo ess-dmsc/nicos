@@ -10,6 +10,8 @@ from nicos.guisupport.qt import (
     QLineEdit,
     QMenu,
     QPushButton,
+    QSizePolicy,
+    QSpacerItem,
     Qt,
     QVBoxLayout,
     pyqtSignal,
@@ -49,6 +51,9 @@ class CetoniLinkedDialog(QDialog):
         self._build_ui()
         self._reinit()
 
+        self._show_paramtable(expert)
+        self._set_size()
+
     def _build_ui(self):
         self._create_widgets()
         self._add_signals()
@@ -68,6 +73,22 @@ class CetoniLinkedDialog(QDialog):
         self._update_params()
         self._set_dev_repr()
         self._set_dialog_data()
+
+    def _show_paramtable(self, expert=False):
+        if expert:
+            self.dialog_layout.insertWidget(
+                self.dialog_layout.count() - 1, self.param_table
+            )
+        else:
+            spacer = QSpacerItem(
+                0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+            )
+            self.dialog_layout.insertItem(self.dialog_layout.count() - 1, spacer)
+
+    def _set_size(self):
+        sz = self.size()
+        sz.setHeight(self.sizeHint().height())
+        self.resize(sz)
 
     def _update_params(self):
         self.client.eval(f"{self.devname}.pollParams()", None)
@@ -242,7 +263,6 @@ class CetoniLinkedDialog(QDialog):
         self.button_start = QPushButton("Start")
         self.button_stop = QPushButton("Stop")
 
-        self.button_show_params = QPushButton("Show parameters")
         self.button_close = QPushButton("Close")
 
         self.menu = QMenu()
@@ -314,7 +334,6 @@ class CetoniLinkedDialog(QDialog):
         self.controls_section.addWidget(self.button_stop)
 
         self.bottom_section = QHBoxLayout()
-        self.bottom_section.addWidget(self.button_show_params)
         self.bottom_section.addStretch()
         self.bottom_section.addWidget(self.button_close)
 
