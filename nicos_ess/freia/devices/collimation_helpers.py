@@ -31,7 +31,7 @@ def resolution_to_slit(l2, l12, ia, res, footprint):
     return [slit1, slit2]
 
 
-def slit_to_resoultion(l2, l12, ia, slit1, slit2):
+def slit_to_resolution(l2, l12, ia, slit1, slit2):
     """The slit_to_resolution function calculates the footprint created by a pair of slits
     when the gap each slit creates is known.
 
