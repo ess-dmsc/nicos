@@ -125,9 +125,10 @@ class HexapodPanel(Panel):
             self.newPos_2.show()
             self.statusBox.show()
             self.coordBox.show()
+            self.otherOptBox.show()
+            self.statusimage.show()
             self.userModes.setTabVisible(1, 0)
             self.userModes.setTabVisible(2, 0)
-            self.statusimage.show()
         # better way to hide all this using another group box....but will do it later
         else:
             self.panelLabel.clear()
@@ -136,6 +137,7 @@ class HexapodPanel(Panel):
             self.newPos_2.hide()
             self.statusBox.hide()
             self.coordBox.hide()
+            self.otherOptBox.hide()
             self.statusimage.hide()
             self.userModes.setTabVisible(1, 0)
             self.userModes.setTabVisible(2, 0)
@@ -267,6 +269,23 @@ class HexapodPanel(Panel):
         self.test = self.client.getDeviceList(needs_class=class_typ)
         self.showError(f"{self.test}")
         # data = self.mainwindow.expertmode
+
+    # Other Hexapod control buttons, sending to any of the axes will start the hexapod as a whole
+    @pyqtSlot()
+    def on_butReset_pressed(self):
+        self.exec_command(f"reset('{self.adevs['tx']['devname']}')")
+
+    @pyqtSlot()
+    def on_butHome_pressed(self):
+        self.exec_command(f"home('{self.adevs['tx']['devname']}')")
+
+    @pyqtSlot()
+    def on_butDisable_pressed(self):
+        self.exec_command(f"disable('{self.adevs['tx']['devname']}')")
+
+    @pyqtSlot()
+    def on_butEnable_pressed(self):
+        self.exec_command(f"enable('{self.adevs['tx']['devname']}')")
 
     # absolute motion using move in GUI
     @pyqtSlot()
