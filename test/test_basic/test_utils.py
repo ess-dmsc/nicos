@@ -24,6 +24,7 @@
 
 """NICOS tests for some utility modules."""
 
+import contextlib
 import os
 import pickle
 import socket
@@ -175,14 +176,18 @@ def test_functions():
 
 
 def test_traceback():
-    a = 1  # pylint: disable=unused-variable
+    a = 1  # noqa: F841
     f = sys._getframe()
     fmt = formatExtendedFrame(f)
     assert any("a                    = 1" in line for line in fmt)
 
+    pw = passwd = token = "hunter2"  # noqa: F841
+    fmt = formatExtendedFrame(sys._getframe())
+    assert not any("hunter2" in line for line in fmt)
+
     try:
         try:
-            1 / 0
+            1 / 0  # noqa: B018
         except ZeroDivisionError as err:
             raise RuntimeError from err
     except Exception:
@@ -395,7 +400,7 @@ def test_check_setup_spec():
         # print is here to aid in finding the offending input parameters
         # as the stacktrace doesn't output locals
         res = checkSetupSpec(spec, setups)
-        print("testing checkSetupSpec(%r, %r) == %r: %r" % (spec, setups, result, res))
+        print(f"testing checkSetupSpec({spec!r}, {setups!r}) == {result!r}: {res!r}")
         assert res == result
 
 
@@ -436,7 +441,7 @@ def test_moveOutOfWay(tmpdir, maxbackup):
     fn1 = str(tmpdir.join("test1"))
     while i < 3:
         with open(fn1, "w", encoding="utf-8") as fp:
-            fp.write("Test %r %i" % (maxbackup, i))
+            fp.write(f"Test {maxbackup!r} {i}")
         moveOutOfWay(fn1, maxbackup)
         i += 1
 
@@ -564,15 +569,11 @@ def test_tupelize():
 @pytest.fixture(scope="function")
 def nonexistantfile(tmpdir):
     fc1 = str(tmpdir.join("testcounter1"))
-    try:
+    with contextlib.suppress(FileNotFoundError):
         os.unlink(fc1)
-    except FileNotFoundError:
-        pass
     yield fc1
-    try:
+    with contextlib.suppress(FileNotFoundError):
         os.unlink(fc1)
-    except FileNotFoundError:
-        pass
 
 
 @pytest.fixture(scope="function")

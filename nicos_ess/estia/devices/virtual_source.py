@@ -140,7 +140,6 @@ class VirtualSource(Moveable):
             return [target[:-1], target[4]]
 
     def doStart(self, target):
-        print(f"{self._parseTargets(target)}")
         for name, pos in zip(self.devices, self._parseTargets(target)):
             self._adevs[name].start(pos)
 
