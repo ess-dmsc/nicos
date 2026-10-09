@@ -6,7 +6,8 @@ from nicos.utils import readonlydict, readonlylist
 
 class nexusconfiglist:
     """a list of NeXus config dicts (items require: group_name, nx_class, dataset_type;
-    optionals: units, source_name, suffix, value, schema, topic, protocol, periodic, nexus_path)
+    optionals: units, source_name, suffix, name, value, schema, topic, protocol, periodic,
+    nexus_path)
     """
 
     _DATASET_TYPES = ("nx_log", "static_read", "static_value")
@@ -29,6 +30,7 @@ class nexusconfiglist:
                 "units",
                 "source_name",
                 "suffix",
+                "name",
                 "value",
                 "schema",
                 "topic",
@@ -80,6 +82,14 @@ class nexusconfiglist:
 
             if "suffix" in raw:
                 out["suffix"] = string(raw.get("suffix", ""))
+
+            if "name" in raw:
+                name = string(raw.get("name"))
+                if not name:
+                    raise ValueError(
+                        f"nexus_config[{idx}].name must be a non-empty string"
+                    )
+                out["name"] = name
 
             if "value" in raw:
                 out["value"] = string(raw.get("value", ""))
@@ -180,12 +190,16 @@ class HasNexusConfig(DeviceMixinBase):
     - `"static_value"`: Add a static string value to the Nexus file.
 
     Dictionary keys:
-        group_name (str): Name of the nicos device and entry in Nexus.
+        group_name (str): Name of the group in Nexus. If the group already
+            exists at `nexus_path`, the entry is added to it.
         nx_class (str): Nexus class.
         dataset_type (str): Dataset type, one of ["nx_log", "static_read", "static_value"].
         units (str, optional): Units of the value.
         source_name (str, optional): PV name for the EPICS Forwarder.
-        suffix (str, optional): String appended to the group name.
+        suffix (str, optional): String appended to the device name to form
+            the name of the entry in the group.
+        name (str, optional): Name of the entry in the group, instead of the
+            device name and suffix.
         value (str, optional): Static value to add to Nexus.
         schema (str, optional): Schema used when forwarding data to Kafka.
         topic (str, optional): Kafka topic to forward data to.
