@@ -22,9 +22,6 @@ class SeriesUpdates:
         self.last_series = series
 
 
-# The four rollover cases (count=128001/320001, both patterns) also fail at merge base
-# 11eee37ee1 with NumPy 1.26.4/lttb: the existing ndarray.resize() call is invalid.
-# This MR fails earlier in those cases because it uses the wrong lttbc API.
 @pytest.mark.parametrize("count", [128000, 128001, 320001])
 @pytest.mark.parametrize("pattern", ["line", "spike"])
 def test_full_history_buffer_keeps_accepting_values(count, pattern):
