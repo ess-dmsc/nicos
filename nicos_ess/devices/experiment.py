@@ -69,6 +69,7 @@ class EssExperiment(Experiment):
         "localcontact": Override(default=[], type=listof(dict)),
         "scripts": Override(category="experiment"),
         "errorbehavior": Override(default="abort", userparam=False),
+        "elog": Override(default=False),
     }
 
     def doInit(self, mode):
@@ -374,10 +375,6 @@ class EssExperiment(Experiment):
             "affiliation": affiliation,
             "facility_user_id": fed_id,
         }
-
-    @property
-    def sample(self):
-        return self._attached_sample
 
     def get_samples(self):
         return [dict(x) for x in self.sample.samples.values()]
