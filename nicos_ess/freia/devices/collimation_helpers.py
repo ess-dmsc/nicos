@@ -5,19 +5,60 @@ DISTRIBUTION = np.sqrt((2 * np.log(2)) / 3)
 
 def resolution_to_slit(l2, l12, ia, res, footprint):
     """The resolution_to_slit function calculates the gap needed by each slit to output the
-    desired footprint size on a sample. The original function was developed by the mantId project
-    in C: https://docs.mantidproject.org/nightly/algorithms/CalculateSlits-v1.html
+     desired footprint size on a sample. The original function was developed by the mantId project
+     in C: https://docs.mantidproject.org/nightly/algorithms/CalculateSlits-v1.html
 
-     -----INPUT-----
-     l2 - distance from the sample to the second set of slits (m)
-     l12 - distance between the collimation slits (m)
-     ia - the incident angle (deg)
-     res - the desired resolution (%)
-     footprint - the desired footprint size (mm)
+     -------------------------------------------------------------------------------------
+     From the Mantid docs:
+        |←----d-----→|
+                    _  _
+    _    _       _-¯ | ↑
+    ↑   | ¯-_ _-¯    | |
+    S₂  | (Θ_X_Θ)    | S₁  ←---beam---
+    ↓   |_-¯   ¯-_   | |
+    ¯             ¯-_| ↓
+                       ¯
+                    _  _
+                 _-¯ | ↑
+              _-¯    | |
+           _-¯      _| | ½S₀
+        _-¯α)      | | ↓
+         ¯¯¯¯¯¯¯¯¯¯¯¯  ¯
+        |←----d-----→|
 
-     -----OUTPUT-----
-     slit1 - the required gap size for slit1 (mm)
-     slit2 - the required gap size for slit2 (mm)
+         For the purposes of these diagrams, Θ has
+         already been multiplied by the resolution.
+
+         α = ½Θ
+         t = tan(α)
+         r = resolution
+         f = footprint (???)
+         u = unknown dimension
+
+         S₀ = S₁ + S₂
+             = 2•d•t
+
+         S₁ = 2•d•t - S₂
+             = 2•d•t - f•sin(α/r) + 2•u•t
+             = 2•(d+u)•t - f•sin(α/r)
+
+         S₂ = f•sin(α/r) - 2•u•t
+
+         sin(α/r) is opp/hyp of the full angle, without the resolution coefficient
+         if f is the hypotenuse of a triangle constructed from the full angle
+         then f•sin(α/r) is the length of the side opposite the angle
+     -----------------------------------------------------------------------------------
+
+      -----INPUT-----
+      l2 - distance from the sample to the second set of slits (m)
+      l12 - distance between the collimation slits (m)
+      ia - the incident angle (deg)
+      res - the desired resolution (%)
+      footprint - the desired footprint size (mm)
+
+      -----OUTPUT-----
+      slit1 - the required gap size for slit1 (mm)
+      slit2 - the required gap size for slit2 (mm)
     """
 
     sinTheta = (footprint / 1000) * (np.sin(np.radians(ia)))
