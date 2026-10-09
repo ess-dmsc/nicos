@@ -48,7 +48,7 @@ devices = dict(
     ),
     divergence_slit_1_p_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Divergence slit 1 right temperature",
+        description="Divergence slit 1 left temperature",
         readpv="BIFRO-DivSl1:MC-SlYp-01:Mtr-Temp",
     ),
     divergence_slit_1_m=device(
