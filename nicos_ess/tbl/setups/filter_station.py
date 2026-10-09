@@ -17,10 +17,10 @@ devices = dict(
         description="Filter bank 1 discrete positions",
         controlled_device="bank_1_axis",
         mapping={
-            "Blank": 1,
-            "Bi: ⌀40 x 50 mm": 56.66,
-            "Cd: ⌀40 x 50 mm": 131.66,
-            "Sapphire: ⌀40 x 50 mm": 206.66,
+            "Bi: ⌀40 x 50 mm": 21.66,
+            "Cd: ⌀40 x 50 mm": 96.66,
+            "Sapphire: ⌀40 x 50 mm": 171.66,
+            "Blank": 295,
         },
     ),
     bank_2_axis=device(
@@ -39,10 +39,10 @@ devices = dict(
         description="Filter bank 2 discrete positions",
         controlled_device="bank_2_axis",
         mapping={
-            "Blank": 1,
-            "Bi: ⌀50 x 25 mm": 58.91,
-            "Be: ⌀50 x 40 mm": 133.91,
-            "Si: ⌀40 x 50 mm": 208.91,
+            "Bi: ⌀50 x 25 mm (1)": 23.91,
+            "Bi: ⌀50 x 25 mm (2)": 98.91,
+            "Si: ⌀40 x 50 mm": 173.91,
+            "Blank": 295,
         },
     ),
     bank_3_axis=device(
@@ -61,8 +61,8 @@ devices = dict(
         description="Filter bank 3 discrete positions",
         controlled_device="bank_3_axis",
         mapping={
-            "Blank": 1,
-            "Bi: ⌀50 x 60 mm": 57.07,
+            "Bi: ⌀50 x 60 mm": 22.07,
+            "Blank": 89.07,
             "Beam Monitor": 221.07,
         },
     ),
