@@ -833,6 +833,20 @@
              </property>
             </widget>
            </item>
+           <item row="0" column="4">
+            <widget class="QPushButton" name="butHome">
+             <property name="text">
+              <string>Home</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="4">
+            <widget class="QPushButton" name="butEnable">
+             <property name="text">
+              <string>Enable</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
         </layout>
