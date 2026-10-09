@@ -4,6 +4,37 @@ from nicos.core import ConfigurationError
 from nicos.utils.credentials.keystore import nicoskeystore
 
 
+class SecretStr:
+    """A string that hides its value from ``str()`` and ``repr()``.
+
+    Mimics ``pydantic.SecretStr``.
+    """
+
+    def __init__(self, secret_value):
+        self._secret_value = secret_value
+
+    def get_secret_value(self):
+        return self._secret_value
+
+    def __str__(self):
+        return "**********"
+
+    def __repr__(self):
+        return "SecretStr('**********')"
+
+
+def reveal_secrets(config):
+    """Return a copy of a Kafka config with its secrets in plain text.
+
+    Pass the result directly to the Kafka client. Bound to a variable, it
+    ends up in the tracebacks of the log files.
+    """
+    return {
+        key: value.get_secret_value() if isinstance(value, SecretStr) else value
+        for key, value in config.items()
+    }
+
+
 def create_sasl_config():
     """Create a SASL config for connecting to Kafka.
 
@@ -49,7 +80,7 @@ def create_sasl_config():
         "security.protocol": protocol,
         "sasl.mechanism": mechanism,
         "sasl.username": username,
-        "sasl.password": password,
+        "sasl.password": SecretStr(password),
     }
 
     if cert_filepath:

@@ -38,14 +38,15 @@ import threading
 import traceback
 import unicodedata
 from collections import OrderedDict
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from datetime import date, timedelta
 from functools import wraps
 from io import BufferedWriter, FileIO
 from itertools import chain, islice
 from os import path
 from stat import S_IRGRP, S_IROTH, S_IRUSR, S_IRWXU, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR
-from time import localtime, mktime, sleep, strftime, strptime, time as currenttime
+from time import localtime, mktime, sleep, strftime, strptime
+from time import time as currenttime
 
 import numpy
 
@@ -217,7 +218,7 @@ class HardwareStub:
         from nicos.core import ProgrammingError
 
         raise ProgrammingError(
-            self.dev, "accessing hardware method %s in " "simulation mode" % name
+            self.dev, f"accessing hardware method {name} in simulation mode"
         )
 
 
@@ -238,19 +239,20 @@ def formatDuration(secs, precise=True):
     if secs < 1:
         est = "< 1 second"
     elif 1 <= secs < 60:
-        est = "%s second%s" % _s(secs + 0.5)
+        est = "{} second{}".format(*_s(secs + 0.5))
     elif secs < 3600:
-        if precise:
-            est = "%s min, %s sec" % (int(secs / 60.0), int(secs % 60))
-        else:
-            est = "%s min" % int(secs / 60.0 + 0.5)
+        est = (
+            f"{int(secs / 60.0)} min, {int(secs % 60)} sec"
+            if precise
+            else f"{int(secs / 60.0 + 0.5)} min"
+        )
     elif secs < 86400:
         hrs = int(secs / 3600.0)
         mins = int((secs % 3600) / 60.0 + 0.5)
         if mins == 60:
             hrs += 1
             mins = 0
-        est = "%s h, %s min" % (hrs, mins)
+        est = f"{hrs} h, {mins} min"
     else:
         days = int(secs / 86400.0)
         hrs = int((secs % 86400) / 3600.0 + 0.5)
@@ -352,7 +354,7 @@ def getSysInfo(service):
         custom_version=get_custom_version(),
     )
     nicosroot_key = config.nicos_root.replace("/", "_")
-    key = "sysinfo/%s/%s/%s" % (service, host, nicosroot_key)
+    key = f"sysinfo/{service}/{host}/{nicosroot_key}"
     return key, res
 
 
@@ -422,14 +424,10 @@ def closeSocket(sock, socket=socket):
     """Do our best to close a socket."""
     if sock is None:
         return
-    try:
+    with suppress(OSError):
         sock.shutdown(socket.SHUT_RDWR)
-    except OSError:
-        pass
-    try:
+    with suppress(OSError):
         sock.close()
-    except OSError:
-        pass
 
 
 @contextmanager
@@ -485,12 +483,12 @@ def createThread(name, target, args=(), kwargs=None, daemon=True, start=True):
 
 def createSubprocess(cmdline, **kwds):
     """Create a subprocess.Popen with the proper setting of close_fds."""
-    if "close_fds" not in kwds:
-        # only supported on Posix and (Windows if not redirected)
-        if os.name == "posix" or not (
-            kwds.get("stdin") or kwds.get("stdout") or kwds.get("stderr")
-        ):
-            kwds["close_fds"] = True
+    # only supported on Posix and (Windows if not redirected)
+    if "close_fds" not in kwds and (
+        os.name == "posix"
+        or not (kwds.get("stdin") or kwds.get("stdout") or kwds.get("stderr"))
+    ):
+        kwds["close_fds"] = True
     return subprocess.Popen(cmdline, **kwds)  # pylint: disable=consider-using-with
 
 
@@ -610,7 +608,7 @@ def importString(import_name):
     try:
         mod = __import__(modname, {}, {}, fromlist)
     except ImportError as err:
-        raise ImportError("Could not import %r: %s" % (import_name, err)) from err
+        raise ImportError(f"Could not import {import_name!r}: {err}") from err
     if not obj:
         return mod
     else:
@@ -640,7 +638,7 @@ DEFAULT_FILE_MODE = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 
 
 def readFile(filename):
-    with open(filename, "r", encoding="utf-8") as fp:
+    with open(filename, encoding="utf-8") as fp:
         return [line.strip() for line in fp]
 
 
@@ -667,11 +665,11 @@ def moveOutOfWay(filepath, maxbackups=10):
         return None
     if maxbackups is not None:
         for i in range(maxbackups, 1, -1):
-            old_bkup = filepath + ".~%d~" % (i - 1)
-            new_bkup = filepath + ".~%d~" % (i)
+            old_bkup = f"{filepath}.~{i - 1}~"
+            new_bkup = f"{filepath}.~{i}~"
             if path.exists(old_bkup):
                 os.rename(old_bkup, new_bkup)
-        os.rename(filepath, filepath + ".~%d~" % 1)
+        os.rename(filepath, f"{filepath}.~1~")
         return old_bkup
     else:
         bu_re = re.compile(filepath + r"\.~([0-9]+)~")
@@ -682,15 +680,14 @@ def moveOutOfWay(filepath, maxbackups=10):
         ]
         nxt = max(exist_matching) + 1 if exist_matching else 1
         while True:
-            renamename = filepath + ".~%d~" % nxt
+            renamename = f"{filepath}.~{nxt}~"
             if not path.exists(renamename):
                 try:
                     os.rename(filepath, renamename)
                     return renamename
-                except os.error as ex:
+                except OSError as ex:
                     raise RuntimeError(
-                        "Could not rename %s to backup "
-                        "name %s: %s" % (filepath, renamename, ex)
+                        f"Could not rename {filepath} to backup name {renamename}: {ex}"
                     ) from ex
             # retry if backup name was already used
             nxt = nxt + 1
@@ -724,18 +721,14 @@ def getPidfileName(appname):
 
 def writePidfile(appname):
     pidpath = getPidfileName(appname)
-    try:
+    with suppress(FileExistsError):
         os.makedirs(path.dirname(pidpath))
-    except FileExistsError:
-        pass
     writeFile(pidpath, [str(os.getpid())])
 
 
 def removePidfile(appname):
-    try:
+    with suppress(FileNotFoundError):
         os.unlink(getPidfileName(appname))
-    except FileNotFoundError:
-        pass
 
 
 def ensureDirectory(dirname, enableDirMode=DEFAULT_DIR_MODE, **kwargs):
@@ -827,12 +820,10 @@ def disableDirectory(
         enable=False,
         logger=logger,
     )
-    if failflag:
-        if logger:
-            logger.warning(
-                "Disabling failed for some files, please check "
-                "access rights manually"
-            )
+    if failflag and logger:
+        logger.warning(
+            "Disabling failed for some files, please check access rights manually"
+        )
     return failflag
     # maybe logging is better done in the caller of disableDirectory
 
@@ -864,11 +855,10 @@ def enableDirectory(
         enable=True,
         logger=logger,
     )
-    if failflag:
-        if logger:
-            logger.warning(
-                "Enabling failed for some files, please check " "access rights manually"
-            )
+    if failflag and logger:
+        logger.warning(
+            "Enabling failed for some files, please check access rights manually"
+        )
     return failflag
     # maybe logging is better done in the caller of enableDirectory
 
@@ -952,8 +942,8 @@ def expandTemplate(template, keywords):
         # malformed template (number of T_BEGIN != T_END)
         # XXX: improve error msg!
         raise ValueError(
-            "malformed template! resolving of %r stopped at position %d"
-            % ("".join(tokens), len(tokens[0]))
+            f"malformed template! resolving of {''.join(tokens)!r} "
+            f"stopped at position {len(tokens[0])}"
         )
     return tokens[0], stats["defaulted"], stats["missing"]
 
@@ -1004,8 +994,8 @@ def daemonize():
 
     # redirect standard file descriptors
     # pylint: disable=consider-using-with,unspecified-encoding
-    sys.stdin = open("/dev/null", "r", encoding=None)
-    sys.stdout = sys.stderr = open("/dev/null", "w", encoding=None)
+    sys.stdin = open("/dev/null", encoding=None)  # noqa: SIM115
+    sys.stdout = sys.stderr = open("/dev/null", "w", encoding=None)  # noqa: SIM115
 
 
 def setuser(recover=True):
@@ -1083,8 +1073,8 @@ _colors = [
 ]
 
 for _i, (_dark, _light) in enumerate(_colors):
-    _codes[_dark] = "\x1b[%im" % (_i + 30)
-    _codes[_light] = "\x1b[%i;01m" % (_i + 30)
+    _codes[_dark] = f"\x1b[{_i + 30}m"
+    _codes[_light] = f"\x1b[{_i + 30};01m"
 
 
 def colorize(name, text):
@@ -1123,10 +1113,10 @@ def whyExited(status):
                 if name.startswith("SIG") and getattr(signal, name) == signum
             ][0]
         except IndexError:
-            signame = "signal %d" % signum
+            signame = f"signal {signum}"
         return signame
     else:
-        return "exit code %d" % os.WEXITSTATUS(status)
+        return f"exit code {os.WEXITSTATUS(status)}"
 
 
 # traceback utilities
@@ -1135,23 +1125,23 @@ def whyExited(status):
 def formatExtendedFrame(frame):
     ret = []
     for key, value in frame.f_locals.items():
-        if key.startswith(("credentials", "password", "secret")):
+        if key.startswith(
+            ("credentials", "password", "passwd", "pw", "secret", "token")
+        ):
             continue
         try:
             valstr = repr(value)[:256]
         except Exception:
             valstr = "<cannot be displayed>"
-        ret.append("        %-20s = %s\n" % (key, valstr))
+        ret.append(f"        {key:<20} = {valstr}\n")
     ret.append("\n")
     return ret
 
 
 ST_HEADER = "Stack trace (most recent call last):"
 TB_HEADER = "Traceback (most recent call last):"
-TB_CAUSE_MSG = "The above exception was the direct cause of the " "following exception:"
-TB_CONTEXT_MSG = (
-    "During handling of the above exception, another " "exception occurred:"
-)
+TB_CAUSE_MSG = "The above exception was the direct cause of the following exception:"
+TB_CONTEXT_MSG = "During handling of the above exception, another exception occurred:"
 
 
 def listExtendedTraceback(exc, seen=None):
@@ -1173,19 +1163,16 @@ def listExtendedTraceback(exc, seen=None):
     while tb is not None:
         frame = tb.tb_frame
         filename = frame.f_code.co_filename
-        item = '  File "%s", line %d, in %s\n' % (
-            filename,
-            tb.tb_lineno,
-            frame.f_code.co_name,
-        )
+        item = f'  File "{filename}", line {tb.tb_lineno}, in {frame.f_code.co_name}\n'
         linecache.checkcache(filename)
         line = linecache.getline(filename, tb.tb_lineno, frame.f_globals)
         if line:
-            item = item + "    %s\n" % line.strip()
+            item = item + f"    {line.strip()}\n"
         ret.append(item)
-        if filename not in ("<script>", "<string>"):
-            if tb.tb_frame.f_globals.get("__name__", "").startswith("nicos"):
-                ret += formatExtendedFrame(tb.tb_frame)
+        if filename not in ("<script>", "<string>") and tb.tb_frame.f_globals.get(
+            "__name__", ""
+        ).startswith("nicos"):
+            ret += formatExtendedFrame(tb.tb_frame)
         tb = tb.tb_next
     ret += traceback.format_exception_only(type(exc), exc)
     return ret
@@ -1212,11 +1199,11 @@ def formatExtendedStack(frame=None, level=1):
         co = frame.f_code
         filename = co.co_filename
         name = co.co_name
-        item = '  File "%s", line %d, in %s\n' % (filename, lineno, name)
+        item = f'  File "{filename}", line {lineno}, in {name}\n'
         linecache.checkcache(filename)
         line = linecache.getline(filename, lineno, frame.f_globals)
         if line:
-            item = item + "    %s\n" % line.strip()
+            item = item + f"    {line.strip()}\n"
         ret.insert(1, item)
         if filename != "<script>":
             ret[2:2] = formatExtendedFrame(frame)
@@ -1251,17 +1238,17 @@ def formatScriptError(exc_info, script_name, script_text):
         tb = tb.tb_next
     # try to format the line
     if lineno is not None:
-        msg = "The error was in line %d:\n\n" % lineno
+        msg = f"The error was in line {lineno}:\n\n"
         minline = max(lineno - 5, 0)
         lines = script_text.splitlines(True)[minline : lineno + 4]
         for i, line in enumerate(lines, start=minline + 1):
-            msg += "%4d %s | %s" % (i, "*" if i == lineno else " ", line)
+            msg += f"{i:4d} {'*' if i == lineno else ' '} | {line}"
     elif len(script_text) < 10000:
         msg = "The script was:\n\n" + script_text
     else:
         msg = ""
     if script_name:
-        msg = "Script name: %s\n\n" % script_name + msg
+        msg = f"Script name: {script_name}\n\n" + msg
     body = "An error occurred in the executed script:\n\n" + exception + "\n\n" + msg
     return body, exception
 
@@ -1304,7 +1291,7 @@ def updateFileCounter(counterpath, key, value):
         linekey, _ = line.split()
         if linekey != key:
             new_lines.append(line + "\n")
-    new_lines.append("%s %d\n" % (key, value))
+    new_lines.append(f"{key} {value:d}\n")
     writeFile(counterpath, new_lines)
 
 
@@ -1392,7 +1379,7 @@ def decodeAny(string):
 
 
 _SAFE_FILE_CHARS = frozenset(
-    "-=+_.,()[]{}0123456789abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "-=+_.,()[]{}0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 _BAD_NAMES = frozenset(
     (".", "..", "con", "prn", "aux", "nul")
@@ -1575,8 +1562,9 @@ class FitterRegistry:
             return cls.fitters[key.lower()]
         except KeyError:
             raise KeyError(
-                "Unknown fitter name %r, known fitters: %s"
-                % (key, ", ".join(cls.fitters))
+                "Unknown fitter name {!r}, known fitters: {}".format(
+                    key, ", ".join(cls.fitters)
+                )
             ) from None
 
 
@@ -1661,7 +1649,7 @@ def parseKeyExpression(
     try:
         expr = ast.parse(spec, mode="eval").body
     except SyntaxError:
-        raise ValueError("invalid key spec: %r" % spec) from None
+        raise ValueError(f"invalid key spec: {spec!r}") from None
     if isinstance(expr, ast.Tuple) and multiple:
         exprs = expr.elts
         descs = _split_spec(spec, exprs)
@@ -1684,7 +1672,7 @@ def parseKeyExpression(
                 node.id = "x"
                 break
         if key is None:
-            raise ValueError("no variable in key spec %r" % descs[-1])
+            raise ValueError(f"no variable in key spec {descs[-1]!r}")
         keys.append(key)
         # expression can be None to mean "identity"
         if isinstance(expr, ast.Name) and expr.id == "x":
@@ -1703,7 +1691,7 @@ def checkSetupSpec(setupspec, setups, log=None):
     def subst_setupexpr(match):
         if match.group() in ("has_setup", "and", "or", "not"):
             return match.group()
-        return "has_setup(%r)" % match.group()
+        return f"has_setup({match.group()!r})"
 
     def has_setup(spec):
         return bool(fnmatch.filter(setups, spec))
@@ -1758,7 +1746,7 @@ DURATION_RE = re.compile(
     re.X,
 )
 
-DURATION_HINT = "Provide value as %s or %s." % (
+DURATION_HINT = "Provide value as {} or {}.".format(
     "<number>",
     "[-+][<number>d[ays]][:][<number>h[r]][:][<number>m[in]][:][<number>s[ec]]",
 )
@@ -1813,7 +1801,7 @@ def parseDuration(inputvalue, allownegative=False):
 
         if not m:
             raise ValueError(
-                '"%s" can not be parsed. ' % inputvalue + DURATION_HINT
+                f'"{inputvalue}" can not be parsed. ' + DURATION_HINT
             ) from None
 
         groupdict = m.groupdict()
