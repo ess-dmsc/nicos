@@ -1,50 +1,52 @@
 description = "The livedata."
 
+excludes = ["just-bin-it"]
+
 devices = dict(
-    psc_monitor_counts_total=device(
+    psc_monitor=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="A bifrost livedata channel",
-        device_name="psc_monitor_counts_total",
+        device_name="psc_monitor_histogram",
         source_name="psc_monitor",
         workflow_id="bifrost/monitor_histogram/1",
         type="counter",
     ),
-    overlap_monitor_counts_total=device(
+    overlap_monitor=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="A bifrost livedata channel",
-        device_name="overlap_monitor_counts_total",
+        device_name="overlap_monitor_histogram",
         source_name="overlap_monitor",
         workflow_id="bifrost/monitor_histogram/1",
         type="counter",
     ),
-    bandwidth_monitor_counts_total=device(
+    bandwidth_monitor=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="A bifrost livedata channel",
-        device_name="bandwidth_monitor_counts_total",
+        device_name="bandwidth_monitor_histogram",
         source_name="bandwidth_monitor",
         workflow_id="bifrost/monitor_histogram/1",
         type="counter",
     ),
-    normalization_monitor_counts_total=device(
+    normalization_monitor=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="A bifrost livedata channel",
-        device_name="normalization_monitor_counts_total",
+        device_name="normalization_monitor_histogram",
         source_name="normalization_monitor",
         workflow_id="bifrost/monitor_histogram/1",
         type="counter",
     ),
-    elastic_monitor_counts_total=device(
+    elastic_monitor=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="A bifrost livedata channel",
-        device_name="elastic_monitor_counts_total",
+        device_name="elastic_monitor_histogram",
         source_name="elastic_monitor",
         workflow_id="bifrost/monitor_histogram/1",
         type="counter",
     ),
-    unified_detector_counts_total=device(
+    detector_image=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="A bifrost livedata channel",
-        device_name="unified_detector_counts_total",
+        device_name="unified_detector_image",
         source_name="unified_detector",
         workflow_id="bifrost/unified_detector_view/1",
         type="counter",
@@ -57,12 +59,23 @@ devices = dict(
         commands_topic="bifrost_livedata_commands",
         status_topics=["bifrost_livedata_heartbeat"],
         others=[
-            "psc_monitor_counts_total",
-            "overlap_monitor_counts_total",
-            "bandwidth_monitor_counts_total",
-            "normalization_monitor_counts_total",
-            "elastic_monitor_counts_total",
-            "unified_detector_counts_total",
+            "psc_monitor",
+            "overlap_monitor",
+            "bandwidth_monitor",
+            "normalization_monitor",
+            "elastic_monitor",
+            "detector_image",
         ],
+        timers=["timer"],
+    ),
+    timer=device(
+        "nicos_ess.devices.timer.TimerChannel",
+        description="Timer",
+        fmtstr="%.2f",
+        unit="s",
     ),
 )
+
+startupcode = """
+SetDetectors(livedata_collector)
+"""
