@@ -52,24 +52,20 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import (
     Any,
-    Dict,
-    List,
     Literal,
-    Optional,
-    Tuple,
     TypedDict,
     Union,
 )
 
 Key = Union[str, int]
-IndexPath = List[Key]
+IndexPath = list[Key]
 ConflictPolicy = Literal["first", "last", "list", "error"]
 Which = Literal["first", "last", "all", "index"]
 
 
 class _GroupSpec(TypedDict):
     nx_class: str
-    children: List[Dict[str, Any]]
+    children: list[dict[str, Any]]
 
 
 def generate_nxlog_json(
@@ -78,7 +74,7 @@ def generate_nxlog_json(
     source: str,
     topic: str,
     units: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build a minimal NXlog group node.
 
     Args:
@@ -134,25 +130,31 @@ def _parse_dtype(value: Any) -> str:
 def generate_dataset_json(
     name: str,
     value: Any,
-    unit: Optional[str],
-) -> Dict[str, Any]:
+    unit: str | None,
+) -> dict[str, Any]:
     """Build a ``dataset`` module node with a ``units`` attribute.
 
     Args:
         name: Dataset name (stored in ``config.name``).
         value: Dataset values (stored in ``config.values``).
-        unit: Units string for the dataset; if ``None`` or empty, an empty string is used.
+        unit: Units string for the dataset; if ``None`` or empty, an empty string is
+            used, except for string values, which then get no ``units`` attribute.
 
     Returns:
         A dictionary representing a dataset module with dtype inferred from ``value``.
     """
-    attributes = [{"name": "units", "dtype": "string", "values": unit if unit else ""}]
+    dtype = _parse_dtype(value)
+    attributes = []
+    if unit or dtype != "string":
+        attributes = [
+            {"name": "units", "dtype": "string", "values": unit if unit else ""}
+        ]
     return {
         "module": "dataset",
         "config": {
             "name": name,
             "values": value,
-            "dtype": _parse_dtype(value),
+            "dtype": dtype,
         },
         "attributes": attributes,
     }
@@ -161,8 +163,8 @@ def generate_dataset_json(
 def generate_group_json(
     name: str,
     nx_class: str,
-    children: List[Dict[str, Any]],
-) -> Dict[str, Any]:
+    children: list[dict[str, Any]],
+) -> dict[str, Any]:
     """Build a group with an ``NX_class`` attribute and provided children.
 
     Args:
@@ -182,8 +184,8 @@ def generate_group_json(
 
 
 def build_json(
-    groups: Mapping[str, Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    groups: Mapping[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
     """Build a list of group nodes from a mapping.
 
     Expects each ``groups[name]`` to contain:
@@ -221,7 +223,7 @@ def is_dataset(node: Any) -> bool:
     )
 
 
-def get_dataset_name(node: Dict[str, Any]) -> str:
+def get_dataset_name(node: dict[str, Any]) -> str:
     """Get dataset name from a dataset node."""
     return node["config"]["name"]
 
@@ -243,7 +245,7 @@ def get_by_index_path(obj: Any, path: Sequence[Key]) -> Any:
     return cur
 
 
-def _as_paths(entry: Union[IndexPath, List[IndexPath]]) -> List[IndexPath]:
+def _as_paths(entry: IndexPath | list[IndexPath]) -> list[IndexPath]:
     """Normalize a mapping value into a list of index paths."""
     if isinstance(entry, list) and entry and isinstance(entry[0], (str, int)):
         return [entry]  # a single index path
@@ -254,7 +256,7 @@ def _as_paths(entry: Union[IndexPath, List[IndexPath]]) -> List[IndexPath]:
 
 def get_by_named_path(
     obj: Any,
-    mapping: Dict[str, Union[IndexPath, List[IndexPath]]],
+    mapping: dict[str, IndexPath | list[IndexPath]],
     named_path: str,
 ) -> Any:
     """Fetch a node by its named path (e.g. ``/entry/instrument``).
@@ -269,7 +271,7 @@ def get_by_named_path(
 
 
 def _store(
-    mapping: Dict[str, Union[IndexPath, List[IndexPath]]],
+    mapping: dict[str, IndexPath | list[IndexPath]],
     key: str,
     value: IndexPath,
     on_conflict: ConflictPolicy,
@@ -307,7 +309,7 @@ def build_named_index_map(
     include_datasets: bool = True,
     include_groups: bool = True,
     on_conflict: ConflictPolicy = "first",
-) -> Dict[str, Union[IndexPath, List[IndexPath]]]:
+) -> dict[str, IndexPath | list[IndexPath]]:
     """Build a mapping from named paths to index paths.
 
     Args:
@@ -328,9 +330,9 @@ def build_named_index_map(
           - index path like ``['children', 0, ...]``, or
           - a list of such index paths (if ``on_conflict='list'``).
     """
-    mapping: Dict[str, Union[IndexPath, List[IndexPath]]] = {}
+    mapping: dict[str, IndexPath | list[IndexPath]] = {}
 
-    def walk(node: Any, idx_path: IndexPath, name_stack: List[str]) -> None:
+    def walk(node: Any, idx_path: IndexPath, name_stack: list[str]) -> None:
         effective_stack = name_stack
         if is_group(node):
             effective_stack = name_stack + [node["name"]]
@@ -353,7 +355,7 @@ def build_named_index_map(
     return mapping
 
 
-def make_getter(root: Any, mapping: Dict[str, Union[IndexPath, List[IndexPath]]]):
+def make_getter(root: Any, mapping: dict[str, IndexPath | list[IndexPath]]):
     """Return a function like ``get('/entry/instrument') -> node``."""
 
     def _get(named_path: str) -> Any:
@@ -363,11 +365,11 @@ def make_getter(root: Any, mapping: Dict[str, Union[IndexPath, List[IndexPath]]]
 
 
 def _resolve_named_path(
-    mapping: Dict[str, Union[IndexPath, List[IndexPath]]],
+    mapping: dict[str, IndexPath | list[IndexPath]],
     named_path: str,
     which: Which = "first",
-    index: Optional[int] = None,
-) -> List[IndexPath]:
+    index: int | None = None,
+) -> list[IndexPath]:
     """Resolve a named path into one or more index paths."""
     if named_path not in mapping:
         raise KeyError(f"Named path not found: {named_path!r}")
@@ -386,7 +388,7 @@ def _resolve_named_path(
     raise ValueError(f"Unknown 'which' value: {which}")
 
 
-def _parent_and_key(root: Any, idx_path: Sequence[Key]) -> Tuple[Any, Key]:
+def _parent_and_key(root: Any, idx_path: Sequence[Key]) -> tuple[Any, Key]:
     """Return ``(parent_container, last_key)`` for an index path."""
     if not idx_path:
         raise ValueError("Empty index path has no parent")
@@ -409,13 +411,13 @@ def _remove_at_index_path(root: Any, idx_path: Sequence[Key]) -> Any:
 
 def append_group_under(
     root: Any,
-    mapping: Dict[str, Union[IndexPath, List[IndexPath]]],
+    mapping: dict[str, IndexPath | list[IndexPath]],
     parent_named_path: str,
-    group_node: Dict[str, Any],
+    group_node: dict[str, Any],
     *,
-    insert_at: Optional[int] = None,
+    insert_at: int | None = None,
     refresh_map: bool = True,
-) -> Tuple[IndexPath, Dict[str, Union[IndexPath, List[IndexPath]]]]:
+) -> tuple[IndexPath, dict[str, IndexPath | list[IndexPath]]]:
     """Append (or insert) a group under the parent's ``children`` list.
 
     Args:
@@ -449,25 +451,24 @@ def append_group_under(
 
     inserted_idx_path = list(parent_idx_path) + ["children", pos]
 
-    if refresh_map:
-        new_map = build_named_index_map(
-            root, include_datasets=True, include_groups=True
-        )
-    else:
-        new_map = mapping  # unchanged
+    new_map = (
+        build_named_index_map(root, include_datasets=True, include_groups=True)
+        if refresh_map
+        else mapping
+    )
 
     return inserted_idx_path, new_map
 
 
 def remove_by_named_path(
     root: Any,
-    mapping: Dict[str, Union[IndexPath, List[IndexPath]]],
+    mapping: dict[str, IndexPath | list[IndexPath]],
     named_path: str,
     *,
     which: Which = "first",
-    index: Optional[int] = None,
+    index: int | None = None,
     refresh_map: bool = True,
-) -> Tuple[int, Dict[str, Union[IndexPath, List[IndexPath]]]]:
+) -> tuple[int, dict[str, IndexPath | list[IndexPath]]]:
     """Remove a dataset or group addressed by its named path.
 
     Args:
@@ -484,7 +485,7 @@ def remove_by_named_path(
     targets = _resolve_named_path(mapping, named_path, which, index)
 
     # Remove in stable order (for list parents: higher indices first).
-    def parent_key(p: IndexPath) -> Tuple[Tuple[Key, ...], int, int]:
+    def parent_key(p: IndexPath) -> tuple[tuple[Key, ...], int, int]:
         parent = get_by_index_path(root, p[:-1]) if p[:-1] else root
         is_list = 1 if isinstance(parent, list) else 0
         last = p[-1]
@@ -496,26 +497,25 @@ def remove_by_named_path(
         _remove_at_index_path(root, p)
         removed += 1
 
-    if refresh_map:
-        new_map = build_named_index_map(
-            root, include_datasets=True, include_groups=True
-        )
-    else:
-        new_map = mapping
+    new_map = (
+        build_named_index_map(root, include_datasets=True, include_groups=True)
+        if refresh_map
+        else mapping
+    )
 
     return removed, new_map
 
 
 def remove_dataset_under(
     root: Any,
-    mapping: Dict[str, Union[IndexPath, List[IndexPath]]],
+    mapping: dict[str, IndexPath | list[IndexPath]],
     parent_named_path: str,
     dataset_name: str,
     *,
     which: Which = "first",
-    index: Optional[int] = None,
+    index: int | None = None,
     refresh_map: bool = True,
-) -> Tuple[int, Dict[str, Union[IndexPath, List[IndexPath]]]]:
+) -> tuple[int, dict[str, IndexPath | list[IndexPath]]]:
     """Remove dataset(s) by name under a parent group.
 
     The target named path is constructed as ``"{parent}/{dataset_name}"``.
@@ -534,12 +534,12 @@ def remove_dataset_under(
 def make_group(
     name: str,
     *,
-    nx_class: Optional[str] = None,
-    attributes: Optional[List[Dict[str, Any]]] = None,
-    children: Optional[List[Dict[str, Any]]] = None,
-) -> Dict[str, Any]:
+    nx_class: str | None = None,
+    attributes: list[dict[str, Any]] | None = None,
+    children: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Construct a minimal group node compatible with these utilities."""
-    node: Dict[str, Any] = {"type": "group", "name": name}
+    node: dict[str, Any] = {"type": "group", "name": name}
     if attributes or nx_class:
         node["attributes"] = list(attributes or [])
     if nx_class:
