@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import time
+from bisect import bisect
 from collections import defaultdict
 from contextlib import suppress
 from logging import WARNING
@@ -60,6 +61,8 @@ COMMENT_STR = "# "
 
 INDICATOR_RED = (255, 0, 0)
 INDICATOR_GREEN = (0, 165, 0)
+
+DEFAULT_FONT_SIZE = 16
 
 
 class FlakeCodes:
@@ -519,10 +522,11 @@ class EditorPanel(Panel):
         font.setItalic(False)
         font.setBold(False)
         sizes = self._get_font_sizes(font.family())
-        point_size = 16
+        point_size = DEFAULT_FONT_SIZE
         if point_size not in sizes:
             # If size does not exist, use one that is close.
-            point_size = [s for s in sizes if s < point_size][~0]
+            position = min(bisect(sizes, point_size), len(sizes) - 1)
+            point_size = sizes[position]
         font.setPointSize(point_size)
         return font, sizes
 
