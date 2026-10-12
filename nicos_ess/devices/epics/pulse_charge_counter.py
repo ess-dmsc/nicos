@@ -3,7 +3,7 @@ import time
 from nicos.core import Override, Param, Value, oneof, status
 from nicos.devices.generic import CounterChannelMixin, PassiveChannel
 from nicos_ess.devices.epics.pva import EpicsReadable
-from nicos_ess.devices.epics.pva.epics_common import worst_status
+from nicos_ess.devices.epics.pva.epics_common import command_channel, worst_status
 
 
 class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
@@ -26,6 +26,8 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         "monitor": Override(default=True, settable=False, type=oneof(True)),
         "type": Override(default="counter", settable=False, mandatory=False),
     }
+
+    _reset_count = command_channel("ErrorReset-S")
 
     def _on_channel_update(self, update):
         if update.channel != "read":
