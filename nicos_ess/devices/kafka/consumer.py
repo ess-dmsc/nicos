@@ -22,7 +22,7 @@ from confluent_kafka import (
 from nicos import session
 from nicos.core.errors import ConfigurationError
 from nicos.utils import createThread
-from nicos_ess.devices.kafka.utils import create_sasl_config
+from nicos_ess.devices.kafka.utils import create_sasl_config, reveal_secrets
 
 NO_STATS_REBOOT_SECS = 10
 ALL_DOWN_REBOOT_SECS = 10
@@ -118,7 +118,9 @@ class KafkaConsumer:
         brokers: Sequence[str],
         starting_offset: str = "latest",
         *,
-        consumer_factory: Callable[[dict], object] = lambda conf: Consumer(conf),
+        consumer_factory: Callable[[dict], object] = lambda conf: Consumer(
+            reveal_secrets(conf)
+        ),
         topic_partition_factory: Callable[..., TopicPartition] = (
             lambda t, p, o=OFFSET_END: TopicPartition(t, p, o)
         ),
@@ -139,6 +141,8 @@ class KafkaConsumer:
         consumer_factory:
             Callable that receives the merged config dict and returns a
             confluent-kafka Consumer-like object. Used for DI/testing.
+            Secrets in the dict are ``SecretStr``; pass it through
+            ``reveal_secrets`` in the call to the client.
         topic_partition_factory:
             Callable used to construct ``TopicPartition`` objects.
         now:
@@ -1628,7 +1632,9 @@ if __name__ == "__main__":
         """Demo callback that prints message timestamps and lengths."""
         for ts, val in msgs:
             ttype, tval = ts
-            print(f"msg ts={ttype}:{tval} len={len(val) if val is not None else 0}")
+            print(  # noqa: T201
+                f"msg ts={ttype}:{tval} len={len(val) if val is not None else 0}"
+            )
 
     def print_no_messages():
         """Demo no-messages callback (no-op)."""

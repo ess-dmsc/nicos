@@ -3,15 +3,6 @@ description = "The monitor detector."
 pv_root = "ODIN-BM:NDet-FEN-003:"
 
 devices = dict(
-    monitor_3=device(
-        "nicos_ess.devices.epics.multiframe_histogrammer.MultiFrameHistogrammer",
-        description="Multi-frame histogrammer",
-        pv_root="ODIN:MFHist-003:",
-        readpv="ODIN:MFHist-003:signal",
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-    ),
     monitor_3_high_voltage=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The high voltage of the monitor detector",
