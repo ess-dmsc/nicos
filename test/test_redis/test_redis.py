@@ -1,7 +1,6 @@
 import fnmatch
 import logging
 import time
-from typing import Union
 from unittest.mock import MagicMock
 
 import pytest
@@ -17,8 +16,14 @@ class RedisClientStub(RedisClient):
     A stub class for the RedisClient class
     """
 
-    def __init__(self, host="localhost", port=6379, db=0):
-        super().__init__(host, port, db, injected_redis=RedisStub())
+    def __init__(self, host="localhost", port=6379, db=0, protocol=3):
+        super().__init__(host, port, db, injected_redis=RedisStub(protocol))
+
+
+def _format_double(value):
+    mantissa, _, exponent = repr(float(value)).partition("e")
+    mantissa = mantissa.removesuffix(".0")
+    return f"{mantissa}E{int(exponent)}" if exponent else mantissa
 
 
 class RedisStubPipeline:
@@ -58,7 +63,8 @@ class RedisStubPipeline:
 
 
 class RedisStub:
-    def __init__(self):
+    def __init__(self, protocol=3):
+        self._protocol = protocol
         self._fake_db = {}
         self._ts_retention = {}
         self._zsets = set()
@@ -90,10 +96,8 @@ class RedisStub:
         return 0
 
     def hmget(self, name, keys, *args):
-        if isinstance(keys, (list, tuple)):
-            fields = list(keys) + list(args)
-        else:
-            fields = [keys] + list(args)
+        fields = list(keys) if isinstance(keys, (list, tuple)) else [keys]
+        fields += args
 
         raw = self._fake_db.get(name, {})
         if not isinstance(raw, dict):
@@ -132,7 +136,7 @@ class RedisStub:
         if key not in self._fake_db or not isinstance(self._fake_db[key], dict):
             raise RedisError("TSDB: the key does not exist")
 
-        self._fake_db[key][ts] = str(value)
+        self._fake_db[key][ts] = _format_double(value)
         retention_ms = self._ts_retention.get(key)
         if retention_ms is not None:
             cutoff = ts - retention_ms
@@ -186,12 +190,13 @@ class RedisStub:
                     result = values[-1] if not reverse else values[0]
                 else:
                     raise RedisError(f"Unsupported aggregation: {aggregation}")
-                result = int(result) if float(result).is_integer() else result
-                aggregated.append([bucket, str(result)])
+                aggregated.append([bucket, _format_double(result)])
             samples = aggregated
         else:
             samples = [[ts, val] for ts, val in samples]
 
+        if self._protocol == 3:
+            samples = [[ts, float(val)] for ts, val in samples]
         return samples[:count] if count is not None else samples
 
     def execute_command(self, command, *args):
@@ -379,7 +384,8 @@ class RedisStub:
             items = items[s : s + num] if num is not None else items[s:]
 
         if withscores:
-            return [(member, score_cast_func(score)) for member, score in items]
+            pair = list if self._protocol == 3 else tuple
+            return [pair((member, score_cast_func(score))) for member, score in items]
         else:
             return [member for member, score in items]
 
@@ -435,7 +441,7 @@ class RedisCacheDatabaseHarness(RedisCacheDatabase):
 
 
 def _store_ttl_entry(
-    db, category: str, subkey: str, *, ttl: Union[float, None], value="some_value"
+    db, category: str, subkey: str, *, ttl: float | None, value="some_value"
 ):
     _tell(db, f"{category}/{subkey}", value, time.time(), ttl)
 
@@ -885,6 +891,34 @@ def test_query_history(db):
     assert history_query == [CacheEntry(125.0, None, 3.16).asDict()]
 
 
+def test_integer_history_keeps_integer_type(db):
+    _tell(db, "test/key/value", 123456)
+
+    history = db.queryHistory(("test/key", "value"), 122, 124)
+
+    assert [type(entry.value) for entry in history] == [int]
+
+
+def test_query_history_reads_string_samples():
+    db = RedisCacheDatabaseHarness(injected_client=RedisClientStub(protocol=2))
+    db._server = EmptyCacheServer()
+    _tell(db, "test/key/value", 3.14, 123)
+    _tell(db, "test/key/value", 5, 124)
+
+    history = db.queryHistory(("test/key", "value"), 122, 125)
+
+    assert [(entry.time, repr(entry.value)) for entry in history] == [
+        (123.0, "3.14"),
+        (124.0, "5"),
+    ]
+
+
+def test_client_requests_resp3():
+    client = RedisClient("localhost", 6379, 0)
+
+    assert client._redis.connection_pool.connection_kwargs["protocol"] == 3
+
+
 def test_can_handle_redis_exception_set_data(db):
     # A fake failure is required to exercise the Redis network-error path.
     db._client._redis.hset = MagicMock(
@@ -1241,7 +1275,7 @@ def test_scalar_timeseries_rollover_trims_old_samples_but_keeps_current_key(db):
     _tell(db, "roll/scalar/value", 2.0, t_new)
 
     ts_store = db._client._redis._fake_db["roll/scalar/value_ts"]
-    assert ts_store == {int(t_new * 1000): "2.0"}
+    assert ts_store == {int(t_new * 1000): "2"}
 
     history = db.queryHistory(("roll/scalar", "value"), t_old - 1, t_new + 1)
     assert [entry.asDict() for entry in history] == [

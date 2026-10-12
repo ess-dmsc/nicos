@@ -31,7 +31,9 @@ class RedisClient:
     def _setup(self, host, port, db, injected_redis):
         if injected_redis:
             return injected_redis
-        return redis.StrictRedis(host=host, port=port, db=db, decode_responses=True)
+        return redis.StrictRedis(
+            host=host, port=port, db=db, decode_responses=True, protocol=3
+        )
 
     @handle_redis_errors(
         default_return={}, custom_message="Failed to get data from Redis"
