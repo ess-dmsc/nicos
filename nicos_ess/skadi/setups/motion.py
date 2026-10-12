@@ -15,10 +15,10 @@ devices = dict(
         motorpv=f"{pv_root}AttCh1:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
     ),
-    # TODO: Not connecting
+    # TODO: Smaract piezo. Still not available.
     attenuation_setting=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Attenuator frame translation",
+        description="[TO BE ADDED] Attenuator frame translation",
         motorpv=f"{pv_root}AttAdj:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
     ),
@@ -122,6 +122,7 @@ devices = dict(
         statuspv=f"{pv_root}InBmM3:MC-Pne-01:ShtStatusCode",
         resetpv=f"{pv_root}InBmM3:MC-Pne-01:ShtErrRst",
         msgtxt=f"{pv_root}InBmM3:MC-Pne-01:ShtMsgTxt",
+        visibility={},
     ),
     detector_tank_window_cover=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
@@ -131,15 +132,21 @@ devices = dict(
         statuspv=f"{pv_root}InBmWC:MC-Pne-01:ShtStatusCode",
         resetpv=f"{pv_root}InBmWC:MC-Pne-01:ShtErrRst",
         msgtxt=f"{pv_root}InBmWC:MC-Pne-01:ShtMsgTxt",
+        visibility={},
     ),
-    # TODO: Not connecting
+    # This actuator is a combination of the two above
+    beam_monitor_position=device(
+        "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
+        description="Beam Monitor Position (combined status of In-Beam Positioner and Window Cover)",
+        pv_root=f"{pv_root}InBmPos:MC-Sts-01:Status",
+        # pv_root="BIFRO-MCS1:MC-MCU-01:Cabinet",
+        number_of_bits=24,
+    ),
+    # TODO: In-kind delivery (Julich). Still not available.
     sample_stack_height=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Sample stack linear z main",
+        description="[TO BE ADDED] Sample stack linear z main",
         motorpv=f"{pv_root}SpSt1I:MC-LftZ-02:Mtr",
         monitor_deadband=0.01,
     ),
-    # TODO: Anciliary?
-    # TODO: Hexapode?
-    # TODO: Snout?
 )
