@@ -415,6 +415,11 @@ class RedisCacheDatabase(CacheDatabase):
         return "ALIGN", from_ms, "AGGREGATION", aggregation, int(interval * 1000)
 
     @staticmethod
+    def _sample_value(value):
+        value = float(value)
+        return int(value) if value.is_integer() else value
+
+    @staticmethod
     def _rebuild_history_value(layout, values):
         kind = layout[0]
         if kind == "status":
@@ -439,7 +444,7 @@ class RedisCacheDatabase(CacheDatabase):
             timestamps = {int(sample[0]) for sample in samples}
             if len(timestamps) != 1:
                 continue
-            values = [cache_load(sample[1]) for sample in samples]
+            values = [self._sample_value(sample[1]) for sample in samples]
             value = self._rebuild_history_value(layout, values)
             entries.append(CacheEntry(timestamps.pop() / 1000.0, None, value))
         return entries
