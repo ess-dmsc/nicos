@@ -76,11 +76,11 @@ def slit_to_resolution(l2, l12, ia, slit1, slit2):
     """The slit_to_resolution function calculates the footprint created by a pair of slits
     when the gap each slit creates is known.
 
-    The function requires the use of a constant labelled DISTRIBUTION. Which is based on an equation from
+    The function has a constant labelled DISTRIBUTION. This is based on an equation from
     'On the resolution and intensity of a time-of-flight neutron reflectometer' (van Well et al) in
     section 3 'Resolution' which provides the distribution's full-width at half-maximum as
-    (2*sqrt(2*log(2))) * (1/(2*sqrt(3))). Which is then further simplified by the FREIA team to the provided
-    DISTRIBUTION constant.
+    (2*sqrt(2*log(2))) * (1/(2*sqrt(3))). Which was then further simplified by the FREIA team to create the
+    used value.
 
     -----INPUT-----
     l2 - distance from the sample to the second set of slits (m)
