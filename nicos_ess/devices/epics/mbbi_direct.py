@@ -25,6 +25,13 @@ class MBBIDirectStatus(EpicsStatusOnlyReadable):
             settable=False,
             mandatory=True,
         ),
+        "bitvalue_prefix": Param(
+            "Prefix for bit values",
+            type=str,
+            settable=False,
+            mandatory=False,
+            default="",
+        ),
         "bitname_prefix": Param(
             "Prefix for bit names",
             type=str,
@@ -43,18 +50,19 @@ class MBBIDirectStatus(EpicsStatusOnlyReadable):
 
     def _build_epics_channels(self):
         channels = {
-            "communication": status_channel(""),
+            "communication": status_channel(pv_suffix=self.bitvalue_prefix),
         }
         for i in range(self.number_of_bits):
             hex_digit = f"{i:x}".upper()
             channels[f"bit_value_{i}"] = readback_channel(
-                f".B{hex_digit}", refresh_status=True
+                f"{self.bitvalue_prefix}.B{hex_digit}", refresh_status=True
             )
             channels[f"bit_name_{i}"] = readback_channel(
                 f"{self.bitname_prefix}{i}",
                 as_string=True,
                 refresh_status=True,
             )
+        print("PVs to connect = " + str(channels))
         return channels
 
     def _compute_status(self, maxage=0):
