@@ -38,14 +38,8 @@ from nicos.guisupport.qt import (
     # QT_VERSION_STR,
     # QAction,
     QApplication,
-    # QDialog,
-    # QFontDialog,
-    # QGridLayout,
-    # QIcon,
-    # QLabel,
-    # QMainWindow,
-    # QMenu,
-    # QMessageBox,
+    # pyqtSignal,
+    # pyqtSlot,
     QPixmap,
     # QPoint,
     QSizePolicy,
@@ -54,8 +48,6 @@ from nicos.guisupport.qt import (
     # QTimer,
     # QWebView,
     QWidget,
-    # pyqtSignal,
-    # pyqtSlot,
 )
 
 # from nicos.protocols.daemon import (
@@ -154,7 +146,10 @@ class Dashboard(Panel):
         self.client.experiment.connect(self._update_dashboard_info)
 
     def _init_dashboard(self):
-        self.setStyleSheet("background-color: #1f5366")
+        # self.setStyleSheet("background-color: #1f5366")
+        # line_top = self.findChild(QFrame, "line_top")
+        # line_top.setStyleSheet("color: white")
+        return
 
     @staticmethod
     def setQSS(style_file):
