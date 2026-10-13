@@ -76,6 +76,8 @@ devices = dict(
         description="Cabinet 4 safety status",
         pv_root=f"{pv_root_cabinet_4}Safety",
         number_of_bits=24,
+        bitvalue_prefix="-StatusBits",
+        bitname_prefix="-NamBit",
     ),
     cabinet_5_status=device(
         "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
@@ -98,5 +100,7 @@ devices = dict(
         description="Cabinet 5 safety status",
         pv_root=f"{pv_root_cabinet_5}Safety",
         number_of_bits=24,
+        bitvalue_prefix="-StatusBits",
+        bitname_prefix="-NamBit",
     ),
 )
