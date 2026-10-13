@@ -14,7 +14,8 @@
 
 # from nicos import nicos_version
 # from nicos.clients.base import ConnectionData
-# from nicos.clients.gui.client import NicosGuiClient
+from nicos.clients.gui.client import NicosGuiClient
+
 # from nicos.clients.gui.config import tabbed
 # from nicos.clients.gui.data import DataHandler
 # from nicos.clients.gui.dialogs.debug import DebugConsole
@@ -37,17 +38,19 @@ from nicos.guisupport.qt import (
     # PYQT_VERSION_STR,
     # QT_VERSION_STR,
     # QAction,
-    QApplication,
+    # QApplication,
+    QLabel,
+    QLayout,
     # pyqtSignal,
     # pyqtSlot,
-    QPixmap,
+    # QPixmap,
     # QPoint,
-    QSizePolicy,
+    # QSizePolicy,
     # QSystemTrayIcon,
-    Qt,
+    # Qt,
     # QTimer,
     # QWebView,
-    QWidget,
+    # QWidget,
 )
 
 # from nicos.protocols.daemon import (
@@ -122,79 +125,29 @@ ALL_TOOLBAR_ITEMS = [
 ]
 
 
-def decolor_logo(pixmap, color):
-    ret_pix = QPixmap(pixmap.size())
-    ret_pix.fill(color)
-    ret_pix.setMask(pixmap.createMaskFromColor(Qt.GlobalColor.transparent))
-    return ret_pix
-
-
-class Spacer(QWidget):
-    def __init__(self, parent=None):
-        QWidget.__init__(self, parent)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-
 class Dashboard(Panel):
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         colors.init_palette(self.palette())
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/dashboard.ui"))
 
-        # create initial state
+        # connect client events
+        self.client = NicosGuiClient(self, self.log)
+        self.client.connected.connect(self.on_client_connected)
+        self.client.disconnected.connect(self.on_client_disconnected)
+
+        # build initial state
         self._init_dashboard()
-        self.client.experiment.connect(self._update_dashboard_info)
 
     def _init_dashboard(self):
-        # self.setStyleSheet("background-color: #1f5366")
-        # line_top = self.findChild(QFrame, "line_top")
-        # line_top.setStyleSheet("color: white")
+        dash_top = self.findChild(QLayout, "dash_top")
+        label = QLabel("Test")
+        dash_top.addWidget(label)
+
         return
 
-    @staticmethod
-    def setQSS(style_file):
-        with open(style_file, encoding="utf-8") as fd:
-            try:
-                QApplication.instance().setStyleSheet(fd.read())
-            except Exception as e:
-                print(e)
+    def on_client_connected(self):
+        return
 
-    def update_text(self, *args):
-        max_text_length = 50
-        for item in args:
-            name = item.get("name")
-
-            label = getattr(self, f"{name}_label")
-            text = getattr(self, f"{name}_text")
-
-            value = self.client.eval(
-                item.get("data_source", ""),
-                None,
-                stringify=item.get("stringify", False),
-            )
-            label.setText(f"{item.get('label', '')}:")
-            if value:
-                logo = decolor_logo(
-                    QPixmap(f"{value}-logo"),
-                    Qt.GlobalColor.white,
-                )
-                if logo.isNull():
-                    if item.get("upper_case", False):
-                        text.setText(value.upper()[0:max_text_length])
-                    else:
-                        text.setText(value[0:max_text_length])
-                else:
-                    text.setPixmap(
-                        logo.scaledToHeight(
-                            self.toolBarMain.height(),
-                            Qt.TransformationMode.SmoothTransformation,
-                        )
-                    )
-            else:
-                text.setText("UNKNOWN")
-
-    def _update_dashboard_info(self):
-        if self.current_status != "disconnected":
-            self.update_text(*ALL_TOOLBAR_ITEMS)
-        else:
-            self.clear_label(*ALL_TOOLBAR_ITEMS)
+    def on_client_disconnected(self):
+        return

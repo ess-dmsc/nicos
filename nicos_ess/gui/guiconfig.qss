@@ -241,6 +241,14 @@ Panel QToolBar > QCheckBox {
     border-radius: 5px;
 }
 
+Dashboard > QFrame {
+    color: white;
+}
+
+Dashboard > QLabel {
+    color: white;
+}
+
 /* QTabBar::tab  ------------------------------------------------
 
 https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qtabwidget-and-qtabbar
