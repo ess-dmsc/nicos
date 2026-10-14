@@ -171,6 +171,7 @@ class Dashboard(Panel):
         self.client.disconnected.connect(self.on_client_disconnected)
 
         # setting presets
+        # TODO: Fix to work like in the mainWindow
         self.instrument = options.get("instrument")
 
         # build initial state
