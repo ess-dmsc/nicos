@@ -21,10 +21,10 @@
        <item>
         <layout class="QVBoxLayout" name="dashTopL">
          <item>
-          <layout class="QVBoxLayout" name="leftRow2"/>
+          <layout class="QVBoxLayout" name="leftRow1"/>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="leftRow1"/>
+          <layout class="QVBoxLayout" name="leftRow2"/>
          </item>
         </layout>
        </item>
