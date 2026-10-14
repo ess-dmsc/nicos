@@ -1414,7 +1414,7 @@
       </rect>
      </property>
      <property name="title">
-      <string>More Controls</string>
+      <string>Other Controls</string>
      </property>
      <widget class="QWidget" name="gridLayoutWidget">
       <property name="geometry">
