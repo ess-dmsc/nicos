@@ -22,6 +22,13 @@ class NewportHexapod(Moveable):
     Starting the Hexapod controls it via the MOVE_ALL function from the
     controller. For individual axes control with relative motion, please use
     the Hexapod Control tab in the GUI.
+
+    axis - hexapod axes, used for reading the position of the hexapod
+    *_sp - axes setpoint used for move_all control
+
+    doStart sets the setpoint devices then calls the move_all on then off to start
+    motion. Goniometer is commanded separately since it is separate from the hexapod,
+    but is treated as an additional rotation in the same space
     """
 
     parameter_overrides = {
