@@ -15,9 +15,23 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QVBoxLayout" name="dashboard_main" stretch="0,2,1">
+    <layout class="QVBoxLayout" name="dashboardMain" stretch="0,0,0">
      <item>
-      <layout class="QHBoxLayout" name="dash_top"/>
+      <layout class="QHBoxLayout" name="dashTop">
+       <item>
+        <layout class="QVBoxLayout" name="dashTopL">
+         <item>
+          <layout class="QVBoxLayout" name="leftRow2"/>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="leftRow1"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="dashTopR"/>
+       </item>
+      </layout>
      </item>
      <item>
       <widget class="Line" name="line_top">
@@ -33,9 +47,9 @@
       </widget>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <layout class="QHBoxLayout" name="dashBottom">
        <item>
-        <layout class="QVBoxLayout" name="dash_left"/>
+        <layout class="QVBoxLayout" name="dashLeft"/>
        </item>
        <item>
         <widget class="Line" name="line_left">
@@ -51,7 +65,7 @@
         </widget>
        </item>
        <item>
-        <layout class="QVBoxLayout" name="dash_center"/>
+        <layout class="QVBoxLayout" name="dashCenter"/>
        </item>
        <item>
         <widget class="Line" name="line_right">
@@ -67,14 +81,24 @@
         </widget>
        </item>
        <item>
-        <layout class="QVBoxLayout" name="dash_right"/>
+        <layout class="QVBoxLayout" name="dashRight"/>
        </item>
       </layout>
      </item>
     </layout>
    </item>
   </layout>
+  <action name="actionEmergencyStop">
+   <property name="text">
+    <string>EmergencyStop</string>
+   </property>
+   <property name="toolTip">
+    <string>Immediate Stop</string>
+   </property>
+  </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../../../resources/nicos-gui.qrc"/>
+ </resources>
  <connections/>
 </ui>
