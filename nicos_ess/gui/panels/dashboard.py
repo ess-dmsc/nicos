@@ -165,6 +165,9 @@ class Dashboard(Panel):
         colors.init_palette(self.palette())
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/dashboard.ui"))
 
+        # state members
+        self.current_status = None
+
         # connect client events
         self.client = NicosGuiClient(self, self.log)
         self.client.connected.connect(self.on_client_connected)
@@ -273,3 +276,60 @@ class Dashboard(Panel):
     def add_status_widget(self):
         self.status_widget = StatusWidget(self)
         self.dashTopR.addWidget(self.status_widget)
+
+    def _update_dashboard_info(self):
+        if self.current_status != "disconnected":
+            self.update_text(*ALL_TOOLBAR_ITEMS)
+        else:
+            self.clear_label(*ALL_TOOLBAR_ITEMS)
+
+    def clear_label(self, *args):
+        for item in args:
+            name = item.get("name")
+            label = getattr(self, f"{name}_label")
+            text = getattr(self, f"{name}_text")
+            label.clear()
+            text.clear()
+
+    def _update_status_text(self):
+        if self.current_status == "disconnected":
+            self.status_label.setText(self.current_status.upper())
+            self.status_text.setText("")
+        else:
+            self.status_label.setText("     Status: ")
+            self.status_text.setText(self.current_status.upper())
+
+    def update_text(self, *args):
+        max_text_length = 50
+        for item in args:
+            name = item.get("name")
+
+            label = getattr(self, f"{name}_label")
+            text = getattr(self, f"{name}_text")
+
+            value = self.client.eval(
+                item.get("data_source", ""),
+                None,
+                stringify=item.get("stringify", False),
+            )
+            label.setText(f"{item.get('label', '')}:")
+
+            if value:
+                logo = decolor_logo(
+                    QPixmap(f"{value}-logo"),
+                    Qt.GlobalColor.white,
+                )
+                if logo.isNull():
+                    if item.get("upper_case", False):
+                        text.setText(value.upper()[0:max_text_length])
+                    else:
+                        text.setText(value[0:max_text_length])
+                else:
+                    text.setPixmap(
+                        logo.scaledToHeight(
+                            self.dashTop.height(),
+                            Qt.TransformationMode.SmoothTransformation,
+                        )
+                    )
+            else:
+                text.setText("UNKNOWN")
