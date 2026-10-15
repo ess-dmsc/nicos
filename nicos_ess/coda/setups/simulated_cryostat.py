@@ -76,6 +76,7 @@ for name, parameter, unit, nexus_group, field_name, dataset_type in [
         device="simulated_cryostat",
         parameter=parameter,
         unit=unit,
+        jitter=0.05 if name.endswith("temperature") else 0,
         visibility=("metadata",),
         pollinterval=1,
         nexus_config=[nexus_config(nexus_group, field_name, dataset_type, units=unit)],
