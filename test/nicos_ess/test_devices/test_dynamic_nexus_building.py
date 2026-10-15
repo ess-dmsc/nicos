@@ -226,12 +226,12 @@ class TestDynamicNexusBuilding(TestCase):
             "dataset_type": "nx_log",
         }
 
-    def test_same_name_twice_in_a_group_is_rejected(self):
+    def test_same_name_twice_in_a_group_is_skipped(self):
         self.motor.nexus_config = [self._value_log(), self._value_log()]
-        with pytest.raises(ConfigurationError, match="motor1/value_log"):
-            self.nexus._nexus_config_groups()
+        with self.log.assert_warns("motor1/value_log' is already written"):
+            assert len(self._motor1_children()) == 1
 
-    def test_name_already_in_the_template_is_rejected(self):
+    def test_name_already_in_the_template_is_skipped(self):
         self.motor.nexus_config = [
             {
                 "nexus_path": "/entry",
@@ -242,8 +242,50 @@ class TestDynamicNexusBuilding(TestCase):
                 "dataset_type": "static_value",
             }
         ]
-        with pytest.raises(ConfigurationError, match="/entry/sample/depends_on"):
-            self.nexus.get_structure(_minimal_metainfo(), counter=1)
+        with self.log.assert_warns("/entry/sample/depends_on' is already in"):
+            doc = json.loads(self.nexus.get_structure(_minimal_metainfo(), counter=1))
+
+        depends_on = get_by_named_path(
+            doc, build_named_index_map(doc), "/entry/sample/depends_on"
+        )
+        assert depends_on["config"]["values"] != "other"
+
+    def _get_structure_paths(self):
+        doc = json.loads(self.nexus.get_structure(_minimal_metainfo(), counter=1))
+        return doc, build_named_index_map(doc, include_datasets=True)
+
+    def test_physical_component_gets_depends_on(self):
+        self.motor.nexus_config = [self._value_log()]
+        doc, path_map = self._get_structure_paths()
+        depends_on = get_by_named_path(
+            doc, path_map, "/entry/instrument/motor1/depends_on"
+        )
+        assert depends_on["config"]["values"] == "."
+
+    def test_given_depends_on_is_kept(self):
+        self.motor.nexus_config = [
+            self._value_log(),
+            {
+                "group_name": "motor1",
+                "nx_class": "NXsensor",
+                "name": "depends_on",
+                "value": "/entry/sample/transformations/x",
+                "dataset_type": "static_value",
+            },
+        ]
+        doc, path_map = self._get_structure_paths()
+        depends_on = get_by_named_path(
+            doc, path_map, "/entry/instrument/motor1/depends_on"
+        )
+        assert depends_on["config"]["values"] == "/entry/sample/transformations/x"
+
+    def test_other_groups_get_no_depends_on(self):
+        self.motor.nexus_config = [
+            {**self._value_log(), "nx_class": "NXcollection"},
+        ]
+        _, path_map = self._get_structure_paths()
+        assert "/entry/instrument/motor1/value_log" in path_map
+        assert "/entry/instrument/motor1/depends_on" not in path_map
 
     def test_alias_is_not_written_again(self):
         self.motor.nexus_config = [self._value_log()]
