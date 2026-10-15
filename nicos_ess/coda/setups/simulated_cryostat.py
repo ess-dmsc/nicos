@@ -51,40 +51,33 @@ devices = dict(
     ),
 )
 
-# Each parameter is written as a field read at the start of the run, as a log
-# of its values during the run, or both. The NICOS collector does not forward
-# string values, so the mode has no log.
-for name, parameter, unit, nexus_group, field_name, log_name in [
-    ("sample_temperature", "sample", "K", sample, None, "temperature"),
-    ("regulator_temperature", "regulation", "K", pv_sensor, None, "value_log"),
-    ("heater_power", "heaterpower", "W", heater, "output_power", "output_power_log"),
-    ("heater_output", "heater", "percent", heater, "output_level", "output_level_log"),
-    ("max_heater_power", "maxpower", "W", heater, "max_power", "max_power_log"),
-    ("setpoint", "setpoint", "K", pid, "setpoint", "setpoint_log"),
-    ("target", "target", "K", pid, "target", "target_log"),
-    ("ramp", "ramp", "K/min", pid, "ramp", "ramp_log"),
+# Numeric parameters are logged as NXlogs named after the NeXus field they
+# stand in for. The NICOS collector does not forward string values, so the
+# mode is read once at the start of the run instead.
+for name, parameter, unit, nexus_group, field_name, dataset_type in [
+    ("sample_temperature", "sample", "K", sample, "temperature", "nx_log"),
+    ("regulator_temperature", "regulation", "K", pv_sensor, "value_log", "nx_log"),
+    ("heater_power", "heaterpower", "W", heater, "output_power", "nx_log"),
+    ("heater_output", "heater", "percent", heater, "output_level", "nx_log"),
+    ("max_heater_power", "maxpower", "W", heater, "max_power", "nx_log"),
+    ("setpoint", "setpoint", "K", pid, "setpoint", "nx_log"),
+    ("target", "target", "K", pid, "target", "nx_log"),
+    ("ramp", "ramp", "K/min", pid, "ramp", "nx_log"),
     # LakeShore-style settings, not the K_p, K_i and K_d gains of
     # NXpid_controller: p = 10*K_p, i = 500/T_i, d = 2*T_d.
-    ("pid_p", "p", "percent/K", pid, "p_setting", "p_setting_log"),
-    ("pid_i", "i", "1/s", pid, "i_setting", "i_setting_log"),
-    ("pid_d", "d", "s", pid, "d_setting", "d_setting_log"),
-    ("mode", "mode", "", pid, "mode", None),
+    ("pid_p", "p", "percent/K", pid, "p_setting", "nx_log"),
+    ("pid_i", "i", "1/s", pid, "i_setting", "nx_log"),
+    ("pid_d", "d", "s", pid, "d_setting", "nx_log"),
+    ("mode", "mode", "", pid, "mode", "static_read"),
 ]:
-    nexus_configs = []
-    if field_name:
-        nexus_configs.append(
-            nexus_config(nexus_group, field_name, "static_read", units=unit)
-        )
-    if log_name:
-        nexus_configs.append(nexus_config(nexus_group, log_name, "nx_log", units=unit))
-
     devices["simulated_" + name] = device(
         "nicos_ess.coda.devices.simulated_cryostat.SimulatedCryostatParameter",
         description="Simulated cryostat " + name.replace("_", " "),
         device="simulated_cryostat",
         parameter=parameter,
         unit=unit,
+        jitter=0.05 if name.endswith("temperature") else 0,
         visibility=("metadata",),
         pollinterval=1,
-        nexus_config=nexus_configs,
+        nexus_config=[nexus_config(nexus_group, field_name, dataset_type, units=unit)],
     )
