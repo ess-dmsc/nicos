@@ -135,8 +135,12 @@ class CetoniLinkedDialog(QDialog):
             self.mode_value.addItems(options)
         self.mode_value.setCurrentText(self.params["pump_mode"])
 
+    def _mode_changed(self, text):
+        self.time_value.setEnabled(text == "Time")
+
     def _update_time(self):
         self.time_value.setText(str(self.params["max_dosing_time"]))
+        self.time_value.setEnabled(self.params["pump_mode"] == "Time")
 
     def _update_first_fill_syringe(self):
         if self.first_fill_value.count() == 0:
@@ -280,6 +284,7 @@ class CetoniLinkedDialog(QDialog):
         self.action_disable.triggered.connect(self.on_action_disable_triggered)
         self.button_apply.clicked.connect(self.on_btn_apply_clicked)
         self.button_close.clicked.connect(self.on_btn_close_clicked)
+        self.mode_value.currentTextChanged.connect(self._mode_changed)
 
     def _set_layout(self):
         self.dialog_layout = QVBoxLayout()
