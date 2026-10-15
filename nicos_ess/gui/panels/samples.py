@@ -10,11 +10,26 @@ from nicos.guisupport.qt import (
 )
 
 
+class SampleModel:
+    def __init__(self, client):
+        self.client = client
+        self.data = {}
+
+    def load_data(self):
+        samples = self.client.eval("session.experiment.get_samples()", stringify=True)
+        print(samples)
+
+
 class SamplePanel(Panel):
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
 
         self._build_ui()
+        self.samples = SampleModel(self.client)
+
+    def on_client_connected(self):
+        Panel.on_client_connected(self)
+        self.samples.load_data()
 
     def _build_ui(self):
         self._create_widgets()
