@@ -6,14 +6,18 @@ from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import pyqtSlot
 from nicos.protocols.cache import cache_load
 from nicos.utils import findResource
+from nicos_ess.gui.panels.utils import attach_status_resources
 
 
 class HexapodPanel(Panel):
     panelName = "Hexapod Controller"
+    axis_names = ("tx", "ty", "tz", "rx", "ry", "rz", "gmt")
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
+        attach_status_resources(self)
         loadUi(self, findResource("nicos_ess/estia/gui/panels/ui_files/hexapod.ui"))
+        self.useicons = bool(options.get("icons", True))
 
         # Hexapod info
         self.paraminfo = {}
@@ -22,6 +26,8 @@ class HexapodPanel(Panel):
         self.devname = options.get("hexapod")
         self.status = options.get("status")
         self.coordSys = options.get("coord")
+        self.errdesc = options.get("errdesc")
+        self.statusdesc = options.get("statusdesc")
         # Hexapod Controller Info
 
         # Error Handling
@@ -65,7 +71,12 @@ class HexapodPanel(Panel):
             self.update_position_info(cache_load(value))
             # can't seem to find it in cache
             # but is popagated into 'value' param just fine...
-            self.update_status_window(self.client.getDeviceParam(self.status, "value"))
+            self.update_status_window(
+                self.client.getDeviceParam(self.devname, "status"),
+                self.client.getDeviceParam(self.status, "value"),
+                self.client.getDeviceParam(self.errdesc, "value"),
+                self.client.getDeviceParam(self.statusdesc, "value"),
+            )
             self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
 
     def on_client_message(self, message):
@@ -114,6 +125,8 @@ class HexapodPanel(Panel):
             self.newPos_2.show()
             self.statusBox.show()
             self.coordBox.show()
+            self.otherOptBox.show()
+            self.statusimage.show()
             self.userModes.setTabVisible(1, 0)
             self.userModes.setTabVisible(2, 0)
         # better way to hide all this using another group box....but will do it later
@@ -124,6 +137,8 @@ class HexapodPanel(Panel):
             self.newPos_2.hide()
             self.statusBox.hide()
             self.coordBox.hide()
+            self.otherOptBox.hide()
+            self.statusimage.hide()
             self.userModes.setTabVisible(1, 0)
             self.userModes.setTabVisible(2, 0)
 
@@ -154,42 +169,22 @@ class HexapodPanel(Panel):
         hexapod_info.pop(self.devname)
 
         for keys in adevs:
-            mini_dict = {}
-            mini_dict.update({"devname": adevs[keys]})
-            self.adevs.update({f"{keys}": mini_dict})
+            if keys in self.axis_names:
+                mini_dict = {}
+                mini_dict.update({"devname": adevs[keys]})
+                self.adevs.update({f"{keys}": mini_dict})
 
-    def update_status_window(self, code):
-        # A bit messy but works to get some error indication quickly
-        error_val = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63]
-        ready_val = [10, 11, 12, 13, 15, 16, 17, 70, 77]
-        ok_val = [40, 41, 43, 44, 45, 47, 48, 49, 64, 68, 69, 73]
-        not_ref = 42
-        if code:
-            code = round(code)
-            if code in error_val:
-                self.hexStatus.setStyleSheet("background-color: lightred")
-            elif code in ready_val:
-                self.hexStatus.setStyleSheet("background-color: lightgreen")
-            elif code in ok_val:
-                self.hexStatus.setStyleSheet("background-color: lightblue")
-            elif code == not_ref:
-                self.hexStatus.setStyleSheet("background-color: orange")
-            else:
-                self.hexStatus.setStyleSheet("background-color: None")
-            self.hexStatus.setText(f"{code}")
+    def update_status_window(self, status, code, errmsg, statmsg):
+        # Use error type to change icon
+        code = round(code)
+        self.hexStatus.setText(f"Code {code}: {statmsg}\n\n{errmsg}")
+
+        self.statusimage.setPixmap(self.statusIcon[status[0]].pixmap(18, 18))
 
     def update_coord_window(self, value):
         # sometimes the mapping is odd for awhile, so checking for int or string and
         # setting text accordingly
-        if value == "Work":
-            self.coordSyst.setStyleSheet("background-color: lightgreen")
-            self.coordSyst.setText("Work")
-        elif value == "Tool":
-            self.coordSyst.setStyleSheet("background-color: lightgreen")
-            self.coordSyst.setText("Tool")
-        else:
-            self.coordSyst.setText("")
-            self.coordSyst.setStyleSheet("background-color: gray")
+        self.coordSyst.setText(f"{value}")
 
     def setup_qt_vars(self):
         self.qtObj = {
@@ -267,6 +262,7 @@ class HexapodPanel(Panel):
         # Sets the spin boxes to the current axis positions for easier absolute motion control
         values = self.client.getDeviceParam(self.devname, "value")
         self.update_position_info(values, "newVal")
+        self.update_position_info(values, "curVal")
 
     @pyqtSlot()
     def on_butTest_pressed(self):
@@ -274,6 +270,23 @@ class HexapodPanel(Panel):
         self.test = self.client.getDeviceList(needs_class=class_typ)
         self.showError(f"{self.test}")
         # data = self.mainwindow.expertmode
+
+    # Other Hexapod control buttons, sending to any of the axes will start the hexapod as a whole
+    @pyqtSlot()
+    def on_butReset_pressed(self):
+        self.exec_command(f"reset('{self.adevs['tx']['devname']}')")
+
+    @pyqtSlot()
+    def on_butHome_pressed(self):
+        self.exec_command(f"home('{self.adevs['tx']['devname']}')")
+
+    @pyqtSlot()
+    def on_butDisable_pressed(self):
+        self.exec_command(f"disable('{self.adevs['tx']['devname']}')")
+
+    @pyqtSlot()
+    def on_butEnable_pressed(self):
+        self.exec_command(f"enable('{self.adevs['tx']['devname']}')")
 
     # absolute motion using move in GUI
     @pyqtSlot()
