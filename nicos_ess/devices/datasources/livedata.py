@@ -92,7 +92,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             mandatory=True,
         ),
         "data_timeout": Param(
-            "Maximum wait for initial data, reset confirmation or fresh data",
+            "Time without data after which the channel warns",
             type=floatrange(0.1),
             default=10.0,
             unit="s",
@@ -129,11 +129,11 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
     def doPreinit(self, mode):
         self._collector = None  # set by LiveDataCollector
         self._signal: np.ndarray | None = None
+        self._plot: dict = {}
         self._generation: int | None = None
         self._gate_generation: int | None = None
-        self._has_baseline = threading.Event()
-        self._last_update = None
-        self._started = 0.0
+        self._reset_confirmed = True
+        self._last_data = time.monotonic()
         self.arraydesc = ArrayDesc(self.name, shape=(), dtype=np.int32)
         if session.sessiontype != POLLER:
             self._update_status(status.OK, "")
@@ -148,38 +148,42 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         return self.arraydesc
 
     def doStatus(self, maxage=0):
+        """Missing data is a warning, and a count keeps waiting for it.
+
+        The exception is a channel whose preset controls the count: without a
+        working job behind it the preset can never be reached, so that is an
+        error.
+        """
         if self.curstatus[0] == status.ERROR:
             return self.curstatus
-        backend = (
-            self._collector.source_health(self.workflow_id, self.source_name)
-            if self._collector
-            else (status.OK, "")
-        )
+        code, text = self._data_health()
+        if code == status.ERROR and self.iscontroller:
+            return code, text
         if self.running:
-            if backend[0] not in (status.OK, status.WARN):
-                self.curstatus = (status.ERROR, backend[1])
-            elif (
-                time.monotonic()
-                - (
-                    self._last_update
-                    if self._last_update is not None
-                    else self._started
-                )
-                > self.data_timeout
-            ):
-                self.curstatus = (status.ERROR, "Timed out waiting for fresh data")
-            else:
-                # WARN is a completed state in NICOS; a warning must not end a count.
-                return status.BUSY, backend[1] or self.curstatus[1]
-            return self.curstatus
-        if backend[0] != status.OK:
-            return backend
+            # WARN is a completed state in NICOS; a warning must not end a count.
+            return status.BUSY, text or self.curstatus[1]
+        if code != status.OK:
+            return status.WARN, text
         return self.curstatus
 
+    def _data_health(self) -> tuple[int, str]:
+        """Status of the data supply: the backend job, then the data itself."""
+        if self._collector is None or not self._collector.subscribed:
+            return status.OK, ""
+        health = self._collector.source_health(self.workflow_id, self.source_name)
+        if health[0] != status.OK:
+            return health
+        if time.monotonic() - self._last_data > self.data_timeout:
+            return status.WARN, f"No data received for {self.data_timeout:g} s"
+        return status.OK, ""
+
     def doPrepare(self):
+        """Zero the value and blank the plot left by the previous count."""
         self.curvalue = 0
-        self._signal = None
-        self._last_update = None
+        if self._signal is not None:
+            self._signal = np.zeros_like(self._signal)
+            self._push_to_nicos(timestamp=time.time_ns(), **self._plot)
+            self._signal = None
         self._update_status(status.OK, "")
 
     def doStop(self):
@@ -187,16 +191,18 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         if self.curstatus[0] != status.ERROR:
             self._update_status(status.OK, "")
 
+    def doReset(self):
+        if not self.running:
+            self._update_status(status.OK, "")
+
     def doFinish(self):
-        if self.running and self._last_update is None:
-            self._update_status(status.ERROR, "No post-reset data received")
-        code, text = self.doStatus(0)
+        code, text = self.curstatus
         self.doStop()
         if code == status.ERROR:
             raise CommunicationError(self, text)
 
     def doStart(self):
-        self._started = time.monotonic()
+        self._last_data = time.monotonic()
         self.running = True
         self._update_status(status.BUSY, "Counting started")
 
@@ -206,11 +212,14 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             self._cache.put(self._name, "status", self.doStatus(), time.time())
 
     def arm_reset(self):
-        """Ignore the current accumulation until a reset starts a new one."""
-        if not self._has_baseline.wait(self.data_timeout):
-            raise CommunicationError(self, "No initial data received before reset")
+        """Ignore the current accumulation until a reset starts a new one.
+
+        A channel that has not seen data yet cannot tell the old accumulation
+        from the new one, so its first change of generation is taken as the
+        reset.
+        """
         self._gate_generation = self._generation
-        self._last_update = None
+        self._reset_confirmed = self._generation is not None
 
     @staticmethod
     def _generation_of(by_name) -> int | None:
@@ -239,7 +248,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             if not self.running:
                 if "signal" in by_name:
                     self._generation = max(self._generation or generation, generation)
-                    self._has_baseline.set()
+                    self._last_data = time.monotonic()
                 return
             if self.curstatus[0] == status.ERROR:
                 return
@@ -250,10 +259,11 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             elif self._generation is not None:
                 if generation < self._generation:
                     return
-                if generation > self._generation:
+                if generation > self._generation and self._reset_confirmed:
                     self._generation = generation
                     self._update_status(status.ERROR, "Accumulation reset during count")
                     return
+                self._reset_confirmed |= generation > self._generation
             self._generation = generation
 
             sig = by_name.get("signal")
@@ -317,9 +327,10 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
                 arr = arr.reshape(1)
                 sig_axes = ["dim0"]
 
+            signal = None
             if arr.ndim == 1:
                 x_idx = 0
-                self._signal = np.ascontiguousarray(arr)
+                signal = np.ascontiguousarray(arr)
                 x_labels, x_unit, x_is_time_flag = _labels_from_coord(
                     _coord_for(sig_axes[x_idx]), arr.shape[0]
                 )
@@ -335,13 +346,13 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
                 view = arr.reshape(
                     dimension_lengths[0], dimension_lengths[1] * dimension_lengths[2]
                 )
-                self._signal = np.ascontiguousarray(view)
+                signal = np.ascontiguousarray(view)
 
                 x_labels, x_unit, x_is_time_flag = _labels_from_coord(
-                    _coord_for(sig_axes[x_idx]), self._signal.shape[1]
+                    _coord_for(sig_axes[x_idx]), signal.shape[1]
                 )
                 y_labels, y_unit, _ = _labels_from_coord(
-                    _coord_for(sig_axes[y_idx]), self._signal.shape[0]
+                    _coord_for(sig_axes[y_idx]), signal.shape[0]
                 )
                 labels = [x_labels, y_labels]
                 plot_type = "hist-3d"
@@ -376,13 +387,13 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
                 view = arr
                 for ax in sorted(reduce_idxs, reverse=True):
                     view = view.sum(axis=ax, dtype=view.dtype)
-                self._signal = np.ascontiguousarray(view)
+                signal = np.ascontiguousarray(view)
 
                 x_labels, x_unit, x_is_time_flag = _labels_from_coord(
-                    _coord_for(sig_axes[x_idx]), self._signal.shape[1]
+                    _coord_for(sig_axes[x_idx]), signal.shape[1]
                 )
                 y_labels, y_unit, _ = _labels_from_coord(
-                    _coord_for(sig_axes[y_idx]), self._signal.shape[0]
+                    _coord_for(sig_axes[y_idx]), signal.shape[0]
                 )
                 labels = [x_labels, y_labels]
                 plot_type = "hist-2d"
@@ -392,29 +403,30 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             title = (getattr(sig, "label", None) or "").strip() or self.name
             signal_unit = getattr(sig, "unit", None) or ""
 
-            if self._signal is None:
+            if signal is None:
                 self.log.warning(
                     f"Data could not be extracted from DA00 for {self.name}"
                 )
                 return
 
-            self.curvalue = int(self._signal.sum()) if self._signal.size else 0
+            self.curvalue = int(signal.sum()) if signal.size else 0
             self.arraydesc = ArrayDesc(
-                self.name, shape=self._signal.shape, dtype=self._signal.dtype
+                self.name, shape=signal.shape, dtype=signal.dtype
             )
             self._cache.put(self, "value", self.curvalue, time.time())
 
-            self._push_to_nicos(
-                plot_type,
-                labels,
-                timestamp_ns,
+            self._plot = dict(
+                plot_type=plot_type,
+                label_arrays=labels,
                 axis_names=axis_names,
                 axis_units=axis_units,
                 title=title,
                 signal_unit=signal_unit,
                 x_is_time=x_is_time_flag,
             )
-            self._last_update = time.monotonic()
+            self._signal = signal
+            self._push_to_nicos(timestamp=timestamp_ns, **self._plot)
+            self._last_data = time.monotonic()
             self._update_status(status.BUSY, "Counting")
         except Exception as exc:
             self._update_status(status.ERROR, str(exc))
@@ -603,6 +615,19 @@ class LiveDataCollector(Detector):
             self.send_workflow_reset_command(workflow_id)
         Detector.doStart(self)
 
+    def doFinish(self):
+        silent = [ch.name for ch in self._data_channels if ch._signal is None]
+        Detector.doFinish(self)
+        if silent:
+            self.log.warning(
+                "No data received during the count from %s", ", ".join(silent)
+            )
+
+    @property
+    def subscribed(self) -> bool:
+        """Whether this session consumes livedata at all."""
+        return self._data_subscriber is not None
+
     def source_health(self, workflow_id: str, source_name: str) -> tuple[int, str]:
         """Status of the backend job feeding one contracted source.
 
@@ -625,7 +650,7 @@ class LiveDataCollector(Detector):
                 and now < self._heartbeat_started + self.status_timeout
             ):
                 return (status.WARN, "Waiting for job heartbeat")
-            return (status.ERROR, f"no running job for {workflow_id}/{source_name}")
+            return (status.ERROR, f"No running job for {workflow_id}/{source_name}")
         worst = max(live, key=lambda job: job.code)
         return (worst.code, worst.text)
 
@@ -705,7 +730,7 @@ class LiveDataCollector(Detector):
             code=code,
             text=""
             if code == status.OK
-            else (message.get("error") or message.get("warning") or state),
+            else (message.get("error") or message.get("warning") or f"Job {state}"),
             expected_at=time.monotonic() + max(1, int(st.update_interval // 1000)),
         )
 
@@ -755,7 +780,7 @@ class LiveDataCollector(Detector):
             )
         except Exception as exc:
             raise CommunicationError(
-                self, f"Error sending workflow reset: {exc}"
+                self, f"Could not send workflow reset: {exc}"
             ) from exc
         if not delivery:
             raise CommunicationError(self, "Workflow reset command delivery timed out")

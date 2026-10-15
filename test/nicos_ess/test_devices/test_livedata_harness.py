@@ -21,7 +21,7 @@ from streaming_data_types.dataarray_da00 import Variable, serialise_da00
 from streaming_data_types.status_x5f2 import serialise_x5f2
 
 from nicos import session as nicos_session
-from nicos.core import CommunicationError, status
+from nicos.core import CommunicationError, NicosError, status
 from nicos_ess.devices.datasources import livedata
 from nicos_ess.devices.timer import TimerChannel
 from test.nicos_ess.test_devices.doubles import (
@@ -167,6 +167,32 @@ class TestLiveDataHarness:
         assert payload["kind"] == "job_command"
         assert payload["workflow_id"] == "test/monitor_data/1"
 
+    def test_prepare_blanks_the_plot_of_the_previous_count(
+        self, daemon_device_harness, livedata_stubs, monkeypatch
+    ):
+        captured = []
+        channel = _create_channel(daemon_device_harness)
+        collector = _create_collector(daemon_device_harness, ["channel"])
+        monkeypatch.setattr(
+            nicos_session,
+            "updateLiveData",
+            lambda parameters, databuffer, labelbuffers: captured.append(
+                (parameters, np.frombuffer(databuffer[0], dtype=np.int64).copy())
+            ),
+        )
+        collector.prepare()
+        assert not captured
+        collector.start()
+        _send_data(collector, 7, 222)
+        collector.finish()
+        assert captured[-1][1].tolist() == [7]
+
+        collector.prepare()
+
+        assert captured[-1][0]["det"] == "channel"
+        assert captured[-1][1].tolist() == [0]
+        assert channel.read(0) == [0]
+
     def test_reset_is_sent_once_per_workflow(
         self, daemon_device_harness, livedata_stubs
     ):
@@ -284,24 +310,45 @@ class TestResetGate:
         assert channel.read(0)[0] == 0
         assert channel.status(0) == (status.ERROR, "Missing start_time in data")
 
-    def test_first_count_waits_for_a_baseline_before_sending_reset(
+    def test_count_starts_without_ever_having_seen_data(
         self, daemon_device_harness, livedata_stubs
     ):
-        channel = _create_channel(daemon_device_harness, data_timeout=0.1)
+        channel = _create_channel(daemon_device_harness)
         collector = _create_collector(daemon_device_harness, ["channel"], seed=False)
-        with pytest.raises(CommunicationError, match="No initial data"):
-            collector.prepare()
-            collector.start()
-        assert not livedata_stubs.messages
-        assert not channel.running
-
-        _send_data(collector, 900000, 111)
         collector.prepare()
         collector.start()
-        _send_data(collector, 900000, 111)
+        assert len(livedata_stubs.messages) == 1
+        assert channel.running
         assert channel.read(0) == [0]
+
         _send_data(collector, 7, 222)
         assert channel.read(0) == [7]
+
+    @pytest.mark.parametrize("old_data_arrives", ["before_reset", "after_start"])
+    def test_first_data_may_be_the_old_accumulation(
+        self, daemon_device_harness, livedata_stubs, monkeypatch, old_data_arrives
+    ):
+        channel = _create_channel(daemon_device_harness)
+        collector = _create_collector(daemon_device_harness, ["channel"], seed=False)
+        produce = livedata_stubs.produce
+
+        def data_races_reset(*args, **kwargs):
+            _send_data(collector, 900000, 111)
+            produce(*args, **kwargs)
+
+        if old_data_arrives == "before_reset":
+            # Deliver the first data ever between arming and the reset command.
+            monkeypatch.setattr(livedata_stubs, "produce", data_races_reset)
+        collector.prepare()
+        collector.start()
+        if old_data_arrives == "after_start":
+            _send_data(collector, 900000, 111)
+
+        _send_data(collector, 7, 222)
+        assert channel.read(0) == [7]
+        assert channel.status(0)[0] == status.BUSY
+        _send_data(collector, 3, 333)
+        assert channel.status(0) == (status.ERROR, "Accumulation reset during count")
 
     def test_unexpected_reset_latches_error_until_next_count(
         self, daemon_device_harness, livedata_stubs
@@ -337,20 +384,57 @@ class TestResetGate:
         assert channel.read(0) == [7]
         assert channel.status(0)[0] == status.BUSY
 
-    def test_finish_without_post_reset_data_fails(
+    def test_reset_clears_a_latched_error(self, daemon_device_harness, livedata_stubs):
+        channel = _create_channel(daemon_device_harness)
+        collector = _create_collector(daemon_device_harness, ["channel"])
+        collector.prepare()
+        collector.start()
+        _send_data(collector, 3, 333)
+        _send_data(collector, 9, 444)
+        assert channel.status(0)[0] == status.ERROR
+        collector.reset()
+        assert channel.status(0)[0] == status.ERROR
+
+        collector.stop()
+        collector.reset()
+        assert channel.status(0) == (status.OK, "")
+
+    def test_unreadable_data_leaves_nothing_to_blank(
         self, daemon_device_harness, livedata_stubs
     ):
         channel = _create_channel(daemon_device_harness)
         collector = _create_collector(daemon_device_harness, ["channel"])
         collector.prepare()
         collector.start()
-        with pytest.raises(CommunicationError, match="No post-reset data"):
-            collector.finish()
-        assert not channel.running
+        data = [
+            Variable(name="signal", data=np.arange(2), shape=(2,), axes=["x"]),
+            Variable(name="x", data=np.asarray(5), shape=(), axes=["x"]),
+            Variable(name="start_time", data=np.asarray(222), shape=(), axes=[]),
+        ]
+        collector._data_subscriber.emit_messages(
+            [((1, 0), serialise_da00(source_name="monitor", timestamp_ns=0, data=data))]
+        )
         assert channel.status(0)[0] == status.ERROR
+        assert channel.doReadArray(0) is None
+        collector.stop()
+
+        collector.prepare()
+        assert channel.status(0) == (status.OK, "")
+
+    def test_finish_without_post_reset_data_reads_zero(
+        self, daemon_device_harness, livedata_stubs
+    ):
+        channel = _create_channel(daemon_device_harness)
+        collector = _create_collector(daemon_device_harness, ["channel"])
+        collector.prepare()
+        collector.start()
+        collector.finish()
+        assert not channel.running
+        assert channel.read(0) == [0]
+        assert channel.status(0)[0] == status.OK
 
     @pytest.mark.parametrize("receive_data", [False, True])
-    def test_count_fails_when_data_stops_arriving(
+    def test_missing_data_warns_without_ending_the_count(
         self, daemon_device_harness, livedata_stubs, monkeypatch, receive_data
     ):
         channel = _create_channel(daemon_device_harness)
@@ -365,7 +449,10 @@ class TestResetGate:
             livedata.time, "monotonic", lambda: now + channel.data_timeout + 1
         )
         collector._data_subscriber.emit_idle()
-        assert channel.status() == (status.ERROR, "Timed out waiting for fresh data")
+        assert channel.status() == (status.BUSY, "No data received for 10 s")
+        assert not collector.isCompleted()
+        collector.finish()
+        assert channel.status(0) == (status.WARN, "No data received for 10 s")
 
     @pytest.mark.parametrize("failure", ["error", "timeout", "exception"])
     def test_delivery_failure_does_not_start_channels(
@@ -396,7 +483,7 @@ class TestWorkflowHealth:
         )
         return channel, collector
 
-    def test_channel_errors_while_no_job_is_heartbeating(
+    def test_channel_warns_while_no_job_is_heartbeating(
         self, daemon_device_harness, livedata_stubs, monkeypatch
     ):
         channel, collector = self._setup(daemon_device_harness)
@@ -409,7 +496,10 @@ class TestWorkflowHealth:
         monkeypatch.setattr(
             livedata.time, "monotonic", lambda: now + collector.status_timeout + 1
         )
-        assert channel.status(0)[0] == status.ERROR
+        assert channel.status(0) == (
+            status.WARN,
+            "No running job for test/monitor_data/1/monitor",
+        )
 
     def test_active_job_lets_the_channel_report_its_own_state(
         self, daemon_device_harness, livedata_stubs
@@ -420,7 +510,16 @@ class TestWorkflowHealth:
 
         assert channel.status(0) == channel.curstatus
 
-    def test_job_error_is_reported_as_the_channel_status(
+    def test_job_waiting_for_data_is_a_warning(
+        self, daemon_device_harness, livedata_stubs
+    ):
+        channel, collector = self._setup(daemon_device_harness)
+
+        collector._note_job_heartbeat(_job_heartbeat("scheduled", status.DISABLED))
+
+        assert channel.status(0) == (status.WARN, "Job scheduled")
+
+    def test_job_error_is_reported_as_a_warning(
         self, daemon_device_harness, livedata_stubs
     ):
         channel, collector = self._setup(daemon_device_harness)
@@ -429,7 +528,7 @@ class TestWorkflowHealth:
             _job_heartbeat("error", status.ERROR, error="workflow blew up")
         )
 
-        assert channel.status(0) == (status.ERROR, "workflow blew up")
+        assert channel.status(0) == (status.WARN, "workflow blew up")
 
     def test_stopped_job_is_dropped(self, daemon_device_harness, livedata_stubs):
         channel, collector = self._setup(daemon_device_harness)
@@ -437,7 +536,7 @@ class TestWorkflowHealth:
 
         collector._note_job_heartbeat(_job_heartbeat("stopped", status.OK))
 
-        assert channel.status(0)[0] == status.ERROR
+        assert channel.status(0)[0] == status.WARN
 
     def test_heartbeat_expires_after_the_grace_period(
         self, daemon_device_harness, livedata_stubs, monkeypatch
@@ -451,7 +550,7 @@ class TestWorkflowHealth:
         # Advance the heartbeat deadline without a real grace-period wait.
         monkeypatch.setattr(livedata.time, "monotonic", lambda: now + expiry)
 
-        assert channel.status(0)[0] == status.ERROR
+        assert channel.status(0)[0] == status.WARN
 
     def test_status_topics_unset_means_no_health_opinion(
         self, daemon_device_harness, livedata_stubs
@@ -475,7 +574,7 @@ class TestWorkflowHealth:
         )
         collector._publish_health_changes()
 
-        assert channel.status() == (status.ERROR, "workflow blew up")
+        assert channel.status() == (status.WARN, "workflow blew up")
 
     def test_sibling_job_does_not_hide_stopped_source(
         self, daemon_device_harness, livedata_stubs
@@ -486,7 +585,7 @@ class TestWorkflowHealth:
             _job_heartbeat("active", status.OK, source_name="another_monitor")
         )
         collector._note_job_heartbeat(_job_heartbeat("stopped", status.OK))
-        assert channel.status(0)[0] == status.ERROR
+        assert channel.status(0)[0] == status.WARN
 
     def test_sibling_error_does_not_fail_healthy_source(
         self, daemon_device_harness, livedata_stubs
@@ -511,7 +610,7 @@ class TestWorkflowHealth:
         collector._note_job_heartbeat(
             _job_heartbeat("active", status.OK, source_name="another_monitor")
         )
-        assert channel.status(0)[0] == status.ERROR
+        assert channel.status(0)[0] == status.WARN
 
     def test_warning_does_not_complete_soft_count(
         self, daemon_device_harness, livedata_stubs
@@ -525,10 +624,50 @@ class TestWorkflowHealth:
         _send_data(collector, 7, 222)
         collector._note_job_heartbeat(_job_heartbeat("warning", status.WARN))
         assert not collector.isCompleted()
-        assert channel.status(0) == (status.BUSY, "warning")
+        assert channel.status(0) == (status.BUSY, "Job warning")
         _send_data(collector, 100, 222)
         assert collector.isCompleted()
         collector.finish()
+
+    def test_controller_without_a_working_job_fails_the_count(
+        self, daemon_device_harness, livedata_stubs
+    ):
+        channel, collector = self._setup(daemon_device_harness)
+        collector._note_job_heartbeat(
+            _job_heartbeat("error", status.ERROR, error="workflow blew up")
+        )
+        assert channel.status(0)[0] == status.WARN
+
+        collector.setPreset(channel=100)
+        collector.prepare()
+        assert channel.status(0) == (status.ERROR, "workflow blew up")
+        with pytest.raises(NicosError, match="workflow blew up"):
+            collector.isCompleted()
+
+        collector.setPreset(t=1)
+        assert channel.status(0)[0] == status.WARN
+
+    def test_controller_job_dying_fails_the_running_count(
+        self, daemon_device_harness, livedata_stubs
+    ):
+        channel, collector = self._setup(daemon_device_harness)
+        collector._note_job_heartbeat(_job_heartbeat("active", status.OK))
+        collector.start(channel=100)
+        _send_data(collector, 7, 222)
+        assert not collector.isCompleted()
+
+        collector._note_job_heartbeat(_job_heartbeat("stopped", status.OK))
+        with pytest.raises(NicosError, match="No running job"):
+            collector.isCompleted()
+
+    def test_controller_waits_for_a_job_that_has_no_data_yet(
+        self, daemon_device_harness, livedata_stubs
+    ):
+        channel, collector = self._setup(daemon_device_harness)
+        collector._note_job_heartbeat(_job_heartbeat("scheduled", status.DISABLED))
+        collector.start(channel=100)
+        assert channel.status(0) == (status.BUSY, "Job scheduled")
+        assert not collector.isCompleted()
 
     def test_shutdown_closes_both_transports(
         self, daemon_device_harness, livedata_stubs

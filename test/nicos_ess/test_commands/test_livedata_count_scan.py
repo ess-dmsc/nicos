@@ -12,7 +12,6 @@ from streaming_data_types.dataarray_da00 import Variable, serialise_da00
 
 from nicos.commands.measure import count
 from nicos.commands.scan import scan
-from nicos.core import CommunicationError
 from nicos_ess.devices.datasources import livedata
 from test.nicos_ess.command_helpers import loaded_setup, scan_positions, set_detectors
 from test.nicos_ess.test_devices.doubles import StubKafkaProducer, StubKafkaSubscriber
@@ -30,7 +29,7 @@ class LiveDataBackend(StubKafkaProducer):
         self.subscribers = []
         self.generation = 111
         self.total = 900000
-        self.publish = True
+        self.sources = ("monitor", "monitor2")
         self.stop = threading.Event()
         self.sent = threading.Event()
         self.lock = threading.RLock()
@@ -51,10 +50,8 @@ class LiveDataBackend(StubKafkaProducer):
     def run(self):
         while not self.stop.wait(0.005):
             with self.lock:
-                if not self.publish:
-                    continue
                 messages = []
-                for name in ("monitor", "monitor2"):
+                for name in self.sources:
                     raw = serialise_da00(
                         source_name=name,
                         timestamp_ns=0,
@@ -126,15 +123,26 @@ def test_livedata_scan_across_two_points(session, livedata_backend):
         assert len(livedata_backend.messages) == 2
 
 
-def test_timer_cannot_record_zero_when_post_reset_data_is_missing(
-    session, livedata_backend
+@pytest.mark.parametrize(
+    "sources, expected", [(("monitor",), [5, 0]), (("monitor2",), [0, 5]), ((), [0, 0])]
+)
+def test_silent_channel_reads_zero_without_blocking_the_count(
+    session, livedata_backend, sources, expected
 ):
+    livedata_backend.sources = sources
+    with loaded_setup(session, "ess_livedata_count_scan"):
+        set_detectors(session, "livedata_collector")
+        result = count(t=COUNT_TIMER_PRESET_SECONDS)
+        assert result[1:] == expected
+        assert not session.getDevice("channel_1").running
+
+
+def test_channel_that_goes_silent_reads_zero(session, livedata_backend):
     with loaded_setup(session, "ess_livedata_count_scan"):
         set_detectors(session, "livedata_collector")
         # Establish real idle data before interrupting the fake data transport.
         assert livedata_backend.sent.wait(1)
         with livedata_backend.lock:
-            livedata_backend.publish = False
-        with pytest.raises(CommunicationError, match="No post-reset data"):
-            count(t=COUNT_TIMER_PRESET_SECONDS)
-        assert not session.getDevice("channel_1").running
+            livedata_backend.sources = ()
+        result = count(t=COUNT_TIMER_PRESET_SECONDS)
+        assert result[1:] == [0, 0]
