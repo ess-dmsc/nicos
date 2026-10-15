@@ -6,12 +6,108 @@ from nicos.core import (
     Override,
     Value,
     multiStatus,
+    status,
     tupleof,
+)
+from nicos_ess.devices.epics.pva import (
+    EpicsAnalogMoveable,
+    EpicsMappedMoveable,
+    EpicsReadable,
+    EpicsStringReadable,
 )
 
 
 class NewportHexapod(Moveable):
-    """Virtual Hexapod with six axes of movement"""
+    """Virtual Hexapod with six axes of movement + Goniometer Control
+    Starting the Hexapod controls it via the MOVE_ALL function from the
+    controller. For individual axes control with relative motion, please use
+    the Hexapod Control tab in the GUI.
+
+    axis - hexapod axes, used for reading the position of the hexapod
+    *_sp - axes setpoint used for move_all control
+
+    doStart sets the setpoint devices then calls the move_all on then off to start
+    motion. Goniometer is commanded separately since it is separate from the hexapod,
+    but is treated as an additional rotation in the same space
+    """
+
+    parameter_overrides = {
+        "fmtstr": Override(default="[%.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f]"),
+        "unit": Override(default="", mandatory=False, settable=True),
+    }
+
+    status_table = {
+        "OK": ([10, 11, 12, 13, 15, 16, 17, 70, 77], status.OK),
+        "BUSY": ([40, 41, 44, 45, 48, 49, 68, 69, 73], status.BUSY),
+        "ERROR": ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63, 42], status.ERROR),
+        "DISABLE": (
+            [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 74, 75, 76],
+            status.DISABLED,
+        ),
+    }
+
+    valuetype = tupleof(float, float, float, float, float, float, float)
+
+    axis_names = ("tx", "ty", "tz", "rx", "ry", "rz", "gmt")
+    sp_names = ("tx_sp", "ty_sp", "tz_sp", "rx_sp", "ry_sp", "rz_sp")
+
+    attached_devices = {name: Attach(name, Moveable) for name in axis_names}
+    attached_devices.update(
+        {name: Attach(name, EpicsAnalogMoveable) for name in sp_names}
+    )
+    attached_devices.update(
+        {
+            "move_all": Attach("move_all", EpicsMappedMoveable),
+            "status": Attach("status", EpicsReadable),
+            "errmsg": Attach("status", EpicsStringReadable),
+        }
+    )
+
+    def doStart(self, target):
+        # set all setpoints to their target position then start with move_all
+        for name, input in zip(self.sp_names, target[:-1]):
+            self._adevs[name].start(input)
+        self._adevs["move_all"].move("On")
+        self._adevs["move_all"].move("Off")
+        self._adevs["gmt"].start(target[-1])
+
+    # stopping any axes will stop the entire hexapod, choosing to use the same axes as EPICS
+    def doStop(self):
+        self._adevs["tx"].stop()
+        self._adevs["gmt"].stop()
+
+    def doRead(self, maxage=0):
+        pos = [self._adevs[name].read(maxage) for name in self.axis_names]
+        return pos
+
+    def doStatus(self, maxage=0):
+        value = self._adevs["status"].read()
+        msg = self._adevs["errmsg"].read()
+        for states in self.status_table:
+            if value in self.status_table[states][0]:
+                return (self.status_table[states][1], msg)
+        return (status.UNKNOWN, msg)
+
+    def doIsAllowed(self, target):
+        for name, pos in zip(self.axis_names, target):
+            ok, why = self._adevs[name].isAllowed(pos)
+            if not ok:
+                return ok, f"{name} {why}"
+        return ok, why
+
+    def valueInfo(self):
+        return [
+            Value(name.capitalize(), unit=f"{self._adevs[name].unit}", fmtstr="%.3f")
+            for name in self.axis_names
+        ]
+
+
+class OldNewportHexapod(Moveable):
+    """Virtual Hexapod with six axes of movement + Goniometer Control
+    Starting the Hexapod controls it by moving each axes indivitually with
+    a pause between each motion. For individual axes control with relative motion,
+    please use the Hexapod Control tab in the GUI.
+    """
 
     parameter_overrides = {
         "fmtstr": Override(default="[%.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f]"),
@@ -25,7 +121,6 @@ class NewportHexapod(Moveable):
     def doStart(self, target):
         # Create a very small delay between axis motions to allow
         # for the controller to run the command
-        # TODO: Implement MOVE_ALL pv from Newport Hexapod
         for name, input in zip(self.axis_names, target):
             self._adevs[name].start(input)
             sleep(1)
@@ -35,7 +130,6 @@ class NewportHexapod(Moveable):
         return pos
 
     def doStatus(self, maxage=0):
-        # TODO: Implement STATUS pv for total hexapod status
         return multiStatus(self._adevs, maxage=maxage)
 
     def doIsAllowed(self, target):
