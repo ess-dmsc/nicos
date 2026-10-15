@@ -3,8 +3,16 @@
 # else:
 #     from importlib.metadata import PackageNotFoundError, entry_points, version
 
+import sys
+from time import time as current_time
 
-from nicos.clients.gui.client import NicosGuiClient
+if sys.version_info < (3, 10):
+    pass
+else:
+    pass
+
+
+from nicos.clients.gui.data import DataHandler
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import (
     loadUi,
@@ -169,9 +177,14 @@ class Dashboard(Panel):
         self.current_status = None
 
         # connect client events
-        self.client = NicosGuiClient(self, self.log)
         self.client.connected.connect(self.on_client_connected)
         self.client.disconnected.connect(self.on_client_disconnected)
+        self.client.status.connect(self.on_client_status)
+        self.client.cache.connect(self.on_client_cache)
+        self.client.experiment.connect(self._update_dashboard_info)
+
+        # data handling setup
+        self.data = DataHandler(self.client)
 
         # setting presets
         # TODO: Fix to work like in the mainWindow
@@ -187,14 +200,14 @@ class Dashboard(Panel):
         self.on_client_disconnected()
 
     def _init_dashboard(self):
-        self.status_label = QLabel("Status")
+        self.status_label = QLabel()
         self.status_label.setStyleSheet("font-size: 17pt; font-weight: bold")
-        self.status_text = QLabel("Text")
+        self.status_text = QLabel()
         self.status_text.setStyleSheet("font-size: 17pt")
 
         self.dashboard = self.dashTopR
-        self.dashboard.addWidget(self.status_label)
-        self.dashboard.addWidget(self.status_text)
+        self.dashboard.addWidget(self.status_label, Qt.AlignmentFlag.AlignRight)
+        self.dashboard.addWidget(self.status_text, Qt.AlignmentFlag.AlignRight)
 
     def _init_dashboard_labels(self, *args):
         dashboardRow1 = self.leftRow1
@@ -296,7 +309,7 @@ class Dashboard(Panel):
             self.status_label.setText(self.current_status.upper())
             self.status_text.setText("")
         else:
-            self.status_label.setText("     Status: ")
+            self.status_label.setText("     NICOS Status: ")
             self.status_text.setText(self.current_status.upper())
 
     def update_text(self, *args):
@@ -333,3 +346,17 @@ class Dashboard(Panel):
                     )
             else:
                 text.setText("UNKNOWN")
+
+    def setStatus(self, status, exception=False):
+        if status == self.current_status:
+            return
+        if (
+            self.client.last_action_at
+            and self.current_status == "running"
+            and status in ("idle", "paused")
+            and current_time() - self.client.last_action_at > 20
+        ):
+            self.client.last_action_at = 0
+        self.current_status = status
+        self._update_dashboard_info()
+        self._update_status_text()
