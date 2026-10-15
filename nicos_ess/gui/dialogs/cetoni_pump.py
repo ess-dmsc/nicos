@@ -177,7 +177,7 @@ class CetoniLinkedDialog(QDialog):
         self.devices_panel.exec_command(f"stop({self.devrepr})", immediate=True)
 
     def start(self):
-        self.devices_panel.exec_command(f"start({self.devrepr}, 1)")
+        self.devices_panel.exec_command(f'move({self.devrepr}, "Start")')
 
     @pyqtSlot()
     def on_btn_apply_clicked(self):
@@ -275,6 +275,7 @@ class CetoniLinkedDialog(QDialog):
     def _add_signals(self):
         self.button_reset.clicked.connect(self.on_btn_reset_clicked)
         self.button_stop.clicked.connect(self.on_btn_stop_clicked)
+        self.button_start.clicked.connect(self.on_btn_start_clicked)
         self.action_enable.triggered.connect(self.on_action_enable_triggered)
         self.action_disable.triggered.connect(self.on_action_disable_triggered)
         self.button_apply.clicked.connect(self.on_btn_apply_clicked)
