@@ -42,9 +42,68 @@ ALLOWED_INSTRUMENT_NAMES = [
     "ymir",
 ]
 
+# Groups of these NeXus classes describe a physical component and need a
+# depends_on, which is "." when no transformation places them.
+PHYSICAL_COMPONENTS = {
+    "NXaperture",
+    "NXattenuator",
+    "NXbeam",
+    "NXbeam_stop",
+    "NXbending_magnet",
+    "NXcapillary",
+    "NXcollimator",
+    "NXcrystal",
+    "NXdetector",
+    "NXdetector_module",
+    "NXdisk_chopper",
+    "NXfermi_chopper",
+    "NXfilter",
+    "NXflipper",
+    "NXfresnel_zone_plate",
+    "NXgrating",
+    "NXguide",
+    "NXinsertion_device",
+    "NXmirror",
+    "NXmoderator",
+    "NXmonitor",
+    "NXmonochromator",
+    "NXpinhole",
+    "NXpolarizer",
+    "NXpositioner",
+    "NXsample",
+    "NXsensor",
+    "NXslit",
+    "NXsource",
+    "NXvelocity_selector",
+    "NXxraylens",
+}
+
 
 def _node_name(node):
     return node.get("name") or node.get("config", {}).get("name")
+
+
+def _has_child(group, name):
+    return any(_node_name(child) == name for child in group["children"])
+
+
+def _add_unless_present(group, node, group_path, log, where):
+    """Append node to the group, unless the group has an entry of its name."""
+    if _has_child(group, _node_name(node)):
+        log.warning(
+            "'%s/%s' is already %s, not adding it again",
+            group_path,
+            _node_name(node),
+            where,
+        )
+    else:
+        group["children"].append(node)
+
+
+def _nx_class(node):
+    for attr in node.get("attributes", []):
+        if attr.get("name") == "NX_class":
+            return attr.get("values")
 
 
 class NexusStructureProvider(Device):
@@ -200,18 +259,24 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
         for path, groups in sorted(by_path.items()):
             for name, node in groups.items():
-                if f"{path}/{name}" in self._path_map:
-                    existing = self._get_node(structure, f"{path}/{name}")
-                    taken = {_node_name(child) for child in existing["children"]}
+                group_path = f"{path}/{name}"
+                if group_path in self._path_map:
+                    existing = self._get_node(structure, group_path)
                     for child in node["children"]:
-                        if _node_name(child) in taken:
-                            raise ConfigurationError(
-                                self,
-                                f"'{path}/{name}/{_node_name(child)}' is already "
-                                "in the NeXus template",
-                            )
-                    existing["children"].extend(node["children"])
+                        _add_unless_present(
+                            existing,
+                            child,
+                            group_path,
+                            self.log,
+                            "in the NeXus template",
+                        )
                     continue
+                if _nx_class(node) in PHYSICAL_COMPONENTS and not _has_child(
+                    node, "depends_on"
+                ):
+                    node["children"].append(
+                        generate_dataset_json("depends_on", ".", "")
+                    )
                 try:
                     _, self._path_map = append_group_under(
                         structure, self._path_map, path, node, refresh_map=True
@@ -235,14 +300,13 @@ class NexusStructureJsonFile(NexusStructureProvider):
                     cfg["group_name"],
                     generate_group_json(cfg["group_name"], cfg["nx_class"], []),
                 )
-                node = self._nexus_config_node(dev, cfg)
-                if any(_node_name(node) == _node_name(c) for c in group["children"]):
-                    raise ConfigurationError(
-                        dev,
-                        f"'{path}/{cfg['group_name']}/{_node_name(node)}' is "
-                        "already written to the NeXus file by another nexus_config",
-                    )
-                group["children"].append(node)
+                _add_unless_present(
+                    group,
+                    self._nexus_config_node(dev, cfg),
+                    f"{path}/{cfg['group_name']}",
+                    dev.log,
+                    "written by another nexus_config",
+                )
         return by_path
 
     def _nexus_config_node(self, dev, cfg):

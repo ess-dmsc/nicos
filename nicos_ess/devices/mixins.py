@@ -191,7 +191,10 @@ class HasNexusConfig(DeviceMixinBase):
 
     Dictionary keys:
         group_name (str): Name of the group in Nexus. If the group already
-            exists at `nexus_path`, the entry is added to it.
+            exists at `nexus_path`, the entry is added to it, unless the group
+            already has an entry of that name. A new group of a physical
+            component class, such as NXsensor or NXpositioner, gets
+            `depends_on` "." unless a nexus_config writes one.
         nx_class (str): Nexus class.
         dataset_type (str): Dataset type, one of ["nx_log", "static_read", "static_value"].
         units (str, optional): Units of the value.
