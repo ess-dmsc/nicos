@@ -124,6 +124,19 @@
     <string>Immediate Stop</string>
    </property>
   </action>
+  <action name="actionMinimize">
+   <property name="icon">
+    <iconset resource="../../../../resources/nicos-gui.qrc">
+     <normaloff>:/material/remove</normaloff>
+     <disabledoff>:/material/add</disabledoff>:/material/remove</iconset>
+   </property>
+   <property name="text">
+    <string>minimize</string>
+   </property>
+   <property name="toolTip">
+    <string>Minimize and Maximize Dashboard</string>
+   </property>
+  </action>
  </widget>
  <resources>
   <include location="../../../../resources/nicos-gui.qrc"/>

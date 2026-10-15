@@ -258,8 +258,12 @@ class Dashboard(Panel):
 
         return
 
+    def set_icons(self):
+
+        self.actionEmergencyStop.setIcon(get_icon("emergency_stop_cross_red-24px.svg"))
+
     def on_client_connected(self):
-        self.setStatus("idle")
+        self.setStatus("idle   ")
         self._reconnect_count = 0
 
         self.setTitlebar(True)
@@ -276,13 +280,13 @@ class Dashboard(Panel):
     def on_client_status(self, data):
         status = data[0]
         if status == STATUS_IDLE:
-            self.setStatus("idle")
+            self.setStatus("idle   ")
         elif status == STATUS_IDLEEXC:
-            self.setStatus("idle", exception=True)
+            self.setStatus("idle   ", exception=True)
         elif status != STATUS_INBREAK:
-            self.setStatus("running")
+            self.setStatus("running   ")
         else:
-            self.setStatus("paused")
+            self.setStatus("paused   ")
 
     def on_client_cache(self, data):
         return
