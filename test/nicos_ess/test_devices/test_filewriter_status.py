@@ -26,11 +26,6 @@ from datetime import datetime
 from unittest import TestCase, mock
 
 import pytest
-
-pytest.importorskip("epics")
-pytest.importorskip("streaming_data_types")
-pytest.importorskip("confluent_kafka")
-
 from streaming_data_types import serialise_answ, serialise_wrdn, serialise_x5f2
 from streaming_data_types.fbschemas.action_response_answ.ActionOutcome import (
     ActionOutcome,
@@ -225,15 +220,17 @@ class TestFileWriterStatus(TestCase):
         # Clean up
         self.filewriter_status.timeoutinterval = old_timeout
 
-    def test_on_failed_start_job_kept_but_state_marked_as_rejected(self):
+    def test_on_failed_start_job_is_rejected_and_removed_from_jobs_in_progress(self):
         job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
 
         start_request = [(456, create_start_request_message(job_id_1, success=False))]
         self.filewriter_status.new_messages_callback(start_request)
 
-        assert job_id_1 in self.filewriter_status.jobs_in_progress
-        assert self.filewriter_status._jobs[job_id_1].state == JobState.REJECTED
+        assert job_id_1 not in self.filewriter_status.jobs_in_progress
+        assert (
+            self.filewriter_status._jobs_in_order[job_id_1].state == JobState.REJECTED
+        )
 
     def test_if_not_yet_started_then_can_mark_for_stop_but_still_in_progress(self):
         job_id_1 = "job id 1"
