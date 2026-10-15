@@ -207,9 +207,7 @@ class Dashboard(Panel):
         self.status_text = QLabel()
         self.status_text.setStyleSheet("font-size: 17pt")
         self.emergency_button = QPushButton("STOP")
-        self.emergency_button.setStyleSheet(
-            "color:white; font-weight:bold; background-color: red; border-color:red"
-        )
+        self.emergency_button.clicked.connect(self.on_actionEmergencyStop_triggered)
 
         self.dashboard = self.dashTopR
         self.dashboard.addWidget(
