@@ -17,7 +17,10 @@
    <item>
     <layout class="QVBoxLayout" name="dashboardMain" stretch="0,0,0">
      <item>
-      <layout class="QHBoxLayout" name="dashTop" stretch="0,4,0">
+      <layout class="QHBoxLayout" name="dashTop" stretch="0,0,4,0">
+       <item>
+        <layout class="QHBoxLayout" name="logo_box"/>
+       </item>
        <item>
         <layout class="QVBoxLayout" name="dashTopL">
          <item>
@@ -52,7 +55,7 @@
        <item>
         <layout class="QHBoxLayout" name="dashTopR">
          <property name="spacing">
-          <number>0</number>
+          <number>6</number>
          </property>
         </layout>
        </item>

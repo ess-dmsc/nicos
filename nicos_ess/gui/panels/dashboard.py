@@ -22,9 +22,11 @@ from nicos.guisupport.qt import (
     QGridLayout,
     QLabel,
     QPixmap,
+    QPushButton,
     QSizePolicy,
     Qt,
     QWidget,
+    pyqtSlot,
 )
 from nicos.protocols.daemon import (
     STATUS_IDLE,
@@ -192,7 +194,7 @@ class Dashboard(Panel):
 
         # build initial state
         self._init_dashboard()
-        # self.add_logo()
+        self.add_logo()
         # self.set_icons()
         self.actionEmergencyStop.setEnabled(self.client.isconnected)
         self._init_dashboard_labels(*ALL_TOOLBAR_ITEMS)
@@ -204,10 +206,23 @@ class Dashboard(Panel):
         self.status_label.setStyleSheet("font-size: 17pt; font-weight: bold")
         self.status_text = QLabel()
         self.status_text.setStyleSheet("font-size: 17pt")
+        self.emergency_button = QPushButton("STOP")
+        self.emergency_button.setStyleSheet(
+            "color:white; font-weight:bold; background-color: red; border-color:red"
+        )
 
         self.dashboard = self.dashTopR
-        self.dashboard.addWidget(self.status_label, Qt.AlignmentFlag.AlignRight)
-        self.dashboard.addWidget(self.status_text, Qt.AlignmentFlag.AlignRight)
+        self.dashboard.addWidget(
+            self.status_label, Qt.AlignmentFlag.AlignRight, Qt.AlignmentFlag.AlignBottom
+        )
+        self.dashboard.addWidget(
+            self.status_text, Qt.AlignmentFlag.AlignRight, Qt.AlignmentFlag.AlignBottom
+        )
+        self.dashboard.addWidget(
+            self.emergency_button,
+            Qt.AlignmentFlag.AlignRight,
+            Qt.AlignmentFlag.AlignBottom,
+        )
 
     def _init_dashboard_labels(self, *args):
         dashboardRow1 = self.leftRow1
@@ -217,13 +232,14 @@ class Dashboard(Panel):
         row_1_layout.setContentsMargins(0, 10, 0, 0)
         row_2_layout = dashboardRow2.layout()
         row_2_layout.setContentsMargins(0, 0, 0, 10)
+        self.dashTopR.setContentsMargins(0, 0, 0, 10)
 
         for item in args:
             name = item.get("name")
             location = item.get("location")
             label, text = QLabel(), QLabel()
             label.setSizePolicy(
-                QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
+                QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
             )
             text.setSizePolicy(
                 QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
@@ -245,7 +261,7 @@ class Dashboard(Panel):
         return
 
     def on_client_connected(self):
-        # self.setStatus("idle")
+        self.setStatus("idle")
         self._reconnect_count = 0
 
         self.setTitlebar(True)
@@ -257,7 +273,7 @@ class Dashboard(Panel):
             # propagate info to all components
             self.client.signal("initstatus", initstatus)
 
-        self.actionEmergencyStop.setEnabled(not self.client.viewonly)
+        self.emergency_button.setEnabled(not self.client.viewonly)
 
     def on_client_status(self, data):
         status = data[0]
@@ -275,7 +291,7 @@ class Dashboard(Panel):
 
     def on_client_disconnected(self):
         # self.setStatus("disconnected")
-        self.actionEmergencyStop.setEnabled(False)
+        self.emergency_button.setEnabled(False)
         self.setTitlebar(False)
 
     def setTitlebar(self, connected):
@@ -360,3 +376,19 @@ class Dashboard(Panel):
         self.current_status = status
         self._update_dashboard_info()
         self._update_status_text()
+
+    def add_logo(self):
+
+        nicos_label = QLabel()
+        pxr = decolor_logo(
+            QPixmap(":/nicos-logo-high"),
+            Qt.GlobalColor.white,
+        )
+        nicos_label.setPixmap(
+            pxr.scaledToHeight(30, Qt.TransformationMode.SmoothTransformation)
+        )
+        self.logo_box.addWidget(nicos_label)
+
+    @pyqtSlot()
+    def on_actionEmergencyStop_triggered(self):
+        self.client.tell_action("emergency")
