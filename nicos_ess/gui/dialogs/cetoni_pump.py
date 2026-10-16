@@ -355,26 +355,14 @@ class CetoniLinkedDialog(QDialog):
     def _format_layout(self):
         self.device_name.setStyleSheet("font-weight: bold;")
 
-        VALUE_FIELD_WIDTH = 120
         UNIT_FIELD_WIDTH = 40
         ROW_HEIGHT = 24
-
-        value_fields = [
-            self.mode_value,
-            self.time_value,
-            self.first_fill_value,
-            self.flowrate_value,
-            self.vol_total_value,
-        ]
 
         unit_fields = [
             self.time_unit,
             self.flowrate_unit,
             self.vol_total_unit,
         ]
-
-        for widget in value_fields:
-            widget.setMaximumWidth(VALUE_FIELD_WIDTH)
 
         for widget in unit_fields:
             widget.setMaximumWidth(UNIT_FIELD_WIDTH)
