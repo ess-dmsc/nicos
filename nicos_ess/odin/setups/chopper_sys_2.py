@@ -30,13 +30,14 @@ devices = dict(
         visibility=(),
     ),
     bpc2_chopper_speed=device(
-        # Should be EpicsAnalogMoveable later
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{bpc2_pv_root}Spd_R",
         writepv=f"{bpc2_pv_root}Spd_S",
         precision=0.1,
         mapping={"14": 14, "7": 7, "0": 0},
+        in_phase="bpc2_chopper_phased",
+        state="bpc2_chopper_status",
     ),
     bpc2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -134,12 +135,14 @@ devices = dict(
         visibility=(),
     ),
     foc2_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{foc2_pv_root}Spd_R",
         writepv=f"{foc2_pv_root}Spd_S",
         precision=0.1,
         mapping={"14": 14, "7": 7, "0": 0, "21": 21, "42": 42},
+        in_phase="foc2_chopper_phased",
+        state="foc2_chopper_status",
     ),
     foc2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -241,12 +244,14 @@ devices = dict(
         visibility=(),
     ),
     foc3_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{foc3_pv_root}Spd_R",
         writepv=f"{foc3_pv_root}Spd_S",
         precision=0.1,
         mapping={"14": 14, "7": 7, "0": 0, "28": 28},
+        in_phase="foc3_chopper_phased",
+        state="foc3_chopper_status",
     ),
     foc3_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -348,12 +353,14 @@ devices = dict(
         visibility=(),
     ),
     foc4_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{foc4_pv_root}Spd_R",
         writepv=f"{foc4_pv_root}Spd_S",
         precision=0.1,
         mapping={"14": 14, "7": 7, "0": 0},
+        in_phase="foc4_chopper_phased",
+        state="foc4_chopper_status",
     ),
     foc4_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",

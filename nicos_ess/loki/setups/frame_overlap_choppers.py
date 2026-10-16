@@ -20,12 +20,14 @@ devices = dict(
         visibility=(),
     ),
     foc1_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{pv_root_1}Spd_R",
         writepv=f"{pv_root_1}Spd_S",
         precision=0.1,
         mapping={"14": 14, "7": 7, "0": 0, "-7": -7, "-14": -14},
+        in_phase="foc1_phased",
+        state="foc1_status",
     ),
     foc1_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -122,12 +124,14 @@ devices = dict(
         visibility=(),
     ),
     foc2_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{pv_root_2}Spd_R",
         writepv=f"{pv_root_2}Spd_S",
         precision=0.1,
         mapping={"14": 14, "7": 7, "0": 0, "-7": -7, "-14": -14},
+        in_phase="foc2_phased",
+        state="foc2_status",
     ),
     foc2_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
