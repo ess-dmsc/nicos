@@ -223,18 +223,23 @@ class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
         """
         Return `True` if a phase-transition has been completed.
 
-        Checking if chopper frequency change was accomplished is done by verifying whether it is in steady state. The
-        in-phase flag tells whether the tachometer and EVR signals concur, using statistical methods on the EPICS IOC.
+        Checking if chopper frequency change was accomplished is done by verifying
+        whether it is in steady state. The in-phase flag tells whether the tachometer
+        and EVR signals concur, using statistical methods on the EPICS IOC.
 
-        Watching in-phase flag state is not sufficient, however, since its change is not instantaneous when we command a frequency
-        change. Although EPICS has a mechanism to put flag down when
-        speed setpoint is changed, there is no enough time for the state change to reach NICOS. Thus, we utilize a
-        rising edge detector, `_is_completed_by_inphase_edge`, that detects the transition, not only the current state.
+        Watching in-phase flag state is not sufficient, however, since its change
+        is not instantaneous when we command a frequency change. Although EPICS
+        has a mechanism to put flag down when speed setpoint is changed, there is
+        no enough time for the state change to reach NICOS. Thus, we utilize a
+        rising edge detector, `_is_completed_by_inphase_edge`, that detects the
+        transition, not only the current state.
 
         A final caveat: the in-phase flag does not go "Not in phase"
-        when set the target to 0 Hz — that is the same as sending a Stop to the controller and the statistics algorithm
-        of EPICS IOC stops working. To handle that case we verify whether the target is zero and if it is also ensure
-        the chopper state changed to "Ready": that means that the disc stopped and the movement is completed.
+        when set the target to 0 Hz — that is the same as sending a Stop to the
+        controller and the statistics algorithm of EPICS IOC stops working. To
+        handle that case we verify whether the target is zero and if it is also
+        ensure the chopper state changed to "Ready": that means that the disc
+        stopped and the movement is completed.
         """
         if self.target != self.TARGET_ZERO:
             return self._is_completed_by_inphase_edge()
