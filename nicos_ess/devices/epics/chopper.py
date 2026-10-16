@@ -11,6 +11,10 @@ from nicos.core import (
     status,
 )
 from nicos.devices.abstract import MappedMoveable
+from nicos_ess.devices.epics.pva import (
+    EpicsManualMappedAnalogMoveable,
+    EpicsMappedReadable,
+)
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsStatusOnlyReadable,
     get_from_cache_or,
@@ -191,11 +195,102 @@ class NewChopperAlarms(ChopperAlarms):
     }
 
 
+class EssChopperSpeed(EpicsManualMappedAnalogMoveable):
+    """
+    Chopper speed class implements doIsCompleted to ease the maw
+    usage inside scripts and scans
+    """
+
+    TARGET_ZERO = "0"
+    _INPHASE_STATES = {
+        "Not in phase": False,
+        "In phase": True,
+    }
+
+    attached_devices = {
+        "in_phase": Attach("In phase ", EpicsMappedReadable),
+        "state": Attach("Current state of the chopper", Readable),
+    }
+
+    def doInit(self, mode):
+        EpicsManualMappedAnalogMoveable.doInit(self, mode)
+        self._previous_inphase = False
+
+    def _str_to_bool(self, inp):
+        return self._INPHASE_STATES[inp]
+
+    def doIsCompleted(self):
+        """
+        Return `True` if a phase-transition has been completed.
+
+        Checking if chopper frequency change was accomplished is done by verifying
+        whether it is in steady state. The in-phase flag tells whether the tachometer
+        and EVR signals concur, using statistical methods on the EPICS IOC.
+
+        Watching in-phase flag state is not sufficient, however, since its change
+        is not instantaneous when we command a frequency change. Although EPICS
+        has a mechanism to put flag down when speed setpoint is changed, there is
+        no enough time for the state change to reach NICOS. Thus, we utilize a
+        rising edge detector, `_is_completed_by_inphase_edge`, that detects the
+        transition, not only the current state.
+
+        A final caveat: the in-phase flag does not go "Not in phase"
+        when set the target to 0 Hz — that is the same as sending a Stop to the
+        controller and the statistics algorithm of EPICS IOC stops working. To
+        handle that case we verify whether the target is zero and if it is also
+        ensure the chopper state changed to "Ready": that means that the disc
+        stopped and the movement is completed.
+        """
+        if self.target != self.TARGET_ZERO:
+            return self._is_completed_by_inphase_edge()
+        return self._is_completed_by_state()
+
+    def _is_completed_by_inphase_edge(self):
+        """
+        This function implements a rising edge detector, as the following picture shows
+
+          in-phase
+          ^
+          |
+        1 |_ _ _ _ _ _ ________ ...
+          |           |
+          |           ^
+        0 |___________|__________-> t
+
+                      ^rising edge of the signal
+
+        from the above chart we can extract the truth table:
+
+        previous | current | output
+        ---------|---------|-------
+         0       | 0       | 0
+         0       | 1       | 1
+         1       | 0       | 0
+         1       | 1       | 0
+
+        and implemented it with logic gates:
+
+        previous -----o|``-.
+                       |    :----- output
+        current  ------|..-`
+
+        This function returns the output value and updates the previous value for the next iteration.
+        """
+        current = self._str_to_bool(self._attached_in_phase.read())
+        edge_detected = current and not self._previous_inphase
+        self._previous_inphase = current
+        return edge_detected
+
+    def _is_completed_by_state(self):
+        return self._attached_state.read() == "Ready"
+
+
 class NewEssChopperController(EssChopperController):
     """Standardized ESS chopper controller for ODIN/NMX style setups."""
 
     attached_devices = {
         "alarms": Attach("Alarms of the chopper", NewChopperAlarms, optional=True),
+        "speed": Attach("Speed PV of the chopper", EssChopperSpeed),
     }
 
     parameter_overrides = {
