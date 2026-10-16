@@ -344,16 +344,26 @@ class CetoniLinkedDialog(QDialog):
         self.bottom_section.addWidget(self.button_close)
 
         self.dialog_layout.addLayout(self.status_section)
-        self.dialog_layout.addSpacing(14)
+        self.dialog_layout.addItem(self._create_spacer())
         self.dialog_layout.addWidget(self.settings_group)
-        self.dialog_layout.addSpacing(14)
+        self.dialog_layout.addItem(self._create_spacer())
         self.dialog_layout.addLayout(self.controls_section)
-        self.dialog_layout.addSpacing(14)
+        self.dialog_layout.addItem(self._create_spacer())
         self.dialog_layout.addLayout(self.bottom_section)
         self.setLayout(self.dialog_layout)
 
     def _format_layout(self):
         self.device_name.setStyleSheet("font-weight: bold;")
+
         ROW_HEIGHT = 24
         for row in range(self.settings_grid.rowCount()):
             self.settings_grid.setRowMinimumHeight(row, ROW_HEIGHT)
+
+    def _create_spacer(
+        self,
+        w=0,
+        h=20,
+        hPolicy=QSizePolicy.Policy.Minimum,
+        vPolicy=QSizePolicy.Policy.Expanding,
+    ):
+        return QSpacerItem(w, h, hPolicy, vPolicy)
