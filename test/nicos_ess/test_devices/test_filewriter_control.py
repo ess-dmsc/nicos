@@ -27,7 +27,7 @@ import pytest
 
 # pytest.importorskip("streaming_data_types")
 # pytest.importorskip("confluent_kafka")
-from nicos.core import SIMULATION
+from nicos.core import GUEST, SIMULATION
 from nicos_ess.devices.datasinks.file_writer import (
     AlreadyWritingException,
     FileWriterController,
@@ -125,11 +125,18 @@ class TestFileWriterControl(TestCase):
         self.filewriter_status._jobs_in_order = {}
         for idx, job_id in enumerate(["job id 1", "job id 2", "job id 3"], start=1):
             job = JobRecord(job_id, idx, 0, 0)
+            print(job.start_time)
             self.filewriter_status._jobs_in_order[job_id] = job
 
-        with mock.patch(
-            "nicos_ess.devices.datasinks.file_writer.printTable"
-        ) as print_table:
+        with (
+            mock.patch(
+                "nicos_ess.devices.datasinks.file_writer.printTable"
+            ) as print_table,
+            mock.patch.object(
+                self.session, "daemon_device", create=True
+            ) as daemon_device,
+        ):
+            daemon_device.current_script.return_value.user.level = GUEST
             self.filewriter_control.list_jobs(2)
 
         _, items, _ = print_table.call_args.args
