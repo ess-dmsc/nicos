@@ -354,18 +354,6 @@ class CetoniLinkedDialog(QDialog):
 
     def _format_layout(self):
         self.device_name.setStyleSheet("font-weight: bold;")
-
-        UNIT_FIELD_WIDTH = 40
         ROW_HEIGHT = 24
-
-        unit_fields = [
-            self.time_unit,
-            self.flowrate_unit,
-            self.vol_total_unit,
-        ]
-
-        for widget in unit_fields:
-            widget.setMaximumWidth(UNIT_FIELD_WIDTH)
-
         for row in range(self.settings_grid.rowCount()):
             self.settings_grid.setRowMinimumHeight(row, ROW_HEIGHT)
