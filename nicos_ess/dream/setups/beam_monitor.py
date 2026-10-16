@@ -4,28 +4,6 @@ pv_root_1 = "DREAM-BM:NDet-FEN-001:"
 pv_root_2 = "DREAM-BM:NDet-FEN-002:"
 
 devices = dict(
-    monitor_1=device(
-        "nicos_ess.devices.epics.multiframe_histogrammer.MultiFrameHistogrammer",
-        description="Consumes histograms from event-to-histogram converter",
-        pv_root="DREAM:MFH-BM1:",
-        readpv="DREAM:MFH-BM1:signal",
-        source_name_input="cbm1",
-        topic_input="dream_beam_monitor",
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-    ),
-    monitor_2=device(
-        "nicos_ess.devices.epics.multiframe_histogrammer.MultiFrameHistogrammer",
-        description="Consumes histograms from event-to-histogram converter",
-        pv_root="DREAM:MFH-BM2:",
-        readpv="DREAM:MFH-BM2:signal",
-        source_name_input="cbm2",
-        topic_input="dream_beam_monitor",
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-    ),
     monitor1_high_voltage=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The value of the high voltage applied to the monitor 1",
