@@ -25,20 +25,23 @@ from unittest import TestCase, mock
 
 import pytest
 
-pytest.importorskip("epics")
-from test.utils import ErrorLogged
-
-pytest.importorskip("streaming_data_types")
-pytest.importorskip("confluent_kafka")
-
+# pytest.importorskip("streaming_data_types")
+# pytest.importorskip("confluent_kafka")
 from nicos.core import SIMULATION
-from nicos_ess.devices.datasinks.file_writer import FileWriterController, JobRecord
+from nicos_ess.devices.datasinks.file_writer import (
+    AlreadyWritingException,
+    FileWriterController,
+    JobRecord,
+)
 from test.nicos_ess.test_devices.test_filewriter_status import (
     create_status_message,
     create_stop_message_with_error,
     no_op,
     prepare_filewriter_status,
 )
+
+# pytest.importorskip("epics")
+from test.utils import ErrorLogged
 
 # Set to None because we load the setup after the mocks are in place.
 session_setup = None
@@ -95,7 +98,7 @@ class TestFileWriterControl(TestCase):
         messages = [(123, create_status_message(job_id_1))]
         self.filewriter_status.new_messages_callback(messages)
 
-        with pytest.raises(Exception):
+        with pytest.raises(AlreadyWritingException):
             self.filewriter_control.start_job()
 
     def test_can_start_job_if_no_job_in_progress(self):
