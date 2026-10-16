@@ -32,7 +32,6 @@ from nicos.core import (
     LIVE,
     POLLER,
     SIMULATION,
-    ArrayDesc,
     CommunicationError,
     Override,
     Param,
@@ -124,8 +123,6 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         "pollinterval": Override(default=None, userparam=False, settable=False),
     }
 
-    arraydesc = ArrayDesc("", shape=(), dtype=np.int32)
-
     def doPreinit(self, mode):
         self._collector = None  # set by LiveDataCollector
         self._signal: np.ndarray | None = None
@@ -134,18 +131,11 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         self._gate_generation: int | None = None
         self._reset_confirmed = True
         self._last_data = time.monotonic()
-        self.arraydesc = ArrayDesc(self.name, shape=(), dtype=np.int32)
         if session.sessiontype != POLLER:
             self._update_status(status.OK, "")
 
     def doRead(self, maxage=0):
         return [self.curvalue]
-
-    def doReadArray(self, quality):
-        return self._signal
-
-    def arrayInfo(self):
-        return self.arraydesc
 
     def doStatus(self, maxage=0):
         """Missing data is a warning, and a count keeps waiting for it.
@@ -410,9 +400,6 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
                 return
 
             self.curvalue = int(signal.sum()) if signal.size else 0
-            self.arraydesc = ArrayDesc(
-                self.name, shape=signal.shape, dtype=signal.dtype
-            )
             self._cache.put(self, "value", self.curvalue, time.time())
 
             self._plot = dict(

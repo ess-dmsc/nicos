@@ -12,6 +12,8 @@ from streaming_data_types.dataarray_da00 import Variable, serialise_da00
 
 from nicos.commands.measure import count
 from nicos.commands.scan import scan
+from nicos.core import UsageError
+from nicos.devices.datasinks import LiveViewSink
 from nicos_ess.devices.datasources import livedata
 from test.nicos_ess.command_helpers import loaded_setup, scan_positions, set_detectors
 from test.nicos_ess.test_devices.doubles import StubKafkaProducer, StubKafkaSubscriber
@@ -146,3 +148,16 @@ def test_channel_that_goes_silent_reads_zero(session, livedata_backend):
             livedata_backend.sources = ()
         result = count(t=COUNT_TIMER_PRESET_SECONDS)
         assert result[1:] == [0, 0]
+
+
+@pytest.mark.parametrize(
+    "detectors", [["channel_1"], ["livedata_collector", "channel_1"]]
+)
+def test_counting_a_channel_directly_is_a_usage_error(
+    session, livedata_backend, monkeypatch, detectors
+):
+    with loaded_setup(session, "ess_livedata_count_scan"):
+        monkeypatch.setattr(session, "_datasinks", [LiveViewSink("liveview")])
+        set_detectors(session, *detectors)
+        with pytest.raises(UsageError, match="cannot be used as a detector"):
+            count(t=COUNT_TIMER_PRESET_SECONDS)

@@ -415,7 +415,7 @@ class TestResetGate:
             [((1, 0), serialise_da00(source_name="monitor", timestamp_ns=0, data=data))]
         )
         assert channel.status(0)[0] == status.ERROR
-        assert channel.doReadArray(0) is None
+        assert channel._signal is None
         collector.stop()
 
         collector.prepare()
@@ -752,7 +752,7 @@ class TestDataChannelDimensionHandling:
         data = np.ones(shape, dtype=np.int32)
         self._send([_var("signal", data, axes=axes)])
         assert self.channel.read(0) == [data.size]
-        assert self.channel.arrayInfo().shape == expected_shape
+        assert self.channel._signal.shape == expected_shape
         assert self.captured[0][0]["datadescs"][0]["shape"] == expected_shape
 
     def test_no_signal_variable_is_ignored(self):
