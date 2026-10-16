@@ -17,7 +17,12 @@ from nicos_ess.devices.epics.pva.epics_common import (
 
 class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
     """
-    Controller device to control one input channel of the flow cryo
+    Controller device for the Lakeshore 336.
+
+    This implementation assumes that the input and outputs of the flow-cryo will not be changed 'on the fly'
+    (for example: Input A -> Output 1, Input B -> Output 2, etc...). If input and output connections
+    are changed, the setup in nicos must be restared for changes to take effect.
+    Ramping and range are set via parameters and heating is started by moving the setpoint
     """
 
     parameters = {
@@ -32,14 +37,14 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             "Input position of the Flow Cryo",
             type=oneof("A", "B", "C", "D", "D2", "D3", "D4", "D5"),
             mandatory=True,
-            settable=False,
+            settable=True,
             userparam=False,
         ),
         "output_num": Param(
             "Output number the input is connected to",
             type=int,
             mandatory=True,
-            settable=False,
+            settable=True,
             userparam=False,
         ),
         "range": Param(
@@ -108,7 +113,7 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             "value": readback_channel(
                 f"Temp{self.input_pos}-Kelvin-R", cache_key="value", primary=True
             ),
-            "alarm": readback_channel(f"Alarm{self.input_pos}-Summary"),
+            "alarm": readback_channel("AlarmSummary"),
             "highlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.HIGH"),
             "lowlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.LOW"),
             "hwhighlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.HI"),
