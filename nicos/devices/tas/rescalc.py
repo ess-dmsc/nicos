@@ -30,6 +30,7 @@ neutrons.instruments.tas.tasres from the neutrons Python package, compiled by
 Marc Janoschek.
 """
 
+import numpy as np
 from numpy import (
     absolute,
     arange,
@@ -908,6 +909,11 @@ Resolution Info:
         # calculates sigmas in system h,k,l (r.l.u) en (meV)
         # print self.M
         [E, V] = eig(self.M)
+        # In NumPy versions >=2.5.0 eig always returns complex values. This
+        # ensures the behavior of previous versions:
+        if np.all(E.imag == 0):  # this is what NumPy prior v2.5 used to do
+            E = E.real
+            V = V.real
 
         # print 'Eigenvalues'
         # print E
@@ -949,8 +955,8 @@ Resolution Info:
         TT = real(self.S * matrix([h, k, l]).transpose())
         # cos(theta) and sin(theta) are the projections of the Q vector onto
         # the directions V1 and V2
-        cos_theta = float(TT[0, 0] / sqrt(dot(TT.transpose(), TT)))
-        sin_theta = float(TT[1, 0] / sqrt(dot(TT.transpose(), TT)))
+        cos_theta = float(TT[0, 0].item() / sqrt(dot(TT.transpose(), TT).item()))
+        sin_theta = float(TT[1, 0].item() / sqrt(dot(TT.transpose(), TT).item()))
 
         # ----- Rotation matrix from system of resolution matrix
         # to system defined by V1, V2, V3 => V1,V2 define scattering plane,

@@ -3,9 +3,10 @@
 # For now, we can manually run this file to verify the stub implementation.
 
 import pytest
+import redis
 
 from nicos.services.cache.endpoints.redis_client import RedisClient
-from test.test_cache.test_redis import RedisClientStub
+from test.test_redis.test_redis import RedisClientStub
 
 
 @pytest.fixture(scope="function")
@@ -63,7 +64,7 @@ def test_execute_command_ts_create_add_range(real_redis_client, stub_redis_clien
     real_range = real_redis_client.execute_command("TS.RANGE", key, 0, 3)
     stub_range = stub_redis_client.execute_command("TS.RANGE", key, 0, 3)
 
-    assert real_range == stub_range
+    assert real_range == stub_range == [[1, 10.0], [2, 20.0]]
 
     command = ("TS.REVRANGE", key, 0, 3, "COUNT", 1)
     assert real_redis_client.execute_command(
@@ -203,7 +204,7 @@ def test_execute_command_zremrangebyscore(real_redis_client, stub_redis_client):
     stub_remaining = stub_redis_client.zrangebyscore(
         key, float("-inf"), float("inf"), withscores=True
     )
-    assert real_remaining == stub_remaining == [("m3", 3.0)]
+    assert real_remaining == stub_remaining == [["m3", 3.0]]
 
 
 def test_execute_command_ts_del(real_redis_client, stub_redis_client):
@@ -221,7 +222,7 @@ def test_execute_command_ts_del(real_redis_client, stub_redis_client):
 
     real_range = real_redis_client.execute_command("TS.RANGE", key, 0, 100)
     stub_range = stub_redis_client.execute_command("TS.RANGE", key, 0, 100)
-    assert real_range == stub_range == [[30, "3"]]
+    assert real_range == stub_range == [[30, 3.0]]
 
 
 def test_execute_command_ts_add_creates_with_retention(
@@ -244,7 +245,7 @@ def test_execute_command_ts_add_creates_with_retention(
 
     real_range = real_redis_client.execute_command("TS.RANGE", key, 0, 100)
     stub_range = stub_redis_client.execute_command("TS.RANGE", key, 0, 100)
-    assert real_range == stub_range == [[40, "2"], [70, "3"]]
+    assert real_range == stub_range == [[40, 2.0], [70, 3.0]]
 
 
 @pytest.mark.parametrize("aggregation", ["avg", "last", "max"])
@@ -299,7 +300,7 @@ def test_execute_command_zrevrangebyscore(real_redis_client, stub_redis_client):
     stub_result = stub_redis_client.zrevrangebyscore(
         "reverse-index", 25, float("-inf"), start=0, num=1, withscores=True
     )
-    assert real_result == stub_result == [("middle", 20.0)]
+    assert real_result == stub_result == [["middle", 20.0]]
 
 
 def test_scan_iter_hash_excludes_timeseries(real_redis_client, stub_redis_client):
@@ -312,3 +313,50 @@ def test_scan_iter_hash_excludes_timeseries(real_redis_client, stub_redis_client
     stub_result = sorted(stub_redis_client.scan_iter(_type="hash"))
 
     assert real_result == stub_result == ["current-value"]
+
+
+@pytest.mark.parametrize(
+    "value",
+    [3.14, 5, 5.0, -2.5, 0, 1e-7, 2.5e-9, 123456789.125, 1e15, 1e16, 1e17, 1.5e22],
+)
+def test_ts_sample_value_types(real_redis_client, stub_redis_client, value):
+    for timestamp, command in enumerate(("TS.RANGE", "TS.REVRANGE"), start=1):
+        real_redis_client.execute_command("TS.ADD", "typed", timestamp, value)
+        stub_redis_client.execute_command("TS.ADD", "typed", timestamp, value)
+
+        real_range = real_redis_client.execute_command(command, "typed", 0, 10)
+        stub_range = stub_redis_client.execute_command(command, "typed", 0, 10)
+
+        assert real_range == stub_range
+        assert [type(sample[1]) for sample in real_range] == [
+            type(sample[1]) for sample in stub_range
+        ]
+
+
+def test_pipeline_ts_range(real_redis_client, stub_redis_client):
+    results = []
+    for client in (real_redis_client, stub_redis_client):
+        client.execute_command("TS.ADD", "piped", 1, 1.5)
+        pipe = client.pipeline(transaction=False)
+        pipe.execute_command("TS.RANGE", "piped", 0, 10)
+        pipe.execute_command("TS.REVRANGE", "piped", 0, 10, "COUNT", 1)
+        results.append(pipe.execute())
+
+    assert results[0] == results[1]
+
+
+@pytest.mark.parametrize("value", [3.14, 5, 5.0, -2.5, 1e-7, 123456789.125, 1e16])
+def test_ts_sample_strings_with_resp2(value):
+    real = redis.StrictRedis(db=15, decode_responses=True, protocol=2)
+    stub = RedisClientStub(protocol=2)
+    real.execute_command("FLUSHDB")
+    try:
+        real.execute_command("TS.ADD", "typed", 1, value)
+        stub.execute_command("TS.ADD", "typed", 1, value)
+
+        assert real.execute_command("TS.RANGE", "typed", 0, 10) == stub.execute_command(
+            "TS.RANGE", "typed", 0, 10
+        )
+    finally:
+        real.execute_command("FLUSHDB")
+        real.close()
