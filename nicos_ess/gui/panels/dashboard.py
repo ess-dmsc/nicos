@@ -156,6 +156,7 @@ class Dashboard(Panel):
     def _init_dashboard_labels(self, *args):
         dashboardRow1 = self.leftRow1
         dashboardRow2 = self.leftRow2
+        dashboardRow2.setContentsMargins(0, 0, 0, 10)
 
         for item in args:
             name = item.get("name")
@@ -177,7 +178,6 @@ class Dashboard(Panel):
                 text.setStyleSheet("font-size: 14pt")
                 dashboardRow2.addWidget(label)
                 dashboardRow2.addWidget(text)
-                dashboardRow2.addWidget(Spacer())
 
             setattr(self, f"{name}_label", label)
             setattr(self, f"{name}_text", text)

@@ -17,12 +17,15 @@
    <item>
     <layout class="QVBoxLayout" name="dashboardMain" stretch="0,0,0">
      <item>
-      <layout class="QHBoxLayout" name="dashTop" stretch="0,0,10,0">
+      <layout class="QHBoxLayout" name="dashTop" stretch="0,1,1,0">
        <item>
         <layout class="QHBoxLayout" name="logo_box"/>
        </item>
        <item>
         <layout class="QVBoxLayout" name="dashTopL">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
          <item>
           <layout class="QHBoxLayout" name="leftRow1">
            <property name="spacing">
@@ -31,10 +34,27 @@
           </layout>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="leftRow2">
-           <property name="spacing">
-            <number>0</number>
-           </property>
+          <layout class="QHBoxLayout" name="holder">
+           <item>
+            <layout class="QHBoxLayout" name="leftRow2">
+             <property name="spacing">
+              <number>6</number>
+             </property>
+            </layout>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
           </layout>
          </item>
         </layout>
@@ -55,6 +75,9 @@
        <item>
         <layout class="QHBoxLayout" name="dashTopR">
          <property name="spacing">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
           <number>6</number>
          </property>
         </layout>
