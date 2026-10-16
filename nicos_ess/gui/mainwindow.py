@@ -43,19 +43,15 @@ from nicos.guisupport.qt import (
     QApplication,
     QDialog,
     QFontDialog,
-    QGridLayout,
     QIcon,
-    QLabel,
     QMainWindow,
     QMenu,
     QMessageBox,
     QPixmap,
-    QSizePolicy,
     QSystemTrayIcon,
     Qt,
     QTimer,
     QWebView,
-    QWidget,
     pyqtSignal,
     pyqtSlot,
 )
@@ -88,84 +84,6 @@ def decolor_logo(pixmap, color):
     ret_pix.fill(color)
     ret_pix.setMask(pixmap.createMaskFromColor(Qt.GlobalColor.transparent))
     return ret_pix
-
-
-class Spacer(QWidget):
-    def __init__(self, parent=None):
-        QWidget.__init__(self, parent)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-
-class StatusWidget(QWidget):
-    @classmethod
-    def _create_resources(cls):
-        cls.status_icon = {
-            "OK": get_icon("check_circle_green-24px.svg"),
-            "OPEN": get_icon("check_circle_green-24px.svg"),
-            "WARN": get_icon("warning_orange-24px.svg"),
-            "BUSY": get_icon("sync_orange-24px.svg"),
-            "NOTREACHED": get_icon("error-24px.svg"),
-            "DISABLED": get_icon("not_interested-24px.svg"),
-            "CLOSED": get_icon("not_interested-24px.svg"),
-            "ERROR": get_icon("error-24px.svg"),
-            "UNKNOWN": get_icon("device_unknown-24px.svg"),
-        }
-
-    def __init__(self, parent=None):
-        QWidget.__init__(self, parent)
-        self.grid_layout = QGridLayout(self)
-        self.setLayout(self.grid_layout)
-        self.status_entries = {}
-        self.maximum_status_columns = 3
-        self.current_row = 0
-        self.current_column = 0
-
-        self._create_resources()
-
-        # Example statuses
-        # self.add_status(
-        #     "Shutter Status", "shutter/status", "CLOSED", status_type="icon_text"
-        # )
-        # self.add_status("Proton Charge", "proton/charge", "0 µC", status_type="text")
-
-        self.grid_layout.setColumnStretch(self.grid_layout.columnCount() + 1, 1)
-
-    def add_status(self, label, key, initial_value, status_type="icon"):
-        label_widget = QLabel(f"{label}:")
-        label_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        label_widget.setStyleSheet("font-size: 17pt; font-weight: bold;")
-
-        value_widget = QLabel(initial_value)
-        value_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        value_widget.setStyleSheet("font-size: 17pt;")
-
-        if self.current_column >= self.maximum_status_columns:
-            self.current_row += 1
-            self.current_column = 0
-
-        col_base = self.current_column * 3
-
-        icon_label = None
-        self.grid_layout.addWidget(label_widget, self.current_row, col_base + 2)
-        if status_type == "icon_text":
-            icon_label = QLabel()
-            icon_label.setPixmap(self.status_icon[initial_value].pixmap(24, 24))
-            self.grid_layout.addWidget(icon_label, self.current_row, col_base + 1)
-        else:
-            self.grid_layout.addWidget(Spacer(), self.current_row, col_base + 1)
-        self.grid_layout.addWidget(value_widget, self.current_row, col_base)
-
-        entry = (label, value_widget, icon_label)
-        self.status_entries[key] = entry
-
-        self.current_column += 1
-
-    def update_status(self, data):
-        """
-        Method that is called when the cache signal is emitted from the client.
-        Use to update the status of the widgets.
-        """
-        ts, key, ttl, value = data
 
 
 class ToolAction(QAction):
@@ -355,9 +273,6 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionViewOnly.setIcon(get_icon("lock-24px.svg"))
         self.actionPreferences.setIcon(get_icon("tune-24px.svg"))
         self.actionExpert.setIcon(get_icon("fingerprint-24px.svg"))
-
-    def add_status_widget(self):
-        self.status_widget = StatusWidget(self)
 
     @staticmethod
     def setQSS(style_file):

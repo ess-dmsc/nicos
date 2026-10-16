@@ -24,7 +24,6 @@ from nicos.guisupport.qt import (
     QPushButton,
     QSizePolicy,
     Qt,
-    QWidget,
     pyqtSlot,
 )
 from nicos.protocols.daemon import (
@@ -95,12 +94,6 @@ def decolor_logo(pixmap, color):
     ret_pix.fill(color)
     ret_pix.setMask(pixmap.createMaskFromColor(Qt.GlobalColor.transparent))
     return ret_pix
-
-
-class Spacer(QWidget):
-    def __init__(self, parent=None):
-        QWidget.__init__(self, parent)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
 
 class Dashboard(Panel):
