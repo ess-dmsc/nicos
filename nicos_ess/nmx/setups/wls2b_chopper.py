@@ -19,12 +19,14 @@ devices = dict(
         visibility=(),
     ),
     wls2b_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{pv_root_2}Spd_R",
         writepv=f"{pv_root_2}Spd_S",
         precision=0.1,
         mapping={"0": 0, "14": 14},
+        in_phase="wls2b_chopper_phased",
+        state="wls2b_chopper_status",
     ),
     wls2b_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
