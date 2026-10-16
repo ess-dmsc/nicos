@@ -653,8 +653,14 @@ class FileWriterControlSink(Device):
         funcs = [
             lambda job: str(job.job_number),
             lambda job: job.get_state_string(),
-            lambda job: job.start_time.strftime(dt_format),
-            lambda job: job.stop_time.strftime(dt_format) if job.stop_time else "",
+            lambda job: datetime.fromtimestamp(job.start_time / 1000).strftime(
+                dt_format
+            ),
+            lambda job: (
+                datetime.fromtimestamp(job.stop_time / 1000).strftime(dt_format)
+                if job.stop_time
+                else ""
+            ),
             lambda job: str(job.replay_of) if job.replay_of else "",
             lambda job: job.error_msg if job.error_msg else "",
         ]
