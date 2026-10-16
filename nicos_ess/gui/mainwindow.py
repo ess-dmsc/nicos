@@ -50,7 +50,6 @@ from nicos.guisupport.qt import (
     QMenu,
     QMessageBox,
     QPixmap,
-    QPoint,
     QSizePolicy,
     QSystemTrayIcon,
     Qt,
@@ -82,53 +81,6 @@ try:
     from nicos.clients.gui.dialogs.help import HelpWindow
 except ImportError:
     HelpWindow = None
-
-
-class ToolbarItem:
-    INSTRUMENT = {
-        "name": "instrument",
-        "location": "row_1",
-        "label": "Instrument",
-        "data_source": "session.instrument",
-        "stringify": False,
-        "upper_case": True,
-    }
-    EXPERIMENT = {
-        "name": "experiment",
-        "location": "row_1",
-        "label": "     Experiment",
-        "data_source": "session.experiment.title",
-        "stringify": False,
-    }
-    PROPOSAL_ID = {
-        "name": "proposal_ID",
-        "location": "row_2",
-        "label": "Proposal ID",
-        "data_source": "session.experiment.proposal",
-        "stringify": False,
-    }
-    RUN_NUMBER = {
-        "name": "run_number",
-        "location": "row_2",
-        "label": "Run Number",
-        "data_source": "session.experiment.get_current_run_number()",
-        "stringify": True,
-    }
-    RUN_TITLE = {
-        "name": "run_title",
-        "location": "row_1",
-        "label": "     Run Title",
-        "data_source": "session.experiment.run_title",
-        "stringify": False,
-    }
-
-
-ALL_TOOLBAR_ITEMS = [
-    ToolbarItem.INSTRUMENT,
-    ToolbarItem.PROPOSAL_ID,
-    ToolbarItem.RUN_NUMBER,
-    ToolbarItem.RUN_TITLE,
-]
 
 
 def decolor_logo(pixmap, color):
@@ -317,7 +269,6 @@ class MainWindow(DlgUtils, QMainWindow):
         self.client.plugplay.connect(self.on_client_plugplay)
         self.client.watchdog.connect(self.on_client_watchdog)
         self.client.prompt.connect(self.on_client_prompt)
-        self.client.experiment.connect(self._update_toolbar_info)
 
         # data handling setup
         self.data = DataHandler(self.client)
@@ -379,15 +330,11 @@ class MainWindow(DlgUtils, QMainWindow):
         self.pnpWindows = {}
 
         # create initial state
-        self._init_toolbar()
-        self.add_logo()
         self.set_icons()
         self._create_cheeseburger_menu()
         self.actionUser.setIconVisibleInMenu(True)
         self.actionExpert.setEnabled(self.client.isconnected)
         self.actionEmergencyStop.setEnabled(self.client.isconnected)
-        self._init_toolbar_labels(*ALL_TOOLBAR_ITEMS)
-        self.add_status_widget()
         self.on_client_disconnected()
 
     def _create_cheeseburger_menu(self):
@@ -400,52 +347,6 @@ class MainWindow(DlgUtils, QMainWindow):
         dropdown.addAction(self.actionExit)
         self.dropdown = dropdown
 
-    def _init_toolbar(self):
-        self.status_label = QLabel()
-        self.status_label.setStyleSheet("font-size: 17pt; font-weight: bold")
-        self.status_text = QLabel()
-        self.status_text.setStyleSheet("font-size: 17pt")
-
-        self.toolbar = self.toolBarRight
-        self.toolbar.addWidget(self.status_text)
-        self.toolbar.addWidget(self.status_label)
-
-    def _init_toolbar_labels(self, *args):
-        toolBarLabels = self.findChild(QWidget, "toolBarLabels")
-        toolBarRow1 = self.findChild(QWidget, "toolBarRow1")
-        toolBarRow2 = self.findChild(QWidget, "toolBarRow2")
-
-        row_1_layout = toolBarRow1.layout()
-        row_1_layout.setContentsMargins(0, 10, 0, 0)
-        row_2_layout = toolBarRow2.layout()
-        row_2_layout.setContentsMargins(0, 0, 0, 10)
-
-        self.toolBarMain.addWidget(toolBarLabels)
-
-        for item in args:
-            name = item.get("name")
-            location = item.get("location")
-            label, text = QLabel(), QLabel()
-            label.setSizePolicy(
-                QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
-            )
-            text.setSizePolicy(
-                QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
-            )
-            if location == "row_1":
-                label.setStyleSheet("font-size: 17pt; font-weight: bold")
-                text.setStyleSheet("font-size: 17pt")
-                row_1_layout.addWidget(label)
-                row_1_layout.addWidget(text)
-            elif location == "row_2":
-                label.setStyleSheet("font-size: 14pt; font-weight: bold")
-                text.setStyleSheet("font-size: 14pt")
-                row_2_layout.addWidget(label)
-                row_2_layout.addWidget(text)
-
-            setattr(self, f"{name}_label", label)
-            setattr(self, f"{name}_text", text)
-
     def set_icons(self):
         self.actionUser.setIcon(get_icon("settings_applications-24px.svg"))
         self.actionEmergencyStop.setIcon(get_icon("emergency_stop_cross_red-24px.svg"))
@@ -455,62 +356,8 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionPreferences.setIcon(get_icon("tune-24px.svg"))
         self.actionExpert.setIcon(get_icon("fingerprint-24px.svg"))
 
-    def add_logo(self):
-        spacer = QWidget()
-        spacer.setMinimumWidth(20)
-        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.toolBarMain.insertWidget(self.toolBarMain.actions()[0], spacer)
-
-        nicos_label = QLabel()
-        pxr = decolor_logo(
-            QPixmap(":/nicos-logo-high"),
-            Qt.GlobalColor.white,
-        )
-        nicos_label.setPixmap(
-            pxr.scaledToHeight(
-                self.toolBarMain.height(), Qt.TransformationMode.SmoothTransformation
-            )
-        )
-        self.toolBarMain.insertWidget(self.toolBarMain.actions()[1], nicos_label)
-
     def add_status_widget(self):
         self.status_widget = StatusWidget(self)
-        self.toolBarRight.addWidget(self.status_widget)
-
-    def update_text(self, *args):
-        max_text_length = 50
-        for item in args:
-            name = item.get("name")
-
-            label = getattr(self, f"{name}_label")
-            text = getattr(self, f"{name}_text")
-
-            value = self.client.eval(
-                item.get("data_source", ""),
-                None,
-                stringify=item.get("stringify", False),
-            )
-            label.setText(f"{item.get('label', '')}:")
-
-            if value:
-                logo = decolor_logo(
-                    QPixmap(f"{value}-logo"),
-                    Qt.GlobalColor.white,
-                )
-                if logo.isNull():
-                    if item.get("upper_case", False):
-                        text.setText(value.upper()[0:max_text_length])
-                    else:
-                        text.setText(value[0:max_text_length])
-                else:
-                    text.setPixmap(
-                        logo.scaledToHeight(
-                            self.toolBarMain.height(),
-                            Qt.TransformationMode.SmoothTransformation,
-                        )
-                    )
-            else:
-                text.setText("UNKNOWN")
 
     @staticmethod
     def setQSS(style_file):
@@ -519,28 +366,6 @@ class MainWindow(DlgUtils, QMainWindow):
                 QApplication.instance().setStyleSheet(fd.read())
             except Exception as e:
                 print(e)
-
-    def _update_toolbar_info(self):
-        if self.current_status != "disconnected":
-            self.update_text(*ALL_TOOLBAR_ITEMS)
-        else:
-            self.clear_label(*ALL_TOOLBAR_ITEMS)
-
-    def _update_status_text(self):
-        if self.current_status == "disconnected":
-            self.status_label.setText(self.current_status.upper())
-            self.status_text.setText("")
-        else:
-            self.status_label.setText("     Status: ")
-            self.status_text.setText(self.current_status.upper())
-
-    def clear_label(self, *args):
-        for item in args:
-            name = item.get("name")
-            label = getattr(self, f"{name}_label")
-            text = getattr(self, f"{name}_text")
-            label.clear()
-            text.clear()
 
     def addPanel(self, panel, always=True):
         if always or panel not in self.panels:
@@ -583,17 +408,12 @@ class MainWindow(DlgUtils, QMainWindow):
                 wconfig.options,
                 self,
             )
-            self.toolBarWindows.addAction(action)
             self.menuWindows.addAction(action)
 
             def window_callback(on, i=i):
                 self.createWindow(i)
 
             action.triggered[bool].connect(window_callback)
-        if not self.gui_conf.windows:
-            self.toolBarWindows.hide()
-        else:
-            self.toolBarWindows.show()
 
         if isinstance(self.gui_conf.main_window, tabbed) and widget:
             widget.tabChangedTab(0)
@@ -799,8 +619,6 @@ class MainWindow(DlgUtils, QMainWindow):
             self.trayIcon.showMessage(self.instrument, msg)
             self.client.last_action_at = 0
         self.current_status = status
-        self._update_toolbar_info()
-        self._update_status_text()
         # new status icon
         pixmap = QPixmap(":/" + status + ("exc" if exception else ""))
         new_icon = QIcon()
@@ -890,7 +708,7 @@ class MainWindow(DlgUtils, QMainWindow):
             self.setStatus("paused")
 
     def on_client_cache(self, data):
-        self.status_widget.update_status(data)
+        return
 
     def on_client_disconnected(self):
         self.adminLabel.setVisible(False)
@@ -1109,10 +927,10 @@ class MainWindow(DlgUtils, QMainWindow):
             panel.setCustomStyle(font, self.user_color)
         self.user_font = font
 
-    @pyqtSlot()
-    def on_actionUser_triggered(self):
-        w = self.toolBarRight.widgetForAction(self.actionUser)
-        self.dropdown.popup(w.mapToGlobal(QPoint(0, w.height())))
+    # @pyqtSlot()
+    # def on_actionUser_triggered(self):
+    #     w = self.toolBarRight.widgetForAction(self.actionUser)
+    #     self.dropdown.popup(w.mapToGlobal(QPoint(0, w.height())))
 
     @pyqtSlot()
     def on_actionEmergencyStop_triggered(self):

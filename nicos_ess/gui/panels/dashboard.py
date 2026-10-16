@@ -68,7 +68,7 @@ class DashboardItem:
     RUN_NUMBER = {
         "name": "run_number",
         "location": "row_2",
-        "label": "Run Number",
+        "label": "     Run Number",
         "data_source": "session.experiment.get_current_run_number()",
         "stringify": True,
     }
