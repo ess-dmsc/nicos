@@ -55,10 +55,11 @@ class TestFileWriterControl(TestCase):
         return thing
 
     def mock_dependencies(self):
-        self.consumer = self.create_patch(
-            "nicos_ess.devices.kafka.consumer.KafkaConsumer"
+        self.consumer_factory = self.create_patch(
+            "nicos_ess.devices.datasinks.file_writer.KafkaConsumer.create"
         )
-        self.consumer.return_value.topics.return_value = [
+        self.consumer = self.consumer_factory.return_value
+        self.consumer.topics.return_value = [
             "TEST_controlTopic",
             "TEST_jobPool",
         ]
@@ -66,7 +67,7 @@ class TestFileWriterControl(TestCase):
 
     def get_filewriter_control_device(self):
         filewriter_control = self.session.getDevice("FileWriterControl")
-        filewriter_control.one_file_per_scan = True
+        # filewriter_control.one_file_per_scan = True
         # No-op logging
         filewriter_control.log.error = no_op
         filewriter_control.log.warning = no_op
