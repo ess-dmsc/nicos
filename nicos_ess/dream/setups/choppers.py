@@ -138,7 +138,7 @@ devices = dict(
         visibility=(),
     ),
     band_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{pv_root_band_chopper}Spd_R",
         writepv=f"{pv_root_band_chopper}Spd_S",
@@ -162,6 +162,8 @@ devices = dict(
             "98": 98,
             "112": 112,
         },
+        in_phase="band_chopper_phased",
+        state="band_chopper_status",
     ),
     band_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -268,7 +270,7 @@ devices = dict(
         visibility=(),
     ),
     overlap_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{pv_root_overlap_chopper}Spd_R",
         writepv=f"{pv_root_overlap_chopper}Spd_S",
@@ -278,6 +280,8 @@ devices = dict(
             "0": 0,
             "14": 14,
         },
+        in_phase="overlap_chopper_phased",
+        state="overlap_chopper_status",
     ),
     overlap_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -384,7 +388,7 @@ devices = dict(
         visibility=(),
     ),
     pulse_shaping_chopper_1_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{pv_root_pulse_shaping_chopper_1}Spd_R",
         writepv=f"{pv_root_pulse_shaping_chopper_1}Spd_S",
@@ -414,6 +418,8 @@ devices = dict(
             "294": 294,
             "308": 308,
         },
+        in_phase="pulse_shaping_chopper_1_phased",
+        state="pulse_shaping_chopper_1_status",
     ),
     pulse_shaping_chopper_1_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -529,7 +535,7 @@ devices = dict(
         visibility=(),
     ),
     pulse_shaping_chopper_2_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{pv_root_pulse_shaping_chopper_2}Spd_R",
         writepv=f"{pv_root_pulse_shaping_chopper_2}Spd_S",
@@ -559,6 +565,8 @@ devices = dict(
             "294": 294,
             "308": 308,
         },
+        in_phase="pulse_shaping_chopper_2_phased",
+        state="pulse_shaping_chopper_2_status",
     ),
     pulse_shaping_chopper_2_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
