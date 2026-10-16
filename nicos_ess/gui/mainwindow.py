@@ -842,11 +842,6 @@ class MainWindow(DlgUtils, QMainWindow):
             panel.setCustomStyle(font, self.user_color)
         self.user_font = font
 
-    # @pyqtSlot()
-    # def on_actionUser_triggered(self):
-    #     w = self.toolBarRight.widgetForAction(self.actionUser)
-    #     self.dropdown.popup(w.mapToGlobal(QPoint(0, w.height())))
-
     @pyqtSlot()
     def on_actionEmergencyStop_triggered(self):
         self.client.tell_action("emergency")
