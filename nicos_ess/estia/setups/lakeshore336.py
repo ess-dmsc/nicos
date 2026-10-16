@@ -8,7 +8,6 @@ devices = dict(
         pvroot=pv_root,
         input_pos="A",
         output_num=1,
-        ramp="Off",
     ),
     transport_holder=device(
         "nicos_ess.estia.devices.flow_cryo_control.FlowCryoInput",
@@ -16,7 +15,6 @@ devices = dict(
         pvroot=pv_root,
         input_pos="B",
         output_num=2,
-        ramp="Off",
     ),
     # double_sample_holder=device(
     #     "nicos_ess.estia.devices.flow_cryo_control.FlowCryoInput",
