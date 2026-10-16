@@ -5,7 +5,6 @@ from nicos.core import (
     Param,
     oneof,
     pvname,
-    status,
 )
 from nicos.core.mixins import CanDisable, HasLimits
 from nicos_ess.devices.epics.pva.epics_common import (
@@ -99,7 +98,6 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
     _connect_channels = ("alarm",)
 
     def doPreinit(self, mode):
-        self._current_status = (status.OK, "")
         if mode == SIMULATION:
             return
         EpicsDeviceBase.doPreinit(self, mode)
@@ -113,7 +111,8 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
             "value": readback_channel(
                 f"Temp{self.input_pos}-Kelvin-R", cache_key="value", primary=True
             ),
-            "alarm": readback_channel("AlarmSummary"),
+            "alarm": readback_channel(f"Alarm{self.input_pos}-Summary"),
+            "alarm_severity": readback_channel(f"Alarm{self.input_pos}-Summary.SEVR"),
             "highlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.HIGH"),
             "lowlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.LOW"),
             "hwhighlimit": readback_channel(f"Temp{self.input_pos}-Kelvin-R.HI"),
@@ -145,10 +144,8 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
         # TODO: No proper alarm summary enabled in epics. Catch where the
         # error is coming from here (for now...)
         msg = self._read_channel_cached("alarm")
-        if msg == "":
-            return status.OK, msg
-        else:
-            return status.ERROR, msg
+        severity = self._read_channel_cached("alarm_severity")
+        return severity, msg
 
     def _mapReadValue(self, value, mapping):
         inverse_mapping = {v: k for k, v in mapping.items()}
@@ -176,6 +173,6 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
         return self._mapReadValue(value, self.ramp_enum)
 
     def doReadAbslimits(self):
-        abs_min = self._epics.get_channel_value("highlimit")
-        abs_max = self._epics.get_channel_value("lowlimit")
+        abs_min = self._epics.get_channel_value("lowlimit")
+        abs_max = self._epics.get_channel_value("highlimit")
         return abs_min, abs_max
