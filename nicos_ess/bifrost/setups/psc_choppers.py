@@ -20,7 +20,7 @@ devices = dict(
         visibility=(),
     ),
     psc1_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{pv_root_1}Spd_R",
         writepv=f"{pv_root_1}Spd_S",
@@ -37,6 +37,8 @@ devices = dict(
             "112": 112,
             "126": 126,
         },
+        in_phase="psc1_chopper_phase",
+        state="psc1_chopper_status",
     ),
     psc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -133,7 +135,7 @@ devices = dict(
         visibility=(),
     ),
     psc2_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
         readpv=f"{pv_root_2}Spd_R",
         writepv=f"{pv_root_2}Spd_S",
@@ -150,6 +152,8 @@ devices = dict(
             "112": 112,
             "126": 126,
         },
+        in_phase="psc2_chopper_phased",
+        state="psc2_chopper_status",
     ),
     psc2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
