@@ -24,9 +24,16 @@
 sysconfig = dict(
     datasinks=["FileWriterControl"],
     experiment="Exp",
+    instrument="YMIR",
 )
 
 devices = dict(
+    YMIR=device(
+        "nicos.devices.instrument.Instrument",
+        description="instrument object",
+        instrument="YMIR",
+        responsible="M. Clarke <matt.clarke@ess.eu>",
+    ),
     Exp=device(
         "nicos.devices.experiment.Experiment",
         description="experiment object",
