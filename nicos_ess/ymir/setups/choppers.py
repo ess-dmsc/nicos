@@ -18,15 +18,6 @@ devices = dict(
         requires={"level": "admin"},
         visibility=(),
     ),
-    mini_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The current speed.",
-        readpv=f"{pv_root}Spd_R",
-        writepv=f"{pv_root}Spd_S",
-        abslimits=(0.0, 14),
-        precision=0.1,
-        mapping={"14": 14, "7": 7, "0": 0},
-    ),
     mini_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
@@ -93,6 +84,17 @@ devices = dict(
         description="The chopper alarms",
         pv_root=pv_root,
         visibility=(),
+    ),
+    mini_chopper_speed=device(
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
+        description="The current speed.",
+        readpv=f"{pv_root}Spd_R",
+        writepv=f"{pv_root}Spd_S",
+        abslimits=(0.0, 14),
+        precision=0.1,
+        mapping={"-14": -14, "-7": -7, "0": 0, "7": 7, "14": 14},
+        in_phase="mini_chopper_phased",
+        state="mini_chopper_status",
     ),
     mini_chopper=device(
         "nicos_ess.devices.epics.chopper.NewEssChopperController",
