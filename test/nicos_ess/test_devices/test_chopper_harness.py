@@ -95,6 +95,11 @@ def attached_chopper_devices(device_harness, fake_backend):
 @pytest.fixture
 def attached_new_chopper_devices(device_harness, fake_backend):
     device_harness.create_pair(
+        HarnessReadable,
+        name="ess_state",
+        shared={"initial": "stop"},
+    )
+    device_harness.create_pair(
         HarnessMappedMoveable,
         name="ess_command",
         shared={"mapping": {"stop": 0, "start": 1}},
