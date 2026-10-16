@@ -2,6 +2,7 @@
 
 import copy
 import json
+from collections import defaultdict
 
 from nicos import session
 from nicos.core import (
@@ -13,10 +14,16 @@ from nicos.core import (
     oneof,
     relative_path,
 )
+from nicos.core.device import DeviceAlias
+from nicos_ess.devices.mixins import HasNexusConfig
 from nicos_ess.nexus.converter import NexusTemplateConverter
 from nicos_ess.utilities.json_utils import (
     append_group_under,
+    build_json,
     build_named_index_map,
+    generate_dataset_json,
+    generate_group_json,
+    generate_nxlog_json,
     get_by_named_path,
 )
 
@@ -35,6 +42,69 @@ ALLOWED_INSTRUMENT_NAMES = [
     "ymir",
 ]
 
+# Groups of these NeXus classes describe a physical component and need a
+# depends_on, which is "." when no transformation places them.
+PHYSICAL_COMPONENTS = {
+    "NXaperture",
+    "NXattenuator",
+    "NXbeam",
+    "NXbeam_stop",
+    "NXbending_magnet",
+    "NXcapillary",
+    "NXcollimator",
+    "NXcrystal",
+    "NXdetector",
+    "NXdetector_module",
+    "NXdisk_chopper",
+    "NXfermi_chopper",
+    "NXfilter",
+    "NXflipper",
+    "NXfresnel_zone_plate",
+    "NXgrating",
+    "NXguide",
+    "NXinsertion_device",
+    "NXmirror",
+    "NXmoderator",
+    "NXmonitor",
+    "NXmonochromator",
+    "NXpinhole",
+    "NXpolarizer",
+    "NXpositioner",
+    "NXsample",
+    "NXsensor",
+    "NXslit",
+    "NXsource",
+    "NXvelocity_selector",
+    "NXxraylens",
+}
+
+
+def _node_name(node):
+    return node.get("name") or node.get("config", {}).get("name")
+
+
+def _has_child(group, name):
+    return any(_node_name(child) == name for child in group["children"])
+
+
+def _add_unless_present(group, node, group_path, log, where):
+    """Append node to the group, unless the group has an entry of its name."""
+    if _has_child(group, _node_name(node)):
+        log.warning(
+            "'%s/%s' is already %s, not adding it again",
+            group_path,
+            _node_name(node),
+            where,
+        )
+    else:
+        group["children"].append(node)
+
+
+def _nx_class(node):
+    for attr in node.get("attributes", []):
+        if attr.get("name") == "NX_class":
+            return attr.get("values")
+
 
 class NexusStructureProvider(Device):
     """Interface for devices that provide a File Writer NeXus structure."""
@@ -51,8 +121,8 @@ class NexusStructureJsonFile(NexusStructureProvider):
     """Build a run-specific NeXus structure from a JSON template.
 
     The template is filtered for the loaded setups and active structure alias,
-    then extended with EPICS streams, proposal metadata, users, sample details
-    and detector array sizes.
+    then extended with the devices' nexus_config groups, proposal metadata,
+    users, sample details and detector array sizes.
     """
 
     parameters = {
@@ -180,41 +250,84 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return structure
 
     def _insert_extra_devices(self, structure):
-        if not self._check_for_device("KafkaForwarder"):
-            return structure
+        by_path = self._nexus_config_groups()
+        if tracker := self._check_for_device("component_tracking"):
+            groups = build_json(tracker._generate_json_configs_groups())
+            by_path["/entry/instrument"]["component_tracker"] = generate_group_json(
+                "component_tracker", "NXcollection", groups
+            )
 
-        fwd = session.getDevice("KafkaForwarder")
-        by_path = fwd.get_nexus_json()  # { '/entry/...': [group-node, ...] }
-
-        for path, group_nodes in by_path.items():
-            for node in group_nodes:
+        for path, groups in sorted(by_path.items()):
+            for name, node in groups.items():
+                group_path = f"{path}/{name}"
+                if group_path in self._path_map:
+                    existing = self._get_node(structure, group_path)
+                    for child in node["children"]:
+                        _add_unless_present(
+                            existing,
+                            child,
+                            group_path,
+                            self.log,
+                            "in the NeXus template",
+                        )
+                    continue
+                if _nx_class(node) in PHYSICAL_COMPONENTS and not _has_child(
+                    node, "depends_on"
+                ):
+                    node["children"].append(
+                        generate_dataset_json("depends_on", ".", "")
+                    )
                 try:
                     _, self._path_map = append_group_under(
-                        structure,
-                        self._path_map,
-                        parent_named_path=path,
-                        group_node=node,
-                        refresh_map=True,  # rebuilds map for subsequent insertions
+                        structure, self._path_map, path, node, refresh_map=True
                     )
                 except KeyError:
                     self.log.warning(
                         "NeXus path '%s' not found in template; skipping.", path
                     )
-
-        if self._check_for_device("component_tracking"):
-            try:
-                _, self._path_map = append_group_under(
-                    structure,
-                    self._path_map,
-                    "/entry/instrument",
-                    session.getDevice("KafkaForwarder").get_component_nexus_json(),
-                    refresh_map=True,
-                )
-            except KeyError:
-                self.log.warning(
-                    "Could not find '/entry/instrument' for component tracking."
-                )
         return structure
+
+    def _nexus_config_groups(self):
+        """Build {nexus_path: {group_name: group node}} from all nexus_configs."""
+        by_path = defaultdict(dict)
+        for dev in session.devices.values():
+            # An alias has the nexus_config of the device it points to.
+            if isinstance(dev, DeviceAlias) or not isinstance(dev, HasNexusConfig):
+                continue
+            for cfg in dev.nexus_config:
+                path = cfg.get("nexus_path", "/entry/instrument")
+                group = by_path[path].setdefault(
+                    cfg["group_name"],
+                    generate_group_json(cfg["group_name"], cfg["nx_class"], []),
+                )
+                _add_unless_present(
+                    group,
+                    self._nexus_config_node(dev, cfg),
+                    f"{path}/{cfg['group_name']}",
+                    dev.log,
+                    "written by another nexus_config",
+                )
+        return by_path
+
+    def _nexus_config_node(self, dev, cfg):
+        name = cfg.get("name") or "_".join(filter(None, (dev.name, cfg.get("suffix"))))
+        units = cfg.get("units", "")
+        if cfg["dataset_type"] == "static_read":
+            return generate_dataset_json(name, dev.read(0), units)
+        elif cfg["dataset_type"] == "static_value":
+            return generate_dataset_json(name, cfg["value"], units)
+        elif "source_name" in cfg:
+            return generate_nxlog_json(
+                name, cfg["schema"], cfg["source_name"], cfg["topic"], units
+            )
+        if isinstance(session.cache.get(dev, "value"), str):
+            self.log.warning(
+                "%s has a string value, which the NICOS collector does not "
+                "forward; its NXlog will be empty",
+                dev,
+            )
+        topic = f"{session.instrument.name.lower()}_nicos_devices"
+        return generate_nxlog_json(name, "f144", dev.name.lower(), topic, units)
 
     def _insert_array_size(self, structure):
         dumped_structure = json.dumps(structure)
@@ -232,11 +345,10 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
     def _replace_area_detector_placeholder(self, data):
         for item in data["children"]:
-            if "config" in item and "array_size" in item["config"]:
-                if item["config"]["array_size"] == "$AREADET$":
-                    item["config"]["array_size"] = []
-                    for val in self._get_detector_device_array_size(item["config"]):
-                        item["config"]["array_size"].append(val)
+            if item.get("config", {}).get("array_size") == "$AREADET$":
+                item["config"]["array_size"] = []
+                for val in self._get_detector_device_array_size(item["config"]):
+                    item["config"]["array_size"].append(val)
             if "children" in item:
                 self._replace_area_detector_placeholder(item)
 
@@ -363,7 +475,17 @@ class NexusStructureJsonFile(NexusStructureProvider):
                 attr.get("name") == "NX_class" and attr.get("values") == "NXsample"
                 for attr in child["attributes"]
             ):
-                child.setdefault("children", []).extend(samples_list)
+                children = child.setdefault("children", [])
+                taken = {_node_name(c) for c in children}
+                for node in samples_list:
+                    if _node_name(node) in taken:
+                        self.log.warning(
+                            "sample field '%s' is not written, the NeXus sample "
+                            "group already has an entry of that name",
+                            _node_name(node),
+                        )
+                        continue
+                    children.append(node)
                 self._refresh_map(structure)
                 return structure
 
@@ -374,7 +496,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
     def _get_sample_name_from_sample_changer(self, samples, metainfo):
         current_position = metainfo.get(("sample_changer", "value"))[0]
-        for i, sample in samples[0].items():
+        for sample in samples[0].values():
             if sample["position"] == current_position:
                 return sample["name"]
         else:
@@ -382,7 +504,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
     def _get_sample_info(self, samples, sample_name):
         sample_info = None
-        for i, sample in samples[0].items():
+        for sample in samples[0].values():
             if sample["name"] == sample_name:
                 sample_info = sample.copy()
                 break
@@ -428,7 +550,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
                 if node.get("name") == dev_name:
                     return path + [node["name"]]
                 if "children" in node:
-                    for i, child in enumerate(node["children"]):
+                    for child in node["children"]:
                         try:
                             found_path = search_node(child, path + [node["name"]])
                         except Exception as e:
@@ -495,7 +617,7 @@ class NexusStructureTemplate(NexusStructureProvider):
         """
         if not hasattr(self._templates, val):
             raise NicosError(
-                "Template %s not found in module %s" % (val, self.templatesmodule)
+                f"Template {val} not found in module {self.templatesmodule}"
             )
 
         self._template = getattr(self._templates, val)

@@ -5,7 +5,7 @@ from dataclasses import dataclass, replace
 from enum import Enum
 from functools import partial
 from time import time as currenttime
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable
 
 from streaming_data_types import DESERIALISERS
 from streaming_data_types.alarm_al00 import Severity
@@ -21,15 +21,18 @@ from nicos.core import (
     Override,
     Param,
     Readable,
+    Value,
     host,
     nonemptylistof,
     nonemptystring,
     status,
 )
 from nicos.core.errors import CommunicationError, ConfigurationError
+from nicos.core.utils import statusString
+from nicos.devices.generic import CounterChannelMixin, PassiveChannel
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 
-KafkaKey = Tuple[str, str]
+KafkaKey = tuple[str, str]
 
 
 class KafkaReadbackError(Enum):
@@ -52,13 +55,16 @@ class KafkaReadbackState:
     has_value: bool = False
     value: Any = None
     value_timestamp_ns: int = 0
-    alarm: Optional[Severity] = None
+    # Incremented for each accepted f144 update so accumulators can distinguish
+    # new values from cached values included in status-only notifications.
+    value_revision: int = 0
+    alarm: Severity | None = None
     alarm_message: str = ""
     alarm_timestamp_ns: int = 0
-    connection: Optional[ConnectionInfo] = None
+    connection: ConnectionInfo | None = None
     connection_service: str = ""
     connection_timestamp_ns: int = 0
-    kafka_error: Optional[KafkaReadbackError] = None
+    kafka_error: KafkaReadbackError | None = None
     kafka_error_message: str = ""
     kafka_error_timestamp_ns: int = 0
 
@@ -71,7 +77,7 @@ class KafkaReadbackSchemaSpec:
     """How one schema contributes to the shared readback state."""
 
     get_source_name: Callable[[Any], str]
-    apply_update: Callable[[KafkaReadbackState, Any], None]
+    apply_update: Callable[[KafkaReadbackState, Any], bool]
 
 
 class KafkaReadbackRouter(Device):
@@ -99,12 +105,12 @@ class KafkaReadbackRouter(Device):
         ),
     }
 
-    _schema_specs: Dict[str, KafkaReadbackSchemaSpec] = {}
+    _schema_specs: dict[str, KafkaReadbackSchemaSpec] = {}
 
     def doPreinit(self, mode):
         self._kafka_subscribers = {}
-        self._latest: Dict[KafkaKey, KafkaReadbackState] = {}
-        self._callbacks: Dict[KafkaKey, List[Callable[[KafkaReadbackState], None]]] = {}
+        self._latest: dict[KafkaKey, KafkaReadbackState] = {}
+        self._callbacks: dict[KafkaKey, list[Callable[[KafkaReadbackState], None]]] = {}
         self._lock = threading.RLock()
 
         if mode == SIMULATION or session.sessiontype == POLLER:
@@ -206,6 +212,8 @@ class KafkaReadbackRouter(Device):
         snapshot, callbacks = self._update_state(
             topic, source_name, apply_update, decoded
         )
+        if snapshot is None:
+            return
         self._notify_callbacks(topic, source_name, snapshot, callbacks)
 
     def _decode_payload(self, raw):
@@ -228,7 +236,8 @@ class KafkaReadbackRouter(Device):
         key = self._key(topic, source_name)
         with self._lock:
             state = self._latest.setdefault(key, KafkaReadbackState())
-            apply_update(state, decoded)
+            if not apply_update(state, decoded):
+                return None, ()
             state.kafka_error = None
             state.kafka_error_message = ""
             state.kafka_error_timestamp_ns = 0
@@ -258,27 +267,59 @@ class KafkaReadbackRouter(Device):
 
     @staticmethod
     def _apply_f144(state, decoded):
+        timestamp_ns = int(decoded.timestamp_unix_ns or 0)
+        if KafkaReadbackRouter._is_stale_timestamp(
+            timestamp_ns, state.value_timestamp_ns
+        ):
+            return False
         state.has_value = True
         state.value = decoded.value
-        state.value_timestamp_ns = int(decoded.timestamp_unix_ns or 0)
+        state.value_timestamp_ns = timestamp_ns
+        state.value_revision += 1
+        if state.connection not in (None, ConnectionInfo.CONNECTED) and (
+            not timestamp_ns
+            or not state.connection_timestamp_ns
+            or timestamp_ns >= state.connection_timestamp_ns
+        ):
+            state.connection = ConnectionInfo.CONNECTED
+            state.connection_timestamp_ns = timestamp_ns
+        return True
 
     @staticmethod
     def _apply_al00(state, decoded):
+        timestamp_ns = int(decoded.timestamp_ns or 0)
+        if KafkaReadbackRouter._is_stale_timestamp(
+            timestamp_ns, state.alarm_timestamp_ns
+        ):
+            return False
         state.alarm = decoded.severity
         state.alarm_message = decoded.message
-        state.alarm_timestamp_ns = int(decoded.timestamp_ns or 0)
+        state.alarm_timestamp_ns = timestamp_ns
+        return True
 
     @staticmethod
     def _apply_ep01(state, decoded):
+        timestamp_ns = int(decoded.timestamp or 0)
+        if KafkaReadbackRouter._is_stale_timestamp(
+            timestamp_ns, state.connection_timestamp_ns
+        ):
+            return False
         state.connection = decoded.status
         state.connection_service = decoded.service_id or ""
-        state.connection_timestamp_ns = int(decoded.timestamp or 0)
+        state.connection_timestamp_ns = timestamp_ns
+        return True
+
+    @staticmethod
+    def _is_stale_timestamp(timestamp_ns, latest_timestamp_ns):
+        return bool(
+            timestamp_ns and latest_timestamp_ns and timestamp_ns <= latest_timestamp_ns
+        )
 
     def _require_configured_topic(self, topic):
         if topic not in self.topics:
             raise ConfigurationError(
                 self,
-                "topic %r is not configured on %s" % (topic, self.name),
+                f"topic {topic!r} is not configured on {self.name}",
             )
 
     @staticmethod
@@ -363,8 +404,7 @@ class KafkaReadable(Readable):
         if snapshot is None or not snapshot.has_value:
             raise CommunicationError(
                 self,
-                "Could not read value from Kafka source %r/%r"
-                % (self.topic, self.source_name),
+                f"Could not read value from Kafka source {self.topic!r}/{self.source_name!r}",
             )
         return snapshot.value
 
@@ -386,18 +426,7 @@ class KafkaReadable(Readable):
 
         current_status = self._status_from_snapshot(snapshot)
         if current_status is not None:
-            self._cache.put(
-                self,
-                "status",
-                current_status,
-                self._cache_timestamp(
-                    max(
-                        snapshot.alarm_timestamp_ns,
-                        snapshot.connection_timestamp_ns,
-                        snapshot.kafka_error_timestamp_ns,
-                    )
-                ),
-            )
+            self._put_status_from_snapshot(snapshot, current_status)
 
     def _status_from_snapshot(self, snapshot):
         if snapshot is None:
@@ -424,6 +453,22 @@ class KafkaReadable(Readable):
             return None
         return max(parts, key=lambda item: item[0])
 
+    def _put_status_from_snapshot(self, snapshot, current_status):
+        self._cache.put(
+            self,
+            "status",
+            current_status,
+            self._cache_timestamp(self._status_timestamp_ns(snapshot)),
+        )
+
+    @staticmethod
+    def _status_timestamp_ns(snapshot):
+        return max(
+            snapshot.alarm_timestamp_ns,
+            snapshot.connection_timestamp_ns,
+            snapshot.kafka_error_timestamp_ns,
+        )
+
     @staticmethod
     def _cache_timestamp(timestamp_ns):
         if timestamp_ns:
@@ -448,3 +493,126 @@ class KafkaReadable(Readable):
         if connection in (ConnectionInfo.UNKNOWN, ConnectionInfo.NEVER_CONNECTED):
             return status.UNKNOWN, f"Kafka source {connection.name.lower()}{suffix}"
         return status.ERROR, f"Kafka source {connection.name.lower()}{suffix}"
+
+
+class KafkaAccumulatorChannel(CounterChannelMixin, KafkaReadable, PassiveChannel):
+    """Detector monitor channel accumulating f144 values from Kafka readbacks."""
+
+    parameters = {
+        "total": Param(
+            "The total accumulated so far",
+            type=float,
+            settable=True,
+            default=0.0,
+            internal=True,
+        ),
+        "started": Param(
+            "Whether accumulation is currently active",
+            type=bool,
+            settable=True,
+            default=False,
+            internal=True,
+        ),
+    }
+
+    parameter_overrides = {
+        "type": Override(default="monitor", mandatory=False),
+        "unit": Override(mandatory=True),
+        "fmtstr": Override(mandatory=True),
+    }
+
+    def valueInfo(self):
+        return (
+            Value(
+                self.name,
+                unit=self.unit,
+                errors="none",
+                type=self.type,
+                fmtstr=self.fmtstr,
+            ),
+        )
+
+    def doPreinit(self, mode):
+        KafkaReadable.doPreinit(self, mode)
+        self._last_value_revision = 0
+        self._starttime = 0.0
+        self._lock = threading.RLock()
+
+    def doPrepare(self):
+        self._reset(False)
+
+    def doStart(self):
+        self._reset(True)
+
+    def doFinish(self):
+        with self._lock:
+            self._set_started(False)
+
+    def doStop(self):
+        with self._lock:
+            self._set_started(False)
+
+    def doStatus(self, maxage=0):
+        return self._combined_status_from_snapshot(
+            self._attached_kafka.latest(self.topic, self.source_name)
+        )
+
+    def doRead(self, maxage=0):
+        return [self.total]
+
+    def _receive_kafka_update(self, snapshot):
+        current_status = self._combined_status_from_snapshot(snapshot)
+        if self._cache:
+            self._put_status_from_snapshot(snapshot, current_status)
+        if snapshot.has_value:
+            timestamp = self._cache_timestamp(snapshot.value_timestamp_ns)
+            self._add_value(snapshot.value_revision, snapshot.value, timestamp)
+
+    def _reset(self, started):
+        timestamp = currenttime()
+        with self._lock:
+            self._starttime = timestamp if started else 0.0
+            self.total = 0.0
+            self._set_started(started, timestamp)
+            if self._cache:
+                self._cache.put(self, "value", [0.0], timestamp)
+
+    def _set_started(self, started, timestamp=None):
+        if timestamp is None:
+            timestamp = currenttime()
+        self.started = started
+        if self._cache:
+            self._cache.put(
+                self,
+                "status",
+                self._combined_status_from_snapshot(
+                    self._attached_kafka.latest(self.topic, self.source_name)
+                ),
+                timestamp,
+            )
+
+    def _combined_status_from_snapshot(self, snapshot):
+        local_status = (status.BUSY, "counting") if self.started else (status.OK, "")
+        kafka_status = self._status_from_snapshot(snapshot)
+        if kafka_status is None:
+            return local_status
+        return (
+            max(local_status[0], kafka_status[0]),
+            statusString(local_status[1], kafka_status[1]),
+        )
+
+    def _add_value(self, revision, value, timestamp):
+        with self._lock:
+            if revision <= self._last_value_revision:
+                return
+            self._last_value_revision = revision
+            if not self.started or timestamp < self._starttime:
+                return
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                self.log.warning(
+                    "Ignoring nonnumeric Kafka accumulator update %r", value
+                )
+                return
+            self.total += float(value)
+            if self._cache:
+                self._cache.put(self, "value", [self.total], timestamp)

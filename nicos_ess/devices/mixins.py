@@ -6,7 +6,8 @@ from nicos.utils import readonlydict, readonlylist
 
 class nexusconfiglist:
     """a list of NeXus config dicts (items require: group_name, nx_class, dataset_type;
-    optionals: units, source_name, suffix, value, schema, topic, protocol, periodic, nexus_path)
+    optionals: units, source_name, suffix, name, value, schema, topic, protocol, periodic,
+    nexus_path)
     """
 
     _DATASET_TYPES = ("nx_log", "static_read", "static_value")
@@ -29,6 +30,7 @@ class nexusconfiglist:
                 "units",
                 "source_name",
                 "suffix",
+                "name",
                 "value",
                 "schema",
                 "topic",
@@ -81,6 +83,14 @@ class nexusconfiglist:
             if "suffix" in raw:
                 out["suffix"] = string(raw.get("suffix", ""))
 
+            if "name" in raw:
+                name = string(raw.get("name"))
+                if not name:
+                    raise ValueError(
+                        f"nexus_config[{idx}].name must be a non-empty string"
+                    )
+                out["name"] = name
+
             if "value" in raw:
                 out["value"] = string(raw.get("value", ""))
 
@@ -107,14 +117,13 @@ class nexusconfiglist:
                 periodic = raw.get("periodic")
                 # accept bool or int 0/1, and strings that cast to 0/1
                 try:
-                    if isinstance(periodic, bool):
-                        periodic = int(bool(periodic))
-                    else:
-                        periodic = int(periodic)
+                    periodic = int(periodic)
+                    if periodic not in (0, 1):
+                        raise RuntimeError()
                 except Exception:
-                    raise ValueError(f"nexus_config[{idx}].periodic must be 0 or 1")
-                if periodic not in (0, 1):
-                    raise ValueError(f"nexus_config[{idx}].periodic must be 0 or 1")
+                    raise ValueError(
+                        f"nexus_config[{idx}].periodic must be 0 or 1"
+                    ) from None
                 out["periodic"] = periodic
 
             if "nexus_path" in raw:
@@ -136,15 +145,22 @@ class nexusconfiglist:
                 )
 
             # forwarding keys only allowed for nx_log
-            fwd_keys_present = {"schema", "topic", "source_name"} & set(raw)
+            fwd_keys_present = {
+                "schema",
+                "topic",
+                "source_name",
+                "protocol",
+                "periodic",
+            } & set(raw)
             if ds != "nx_log" and fwd_keys_present:
                 raise ValueError(
                     f"nexus_config[{idx}] has forwarding keys {sorted(fwd_keys_present)} "
                     "but dataset_type is not 'nx_log'"
                 )
 
-            # nx_log must contain the three: schema/topic/source_name (non-empty)
-            if ds == "nx_log":
+            # nx_log without forwarding keys logs the device's NICOS value,
+            # otherwise it must contain schema/topic/source_name (non-empty)
+            if ds == "nx_log" and fwd_keys_present:
                 missing_fwd = [k for k in self._FORWARDER_REQ if k not in raw]
                 if missing_fwd:
                     raise ValueError(
@@ -166,23 +182,34 @@ class HasNexusConfig(DeviceMixinBase):
     Mixin class for devices to send data to Kafka and the Nexus file.
 
     Use `dataset_type` to specify the data handling mode:
-    - `"nx_log"`: Forward data to Kafka.
+    - `"nx_log"`: Log a Kafka stream. With `source_name`, the PV is forwarded
+      by the EPICS Forwarder. Without it, the device's own value is logged,
+      as published by the NICOS collector; all forwarding keys must then be
+      omitted.
     - `"static_read"`: Add the read value of the device to the Nexus file.
     - `"static_value"`: Add a static string value to the Nexus file.
 
     Dictionary keys:
-        group_name (str): Name of the nicos device and entry in Nexus.
+        group_name (str): Name of the group in Nexus. If the group already
+            exists at `nexus_path`, the entry is added to it, unless the group
+            already has an entry of that name. A new group of a physical
+            component class, such as NXsensor or NXpositioner, gets
+            `depends_on` "." unless a nexus_config writes one.
         nx_class (str): Nexus class.
         dataset_type (str): Dataset type, one of ["nx_log", "static_read", "static_value"].
         units (str, optional): Units of the value.
-        source_name (str, optional): PV name or NICOS device name.
-        suffix (str, optional): String appended to the group name.
+        source_name (str, optional): PV name for the EPICS Forwarder.
+        suffix (str, optional): String appended to the device name to form
+            the name of the entry in the group.
+        name (str, optional): Name of the entry in the group, instead of the
+            device name and suffix.
         value (str, optional): Static value to add to Nexus.
         schema (str, optional): Schema used when forwarding data to Kafka.
         topic (str, optional): Kafka topic to forward data to.
         protocol (str, optional): Protocol used when forwarding data to Kafka. One of ["pva" (default), "ca"].
         periodic (int, optional): Whether data is forwarded periodically (0 or 1).
-        nexus_path (str, optional): Absolute NeXus path to place the group, e.g. "/entry/instrument" (default) or "/entry/sample".
+        nexus_path (str, optional): Absolute NeXus path to place the group,
+            e.g. "/entry/instrument" (default) or "/entry/sample".
     """
 
     parameters = {

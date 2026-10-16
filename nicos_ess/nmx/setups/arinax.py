@@ -2,21 +2,23 @@ description = "ARINAX controls (sample exposure system)"
 
 group = "optional"
 
-pv_root = "NMX-ExpSys::"  # EPICS proxy IOC that interfaces ARINAX PVs
+pv_root = "NMX-ExpSys::"  # The EPICS proxy IOC that interfaces ARINAX PVs.
 
 SAMPLE_STORAGE = {
-    f"Sample Storage {s} - SS{i}": (f"Sample_Storage_{s}", f"SS{i}")
+    f"Sample Storage {s} - SS{i}": f"Sample_Storage_{s} SS{i}"
     for s in range(1, 4)
     for i in range(1, 11)
 }
 
 UNIPUCKS = {
-    f"UniPuck {s} - UP{i}": (f"UniPuck{s}", f"UP{i}")
+    f"UniPuck {s} - UP{i}": f"UniPuck{s} UP{i}"
     for s in range(1, 3)
     for i in range(1, 17)
 }
 
 ZOOM_LEVELS = {f"Zoom level {i}": i for i in range(1, 8)}
+LIGHT_LEVELS = {f"Light level {i}": i * 5 for i in range(0, 11)}
+PRECISION = 0.001
 
 devices = dict(
     # General statue/status of ARINAX system
@@ -46,7 +48,6 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    # SPU Config
     config_sample_holder_position=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU Configuration",
@@ -122,18 +123,21 @@ devices = dict(
         description="ARINAX sample centring motor Phi",
         readpv=f"{pv_root}getPhiPosition",
         writepv=f"{pv_root}setPhiPosition",
+        precision=PRECISION,
     ),
     sample_centring_2_chi=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample centring motor Chi",
         readpv=f"{pv_root}getChiPosition",
         writepv=f"{pv_root}setChiPosition",
+        precision=PRECISION,
     ),
     sample_centring_3_theta=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample centring motor Theta",
         readpv=f"{pv_root}getThetaPosition",
         writepv=f"{pv_root}setThetaPosition",
+        precision=PRECISION,
     ),
     # Alignment table motion
     alignment_table_x=device(
@@ -141,36 +145,42 @@ devices = dict(
         description="ARINAX alignment table motor X",
         readpv=f"{pv_root}getAlignmentTableXPosition",
         writepv=f"{pv_root}setAlignmentTableXPosition",
+        precision=PRECISION,
     ),
     alignment_table_y=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Y",
         readpv=f"{pv_root}getAlignmentTableYPosition",
         writepv=f"{pv_root}setAlignmentTableYPosition",
+        precision=PRECISION,
     ),
     alignment_table_z=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Z",
         readpv=f"{pv_root}getAlignmentTableZPosition",
         writepv=f"{pv_root}setAlignmentTableZPosition",
+        precision=PRECISION,
     ),
     alignment_table_vx=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Vx",
         readpv=f"{pv_root}getAlignmentTableVxPosition",
         writepv=f"{pv_root}setAlignmentTableVxPosition",
+        precision=PRECISION,
     ),
     alignment_table_vy=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Vy",
         readpv=f"{pv_root}getAlignmentTableVyPosition",
         writepv=f"{pv_root}setAlignmentTableVyPosition",
+        precision=PRECISION,
     ),
     alignment_table_vFocus=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX alignment table motor Vfocus",
         readpv=f"{pv_root}getAlignmentTableVfocusPosition",
         writepv=f"{pv_root}setAlignmentTableVfocusPosition",
+        precision=PRECISION,
     ),
     # Centring table motion
     centring_table_x=device(
@@ -178,42 +188,49 @@ devices = dict(
         description="ARINAX centring table motor X",
         readpv=f"{pv_root}getCentringTableXPosition",
         writepv=f"{pv_root}setCentringTableXPosition",
+        precision=PRECISION,
     ),
     centring_table_y=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX centring table motor Y",
         readpv=f"{pv_root}getCentringTableYPosition",
         writepv=f"{pv_root}setCentringTableYPosition",
+        precision=PRECISION,
     ),
     # Backlight
-    # TODO: Changed to a manual mapping once we know the step size.
     backlight_level=device(
-        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
+        # This PV goes from 0 to 100, but steps of 10 makes more sense.
+        # NOTE: The control is for now setting double of the input value,
+        # e.g., setting 5 makes the control goes to 10. Checking if it's an issue.
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="ARINAX SPU backlight level",
         readpv=f"{pv_root}getBackLightLevel",
         writepv=f"{pv_root}setBackLightLevel",
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        userlimits=[0, 100],
         fmtstr="%d",
+        mapping=LIGHT_LEVELS,
     ),
     backlight_position=device(
-        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
         description="ARINAX SPU backlight position",
         readpv=f"{pv_root}getBackLightPOS",
         writepv=f"{pv_root}setBackLightPOS",
+        fmtstr="%d",
+        mapping={"Out": 0, "In": 1},
     ),
     # Zoom
     zoom_level=device(
         # The zoom range is on the :getZoomRange PV.
-        "nicos_ess.devices.epics.pva.EpicsManualMappedMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="ARINAX SPU zoom level",
         readpv=f"{pv_root}getZoomLevel",
         writepv=f"{pv_root}setZoomLevel",
         monitor=True,
         pollinterval=0.5,
         maxage=None,
+        fmtstr="%d",
         mapping=ZOOM_LEVELS,
     ),
 )

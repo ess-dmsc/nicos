@@ -122,6 +122,7 @@ devices = dict(
     sample_changer_controller=device(
         "nicos_ess.devices.mapped_controller.MappedController",
         controlled_device="sample_changer_axis",
+        description="No description available.",
         mapping={"sample_1": 0, "sample_2": 10, "sample_3": 20},
     ),
     slit_y_plus=device(
@@ -172,18 +173,18 @@ devices = dict(
         motorpv="YMIR-DivSl2:MC-SlZg-01:Mtr",
         monitor_deadband=0.01,
     ),
-    cabinet_1_status=device(
+    cabinet_2_status=device(
         "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
         description="Cabinet 2 status",
         pv_root="YMIR-MCS2:MC-MCU-02:Cabinet",
         number_of_bits=24,
     ),
-    cabinet_1_pressure_1=device(
+    cabinet_2_pressure_1=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Cabinet 2 pressure 1",
         readpv="YMIR-MCS2:MC-MCU-02:Pressure1",
     ),
-    cabinet_1_pressure_2=device(
+    cabinet_2_pressure_2=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Cabinet 2 pressure 2",
         readpv="YMIR-MCS2:MC-MCU-02:Pressure2",

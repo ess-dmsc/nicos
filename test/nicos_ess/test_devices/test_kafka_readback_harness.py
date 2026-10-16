@@ -489,6 +489,36 @@ class TestKafkaReadbackHarness:
         )
         assert readable.read() == pytest.approx(2.0)
 
+    def test_stale_value_update_does_not_replace_newer_value(
+        self, device_harness, kafka_readback_stubs
+    ):
+        create_router_pair(device_harness)
+        readable, poller_readable = create_readable_pair(
+            device_harness, "first", "src:first"
+        )
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            serialise_f144("src:first", 3.0, 3_000_000_000),
+        )
+        assert readable.read() == pytest.approx(3.0)
+        assert poller_readable.read() == pytest.approx(3.0)
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            serialise_f144("src:first", 2.0, 2_000_000_000),
+        )
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            serialise_f144("src:first", 4.0, 3_000_000_000),
+        )
+
+        assert readable.read() == pytest.approx(3.0)
+        assert poller_readable.read() == pytest.approx(3.0)
+
     @pytest.mark.parametrize(
         ("value", "expected"),
         [
@@ -589,7 +619,7 @@ class TestKafkaReadbackHarness:
     def test_alarm_clears_from_error_back_to_ok(
         self, device_harness, kafka_readback_stubs
     ):
-        """Verify that an alarm can transition from MAJOR → OK."""
+        """Verify that an alarm can transition from MAJOR to OK."""
         create_router_pair(device_harness)
         readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
@@ -607,10 +637,40 @@ class TestKafkaReadbackHarness:
         )
         assert readable.status() == (status.OK, "")
 
+    def test_stale_alarm_update_does_not_replace_newer_alarm(
+        self, device_harness, kafka_readback_stubs
+    ):
+        create_router_pair(device_harness)
+        readable, poller_readable = create_readable_pair(
+            device_harness, "first", "src:first"
+        )
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            alarm_message(3_000_000_000, Severity.MAJOR, "fault"),
+        )
+        assert readable.status() == (status.ERROR, "fault")
+        assert poller_readable.status() == (status.ERROR, "fault")
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            alarm_message(2_000_000_000, Severity.OK, ""),
+        )
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            alarm_message(3_000_000_000, Severity.OK, ""),
+        )
+
+        assert readable.status() == (status.ERROR, "fault")
+        assert poller_readable.status() == (status.ERROR, "fault")
+
     def test_connection_recovers_from_disconnected_to_connected(
         self, device_harness, kafka_readback_stubs
     ):
-        """Verify that a connection can transition from DISCONNECTED → CONNECTED."""
+        """Verify that a connection can transition from DISCONNECTED to CONNECTED."""
         create_router_pair(device_harness)
         readable, _poller = create_readable_pair(device_harness, "first", "src:first")
 
@@ -627,6 +687,92 @@ class TestKafkaReadbackHarness:
             connection_message(2_000_000_000, ConnectionInfo.CONNECTED),
         )
         assert readable.status() == (status.OK, "")
+
+    def test_newer_value_update_clears_stale_connection_error(
+        self, device_harness, kafka_readback_stubs
+    ):
+        create_router_pair(device_harness)
+        readable, poller_readable = create_readable_pair(
+            device_harness, "first", "src:first"
+        )
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            connection_message(2_000_000_000, ConnectionInfo.DISCONNECTED),
+        )
+        assert readable.status()[0] == status.ERROR
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            serialise_f144("src:first", 5.5, 3_000_000_000),
+        )
+
+        assert readable.read() == pytest.approx(5.5)
+        assert readable.status(0) == (status.OK, "")
+        assert readable.status() == (status.OK, "")
+        assert poller_readable.status() == (status.OK, "")
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            connection_message(2_000_000_000, ConnectionInfo.DISCONNECTED),
+        )
+        assert readable.status(0) == (status.OK, "")
+        assert readable.status() == (status.OK, "")
+        assert poller_readable.status() == (status.OK, "")
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            connection_message(4_000_000_000, ConnectionInfo.DISCONNECTED),
+        )
+        assert readable.status(0) == (
+            status.ERROR,
+            "Kafka source disconnected (svc)",
+        )
+        assert readable.status() == (
+            status.ERROR,
+            "Kafka source disconnected (svc)",
+        )
+        assert poller_readable.status() == (
+            status.ERROR,
+            "Kafka source disconnected (svc)",
+        )
+
+    def test_older_value_update_does_not_clear_newer_connection_error(
+        self, device_harness, kafka_readback_stubs
+    ):
+        create_router_pair(device_harness)
+        readable, poller_readable = create_readable_pair(
+            device_harness, "first", "src:first"
+        )
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            connection_message(3_000_000_000, ConnectionInfo.DISCONNECTED),
+        )
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            serialise_f144("src:first", 5.5, 2_000_000_000),
+        )
+
+        assert readable.read() == pytest.approx(5.5)
+        assert readable.status(0) == (
+            status.ERROR,
+            "Kafka source disconnected (svc)",
+        )
+        assert readable.status() == (
+            status.ERROR,
+            "Kafka source disconnected (svc)",
+        )
+        assert poller_readable.status() == (
+            status.ERROR,
+            "Kafka source disconnected (svc)",
+        )
 
     def test_router_shutdown_closes_all_subscribers(
         self, device_harness, kafka_readback_stubs
@@ -691,6 +837,34 @@ class TestKafkaReadbackHarness:
             alarm_message(2_000_000_000, Severity.OK, ""),
         )
         assert readable.status() == (status.OK, "")
+
+    def test_stale_message_does_not_clear_kafka_error(
+        self, device_harness, kafka_readback_stubs
+    ):
+        create_router_pair(device_harness)
+        readable, _poller = create_readable_pair(device_harness, "first", "src:first")
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            alarm_message(3_000_000_000, Severity.OK, ""),
+        )
+        emit_kafka_error(
+            device_harness,
+            kafka_readback_stubs,
+            FakeKafkaError(ERR_ALL_BROKERS_DOWN, "ALL_BROKERS_DOWN", "all down"),
+        )
+        assert readable.status()[0] == status.ERROR
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            alarm_message(2_000_000_000, Severity.OK, ""),
+        )
+
+        result_status, message = readable.status()
+        assert result_status == status.ERROR
+        assert "all down" in message
 
     def test_kafka_error_fans_out_to_all_readables_on_topic(
         self, device_harness, kafka_readback_stubs

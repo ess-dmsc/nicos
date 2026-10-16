@@ -4,7 +4,9 @@ import os
 import subprocess
 import sys
 import time
+from bisect import bisect
 from collections import defaultdict
+from contextlib import suppress
 from logging import WARNING
 from uuid import uuid1
 
@@ -12,25 +14,26 @@ from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
-from nicos.clients.gui.widgets.qscintillacompat import QScintillaCompatible
 from nicos.core.utils import ADMIN
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
     QAction,
     QActionGroup,
     QColor,
+    QComboBox,
     QDialog,
     QFileDialog,
     QFont,
+    QFontDatabase,
     QFontMetrics,
     QHBoxLayout,
     QHeaderView,
     QInputDialog,
+    QLabel,
     QLineEdit,
     QMessageBox,
     QPen,
     QPrintDialog,
-    QPrinter,
     QPushButton,
     QsciLexerPython,
     QsciPrinter,
@@ -46,17 +49,16 @@ from nicos.guisupport.qt import (
     QWidget,
     pyqtSlot,
 )
-from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, findResource, formatDuration, formatEndtime
 from nicos_ess.gui.dialogs.remote_file_dialog import RemoteFileDialog
 from nicos_ess.gui.utils import get_icon
-
-has_scintilla = QsciScintilla is not None
 
 COMMENT_STR = "# "
 
 INDICATOR_RED = (255, 0, 0)
 INDICATOR_GREEN = (0, 165, 0)
+
+DEFAULT_FONT_SIZE = 16
 
 
 class FlakeCodes:
@@ -107,41 +109,54 @@ def run_flake8(code):
 
 IGNORED_FUNCTIONS = find_all_nicos_commands()
 
-if has_scintilla:
 
-    class Printer(QsciPrinter):
-        """
-        Class extending the default QsciPrinter with a header.
-        """
+class Printer(QsciPrinter):
+    """
+    Class extending the default QsciPrinter with a header.
+    """
 
-        def formatPage(self, painter, drawing, area, pagenr):
-            QsciPrinter.formatPage(self, painter, drawing, area, pagenr)
+    def formatPage(self, painter, drawing, area, pagenr):
+        QsciPrinter.formatPage(self, painter, drawing, area, pagenr)
 
-            fn = self.docName()
-            header = "File: {}    page {}    {}".format(
-                fn,
-                pagenr,
-                time.strftime("%Y-%m-%d %H:%M"),
+        fn = self.docName()
+        header = "File: {}    page {}    {}".format(
+            fn,
+            pagenr,
+            time.strftime("%Y-%m-%d %H:%M"),
+        )
+        painter.save()
+        pen = QPen(QColor(30, 30, 30))
+        pen.setWidth(1)
+        painter.setPen(pen)
+        newTop = area.top() + painter.fontMetrics().height() + 15
+        area.setLeft(area.left() + 30)
+        if drawing:
+            painter.drawText(
+                area.left(), area.top() + painter.fontMetrics().ascent(), header
             )
-            painter.save()
-            pen = QPen(QColor(30, 30, 30))
-            pen.setWidth(1)
-            painter.setPen(pen)
-            newTop = area.top() + painter.fontMetrics().height() + 15
-            area.setLeft(area.left() + 30)
-            if drawing:
-                painter.drawText(
-                    area.left(), area.top() + painter.fontMetrics().ascent(), header
-                )
-                painter.drawLine(
-                    area.left() - 2, newTop - 12, area.right() + 2, newTop - 12
-                )
-            area.setTop(newTop)
-            painter.restore()
+            painter.drawLine(
+                area.left() - 2, newTop - 12, area.right() + 2, newTop - 12
+            )
+        area.setTop(newTop)
+        painter.restore()
 
-    class QsciScintillaCustom(QsciScintilla):
-        def moveToEnd(self):
-            self.SendScintilla(self.SCI_DOCUMENTEND)
+
+class QsciScintillaCustom(QsciScintilla):
+    def moveToEnd(self):
+        self.SendScintilla(self.SCI_DOCUMENTEND)
+
+
+class FontSizeSelector(QWidget):
+    def __init__(self, sizes, current, change_handler, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        layout = QHBoxLayout()
+        font_size = QComboBox()
+        font_size.addItems([str(s) for s in sizes])
+        font_size.setCurrentIndex(current)
+        font_size.currentTextChanged.connect(change_handler)
+        layout.addWidget(QLabel("Font size:"))
+        layout.addWidget(font_size)
+        self.setLayout(layout)
 
 
 class FindReplaceWidget(QWidget):
@@ -330,8 +345,7 @@ class EditorPanel(Panel):
 
         self.mainwindow.codeGenerated.connect(self.on_codeGenerated)
 
-        if not has_scintilla:
-            self.actionComment.setEnabled(False)
+        self.actionComment.setEnabled(False)
 
         self.menus = None
         self.bar = None
@@ -394,6 +408,10 @@ class EditorPanel(Panel):
         client.cache.connect(self.on_client_cache)
         client.experiment.connect(self.on_client_experiment)
 
+        self.custom_font, self.font_sizes = self._create_default_font()
+        self.simFrame.simOutView.setFont(self.custom_font)
+        self.simFrame.simOutViewErrors.setFont(self.custom_font)
+
         self.newFile()
 
         self.layout().setMenuBar(self.createPanelToolbar())
@@ -441,8 +459,25 @@ class EditorPanel(Panel):
         showToolText(bar, self.actionUpdate)
         bar.addSeparator()
         bar.addAction(self.actionShowFind)
+        bar.addSeparator()
         showToolText(bar, self.actionShowFind)
+        current = self.font_sizes.index(self.custom_font.pointSize())
+        bar.addWidget(
+            FontSizeSelector(self.font_sizes, current, self._change_font_size)
+        )
         return bar
+
+    def _get_font_sizes(self, font_family):
+        # Handle Qt5 and Qt6 differences.
+        # For Qt6 PointSizes has become a static method
+        with suppress(Exception):
+            return QFontDatabase.pointSizes(font_family)
+        return QFontDatabase().pointSizes(font_family)
+
+    def _change_font_size(self, value):
+        self.custom_font.setPointSize(int(value))
+        for editor in self.editors:
+            self._updateStyle(editor)
 
     def get_icons(self):
         self.actionNew.setIcon(get_icon("add_circle_outline-24px.svg"))
@@ -474,31 +509,34 @@ class EditorPanel(Panel):
     def updateStatus(self, status, exception=False):
         self.current_status = status
 
+    def _create_default_font(self):
+        # Use monospace as writing Python with a non-monospace
+        # font is evil.
+        font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+        font.setItalic(False)
+        font.setBold(False)
+        sizes = self._get_font_sizes(font.family())
+        point_size = DEFAULT_FONT_SIZE
+        if point_size not in sizes:
+            # If size does not exist, use one that is close.
+            position = min(bisect(sizes, point_size), len(sizes) - 1)
+            point_size = sizes[position]
+        font.setPointSize(point_size)
+        return font, sizes
+
     def setCustomStyle(self, font, back):
-        self.custom_font = font
-        self.custom_back = back
-        self.simFrame.simOutView.setFont(font)
-        self.simFrame.simOutViewErrors.setFont(font)
-        for editor in self.editors:
-            self._updateStyle(editor)
+        # Ignore the global style update as we handle it ourselves.
+        pass
 
     def _updateStyle(self, editor):
-        if self.custom_font is None:
-            return
         bold = QFont(self.custom_font)
         bold.setBold(True)
-        if has_scintilla:
-            lexer = editor.lexer()
-            lexer.setDefaultFont(self.custom_font)
-            for i in range(20):
-                lexer.setFont(self.custom_font, i)
-                lexer.setPaper(self.custom_back, i)
-            # make keywords bold
-            lexer.setFont(bold, 5)
-            lexer.setDefaultPaper(self.custom_back)
-        else:
-            editor.setFont(self.custom_font)
-            setBackgroundColor(editor, self.custom_back)
+        lexer = editor.lexer()
+        lexer.setDefaultFont(self.custom_font)
+        for i in range(20):
+            lexer.setFont(self.custom_font, i)
+        # make keywords bold
+        lexer.setFont(bold, 5)
 
     def enableFileActions(self, on):
         for action in [
@@ -512,7 +550,7 @@ class EditorPanel(Panel):
             action.setEnabled(on)
         self.enableRemoteActions()
         for action in [self.actionComment]:
-            action.setEnabled(on and has_scintilla)
+            action.setEnabled(on)
 
     def enableRemoteActions(self):
         for action in [
@@ -623,50 +661,41 @@ class EditorPanel(Panel):
         return True
 
     def createEditor(self):
-        if has_scintilla:
-            editor = QsciScintillaCustom(self)
-            lexer = QsciLexerPython(editor)
-            editor.setUtf8(True)
-            editor.setLexer(lexer)
-            editor.setAutoIndent(True)
-            editor.setEolMode(QsciScintilla.EolMode.EolUnix)
-            editor.setIndentationsUseTabs(False)
-            editor.setIndentationGuides(True)
-            editor.setTabIndents(True)
-            editor.setBackspaceUnindents(True)
-            editor.setTabWidth(4)
-            editor.setIndentationWidth(0)
-            editor.setBraceMatching(QsciScintilla.BraceMatch.SloppyBraceMatch)
-            editor.setFolding(QsciScintilla.FoldStyle.PlainFoldStyle)
-            editor.setIndentationGuidesForegroundColor(QColor("#CCC"))
-            editor.setWrapMode(QsciScintilla.WrapMode.WrapCharacter)
-            editor.setMarginLineNumbers(1, True)
-            editor.setMarginWidth(
-                1, 5 + 4 * QFontMetrics(editor.font()).averageCharWidth()
+        editor = QsciScintillaCustom(self)
+        lexer = QsciLexerPython(editor)
+        editor.setUtf8(True)
+        editor.setLexer(lexer)
+        editor.setAutoIndent(True)
+        editor.setEolMode(QsciScintilla.EolMode.EolUnix)
+        editor.setIndentationsUseTabs(False)
+        editor.setIndentationGuides(True)
+        editor.setTabIndents(True)
+        editor.setBackspaceUnindents(True)
+        editor.setTabWidth(4)
+        editor.setIndentationWidth(0)
+        editor.setBraceMatching(QsciScintilla.BraceMatch.SloppyBraceMatch)
+        editor.setFolding(QsciScintilla.FoldStyle.PlainFoldStyle)
+        editor.setIndentationGuidesForegroundColor(QColor("#CCC"))
+        editor.setWrapMode(QsciScintilla.WrapMode.WrapCharacter)
+        editor.setMarginLineNumbers(1, True)
+        editor.setMarginWidth(1, 5 + 4 * QFontMetrics(editor.font()).averageCharWidth())
+        # colors in dark mode,
+        if not colors.is_light:
+            editor.setCaretForegroundColor(colors.text)
+            lexer.setDefaultColor(colors.text)
+            lexer.setColor(QColor("lightblue"), QsciLexerPython.Keyword)
+
+            editor.setMarginsBackgroundColor(colors.palette.window().color())
+            editor.setMarginsForegroundColor(colors.text)
+            editor.setFoldMarginColors(
+                colors.palette.window().color(), colors.palette.window().color()
             )
-            # colors in dark mode,
-            if not colors.is_light:
-                editor.setCaretForegroundColor(colors.text)
-                lexer.setDefaultColor(colors.text)
-                lexer.setColor(QColor("lightblue"), QsciLexerPython.Keyword)
-
-                editor.setMarginsBackgroundColor(colors.palette.window().color())
-                editor.setMarginsForegroundColor(colors.text)
-                editor.setFoldMarginColors(
-                    colors.palette.window().color(), colors.palette.window().color()
-                )
-                editor.setFolding(editor.FoldStyle.PlainFoldStyle)
-
-        else:
-            editor = QScintillaCompatible(self)
+            editor.setFolding(editor.FoldStyle.PlainFoldStyle)
         editor.modificationChanged.connect(lambda dirty: self.setDirty(editor, dirty))
         self._updateStyle(editor)
         return editor
 
     def handle_mouse_move_event(self, event):
-        if not has_scintilla:
-            return
-
         if self.currentEditor not in self.error_messages:
             self.setup_error_highlighting()
             self.check_python_code()
@@ -694,9 +723,6 @@ class EditorPanel(Panel):
         return global_pos
 
     def setup_error_highlighting(self):
-        if not has_scintilla:
-            return
-
         self.check_timer = QTimer()
         self.check_timer.setSingleShot(True)
         self.check_timer.timeout.connect(self.check_python_code)
@@ -704,9 +730,6 @@ class EditorPanel(Panel):
             self.currentEditor.textChanged.connect(lambda: self.check_timer.start(1000))
 
     def check_python_code(self):
-        if not has_scintilla:
-            return
-
         if not self._is_editor_and_error_checks_valid():
             return
 
@@ -824,22 +847,16 @@ class EditorPanel(Panel):
 
     @pyqtSlot()
     def on_actionPrint_triggered(self):
-        if has_scintilla:
-            printer = Printer()
-            printer.setOutputFileName("")
-            printer.setDocName(self.filenames[self.currentEditor])
-            if QPrintDialog(printer, self).exec() == QDialog.DialogCode.Accepted:
-                lexer = self.currentEditor.lexer()
-                bgcolor = lexer.paper(0)
-                # printer prints background color too, so set it to white
-                lexer.setPaper(Qt.GlobalColor.white)
-                printer.printRange(self.currentEditor)
-                lexer.setPaper(bgcolor)
-        else:
-            printer = QPrinter()
-            printer.setOutputFileName("")
-            if QPrintDialog(printer, self).exec() == QDialog.DialogCode.Accepted:
-                self.currentEditor.print(printer)
+        printer = Printer()
+        printer.setOutputFileName("")
+        printer.setDocName(self.filenames[self.currentEditor])
+        if QPrintDialog(printer, self).exec() == QDialog.DialogCode.Accepted:
+            lexer = self.currentEditor.lexer()
+            bgcolor = lexer.paper(0)
+            # printer prints background color too, so set it to white
+            lexer.setPaper(Qt.GlobalColor.white)
+            printer.printRange(self.currentEditor)
+            lexer.setPaper(bgcolor)
 
     def validateScript(self):
         return self.currentEditor.text()

@@ -1,0 +1,83 @@
+"""Simulated sample temperature environment for Coda NeXus tests."""
+
+description = "Simulated cryostat with logged temperatures and controller metadata"
+group = "optional"
+
+# NeXus groups as (nexus_path, group_name, nx_class).
+sample = ("/entry", "sample", "NXsample")
+environment = ("/entry/sample", "temperature_env", "NXenvironment")
+heater = ("/entry/sample/temperature_env", "heater", "NXactuator")
+heater_path = "/entry/sample/temperature_env/heater"
+pid = (heater_path, "pid_controller", "NXpid_controller")
+pv_sensor = (heater_path + "/pid_controller", "pv_sensor", "NXsensor")
+
+
+def nexus_config(nexus_group, name, dataset_type, **kwargs):
+    nexus_path, group_name, nx_class = nexus_group
+    return dict(
+        nexus_path=nexus_path,
+        group_name=group_name,
+        nx_class=nx_class,
+        name=name,
+        dataset_type=dataset_type,
+        **kwargs,
+    )
+
+
+devices = dict(
+    simulated_cryostat=device(
+        "nicos_ess.coda.devices.simulated_cryostat.SimulatedCryostat",
+        description="Simulated cryostat temperature controller",
+        unit="K",
+        abslimits=(2, 350),
+        ramp=6,
+        jitter=0,
+        precision=0.1,
+        window=30,
+        nexus_config=[
+            nexus_config(
+                environment, "name", "static_value", value="simulated_cryostat"
+            ),
+            nexus_config(environment, "type", "static_value", value="cryostat"),
+            nexus_config(
+                heater, "physical_quantity", "static_value", value="temperature"
+            ),
+            nexus_config(
+                heater, "actuation_target", "static_value", value="/entry/sample"
+            ),
+            nexus_config(pid, "control_action", "static_value", value="direct"),
+            nexus_config(pv_sensor, "measurement", "static_value", value="temperature"),
+        ],
+    ),
+)
+
+# Numeric parameters are logged as NXlogs named after the NeXus field they
+# stand in for. The NICOS collector does not forward string values, so the
+# mode is read once at the start of the run instead.
+for name, parameter, unit, nexus_group, field_name, dataset_type in [
+    ("sample_temperature", "sample", "K", sample, "temperature", "nx_log"),
+    ("regulator_temperature", "regulation", "K", pv_sensor, "value_log", "nx_log"),
+    ("heater_power", "heaterpower", "W", heater, "output_power", "nx_log"),
+    ("heater_output", "heater", "percent", heater, "output_level", "nx_log"),
+    ("max_heater_power", "maxpower", "W", heater, "max_power", "nx_log"),
+    ("setpoint", "setpoint", "K", pid, "setpoint", "nx_log"),
+    ("target", "target", "K", pid, "target", "nx_log"),
+    ("ramp", "ramp", "K/min", pid, "ramp", "nx_log"),
+    # LakeShore-style settings, not the K_p, K_i and K_d gains of
+    # NXpid_controller: p = 10*K_p, i = 500/T_i, d = 2*T_d.
+    ("pid_p", "p", "percent/K", pid, "p_setting", "nx_log"),
+    ("pid_i", "i", "1/s", pid, "i_setting", "nx_log"),
+    ("pid_d", "d", "s", pid, "d_setting", "nx_log"),
+    ("mode", "mode", "", pid, "mode", "static_read"),
+]:
+    devices["simulated_" + name] = device(
+        "nicos_ess.coda.devices.simulated_cryostat.SimulatedCryostatParameter",
+        description="Simulated cryostat " + name.replace("_", " "),
+        device="simulated_cryostat",
+        parameter=parameter,
+        unit=unit,
+        jitter=0.05 if name.endswith("temperature") else 0,
+        visibility=("metadata",),
+        pollinterval=1,
+        nexus_config=[nexus_config(nexus_group, field_name, dataset_type, units=unit)],
+    )

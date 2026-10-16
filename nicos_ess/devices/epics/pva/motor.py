@@ -576,54 +576,27 @@ class EpicsMotor(
         else:
             msg_severity = 0
         msg_stat = SEVERITY_TO_STATUS.get(msg_severity, status.UNKNOWN)
+
+        if msg_stat == status.OK:
+            msg_txt = ""
         return msg_stat, msg_txt
-
-    def _update_status_with_msgtxt(self, motor_stat, motor_msg, maxage=0):
-        motor_msg = (motor_msg or "").strip()
-        msg_stat, msg_txt = self._get_msgtxt(maxage)
-        # MsgTxt severity can only raise the motor status, never lower it.
-        merged_stat = max(msg_stat, motor_stat)
-
-        if merged_stat == status.OK:
-            merged_msg = ""
-        else:
-            motor_alarm_active = motor_stat != status.OK and bool(motor_msg)
-            msgtxt_alarm_active = msg_stat != status.OK and bool(msg_txt)
-            if motor_alarm_active and msgtxt_alarm_active:
-                merged_msg = f"{msg_txt}, motor alarm: {motor_msg}"
-            elif msgtxt_alarm_active:
-                merged_msg = msg_txt
-            else:
-                merged_msg = motor_msg
-
-        if self._motor_status != (merged_stat, merged_msg):
-            self._log_epics_msg_info(merged_msg, merged_stat, motor_msg)
-        return merged_stat, merged_msg
 
     def _get_alarm_status_and_msg(self, maxage=0):
         def _get_value_status():
             return self._epics.get_channel_alarm("value")
 
-        motor_stat, motor_msg = get_from_cache_or(
-            self, "value_status", _get_value_status, maxage=maxage
-        )
-        motor_msg = (motor_msg or "").strip()
-
+        # Prioritize the status and message from msgtxt
         if self.has_msgtxt:
-            motor_stat, motor_msg = self._update_status_with_msgtxt(
-                motor_stat, motor_msg, maxage
+            motor_stat, motor_msg = self._get_msgtxt(maxage)
+        else:
+            motor_stat, motor_msg = get_from_cache_or(
+                self, "value_status", _get_value_status, maxage=maxage
             )
-        elif motor_stat == status.OK:
-            motor_msg = ""
-        return motor_stat, motor_msg
+            motor_msg = (motor_msg or "").strip()
+            if motor_stat == status.OK:
+                motor_msg = ""
 
-    def _log_epics_msg_info(self, error_msg, stat, epics_msg):
-        if stat == status.OK or stat == status.UNKNOWN:
-            return
-        if stat == status.WARN:
-            self.log.warning("%s (%s)", error_msg, epics_msg)
-        elif stat == status.ERROR:
-            self.log.error("%s (%s)", error_msg, epics_msg)
+        return motor_stat, motor_msg
 
     def _get_dir_sign(self):
         return (

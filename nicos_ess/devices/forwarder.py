@@ -1,7 +1,6 @@
-"""Configure EPICS streams and build their run-specific NeXus fragments."""
+"""Configure the EPICS Forwarder with the streams requested in nexus_config."""
 
 import time
-from collections import defaultdict
 
 from streaming_data_types.fbschemas.forwarder_config_update_fc00.UpdateType import (
     UpdateType,
@@ -22,14 +21,7 @@ from nicos.core import (
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
-from nicos_ess.utilities.json_utils import (
-    build_json,
-    generate_dataset_json,
-    generate_group_json,
-    generate_nxlog_json,
-)
-
-DEFAULT_NEXUS_PATH = "/entry/instrument"
+from nicos_ess.devices.mixins import HasNexusConfig
 
 
 class EpicsKafkaForwarder(KafkaStatusHandler):
@@ -73,36 +65,18 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
         """
         return set(self._forwarded)
 
-    def get_nexus_json(self):
-        """
-        Get the Nexus JSON configuration.
-
-        :return: Mapping { '/entry/...': [group-node, ...] }.
-        """
-        return self._generate_json_configs()
-
-    def get_component_nexus_json(self):
-        children = build_json(
-            session.devices["component_tracking"]._generate_json_configs_groups()
-        )
-        return generate_group_json("component_tracker", "NXcollection", children)
-
-    def _get_forwarder_config(self, dev):
-        for nexus_config_dict in dev.nexus_config:
-            yield (
-                nexus_config_dict.get("source_name", ""),
-                nexus_config_dict.get("schema", ""),
-                nexus_config_dict.get("topic", ""),
-                nexus_config_dict.get("protocol", ""),
-                nexus_config_dict.get("periodic", 0),
-            )
-
     def _get_pvs_to_forward(self):
         return {
-            pv: (schema, topic, protocol, periodic)
+            cfg["source_name"]: (
+                cfg["schema"],
+                cfg["topic"],
+                cfg.get("protocol", ""),
+                cfg.get("periodic", 0),
+            )
             for dev in session.devices.values()
-            if hasattr(dev, "nexus_config")
-            for pv, schema, topic, protocol, periodic in self._get_forwarder_config(dev)
+            if isinstance(dev, HasNexusConfig)
+            for cfg in dev.nexus_config
+            if "source_name" in cfg
         }
 
     def _generate_forwarder_config(self, pvs):
@@ -149,114 +123,3 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
 
         status_msg = "Forwarding.." if self._forwarded else "idle"
         self._setROParam("curstatus", (status.OK, status_msg))
-
-    def _get_json_config(self, dev):
-        for nexus_config_dict in dev.nexus_config:
-            group_name = nexus_config_dict.get("group_name", "")
-            nx_class = nexus_config_dict.get("nx_class", "")
-            dataset_type = nexus_config_dict.get(
-                "dataset_type", "nx_log"
-            )  # default nxlog to keep backwards compatibility for now
-            if group_name and nx_class:
-                if dataset_type == "nx_log":
-                    yield self._handle_nxlog(
-                        nexus_config_dict, dev, group_name, nx_class
-                    )
-                elif dataset_type == "static_read":
-                    yield self._handle_static_read(
-                        nexus_config_dict, dev, group_name, nx_class
-                    )
-                elif dataset_type == "static_value":
-                    yield self._handle_static_value(
-                        nexus_config_dict, dev, group_name, nx_class
-                    )
-
-    def _handle_nxlog(self, config, dev, group_name, nx_class):
-        dev_name = dev.name
-        suffix = config.get("suffix", "")
-        if suffix:
-            dev_name = f"{dev_name}_{suffix}"
-        return (
-            dev_name,
-            {
-                "group_name": group_name,
-                "nx_class": nx_class,
-                "units": config.get("units", ""),
-                "pv": config.get("source_name", ""),
-                "schema": config.get("schema", ""),
-                "topic": config.get("topic", ""),
-                "dataset_type": config.get("dataset_type", "nx_log"),
-                "nexus_path": config.get("nexus_path", DEFAULT_NEXUS_PATH),
-            },
-        )
-
-    def _handle_static_read(self, config, dev, group_name, nx_class):
-        dev_name = dev.name
-        current_value = dev.read(0)
-        suffix = config.get("suffix", "")
-        if suffix:
-            dev_name = f"{dev_name}_{suffix}"
-        return (
-            dev_name,
-            {
-                "group_name": group_name,
-                "nx_class": nx_class,
-                "units": config.get("units", ""),
-                "value": current_value,
-                "dataset_type": config.get("dataset_type", "static_read"),
-                "nexus_path": config.get("nexus_path", DEFAULT_NEXUS_PATH),
-            },
-        )
-
-    def _handle_static_value(self, config, dev, group_name, nx_class):
-        dev_name = dev.name
-        suffix = config.get("suffix", "")
-        if suffix:
-            dev_name = f"{dev_name}_{suffix}"
-        return (
-            dev_name,
-            {
-                "group_name": group_name,
-                "nx_class": nx_class,
-                "units": config.get("units", ""),
-                "value": config.get("value", ""),
-                "dataset_type": config.get("dataset_type", "static_value"),
-                "nexus_path": config.get("nexus_path", DEFAULT_NEXUS_PATH),
-            },
-        )
-
-    def _get_configs_for_json(self):
-        return {
-            dev_name: config
-            for dev in session.devices.values()
-            if hasattr(dev, "nexus_config")
-            for dev_name, config in self._get_json_config(dev)
-        }
-
-    def _generate_json_configs(self):
-        dev_configs = self._get_configs_for_json()
-
-        grouped = defaultdict(
-            lambda: defaultdict(lambda: {"nx_class": None, "children": []})
-        )
-
-        for dev_name, cfg in dev_configs.items():
-            path = cfg.get("nexus_path", DEFAULT_NEXUS_PATH)
-            gname = cfg["group_name"]
-
-            if grouped[path][gname]["nx_class"] is None:
-                grouped[path][gname]["nx_class"] = cfg["nx_class"]
-
-            if cfg["dataset_type"] == "nx_log":
-                snippet = generate_nxlog_json(
-                    dev_name, cfg["schema"], cfg["pv"], cfg["topic"], cfg["units"]
-                )
-            elif cfg["dataset_type"] in ("static_read", "static_value"):
-                snippet = generate_dataset_json(dev_name, cfg["value"], cfg["units"])
-            else:
-                continue
-
-            grouped[path][gname]["children"].append(snippet)
-
-        # Convert each path’s groups-dict into a list of group nodes
-        return {path: build_json(groups) for path, groups in grouped.items()}

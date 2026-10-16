@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1213</width>
+    <width>1466</width>
     <height>992</height>
    </rect>
   </property>
@@ -41,7 +41,7 @@
          <number>5</number>
         </property>
         <property name="text">
-         <string>Hexapod Controls -</string>
+         <string>Hexapod Control -</string>
         </property>
        </widget>
       </item>
@@ -75,8 +75,8 @@
     <rect>
      <x>10</x>
      <y>70</y>
-     <width>1191</width>
-     <height>551</height>
+     <width>1161</width>
+     <height>781</height>
     </rect>
    </property>
    <property name="tabPosition">
@@ -94,11 +94,11 @@
       <rect>
        <x>10</x>
        <y>10</y>
-       <width>1114</width>
-       <height>391</height>
+       <width>1131</width>
+       <height>471</height>
       </rect>
      </property>
-     <layout class="QHBoxLayout" name="hexapodControls" stretch="0,2,1">
+     <layout class="QHBoxLayout" name="hexapodControls" stretch="0,2,2">
       <property name="spacing">
        <number>9</number>
       </property>
@@ -594,7 +594,7 @@
            <item row="8" column="0">
             <widget class="QPushButton" name="butStart">
              <property name="text">
-              <string>Start All</string>
+              <string>Move All</string>
              </property>
             </widget>
            </item>
@@ -862,8 +862,8 @@
          <property name="spacing">
           <number>6</number>
          </property>
-         <item row="0" column="2">
-          <layout class="QGridLayout" name="newPosGrid_2" rowstretch="0,0,0,0,0,0,0,0">
+         <item row="0" column="1" colspan="2">
+          <layout class="QGridLayout" name="newPosGrid_2" rowstretch="0,0,0,0,0,0,0,0" columnstretch="0,0,0,0,0">
            <property name="leftMargin">
             <number>9</number>
            </property>
@@ -882,6 +882,128 @@
            <property name="verticalSpacing">
             <number>6</number>
            </property>
+           <item row="2" column="3">
+            <widget class="QLabel" name="newTzUnit_2">
+             <property name="text">
+              <string>mm</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="3">
+            <widget class="QLabel" name="newRzUnit_2">
+             <property name="text">
+              <string>deg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QPushButton" name="relNeg_gmt">
+             <property name="text">
+              <string>–</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="3">
+            <widget class="QLabel" name="newTabUnit_2">
+             <property name="text">
+              <string>deg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QPushButton" name="relNeg_rz">
+             <property name="text">
+              <string>–</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLabel" name="newTzLabel_2">
+             <property name="text">
+              <string>tz</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QLabel" name="newTabLabel_2">
+             <property name="minimumSize">
+              <size>
+               <width>30</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>gmt</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLabel" name="newTyLabel_2">
+             <property name="text">
+              <string>ty</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="4">
+            <widget class="QPushButton" name="relPos_rx">
+             <property name="text">
+              <string>+</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QLabel" name="newTyUnit_2">
+             <property name="text">
+              <string>mm</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="4">
+            <widget class="QPushButton" name="relPos_ry">
+             <property name="text">
+              <string>+</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="4">
+            <widget class="QPushButton" name="relPos_rz">
+             <property name="text">
+              <string>+</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLabel" name="newRyLabel_2">
+             <property name="minimumSize">
+              <size>
+               <width>30</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>ry</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="4">
+            <widget class="QPushButton" name="relPos_ty">
+             <property name="text">
+              <string>+</string>
+             </property>
+            </widget>
+           </item>
            <item row="3" column="2">
             <widget class="QDoubleSpinBox" name="relRx">
              <property name="locale">
@@ -901,39 +1023,6 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="0">
-            <widget class="QPushButton" name="relNeg_tx">
-             <property name="text">
-              <string>–</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="2">
-            <widget class="QDoubleSpinBox" name="relTab">
-             <property name="locale">
-              <locale language="English" country="UnitedStates"/>
-             </property>
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="3">
-            <widget class="QLabel" name="newTzUnit_2">
-             <property name="text">
-              <string>mm</string>
-             </property>
-            </widget>
-           </item>
            <item row="2" column="4">
             <widget class="QPushButton" name="relPos_tz">
              <property name="text">
@@ -948,12 +1037,21 @@
              </property>
             </widget>
            </item>
-           <item row="5" column="4">
-            <widget class="QPushButton" name="relPos_rz">
-             <property name="text">
-              <string>+</string>
+           <item row="7" column="0">
+            <spacer name="verticalSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
              </property>
-            </widget>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>25</height>
+              </size>
+             </property>
+            </spacer>
            </item>
            <item row="1" column="2">
             <widget class="QDoubleSpinBox" name="relTy">
@@ -974,100 +1072,8 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
-            <widget class="QLabel" name="newTzLabel_2">
-             <property name="text">
-              <string>tz</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLabel" name="newTxLabel_2">
-             <property name="text">
-              <string>tx</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0">
-            <widget class="QPushButton" name="relNeg_ry">
-             <property name="text">
-              <string>–</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="3">
-            <widget class="QLabel" name="newRxUnit_2">
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="4">
-            <widget class="QPushButton" name="relPos_gmt">
-             <property name="text">
-              <string>+</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="3">
-            <widget class="QLabel" name="newTabUnit_2">
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="1">
-            <widget class="QLabel" name="newTabLabel_2">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>gmt</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="4">
-            <widget class="QPushButton" name="relPos_ry">
-             <property name="text">
-              <string>+</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QPushButton" name="relNeg_rx">
-             <property name="text">
-              <string>–</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="3">
-            <widget class="QLabel" name="newRyUnit_2">
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QPushButton" name="relNeg_tz">
-             <property name="text">
-              <string>–</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="2">
-            <widget class="QDoubleSpinBox" name="relRy">
+           <item row="2" column="2">
+            <widget class="QDoubleSpinBox" name="relTz">
              <property name="locale">
               <locale language="English" country="UnitedStates"/>
              </property>
@@ -1085,22 +1091,8 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="4">
-            <widget class="QPushButton" name="relPos_ty">
-             <property name="text">
-              <string>+</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="4">
-            <widget class="QPushButton" name="relPos_rx">
-             <property name="text">
-              <string>+</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QLabel" name="newRxLabel_2">
+           <item row="5" column="1">
+            <widget class="QLabel" name="newRzLabel_2">
              <property name="minimumSize">
               <size>
                <width>30</width>
@@ -1108,17 +1100,36 @@
               </size>
              </property>
              <property name="text">
-              <string>rx</string>
+              <string>rz</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
-           <item row="1" column="3">
-            <widget class="QLabel" name="newTyUnit_2">
+           <item row="6" column="4">
+            <widget class="QPushButton" name="relPos_gmt">
              <property name="text">
-              <string>mm</string>
+              <string>+</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="2">
+            <widget class="QDoubleSpinBox" name="relRz">
+             <property name="locale">
+              <locale language="English" country="UnitedStates"/>
+             </property>
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::NoButtons</enum>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+             <property name="minimum">
+              <double>-200.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>200.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -1147,8 +1158,32 @@
              </property>
             </widget>
            </item>
-           <item row="5" column="2">
-            <widget class="QDoubleSpinBox" name="relRz">
+           <item row="2" column="0">
+            <widget class="QPushButton" name="relNeg_tz">
+             <property name="text">
+              <string>–</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="newTxLabel_2">
+             <property name="text">
+              <string>tx</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="3">
+            <widget class="QLabel" name="newRxUnit_2">
+             <property name="text">
+              <string>deg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="2">
+            <widget class="QDoubleSpinBox" name="relRy">
              <property name="locale">
               <locale language="English" country="UnitedStates"/>
              </property>
@@ -1166,8 +1201,22 @@
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
-            <widget class="QLabel" name="newRyLabel_2">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="relNeg_tx">
+             <property name="text">
+              <string>–</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QPushButton" name="relNeg_ry">
+             <property name="text">
+              <string>–</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLabel" name="newRxLabel_2">
              <property name="minimumSize">
               <size>
                <width>30</width>
@@ -1175,10 +1224,36 @@
               </size>
              </property>
              <property name="text">
-              <string>ry</string>
+              <string>rx</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="2">
+            <widget class="QDoubleSpinBox" name="relTab">
+             <property name="locale">
+              <locale language="English" country="UnitedStates"/>
+             </property>
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::NoButtons</enum>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+             <property name="minimum">
+              <double>-200.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>200.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="3">
+            <widget class="QLabel" name="newRyUnit_2">
+             <property name="text">
+              <string>deg</string>
              </property>
             </widget>
            </item>
@@ -1189,26 +1264,10 @@
              </property>
             </widget>
            </item>
-           <item row="5" column="0">
-            <widget class="QPushButton" name="relNeg_rz">
+           <item row="3" column="0">
+            <widget class="QPushButton" name="relNeg_rx">
              <property name="text">
               <string>–</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="1">
-            <widget class="QLabel" name="newRzLabel_2">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>rz</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
@@ -1218,65 +1277,6 @@
               <string>mm</string>
              </property>
             </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QPushButton" name="relNeg_gmt">
-             <property name="text">
-              <string>–</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="3">
-            <widget class="QLabel" name="newRzUnit_2">
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QDoubleSpinBox" name="relTz">
-             <property name="locale">
-              <locale language="English" country="UnitedStates"/>
-             </property>
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLabel" name="newTyLabel_2">
-             <property name="text">
-              <string>ty</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="7" column="0">
-            <spacer name="verticalSpacer">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Fixed</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>25</height>
-              </size>
-             </property>
-            </spacer>
            </item>
           </layout>
          </item>
@@ -1288,10 +1288,10 @@
     <widget class="QGroupBox" name="statusBox">
      <property name="geometry">
       <rect>
-       <x>230</x>
-       <y>410</y>
-       <width>451</width>
-       <height>91</height>
+       <x>20</x>
+       <y>630</y>
+       <width>1121</width>
+       <height>101</height>
       </rect>
      </property>
      <property name="title">
@@ -1300,14 +1300,14 @@
      <widget class="QLabel" name="hexStatus">
       <property name="geometry">
        <rect>
-        <x>0</x>
-        <y>20</y>
-        <width>451</width>
-        <height>71</height>
+        <x>10</x>
+        <y>30</y>
+        <width>1191</width>
+        <height>61</height>
        </rect>
       </property>
       <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+       <enum>QFrame::NoFrame</enum>
       </property>
       <property name="frameShadow">
        <enum>QFrame::Sunken</enum>
@@ -1319,9 +1319,52 @@
        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="alignment">
-       <set>Qt::AlignCenter</set>
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
       </property>
       <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+      <property name="margin">
+       <number>0</number>
+      </property>
+      <property name="indent">
+       <number>3</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="statusimage">
+      <property name="geometry">
+       <rect>
+        <x>70</x>
+        <y>0</y>
+        <width>20</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>18</width>
+        <height>18</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="pixmap">
+       <pixmap resource="../../../../../resources/nicos-gui.qrc">:/leds/status_white</pixmap>
+      </property>
+      <property name="scaledContents">
        <bool>true</bool>
       </property>
      </widget>
@@ -1330,9 +1373,9 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>410</y>
-       <width>131</width>
-       <height>91</height>
+       <y>520</y>
+       <width>171</width>
+       <height>71</height>
       </rect>
      </property>
      <property name="title">
@@ -1342,13 +1385,13 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>20</y>
-        <width>131</width>
-        <height>71</height>
+        <y>30</y>
+        <width>171</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+       <enum>QFrame::NoFrame</enum>
       </property>
       <property name="frameShadow">
        <enum>QFrame::Sunken</enum>
@@ -1359,6 +1402,74 @@
       <property name="alignment">
        <set>Qt::AlignCenter</set>
       </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="otherOptBox">
+     <property name="geometry">
+      <rect>
+       <x>690</x>
+       <y>500</y>
+       <width>441</width>
+       <height>101</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Other Controls</string>
+     </property>
+     <widget class="QWidget" name="gridLayoutWidget_2">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>20</y>
+        <width>441</width>
+        <height>80</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_3" columnstretch="1,0,0,0">
+       <property name="leftMargin">
+        <number>9</number>
+       </property>
+       <property name="topMargin">
+        <number>5</number>
+       </property>
+       <property name="rightMargin">
+        <number>9</number>
+       </property>
+       <property name="bottomMargin">
+        <number>5</number>
+       </property>
+       <property name="horizontalSpacing">
+        <number>9</number>
+       </property>
+       <item row="0" column="2">
+        <widget class="QPushButton" name="butEnable">
+         <property name="text">
+          <string>Enable</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QPushButton" name="butReset">
+         <property name="text">
+          <string>Reset</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QPushButton" name="butHome">
+         <property name="text">
+          <string>Home Hexapod</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3">
+        <widget class="QPushButton" name="butDisable">
+         <property name="text">
+          <string>Disable</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </widget>
    </widget>
@@ -1374,8 +1485,8 @@
     <widget class="QPushButton" name="butTest">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>30</y>
+       <x>220</x>
+       <y>90</y>
        <width>101</width>
        <height>25</height>
       </rect>
@@ -1409,6 +1520,7 @@
  <layoutdefault spacing="6" margin="11"/>
  <resources>
   <include location="../../../../../resources/nicos-gui.qrc"/>
+  <include location="../../../../resources/nicos-gui.qrc"/>
  </resources>
  <connections/>
 </ui>

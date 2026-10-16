@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import numpy as np
+import pytest
+
 from test.nicos_ess.gui.doubles import DeviceSpec
 from test.nicos_ess.gui.helpers import (
     get_panel_by_class,
@@ -64,7 +67,8 @@ def test_device_appears_after_connect(gui_window_factory, fake_daemon, qtbot):
     assert setup_item.child(0).text(panel.col_index["NAME"]) == "tas"
 
 
-def test_cache_event_updates_panel(gui_window_factory, fake_daemon, qtbot):
+@pytest.mark.parametrize("value_type", [float, np.float64], ids=["python", "numpy"])
+def test_cache_event_updates_panel(gui_window_factory, fake_daemon, qtbot, value_type):
     """Cache events flow through the real event thread into the visible tree."""
     fake_daemon.add_device(
         _tas_device(FORMATTED_VALUE_PARAMS),
@@ -82,7 +86,8 @@ def test_cache_event_updates_panel(gui_window_factory, fake_daemon, qtbot):
         timeout=2000,
     )
 
-    fake_daemon.push_cache("tas/value", 7.5, timestamp=100.0)
+    with np.printoptions(legacy=False):
+        fake_daemon.push_cache("tas/value", value_type(7.5), timestamp=100.0)
 
     # These exact strings prove the seeded fmtstr/unit are honored.
     qtbot.waitUntil(

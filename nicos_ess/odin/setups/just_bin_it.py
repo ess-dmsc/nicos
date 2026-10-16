@@ -1,9 +1,6 @@
 description = "The just-bin-it histogrammer."
 
-
-tof_range = ((0, 0.7143 * 1e9),)  # in ns 0-0.7143 ms
-num_bins = (7143,)  # 10us per bin
-
+excludes = ["livedata"]
 
 devices = dict(
     jbi_detector=device(
@@ -17,11 +14,8 @@ devices = dict(
         command_topic="odin_jbi_commands",
         response_topic="odin_jbi_responses",
         statustopic=["odin_jbi_heartbeat"],
-        images=[
-            "tpx3_det",
-        ],
+        images=["monitor_1", "monitor_2", "monitor_3"],
         timers=["timer"],
-        # counters=["pulse_counter"],
     ),
     timer=device(
         "nicos_ess.devices.timer.TimerChannel",
@@ -29,25 +23,52 @@ devices = dict(
         fmtstr="%.2f",
         unit="s",
     ),
-    # Need to define a EVR counter for ODIN
-    # pulse_counter=device(
-    #     "nicos_ess.devices.epics.pulse_counter.PulseCounter",
-    #     description="EVR Pulse Counter",
-    #     readpv="ODIN-DtCmn:Ctrl-EVR-001:EvtHCnt-I",
-    #     fmtstr="%d",
-    # ),
-    tpx3_det=device(
+    monitor_1=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
-        description="Timepix 3 just-bin-it channel",
+        description="Beam monitor 1 just-bin-it channel",
         hist_topic="odin_visualisation",
-        data_topic="odin_detector_tpx3_empir",
+        data_topic="odin_beam_monitor",
+        source="cbm1",
         brokers=configdata("config.KAFKA_BROKERS"),
-        unit="evts",
+        unit="ADC counts",
         hist_type="1-D TOF",
-        det_width=4096,
-        det_height=4096,
-        det_range=(1, 16777216),
-        tof_range=(0, 0.7143 * 1e9),  # in ns 0-0.7143 ms
-        num_bins=7143,  # 10us per bin
+        det_width=1,
+        det_height=1,
+        det_range=(0, 100),
+        tof_range=(0, 71428571),
+        num_bins=714,
+        input_schema="da00",
+    ),
+    monitor_2=device(
+        "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
+        description="Beam monitor 2 just-bin-it channel",
+        hist_topic="odin_visualisation",
+        data_topic="odin_beam_monitor",
+        source="cbm2",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        unit="ADC counts",
+        hist_type="1-D TOF",
+        det_width=1,
+        det_height=1,
+        det_range=(0, 100),
+        tof_range=(0, 71428571),
+        num_bins=714,
+        input_schema="da00",
+    ),
+    monitor_3=device(
+        "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
+        description="Beam monitor 3 just-bin-it channel",
+        hist_topic="odin_visualisation",
+        data_topic="odin_beam_monitor",
+        source="cbm3",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        unit="ADC counts",
+        hist_type="1-D TOF",
+        det_width=1,
+        det_height=1,
+        det_range=(0, 100),
+        tof_range=(0, 71428571),
+        num_bins=714,
+        input_schema="da00",
     ),
 )

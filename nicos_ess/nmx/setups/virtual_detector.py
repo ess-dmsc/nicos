@@ -14,12 +14,12 @@ description = "Virtual detector"
 devices = dict(
     timer_detector=device(
         "nicos.devices.generic.Detector",
-        description="The detector",
-        timers=["timer"],
+        description="The (virtual) detector",
+        timers=["virt_timer"],
     ),
-    timer=device(
+    virt_timer=device(
         "nicos_ess.devices.timer.TimerChannel",
-        description="The timer",
+        description="The (virtual) timer",
         fmtstr="%.2f",
         unit="s",
     ),

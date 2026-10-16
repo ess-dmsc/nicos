@@ -54,6 +54,7 @@ main_window = vbox(
                                 collector="ad_sim_detector_area_detector_collector",
                                 source_motor="source_motor",
                                 flatpanel_motor="flatpanel_motor",
+                                setups="xray_setup",
                             ),
                         ),
                         (

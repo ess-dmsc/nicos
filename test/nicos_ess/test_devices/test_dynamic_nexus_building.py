@@ -3,13 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from nicos.core import MAIN, POLLER
+from nicos.core import MAIN, POLLER, ConfigurationError
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureJsonFile
 from nicos_ess.loki.devices.thermostated_cellholder import ThermoStatedCellHolder
 from nicos_ess.utilities.json_utils import (
     build_named_index_map,
     get_by_named_path,
 )
+from test.utils import ErrorLogged
 
 try:
     from unittest import TestCase, mock
@@ -43,7 +44,7 @@ def _minimal_metainfo(counter: int = 1) -> dict:
                     "facility_user_id": "johndoe",
                 }
             ],
-            "({'name': 'John Doe', 'email': '', 'affiliation': 'European Spallation Source ERIC (ESS)', 'facility_user_id': 'johndoe'})",
+            "({'name': 'John Doe', 'email': '', 'affiliation': 'European Spallation Source ERIC (ESS)', 'facility_user_id': 'johndoe'})",  # noqa: E501
             "",
             "experiment",
         ),
@@ -65,12 +66,13 @@ class TestDynamicNexusBuilding(TestCase):
         return thing
 
     @pytest.fixture(autouse=True)
-    def prepare(self, session, monkeypatch):
+    def prepare(self, session, log, monkeypatch):
         # Ensure relative paths in setups resolve from repo root
         repo_root = Path(__file__).resolve().parents[3]
         monkeypatch.chdir(repo_root)
 
         self.session = session
+        self.log = log
         self.session.sessiontype = POLLER
 
         # Patch KafkaConsumer so loading the forwarder setup doesn't try to connect
@@ -88,6 +90,7 @@ class TestDynamicNexusBuilding(TestCase):
         self.session.loadSetup("ess_forwarder", {})
         self.session.loadSetup("ess_motors", {})
         self.session.loadSetup("ess_nexus_structure", {})
+        self.session.loadSetup("ess_nexus_aliases", {})
 
         # Devices under test
         self.forwarder = self.session.getDevice("KafkaForwarder")
@@ -106,8 +109,260 @@ class TestDynamicNexusBuilding(TestCase):
         self.session.unloadSetup()
         self.session.sessiontype = MAIN
 
+    def _motor1_children(self):
+        return self.nexus._nexus_config_groups()["/entry/instrument"]["motor1"][
+            "children"
+        ]
+
+    def test_static_value_to_nexus(self):
+        self.motor.nexus_config = [
+            {
+                "group_name": "motor1",
+                "nx_class": "NXcollection",
+                "suffix": "info",
+                "value": "some_value_in_nexus",
+                "dataset_type": "static_value",
+            }
+        ]
+        assert self._motor1_children()[0]["config"] == {
+            "name": "motor1_info",
+            "values": "some_value_in_nexus",
+            "dtype": "string",
+        }
+
+    def test_static_read_to_nexus(self):
+        self.motor.nexus_config = [
+            {
+                "group_name": "motor1",
+                "nx_class": "NXcollection",
+                "units": "mm",
+                "suffix": "readback",
+                "dataset_type": "static_read",
+            }
+        ]
+        self.motor.values["position"] = 42
+        assert self._motor1_children()[0]["config"] == {
+            "name": "motor1_readback",
+            "values": 42,
+            "dtype": "int",
+        }
+
+    def test_forwarded_nx_log_to_nexus(self):
+        self.motor.nexus_config = [
+            {
+                "group_name": "motor1",
+                "nx_class": "NXcollection",
+                "units": "mm",
+                "dataset_type": "nx_log",
+                "source_name": "IOC:m1.RBV",
+                "schema": "f144",
+                "topic": "ymir_motion",
+            }
+        ]
+        [nxlog] = self._motor1_children()
+        assert nxlog["name"] == "motor1"
+        assert nxlog["children"][0]["module"] == "f144"
+        assert nxlog["children"][0]["config"]["source"] == "IOC:m1.RBV"
+        assert nxlog["children"][0]["config"]["topic"] == "ymir_motion"
+
+    def test_nicos_nx_log_to_nexus(self):
+        self.motor.nexus_config = [
+            {
+                "group_name": "motor1",
+                "nx_class": "NXcollection",
+                "units": "mm",
+                "dataset_type": "nx_log",
+            }
+        ]
+        [nxlog] = self._motor1_children()
+        assert nxlog["name"] == "motor1"
+        assert nxlog["children"][0]["module"] == "f144"
+        assert nxlog["children"][0]["config"]["source"] == "motor1"
+        assert nxlog["children"][0]["config"]["topic"] == "instr_nicos_devices"
+
+    def test_nicos_nx_log_with_string_value_warns(self):
+        self.motor.nexus_config = [
+            {
+                "group_name": "motor1",
+                "nx_class": "NXcollection",
+                "dataset_type": "nx_log",
+            }
+        ]
+        self.motor.values["position"] = "not_a_number"
+        self.motor.read(0)
+        with mock.patch.object(self.nexus._obj.log, "warning") as warning:
+            self.nexus._nexus_config_groups()
+        warning.assert_called_once()
+
+    def test_name_replaces_device_name(self):
+        self.motor.nexus_config = [
+            {
+                "group_name": "motor1",
+                "nx_class": "NXsensor",
+                "name": "value_log",
+                "dataset_type": "nx_log",
+            }
+        ]
+        [nxlog] = self._motor1_children()
+        assert nxlog["name"] == "value_log"
+        assert nxlog["children"][0]["config"]["source"] == "motor1"
+
+    def test_empty_name_is_rejected(self):
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [
+                {
+                    "group_name": "motor1",
+                    "nx_class": "NXsensor",
+                    "name": "",
+                    "dataset_type": "nx_log",
+                }
+            ]
+
+    def _value_log(self, group_name="motor1"):
+        return {
+            "group_name": group_name,
+            "nx_class": "NXsensor",
+            "name": "value_log",
+            "dataset_type": "nx_log",
+        }
+
+    def test_same_name_twice_in_a_group_is_skipped(self):
+        self.motor.nexus_config = [self._value_log(), self._value_log()]
+        with self.log.assert_warns("motor1/value_log' is already written"):
+            assert len(self._motor1_children()) == 1
+
+    def test_name_already_in_the_template_is_skipped(self):
+        self.motor.nexus_config = [
+            {
+                "nexus_path": "/entry",
+                "group_name": "sample",
+                "nx_class": "NXsample",
+                "name": "depends_on",
+                "value": "other",
+                "dataset_type": "static_value",
+            }
+        ]
+        with self.log.assert_warns("/entry/sample/depends_on' is already in"):
+            doc = json.loads(self.nexus.get_structure(_minimal_metainfo(), counter=1))
+
+        depends_on = get_by_named_path(
+            doc, build_named_index_map(doc), "/entry/sample/depends_on"
+        )
+        assert depends_on["config"]["values"] != "other"
+
+    def _get_structure_paths(self):
+        doc = json.loads(self.nexus.get_structure(_minimal_metainfo(), counter=1))
+        return doc, build_named_index_map(doc, include_datasets=True)
+
+    def test_physical_component_gets_depends_on(self):
+        self.motor.nexus_config = [self._value_log()]
+        doc, path_map = self._get_structure_paths()
+        depends_on = get_by_named_path(
+            doc, path_map, "/entry/instrument/motor1/depends_on"
+        )
+        assert depends_on["config"]["values"] == "."
+
+    def test_given_depends_on_is_kept(self):
+        self.motor.nexus_config = [
+            self._value_log(),
+            {
+                "group_name": "motor1",
+                "nx_class": "NXsensor",
+                "name": "depends_on",
+                "value": "/entry/sample/transformations/x",
+                "dataset_type": "static_value",
+            },
+        ]
+        doc, path_map = self._get_structure_paths()
+        depends_on = get_by_named_path(
+            doc, path_map, "/entry/instrument/motor1/depends_on"
+        )
+        assert depends_on["config"]["values"] == "/entry/sample/transformations/x"
+
+    def test_other_groups_get_no_depends_on(self):
+        self.motor.nexus_config = [
+            {**self._value_log(), "nx_class": "NXcollection"},
+        ]
+        _, path_map = self._get_structure_paths()
+        assert "/entry/instrument/motor1/value_log" in path_map
+        assert "/entry/instrument/motor1/depends_on" not in path_map
+
+    def test_alias_is_not_written_again(self):
+        self.motor.nexus_config = [self._value_log()]
+        self.session.getDevice("motor_alias").alias = "motor1"
+        assert len(self._motor1_children()) == 1
+
+    def test_sample_info_does_not_repeat_an_existing_field(self):
+        self.motor.nexus_config = [
+            {
+                "nexus_path": "/entry",
+                "group_name": "sample",
+                "nx_class": "NXsample",
+                "name": "temperature",
+                "dataset_type": "nx_log",
+            }
+        ]
+        metainfo = _minimal_metainfo()
+        metainfo[("Sample", "samples")] = (
+            {0: {"name": "SampleA", "temperature": "0"}},
+            "",
+            "",
+            "sample",
+        )
+
+        with self.log.assert_warns("sample field 'temperature' is not written"):
+            doc = json.loads(self.nexus.get_structure(metainfo, counter=1))
+
+        sample = get_by_named_path(
+            doc, build_named_index_map(doc, include_datasets=False), "/entry/sample"
+        )
+        assert [c.get("name") for c in sample["children"]].count("temperature") == 1
+        assert not any(
+            c.get("config", {}).get("name") == "temperature" for c in sample["children"]
+        )
+
+    def test_dynamic_build_adds_to_existing_and_nested_groups(self):
+        self.motor.nexus_config = [
+            {
+                "nexus_path": "/entry/sample/temperature_env",
+                "group_name": "sensor",
+                "nx_class": "NXsensor",
+                "name": "value_log",
+                "dataset_type": "nx_log",
+            },
+            {
+                "nexus_path": "/entry/sample",
+                "group_name": "temperature_env",
+                "nx_class": "NXenvironment",
+                "name": "name",
+                "value": "cryostat",
+                "dataset_type": "static_value",
+            },
+            {
+                "nexus_path": "/entry",
+                "group_name": "sample",
+                "nx_class": "NXsample",
+                "name": "temperature",
+                "dataset_type": "nx_log",
+            },
+        ]
+
+        doc = json.loads(self.nexus.get_structure(_minimal_metainfo(), counter=1))
+
+        entry = doc["children"][0]
+        samples = [c for c in entry["children"] if c.get("name") == "sample"]
+        assert len(samples) == 1
+        path_map = build_named_index_map(doc, include_datasets=True)
+        for path in (
+            "/entry/sample/name",
+            "/entry/sample/temperature",
+            "/entry/sample/temperature_env/name",
+            "/entry/sample/temperature_env/sensor/value_log",
+        ):
+            assert get_by_named_path(doc, path_map, path) is not None
+
     def test_dynamic_build_places_groups_by_path(self):
-        """Motor nexus_config → Forwarder get_nexus_json() → NexusStructure insertion under correct paths."""
+        """Motor nexus_config → NexusStructure insertion under correct paths."""
         # Two entries for the same device, different dataset types & paths
         nx_conf1 = {
             "group_name": "motor1",
@@ -131,7 +386,7 @@ class TestDynamicNexusBuilding(TestCase):
         self.motor.nexus_config = [nx_conf1, nx_conf2]
         self.motor.values["position"] = position
 
-        # Build the final NeXus JSON via the structure device (this will ask the forwarder for by-path groups)
+        # Build the final NeXus JSON via the structure device
         raw = self.nexus.get_structure(_minimal_metainfo(counter=5), counter=5)
         doc = json.loads(raw)
 
@@ -246,8 +501,8 @@ class TestDynamicNexusBuilding(TestCase):
         metainfo = _minimal_metainfo(counter)
         metainfo[("Sample", "samples")] = (samples, str(samples), "", "sample")
         metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
-        with pytest.raises(Exception):
-            structure = self.nexus.get_structure(metainfo, counter)
+        with pytest.raises(ErrorLogged, match="forget to set a sample"):
+            self.nexus.get_structure(metainfo, counter)
 
     def test_empty_sample(self):
         samples = {0: {"name": ""}}
@@ -256,8 +511,8 @@ class TestDynamicNexusBuilding(TestCase):
         metainfo = _minimal_metainfo(counter)
         metainfo[("Sample", "samples")] = (samples, str(samples), "", "sample")
         metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
-        with pytest.raises(Exception):
-            structure = self.nexus.get_structure(metainfo, counter)
+        with pytest.raises(ErrorLogged, match="forget to set a sample"):
+            self.nexus.get_structure(metainfo, counter)
 
     def test_add_sample_name_from_thermostated_cell_holder(self):
         self.nexus.nexus_config_path = (
@@ -353,5 +608,5 @@ class TestDynamicNexusBuilding(TestCase):
             {"type": "blank", "positions": [], "labels": []},
         ]
 
-        with pytest.raises(Exception):
-            structure = self.nexus.get_structure(metainfo, counter)
+        with pytest.raises(ErrorLogged, match="forget to set a sample"):
+            self.nexus.get_structure(metainfo, counter)

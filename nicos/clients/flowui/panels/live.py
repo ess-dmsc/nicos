@@ -30,7 +30,11 @@ from nicos.clients.flowui.panels import get_icon
 from nicos.clients.gui.panels.live import LiveDataPanel as DefaultLiveDataPanel
 from nicos.guisupport.livewidget import (
     AXES,
+)
+from nicos.guisupport.livewidget import (
     LiveWidget as DefaultLiveWidget,
+)
+from nicos.guisupport.livewidget import (
     LiveWidget1D as DefaultLiveWidget1D,
 )
 from nicos.guisupport.qt import (
@@ -199,7 +203,7 @@ def processDataArrays(index, params, data):
     shape = datadesc["shape"]
 
     # determine 1D array size
-    arraysize = numpy.product(shape)
+    arraysize = numpy.prod(shape)
     arrays = numpy.split(data[: count * arraysize], count)
 
     # reshape every array in the list

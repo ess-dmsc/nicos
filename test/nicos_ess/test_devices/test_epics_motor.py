@@ -21,13 +21,11 @@
 #
 # *****************************************************************************
 
-from unittest.mock import Mock
 
 import pytest
 
 # pytest.importorskip("graypy")
 from nicos.commands.device import adjust
-from nicos.core import status
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsComponent
 
@@ -162,38 +160,6 @@ class TestEpicsMotor:
         self.motor.offset = new_offset
 
         assert (low + new_offset, high + new_offset) == self.motor.userlimits
-
-    @pytest.mark.parametrize(
-        "test_alerts_input",
-        [
-            status.OK,
-            status.WARN,
-            status.ERROR,
-            status.UNKNOWN,
-        ],
-    )
-    @pytest.mark.parametrize(
-        "msgtxt_return_values",
-        [
-            (status.OK, ""),
-            (status.WARN, ""),
-            (status.ERROR, ""),
-            (status.UNKNOWN, ""),
-        ],
-    )
-    def test_alerts_have_correct_precedence(
-        self, test_alerts_input, msgtxt_return_values
-    ):
-        self.motor._get_msgtxt = Mock(return_value=msgtxt_return_values)
-
-        self.motor._log_epics_msg_info = Mock(return_value=None)
-        self.motor._motor_status = None, None
-
-        msg_stat, _ = self.motor._get_msgtxt()
-        motor_stat, _ = self.motor._update_status_with_msgtxt(test_alerts_input, "")
-        assert msg_stat <= motor_stat
-        if motor_stat == status.ERROR and msg_stat == status.ERROR:
-            assert msg_stat == motor_stat
 
 
 class TestDerivedEpicsMotor:

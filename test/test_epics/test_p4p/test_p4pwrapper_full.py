@@ -41,13 +41,19 @@ def _any_non_ok_alarm_severity() -> tuple[int, int]:
     return sev, SEVERITY_TO_STATUS[sev]
 
 
-def wait_for(predicate, *, timeout: float = _TIMEOUT, interval: float = 0.02) -> None:
+def wait_for(
+    predicate,
+    *,
+    timeout: float = _TIMEOUT,
+    interval: float = 0.02,
+    message: str = "timeout waiting for condition",
+) -> None:
     end = time.time() + timeout
     while time.time() < end:
         if predicate():
             return
         time.sleep(interval)
-    raise AssertionError("timeout waiting for condition")
+    raise AssertionError(message)
 
 
 @dataclass(frozen=True)
@@ -529,53 +535,68 @@ def test_restart_two_subscriptions_finally_connected_even_with_slow_conn_cb(
         time.sleep(0.5)
 
     # Same pvparam for both subs (this is what NICOS devices do)
-    sub1 = pva_wrapper.subscribe(pvname, "value", ch1, slow_conn_cb)
-    sub2 = pva_wrapper.subscribe(pvname, "value", ch2, slow_conn_cb)
+    try:
+        sub1 = pva_wrapper.subscribe(pvname, "value", ch1, slow_conn_cb)
+        sub2 = pva_wrapper.subscribe(pvname, "value", ch2, slow_conn_cb)
 
-    # Force initial activity so both monitors definitely see something.
-    pv.post(1.26, timestamp=time.time())
-    ch1.wait_calls(1, timeout=_TIMEOUT)
-    ch2.wait_calls(1, timeout=_TIMEOUT)
+        # Force initial activity so both monitors definitely see something.
+        pv.post(1.26, timestamp=time.time())
+        ch1.wait_calls(1, timeout=_TIMEOUT)
+        ch2.wait_calls(1, timeout=_TIMEOUT)
 
-    # Both subs should be connected in wrapper bookkeeping
-    wait_for(
-        lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 2,
-        timeout=_TIMEOUT,
-    )
-    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub1))] is True
-    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub2))] is True
+        # Both subs should be connected in wrapper bookkeeping
+        wait_for(
+            lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 2,
+            timeout=_TIMEOUT,
+            message="one or both subscriptions did not connect initially",
+        )
+        assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub1))] is True
+        assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub2))] is True
 
-    # Restart server (simulate IOC restart)
-    pva_rig.server.restart()
+        # Stop the server (simulate IOC restart)
+        pva_rig.server.stop()
 
-    # After stop/start, p4p may deliver Cancelled or other Exception to monitors.
-    # Your wrapper updates bookkeeping either way; rely on that.
-    wait_for(
-        lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 0,
-        timeout=_TIMEOUT,
-    )
-    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub1))] is False
-    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub2))] is False
+        # After stop/start, p4p may deliver Cancelled or other Exception to monitors.
+        # Your wrapper updates bookkeeping either way; rely on that.
+        wait_for(
+            lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 0,
+            timeout=_TIMEOUT,
+            message="one or both subscriptions did not disconnect after server stop",
+        )
+        assert (
+            pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub1))] is False
+        )
+        assert (
+            pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub2))] is False
+        )
 
-    # Now make the restarted server emit an update so monitors reconnect and deliver.
-    pv.post(1.27, timestamp=time.time())
+        pva_rig.server.start()
 
-    wait_for(
-        lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 2,
-        timeout=_TIMEOUT,
-    )
-    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub1))] is True
-    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub2))] is True
+        # Now make the restarted server emit an update so monitors reconnect and deliver.
+        pv.post(1.27, timestamp=time.time())
 
-    # Connection callback should end in connected state.
-    # We *expect* at least two "up" events: one initial, one after restart.
-    wait_for(
-        lambda: sum(1 for c in conn.calls if c[0][2] is True) >= 2, timeout=_TIMEOUT
-    )
+        wait_for(
+            lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 2,
+            timeout=_TIMEOUT,
+            message="one or both subscriptions did not reconnect after server restart",
+        )
+        assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub1))] is True
+        assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub2))] is True
 
-    # no "down" after the last "up"
-    last_up_idx = max(i for i, c in enumerate(conn.calls) if c[0][2] is True)
-    assert not any(c[0][2] is False for c in conn.calls[last_up_idx + 1 :])
+        # Connection callback should end in connected state.
+        # We *expect* at least two "up" events: one initial, one after restart.
+        wait_for(
+            lambda: sum(1 for c in conn.calls if c[0][2] is True) >= 2,
+            timeout=_TIMEOUT,
+            message="recovery connection notification was not received",
+        )
 
-    pva_wrapper.close_subscription(sub1)
-    pva_wrapper.close_subscription(sub2)
+        # no "down" after the last "up"
+        last_up_idx = max(i for i, c in enumerate(conn.calls) if c[0][2] is True)
+        assert not any(c[0][2] is False for c in conn.calls[last_up_idx + 1 :])
+
+    finally:
+        with suppress(Exception):
+            pva_wrapper.close_subscription(sub1)
+        with suppress(Exception):
+            pva_wrapper.close_subscription(sub2)

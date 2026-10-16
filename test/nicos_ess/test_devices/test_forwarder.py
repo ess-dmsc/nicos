@@ -220,79 +220,24 @@ class TestEpicsKafkaForwarder(TestCase):
         assert fc.streams[0].schema == nx_conf["schema"]
         assert fc.streams[0].topic == nx_conf["topic"]
 
-    def test_static_value_to_nexus(self):
-        nx_conf = {
+    def test_nicos_stream_is_not_forwarded(self):
+        pv_conf = {
             "group_name": "motor1",
             "nx_class": "NXcollection",
-            "units": "",
-            "suffix": "info",
-            "value": "some_value_in_nexus",
-            "dataset_type": "static_value",
+            "dataset_type": "nx_log",
+            "source_name": "readpv",
+            "schema": "f144",
+            "topic": "ymir_motion",
         }
-        self.motor.nexus_config = [nx_conf]
-        json_obj = self.device.get_nexus_json()["/entry/instrument"]
-        assert json_obj[0]["name"] == nx_conf["group_name"]
-        assert json_obj[0]["children"][0]["config"] == {
-            "name": f"{nx_conf['group_name']}_{nx_conf['suffix']}",
-            "values": nx_conf["value"],
-            "dtype": "string",
-        }
-
-    def test_static_read_to_nexus(self):
-        nx_conf = {
+        nicos_conf = {
             "group_name": "motor1",
             "nx_class": "NXcollection",
-            "units": "mm",
-            "suffix": "readback",
-            "dataset_type": "static_read",
+            "dataset_type": "nx_log",
+            "suffix": "nicos",
         }
-        position = "some_read_string"
-        self.motor.nexus_config = [nx_conf]
-        self.motor.values["position"] = position
-        json_obj = self.device.get_nexus_json()["/entry/instrument"]
-        assert json_obj[0]["name"] == nx_conf["group_name"]
-        assert json_obj[0]["children"][0]["config"] == {
-            "name": f"{nx_conf['group_name']}_{nx_conf['suffix']}",
-            "values": position,
-            "dtype": "string",
-        }
-
-    def test_multiple_nexus_config_with_different_paths(self):
-        nx_conf1 = {
-            "group_name": "motor1",
-            "nx_class": "NXcollection",
-            "units": "mm",
-            "suffix": "readback",
-            "dataset_type": "static_read",
-            "nexus_path": "/entry/instrument",
-        }
-        nx_conf2 = {
-            "group_name": "motor1",
-            "nx_class": "NXcollection",
-            "units": "",
-            "suffix": "info",
-            "value": "some_value_in_nexus",
-            "dataset_type": "static_value",
-            "nexus_path": "/entry/sample",
-        }
-        position = 123
-        self.motor.nexus_config = [nx_conf1, nx_conf2]
-        self.motor.values["position"] = position
-        json_by_path = self.device.get_nexus_json()
-        assert len(json_by_path) == 2
-        json_1 = json_by_path["/entry/instrument"]
-        assert json_1[0]["name"] == nx_conf1["group_name"]
-        assert json_1[0]["children"][0]["config"] == {
-            "name": f"{nx_conf1['group_name']}_{nx_conf1['suffix']}",
-            "values": position,
-            "dtype": "int",
-        }
-        json_2 = json_by_path["/entry/sample"]
-        assert json_2[0]["name"] == nx_conf2["group_name"]
-        assert json_2[0]["children"][0]["config"] == {
-            "name": f"{nx_conf2['group_name']}_{nx_conf2['suffix']}",
-            "values": nx_conf2["value"],
-            "dtype": "string",
+        self.motor.nexus_config = [pv_conf, nicos_conf]
+        assert self.device._get_pvs_to_forward() == {
+            "readpv": ("f144", "ymir_motion", "", 0)
         }
 
     def test_nexus_config_must_be_list(self):
@@ -522,6 +467,22 @@ class TestEpicsKafkaForwarder(TestCase):
         }
         self.motor.nexus_config = [good]
 
+    def test_nx_log_without_forwarding_keys_is_accepted(self):
+        self.motor.nexus_config = [
+            {"group_name": "g", "nx_class": "NXlog", "dataset_type": "nx_log"}
+        ]
+
+    def test_protocol_or_periodic_without_source_name_raises(self):
+        for key, value in (("protocol", "pva"), ("periodic", 1)):
+            bad = {
+                "group_name": "g",
+                "nx_class": "NXlog",
+                "dataset_type": "nx_log",
+                key: value,
+            }
+            with pytest.raises(ConfigurationError):
+                self.motor.nexus_config = [bad]
+
     def test_valid_static_value_minimal_is_accepted(self):
         good = {
             "group_name": "sample",
@@ -530,53 +491,3 @@ class TestEpicsKafkaForwarder(TestCase):
             "value": "Ni powder",
         }
         self.motor.nexus_config = [good]
-
-    def test_nx_log_config_generates_json(self):
-        nx_conf = {
-            "group_name": "motor1",
-            "nx_class": "NXcollection",
-            "units": "mm",
-            "suffix": "readback",
-            "source_name": "readpv",
-            "schema": "f144",
-            "topic": "ymir_motion",
-            "protocol": "pva",
-            "periodic": 1,
-            "dataset_type": "nx_log",
-        }
-        self.motor.nexus_config = [nx_conf]
-        json_obj = self.device.get_nexus_json()
-        assert "/entry/instrument" in json_obj
-        instrument = json_obj["/entry/instrument"]
-        assert instrument[0]["name"] == "motor1"
-
-    def test_static_read_config_generates_json(self):
-        nx_conf = {
-            "group_name": "motor1",
-            "nx_class": "NXcollection",
-            "units": "mm",
-            "suffix": "readback",
-            "dataset_type": "static_read",
-        }
-        position = 42
-        self.motor.nexus_config = [nx_conf]
-        self.motor.values["position"] = position
-        json_obj = self.device.get_nexus_json()
-        assert "/entry/instrument" in json_obj
-        instrument = json_obj["/entry/instrument"]
-        assert instrument[0]["name"] == "motor1"
-
-    def test_static_value_config_generates_json(self):
-        nx_conf = {
-            "group_name": "motor1",
-            "nx_class": "NXcollection",
-            "units": "",
-            "suffix": "info",
-            "value": "some_value_in_nexus",
-            "dataset_type": "static_value",
-        }
-        self.motor.nexus_config = [nx_conf]
-        json_obj = self.device.get_nexus_json()
-        assert "/entry/instrument" in json_obj
-        instrument = json_obj["/entry/instrument"]
-        assert instrument[0]["name"] == "motor1"
