@@ -42,7 +42,7 @@ except ImportError:
     HelpWindow = None
 
 
-class DASHBOARDItem:
+class DashboardItem:
     INSTRUMENT = {
         "name": "instrument",
         "location": "row_1",
@@ -53,7 +53,7 @@ class DASHBOARDItem:
     }
     EXPERIMENT = {
         "name": "experiment",
-        "location": "row_1",
+        "location": "col_l",
         "label": "     Experiment",
         "data_source": "session.experiment.title",
         "stringify": False,
@@ -82,10 +82,11 @@ class DASHBOARDItem:
 
 
 ALL_DASHBOARD_ITEMS = [
-    DASHBOARDItem.INSTRUMENT,
-    DASHBOARDItem.PROPOSAL_ID,
-    DASHBOARDItem.RUN_NUMBER,
-    DASHBOARDItem.RUN_TITLE,
+    DashboardItem.INSTRUMENT,
+    DashboardItem.PROPOSAL_ID,
+    DashboardItem.RUN_NUMBER,
+    DashboardItem.RUN_TITLE,
+    # DashboardItem.EXPERIMENT,
 ]
 
 
@@ -178,6 +179,11 @@ class Dashboard(Panel):
                 text.setStyleSheet("font-size: 14pt")
                 dashboardRow2.addWidget(label)
                 dashboardRow2.addWidget(text)
+            elif location == "col_l":
+                label.setStyleSheet("font-size: 14pt; font-weight: bold")
+                text.setStyleSheet("font-size: 14pt")
+                self.dashLeft.addWidget(label)
+                self.dashLeft.addWidget(text)
 
             setattr(self, f"{name}_label", label)
             setattr(self, f"{name}_text", text)
