@@ -25,7 +25,7 @@ from unittest import TestCase, mock
 
 import pytest
 
-from nicos.core import GUEST, SIMULATION
+from nicos.core import SIMULATION
 from nicos_ess.devices.datasinks.file_writer import (
     AlreadyWritingException,
     FileWriterController,
@@ -126,11 +126,8 @@ class TestFileWriterControl(TestCase):
             mock.patch(
                 "nicos_ess.devices.datasinks.file_writer.printTable"
             ) as print_table,
-            mock.patch.object(
-                self.session, "daemon_device", create=True
-            ) as daemon_device,
+            mock.patch.object(self.session, "daemon_device", create=True),
         ):
-            daemon_device.current_script.return_value.user.level = GUEST
             self.filewriter_control.list_jobs(2)
 
         _, items, _ = print_table.call_args.args
