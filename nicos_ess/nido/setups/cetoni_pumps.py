@@ -33,7 +33,6 @@ devices = dict(
         description="Device to start the linked pumping flow",
         pvroot=linked_pvroot,
         readpv=f"{linked_pvroot}StopMode-SP",
-        writepv=f"{linked_pvroot}Start-Cmd",
-        mapping={"Start": 1},
+        writepv=f"{linked_pvroot}StopMode-SP",
     ),
 )

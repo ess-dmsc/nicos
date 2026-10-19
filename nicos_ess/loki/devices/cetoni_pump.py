@@ -11,7 +11,7 @@ from nicos.core import (
     status,
     usermethod,
 )
-from nicos_ess.devices.epics.pva import EpicsAnalogMoveable, EpicsManualMappedMoveable
+from nicos_ess.devices.epics.pva import EpicsAnalogMoveable, EpicsMappedMoveable
 from nicos_ess.devices.epics.pva.epics_common import (
     command_channel,
     readback_channel,
@@ -22,7 +22,7 @@ from nicos_ess.devices.epics.pva.epics_common import (
 from nicos_ess.devices.mixins import CanReferenceWithWarning
 
 
-class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
+class CetoniPumpLinkedMode(CanDisable, EpicsMappedMoveable):
     """Control linked pumping between two Cetoni syringes.
 
     Liquid is transferred back and forth between the syringes at the
@@ -68,39 +68,21 @@ class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
             volatile=True,
             settable=True,
         ),
-        "pump_mode": Param(
-            description="Pumping mode",
-            settable=True,
-            volatile=True,
-            type=str,
-        ),
+    }
+
+    parameter_overrides = {
+        "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
     def _after_subscribe(self, mode):
-        self.parameters["first_fill_syringe"].type = oneof(
-            *(self._epics.get_channel_value_choices("first_fill_syringe"))
-        )
-        self.parameters["pump_mode"].type = oneof(
-            *(self._epics.get_channel_value_choices("pump_mode"))
-        )
-        self.parameters["max_dosing_time"].unit = self._epics.get_channel_units(
-            "max_dosing_time"
-        )
-        self.parameters["flowrate"].unit = self._epics.get_channel_units("flowrate")
-        self.parameters["total_vol"].unit = self._epics.get_channel_units("total_vol")
+        first_fill_syringe = self._epics.get_channel_value_choices("first_fill_syringe")
+        self.parameters["first_fill_syringe"].type = oneof(*first_fill_syringe)
         super()._after_subscribe(mode)
 
     def _build_epics_channels(self):
         epics_channels = super()._build_epics_channels()
         epics_channels.update(
             {
-                "read": readback_channel(
-                    cache_key="value",
-                    pv_prefix_attr="pvroot",
-                    pv_suffix="StopMode-SP",
-                    is_enum=True,
-                    primary=True,
-                ),
                 "flowrate": setpoint_channel(
                     cache_key="flowrate",
                     pv_prefix_attr="pvroot",
@@ -120,12 +102,6 @@ class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
                     cache_key="first_fill_syringe",
                     pv_prefix_attr="pvroot",
                     pv_suffix="FillingSyringeIdx-SP",
-                    is_enum=True,
-                ),
-                "pump_mode": setpoint_channel(
-                    cache_key="pump_mode",
-                    pv_prefix_attr="pvroot",
-                    pv_suffix="StopMode-SP",
                     is_enum=True,
                 ),
                 "max_dosing_time": setpoint_channel(
@@ -163,6 +139,7 @@ class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
         is_disabled = self._epics.get_channel_value("is_disabled")
         if is_disabled:
             raise MoveError(self, f'Cannot start: Please enable device "{self.name}"')
+        self._epics.put_channel_value("write", target)
         self._epics.put_channel_value("start", 1)
 
     def doReadMax_Dosing_Time(self):
@@ -191,12 +168,6 @@ class CetoniPumpLinkedMode(CanDisable, EpicsManualMappedMoveable):
 
     def doWriteFirst_Fill_Syringe(self, target):
         self._epics.put_channel_value("first_fill_syringe", target)
-
-    def doReadPump_Mode(self):
-        return self._epics.get_channel_value("pump_mode")
-
-    def doWritePump_Mode(self, target):
-        self._epics.put_channel_value("pump_mode", target)
 
     def doEnable(self, on=False):
         self._epics.put_channel_value("enable", 1 if on else 0)
