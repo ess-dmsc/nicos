@@ -271,3 +271,7 @@ session_setup = None
 class TestEssExperimentWithSession:
     def test_experiment_can_be_created_in_session(self, session):
         assert isinstance(session.experiment, EssExperiment)
+
+    def test_get_proposal_path(self, session):
+        proposal_path = session.experiment.proposalpath_of("123456")
+        assert proposal_path == "ymir/123456/raw"
