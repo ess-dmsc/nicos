@@ -35,7 +35,7 @@ class HexapodPanel(Panel):
         client.connected.connect(self.on_client_connected)
         client.cache.connect(self.on_client_cache)
         client.message.connect(self.on_client_message)
-        self.panelLabel.setText(f"{self.devname.capitalize()}")
+        self.panelLabel.setText(f"{self.devname}")
 
         # hide optional expert control panels for now
         self.userModes.setTabVisible(1, 0)
