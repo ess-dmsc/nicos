@@ -276,7 +276,6 @@ class Dashboard(Panel):
         self._update_status_text()
 
     def add_logo(self):
-
         nicos_label = QLabel()
         pxr = decolor_logo(
             QPixmap(":/nicos-logo-high"),
