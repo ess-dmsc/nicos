@@ -25,8 +25,6 @@ from unittest import TestCase, mock
 
 import pytest
 
-# pytest.importorskip("streaming_data_types")
-# pytest.importorskip("confluent_kafka")
 from nicos.core import GUEST, SIMULATION
 from nicos_ess.devices.datasinks.file_writer import (
     AlreadyWritingException,
@@ -39,8 +37,6 @@ from test.nicos_ess.test_devices.test_filewriter_status import (
     no_op,
     prepare_filewriter_status,
 )
-
-# pytest.importorskip("epics")
 from test.utils import ErrorLogged
 
 # Set to None because we load the setup after the mocks are in place.
