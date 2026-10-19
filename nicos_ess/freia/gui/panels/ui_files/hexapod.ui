@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1104</width>
-    <height>781</height>
+    <height>784</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -133,7 +133,7 @@
          <item>
           <widget class="QGroupBox" name="curPos">
            <property name="title">
-            <string>GroupBox</string>
+            <string>Current Position</string>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <item>
@@ -440,7 +440,7 @@
          <item>
           <widget class="QGroupBox" name="newPos">
            <property name="title">
-            <string>GroupBox</string>
+            <string>Absolute Motion</string>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_4">
             <item>
@@ -845,7 +845,7 @@
          <item>
           <widget class="QGroupBox" name="newPos_2">
            <property name="title">
-            <string>GroupBox</string>
+            <string>Relative Motion</string>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_5">
             <item>
