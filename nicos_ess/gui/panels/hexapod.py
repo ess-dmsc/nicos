@@ -6,43 +6,44 @@ from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import pyqtSlot
 from nicos.protocols.cache import cache_load
 from nicos.utils import findResource
+from nicos_ess.gui.panels.utils import attach_status_resources
 
 
 class HexapodPanel(Panel):
-    paelName = "Hexapod Controller"
+    panelName = "Hexapod Controller"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/hexapod.ui"))
+        attach_status_resources(self)
+        loadUi(self, findResource("nicos_ess/freia/gui/panels/ui_files/hexapod.ui"))
+        self.useicons = bool(options.get("icons", True))
 
         # Hexapod info
-        self.devname = ""
         self.paraminfo = {}
         self.adevs = {}
         self.qtObj = {}
+        self.devname = options.get("setups")
+        # Hexapod Controller Info
+
         # Error Handling
         self._exec_reqid = None
         self._error_window = None
         self._control_dialogs = {}
+        self.test = self.devname
 
         client.setup.connect(self.on_client_setup)
         client.connected.connect(self.on_client_connected)
-        client.disconnected.connect(self.on_client_disconnected)
         client.cache.connect(self.on_client_cache)
         client.message.connect(self.on_client_message)
+        self.panelLabel.setText(f"{self.devname}")
 
-        self.show_controls(False)
-        self._hide_acceleration()  # unused, so hidden
+        # hide optional expert control panels for now
+        self.userModes.setTabVisible(1, 0)
+        self.userModes.setTabVisible(2, 0)
 
     def get_hexapod_info(self):
-        self.get_hexapod_name()
-        if self.devname:
-            self.get_hexapod_data()
-            self.setup_qt_vars()
-            self.propagate_ui()
-            self.show_controls(True)
-        else:
-            self.clear()
+        self.get_hexapod_data()
+        self.setup_qt_vars()
 
     def on_client_setup(self):
         self.get_hexapod_info()
@@ -50,27 +51,20 @@ class HexapodPanel(Panel):
     def on_client_connected(self):
         self.get_hexapod_info()
 
-    def on_client_disconnected(self):
-        self.clear()
-
     def on_client_cache(self, data):
         (time, key, op, value) = data
+        if "/" not in key:
+            return
         devname, pname = key.split("/")
 
-        if pname != "value":
-            return
-        if devname == self.devname:
-            fvalue = cache_load(value)
-            self.update_current_pos(fvalue)
+        if devname == self.devname and pname == "value":
+            self.update_position_info(cache_load(value))
 
     def on_client_message(self, message):
         if message[5] != self._exec_reqid or message[2] < WARNING:
-            # updates gui if device panel is used
-            if "t_speed" in message[3] or "r_speed" in message[3]:
-                self.update_ui_sliders()
             return
         # show warnings and errors emitted by the current command in a window
-        msg = "%s: %s" % (message[0], message[3].strip())
+        msg = f"{message[0]}: {message[3].strip()}"
         if self._error_window is None:
 
             def reset_errorwindow():
@@ -85,106 +79,20 @@ class HexapodPanel(Panel):
             self._error_window.activateWindow()
 
     def exec_command(self, command):
-        self.client.tell("exec", command)
         self._exec_reqid = self.client.run(command)
 
-    def clear(self):
-        self.devname = ""
-        self.paraminfo.clear()
-        self.adevs.clear()
-        self.qtObj.clear()
-        self.show_controls(False)
-
-    def update_current_pos(self, values):
+    def update_position_info(self, values, valtype="curVal"):
         curval = 0
         for axis in self.qtObj:
-            self.qtObj[axis]["curVal"].setText("%.3f" % values[curval])
+            if valtype == "newVal":
+                self.qtObj[axis][valtype].setValue(round(values[curval], 3))
+            elif valtype == "curVal":
+                self.qtObj[axis][valtype].setText(f"{round(values[curval], 3):.3f}")
+            else:
+                raise NotImplementedError(f"valtype {valtype} is not a valid option")
             curval = curval + 1
 
-    def show_controls(self, visibility):
-        if visibility == True:
-            self.panelLabel.setText(f"{self.devname.capitalize()}")
-            self.curPos.show()
-            self.newPos.show()
-            self.grpSpd.show()
-            self._show_added_dof()
-
-            # to add
-            self.presets.show()
-            self.grpStatus.show()
-        else:
-            self.panelLabel.clear()
-            self.curPos.hide()
-            self.newPos.hide()
-            self.grpSpd.hide()
-
-            # to add
-            self.presets.hide()
-            self.grpStatus.hide()
-
-    def get_hexapod_name(self):
-        class_typ = "nicos_ess.devices.virtual.hexapod.VirtualHexapod"
-
-        name = self.client.getDeviceList(needs_class=class_typ)
-        if name:
-            if len(name) > 1:
-                self.showError("Error: 2 Hexapods Found. Panel can only control one!")
-                self.clear()
-                return
-            self.devname = name[0]
-        else:
-            self.clear()
-
     def get_hexapod_data(self):
-        if self.devname == "":
-            return
-
-        params = self.client.getDeviceParamInfo(self.devname)
-        num_adev = len(
-            self.client.getDeviceValue(self.devname)
-        )  # finds number of attached devices
-
-        # update param dict
-        for param in ["t_speed", "r_speed"]:
-            sub_param_info = {}
-            for units in ["type", "unit"]:
-                if units == "type":
-                    sub_param_info.update({"min": params[f"{param}"][f"{units}"].fr})
-                    sub_param_info.update({"max": params[f"{param}"][f"{units}"].to})
-
-                else:
-                    sub_param_info.update({f"{units}": params[f"{param}"][f"{units}"]})
-
-            self.paraminfo.update({f"{param}": sub_param_info})
-        self.paraminfo.update({"adevs": num_adev})
-
-        # update adev dict
-        setup = self.client.eval("session.getSetupInfo()", {})
-        hexapod_info = {}
-
-        for key in setup:
-            if "hexapod" in key:
-                if self.devname in setup[key]["devices"]:
-                    hexapod_info = setup[key]
-
-        adevs = hexapod_info["devices"][self.devname][1]
-        hexapod_info = hexapod_info["devices"]
-        adevs.pop("description")
-        hexapod_info.pop(self.devname)
-
-        for keys in adevs:
-            mini_dict = {}
-            mini_dict.update({"devname": adevs[keys]})
-            mini_dict.update({"unit": hexapod_info[adevs[keys]][1]["unit"]})
-
-            self.adevs.update({f"{keys}": mini_dict})
-
-    def propagate_ui(self):
-        for keys in self.qtObj:
-            self.qtObj[keys]["curUnit"].setText(f"{self.adevs[keys]['unit']}")
-            self.qtObj[keys]["newUnit"].setText(f"{self.adevs[keys]['unit']}")
-
-        self.setup_sliders()
         return
 
     def setup_qt_vars(self):
@@ -237,124 +145,114 @@ class HexapodPanel(Panel):
                 "newLabel": self.newRzLabel,
                 "newUnit": self.newRzUnit,
             },
+            "tbl": {
+                "curVal": self.curTab,
+                "newVal": self.newTab,
+                "curLabel": self.curTabLabel,
+                "curUnit": self.curTabUnit,
+                "newLabel": self.newTabLabel,
+                "newUnit": self.newTabUnit,
+            },
         }
-
-        if self.paraminfo["adevs"] == 7:
-            self.qtObj.update(
-                {
-                    "table": {
-                        "curVal": self.curTab,
-                        "newVal": self.newTab,
-                        "curLabel": self.curTabLabel,
-                        "curUnit": self.curTabUnit,
-                        "newLabel": self.newTabLabel,
-                        "newUnit": self.newTabUnit,
-                    }
-                }
-            )
-
-    def _show_added_dof(self):
-        name = [
-            self.curTabLabel,
-            self.curTab,
-            self.curTabUnit,
-            self.newTabLabel,
-            self.newTab,
-            self.newTabUnit,
-        ]
-
-        if self.paraminfo["adevs"] == 7:
-            for label in name:
-                label.setVisible(True)
-        else:
-            for label in name:
-                label.setVisible(False)
-
-    def _hide_acceleration(self):
-        name = [
-            self.aLabel,
-            self.amin,
-            self.amax,
-            self.aSlider,
-            self.aSpinBox,
-            self.aLine,
-        ]
-
-        for label in name:
-            label.setVisible(False)
 
     @pyqtSlot()
     def on_butStart_pressed(self):
-        target = []
-        for axis in self.qtObj:
-            target.append(self.qtObj[axis]["newVal"].value())
-        self.exec_command(f"move({self.devname}, ({target}))")
+        return
 
     @pyqtSlot()
     def on_butStop_pressed(self):
         self.exec_command(f"stop({self.devname})")
 
     @pyqtSlot()
-    def on_butPreset_pressed(self):
-        self.showError(f"{self.adevs}")
+    def on_refresh_pressed(self):
+        # Sets the spin boxes to the current axis positions for easier absolute motion control
+        values = self.client.getDeviceParam(self.devname, "value")
+        self.update_position_info(values, "newVal")
         return
 
-    # adding @pyqtSlot() causes this button type to become disabled
-    def on_applySpeedSettings_clicked(self):
-        self.exec_command(f"{self.devname}.t_speed = {self.tSpinBox.value()}")
-        self.exec_command(f"{self.devname}.r_speed = {self.rSpinBox.value()}")
+    # absolute motion using move in GUI
+    @pyqtSlot()
+    def on_abs_tx_pressed(self):
+        return
 
-    def setup_sliders(self):
-        self.tLabel.setText(f"Translation Speed ({self.paraminfo['t_speed']['unit']})")
-        self.tmin.setText(f"{self.paraminfo['t_speed']['min']}")
-        self.tmax.setText(f"{self.paraminfo['t_speed']['max']}")
+    @pyqtSlot()
+    def on_abs_ty_pressed(self):
+        return
 
-        self.rLabel.setText(f"Rotational Speed ({self.paraminfo['r_speed']['unit']})")
-        self.rmin.setText(f"{self.paraminfo['r_speed']['min']}")
-        self.rmax.setText(f"{self.paraminfo['r_speed']['max']}")
+    @pyqtSlot()
+    def on_abs_tz_pressed(self):
+        return
 
-        # only need to convert sliders since they work in whole steps
-        self.tSlider.setMinimum(
-            self._step_convert(self.paraminfo["t_speed"]["min"], "SLIDER")
-        )
-        self.tSlider.setMaximum(
-            self._step_convert(self.paraminfo["t_speed"]["max"], "SLIDER")
-        )
-        self.tSpinBox.setMinimum(self.paraminfo["t_speed"]["min"])
-        self.tSpinBox.setMaximum(self.paraminfo["t_speed"]["max"])
+    @pyqtSlot()
+    def on_abs_rx_pressed(self):
+        return
 
-        self.rSlider.setMinimum(
-            self._step_convert(self.paraminfo["r_speed"]["min"], "SLIDER")
-        )
-        self.rSlider.setMaximum(
-            self._step_convert(self.paraminfo["r_speed"]["max"], "SLIDER")
-        )
-        self.rSpinBox.setMinimum(self.paraminfo["r_speed"]["min"])
-        self.rSpinBox.setMaximum(self.paraminfo["r_speed"]["max"])
-        self.update_ui_sliders()
+    @pyqtSlot()
+    def on_abs_ry_pressed(self):
+        return
 
-    def update_ui_sliders(self):
-        paramval = self.client.getDeviceParams(self.devname)
+    @pyqtSlot()
+    def on_abs_rz_pressed(self):
+        return
 
-        self.tSpinBox.setValue(paramval["t_speed"])
-        self.rSpinBox.setValue(paramval["r_speed"])
-        self.curT.setText(f"[{paramval['t_speed']}]")
-        self.curR.setText(f"[{paramval['r_speed']}]")
+    @pyqtSlot()
+    def on_abs_tbl_pressed(self):
+        return
 
-    def on_tSlider_valueChanged(self):
-        self.tSpinBox.setValue(self._step_convert(self.tSlider.value(), "SPINNER"))
+    # relative motion using rmove in GUI
 
-    def on_tSpinBox_valueChanged(self):
-        self.tSlider.setValue(self._step_convert(self.tSpinBox.value(), "SLIDER"))
+    @pyqtSlot()
+    def on_relNeg_tx_pressed(self):
+        return
 
-    def on_rSlider_valueChanged(self):
-        self.rSpinBox.setValue(self._step_convert(self.rSlider.value(), "SPINNER"))
+    @pyqtSlot()
+    def on_relPos_tx_pressed(self):
+        return
 
-    def on_rSpinBox_valueChanged(self):
-        self.rSlider.setValue(self._step_convert(self.rSpinBox.value(), "SLIDER"))
+    @pyqtSlot()
+    def on_relNeg_ty_pressed(self):
+        return
 
-    def _step_convert(self, value, type):
-        if type == "SLIDER":
-            return int(value * 100)
-        if type == "SPINNER":
-            return float(value / 100)
+    @pyqtSlot()
+    def on_relPos_ty_pressed(self):
+        return
+
+    @pyqtSlot()
+    def on_relNeg_tz_pressed(self):
+        return
+
+    @pyqtSlot()
+    def on_relPos_tz_pressed(self):
+        return
+
+    @pyqtSlot()
+    def on_relNeg_rx_pressed(self):
+        return
+
+    @pyqtSlot()
+    def on_relPos_rx_pressed(self):
+        return
+
+    @pyqtSlot()
+    def on_relNeg_ry_pressed(self):
+        return
+
+    @pyqtSlot()
+    def on_relPos_ry_pressed(self):
+        return
+
+    @pyqtSlot()
+    def on_relNeg_rz_pressed(self):
+        return
+
+    @pyqtSlot()
+    def on_relPos_rz_pressed(self):
+        return
+
+    @pyqtSlot()
+    def on_relNeg_tbl_pressed(self):
+        return
+
+    @pyqtSlot()
+    def on_relPos_tbl_pressed(self):
+        return
