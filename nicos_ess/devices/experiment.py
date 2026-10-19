@@ -149,6 +149,16 @@ class EssExperiment(Experiment):
         self._pollParam("users")
         self._pollParam("localcontact")
 
+    def proposalpath_of(self, proposal):
+        """Return the File Writer path for *proposal*.
+
+        ``fixed_proposal_path`` takes precedence. Otherwise the path is
+        ``<instrument-device>/<proposal>/raw``.
+        """
+        if self.fixed_proposal_path is not None:
+            return self.fixed_proposal_path
+        return path.join(session.instrument.name.lower(), proposal, "raw")
+
     def _check_users(self, users):
         if not users:
             return
