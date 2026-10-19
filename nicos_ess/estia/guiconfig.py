@@ -32,13 +32,19 @@ main_window = docked(
                         ),
                         (
                             "Hexapod",
-                            panel(
-                                "nicos_ess.estia.gui.panels.hexapod.HexapodPanel",
-                                hexapod="estia_hexapod",
-                                status="hexapod_status",
-                                errdesc="hexapod_error_msg",
-                                statusdesc="hexapod_status_msg",
-                                coord="hexapod_coord_mode",
+                            vsplit(
+                                panel(
+                                    "nicos_ess.estia.gui.panels.hexapod.HexapodPanel",
+                                    hexapod="estia_hexapod",
+                                    status="hexapod_status",
+                                    errdesc="hexapod_error_msg",
+                                    statusdesc="hexapod_status_msg",
+                                    coord="hexapod_coord_mode",
+                                ),
+                                panel(
+                                    "nicos_ess.gui.panels.console.ConsolePanel",
+                                    hasinput=False,
+                                ),
                             ),
                         ),
                         (
