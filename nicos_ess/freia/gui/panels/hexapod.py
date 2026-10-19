@@ -37,6 +37,10 @@ class HexapodPanel(Panel):
         client.message.connect(self.on_client_message)
         self.panelLabel.setText(f"{self.devname.capitalize()}")
 
+        # hide optional expert control panels for now
+        self.userModes.setTabVisible(1, 0)
+        self.userModes.setTabVisible(2, 0)
+
     def get_hexapod_info(self):
         self.get_hexapod_data()
         self.setup_qt_vars()
