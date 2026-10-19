@@ -63,7 +63,6 @@ class TestFileWriterControl(TestCase):
 
     def get_filewriter_control_device(self):
         filewriter_control = self.session.getDevice("FileWriterControl")
-        # filewriter_control.one_file_per_scan = True
         # No-op logging
         filewriter_control.log.error = no_op
         filewriter_control.log.warning = no_op
