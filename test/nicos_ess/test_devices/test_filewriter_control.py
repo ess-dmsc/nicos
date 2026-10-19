@@ -20,7 +20,7 @@
 #   Matt Clarke <matt.clarke@ess.eu>
 #
 # *****************************************************************************
-
+from datetime import datetime
 from unittest import TestCase, mock
 
 import pytest
@@ -120,8 +120,7 @@ class TestFileWriterControl(TestCase):
     def test_list_jobs_limits_output_to_most_recent_jobs(self):
         self.filewriter_status._jobs_in_order = {}
         for idx, job_id in enumerate(["job id 1", "job id 2", "job id 3"], start=1):
-            job = JobRecord(job_id, idx, 0, 0)
-            print(job.start_time)
+            job = JobRecord(job_id, idx, datetime.fromtimestamp(0), 0)
             self.filewriter_status._jobs_in_order[job_id] = job
 
         with (
