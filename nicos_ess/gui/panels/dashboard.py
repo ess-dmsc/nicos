@@ -1,16 +1,4 @@
-# if sys.version_info < (3, 10):
-#     from importlib_metadata import PackageNotFoundError, entry_points, version
-# else:
-#     from importlib.metadata import PackageNotFoundError, entry_points, version
-
-import sys
 from time import time as current_time
-
-if sys.version_info < (3, 10):
-    pass
-else:
-    pass
-
 
 from nicos.clients.gui.data import DataHandler
 from nicos.clients.gui.panels import Panel
@@ -209,7 +197,7 @@ class Dashboard(Panel):
             self.setStatus("paused   ")
 
     def on_client_cache(self, data):
-        return
+        pass
 
     def on_client_disconnected(self):
         self.setStatus("disconnected")
@@ -252,7 +240,7 @@ class Dashboard(Panel):
             )
             label.setText(f"{item.get('label', '')}:")
 
-            if value:
+            if value is not None:
                 logo = decolor_logo(
                     QPixmap(f"{value}-logo"),
                     Qt.GlobalColor.white,
@@ -282,6 +270,7 @@ class Dashboard(Panel):
             and current_time() - self.client.last_action_at > 20
         ):
             self.client.last_action_at = 0
+
         self.current_status = status
         self._update_dashboard_info()
         self._update_status_text()

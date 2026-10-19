@@ -2,16 +2,10 @@
 
 import sys
 import traceback
+from contextlib import suppress
+from importlib.metadata import PackageNotFoundError, entry_points, version
 from time import strftime
 from time import time as current_time
-
-if sys.version_info < (3, 10):
-    from importlib_metadata import PackageNotFoundError, entry_points, version
-else:
-    from importlib.metadata import PackageNotFoundError, entry_points, version
-
-
-from contextlib import suppress
 
 import gr
 
@@ -42,7 +36,6 @@ from nicos.guisupport.qt import (
     QAction,
     QApplication,
     QDialog,
-    QFontDialog,
     QIcon,
     QMainWindow,
     QMenu,
@@ -310,7 +303,7 @@ class MainWindow(DlgUtils, QMainWindow):
             # load auxiliary windows state
             self.loadAuxWindows(settings)
         if len(self.splitstate) == len(self.splitters):
-            for sp, st in zip(self.splitters, self.splitstate):
+            for sp, st in zip(self.splitters, self.splitstate, strict=True):
                 sp.restoreState(st)
 
         if not self.gui_conf.windows:
@@ -623,7 +616,7 @@ class MainWindow(DlgUtils, QMainWindow):
             self.setStatus("paused")
 
     def on_client_cache(self, data):
-        return
+        pass
 
     def on_client_disconnected(self):
         self.adminLabel.setVisible(False)
@@ -832,15 +825,6 @@ class MainWindow(DlgUtils, QMainWindow):
         ret = dlg.exec()
         if ret == QDialog.DialogCode.Accepted:
             dlg.saveSettings()
-
-    @pyqtSlot()
-    def on_actionFont_triggered(self):
-        font, ok = QFontDialog.getFont(self.user_font, self)
-        if not ok:
-            return
-        for panel in self.panels:
-            panel.setCustomStyle(font, self.user_color)
-        self.user_font = font
 
     @pyqtSlot()
     def on_actionEmergencyStop_triggered(self):
