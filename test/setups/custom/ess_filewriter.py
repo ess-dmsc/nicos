@@ -32,7 +32,7 @@ devices = dict(
         "nicos.devices.instrument.Instrument",
         description="instrument object",
         instrument="YMIR",
-        responsible="M. Clarke <matt.clarke@ess.eu>",
+        responsible="ECDC <ecdc@ess.eu>",
     ),
     Exp=device(
         "nicos.devices.experiment.Experiment",
