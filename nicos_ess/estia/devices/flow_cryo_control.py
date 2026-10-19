@@ -106,6 +106,14 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
         if mode == SIMULATION:
             return
 
+    def _after_subscribe(self, mode):
+        # if a hard restart is done on the lakeshore, polling is automatically
+        # disabled...so on connect make sure it is on or start it
+        if mode == SIMULATION:
+            return
+        if self._epics.get_pv_value("polling") == 1:
+            self._epics.put_channel_value("polling", 0)
+
     def _build_epics_channels(self):
         epics_channels = {
             "value": readback_channel(
