@@ -54,7 +54,7 @@ main_window = docked(
         ),
         (
             "Scripting",
-            panel("nicos.clients.flowui.panels.editor.EditorPanel", tools=None),
+            panel("nicos.clients.flowui.panels.remote_editor.EditorPanel", tools=None),
         ),
         (
             "History",
