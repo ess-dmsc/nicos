@@ -1,0 +1,140 @@
+description = "Eurotherm temperature controller"
+
+pv_root = "SE-MEC2:SE-TCtrl-001:"
+
+devices = dict(
+    tctrl_autotune=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="Autotune enable/disable",
+        readpv=f"{pv_root}Autotune-RB",
+        writepv=f"{pv_root}Autotune-SP",
+        mapping={"Disable": 0, "Enable": 1},
+    ),
+    tctrl_bypass=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Alarm bypass",
+        readpv=f"{pv_root}Bypass-RB",
+        writepv=f"{pv_root}Bypass-SP",
+    ),
+    tctrl_loop_break=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Loop break",
+        readpv=f"{pv_root}LoopBreak-Mon",
+        writepv=f"{pv_root}LoopBreak-Mon",
+    ),
+    tctrl_loop_break_delta=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Loop break delta",
+        readpv=f"{pv_root}LoopBreakDelta-RB",
+        writepv=f"{pv_root}LoopBreakDelta-SP",
+        targetpv=f"{pv_root}LoopBreakDelta-SP",
+    ),
+    tctrl_loop_break_time=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Loop break time",
+        readpv=f"{pv_root}LoopBreakTime-RB",
+        writepv=f"{pv_root}LoopBreakTime-SP",
+        targetpv=f"{pv_root}LoopBreakTime-SP",
+    ),
+    tctrl_output_actual=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Actual output indicator",
+        readpv=f"{pv_root}OutputActual-Mon",
+    ),
+    tctrl_output_level=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Power output",
+        readpv=f"{pv_root}OutputLevel-Mon",
+    ),
+    tctrl_PID_cutback_high=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="PID cutback high",
+        readpv=f"{pv_root}Pid-CBH-RB",
+        writepv=f"{pv_root}Pid-CBH-SP",
+        targetpv=f"{pv_root}Pid-CBH-SP",
+    ),
+    tctrl_PID_cutback_low=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="PID cutback low",
+        readpv=f"{pv_root}Pid-CBL-RB",
+        writepv=f"{pv_root}Pid-CBL-SP",
+        targetpv=f"{pv_root}Pid-CBL-SP",
+    ),
+    tctrl_PID_derivative=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="PID derivative",
+        readpv=f"{pv_root}Pid-D-RB",
+        writepv=f"{pv_root}Pid-D-SP",
+        targetpv=f"{pv_root}Pid-D-SP",
+    ),
+    tctrl_PID_integral=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="PID integral",
+        readpv=f"{pv_root}Pid-I-RB",
+        writepv=f"{pv_root}Pid-I-SP",
+        targetpv=f"{pv_root}Pid-I-SP",
+    ),
+    tctrl_PID_proportional=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="PID proportional",
+        readpv=f"{pv_root}Pid-P-RB",
+        writepv=f"{pv_root}Pid-P-SP",
+        targetpv=f"{pv_root}Pid-P-SP",
+    ),
+    tctrl_selector=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Sensor selector",
+        readpv=f"{pv_root}Selector-Enum",
+        writepv=f"{pv_root}Selector-Enum",
+    ),
+    tctrl_setpoint_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Setpoint temperature",
+        readpv=f"{pv_root}Spt-RB",
+        writepv=f"{pv_root}Spt-SP",
+        targetpv=f"{pv_root}Spt-SP",
+    ),
+    tctrl_setpoint_high_limit=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Setpoint high limit",
+        readpv=f"{pv_root}SptLimit-High-RB",
+        writepv=f"{pv_root}SptLimit-High-SP",
+        targetpv=f"{pv_root}SptLimit-High-SP",
+    ),
+    tctrl_setpoint_low_limit=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Setpoint low limit",
+        readpv=f"{pv_root}SptLimit-Low-RB",
+        writepv=f"{pv_root}SptLimit-Low-SP",
+        targetpv=f"{pv_root}SptLimit-Low-SP",
+    ),
+    tctrl_setpoint_decrease_rate=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Setpoint decrease rate",
+        readpv=f"{pv_root}SptRateDown-RB",
+        writepv=f"{pv_root}SptRateDown-SP",
+        targetpv=f"{pv_root}SptRateDown-SP",
+    ),
+    tctrl_setpoint_increase_rate=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Setpoint increase rate",
+        readpv=f"{pv_root}SptRateUp-RB",
+        writepv=f"{pv_root}SptRateUp-SP",
+        targetpv=f"{pv_root}SptRateUp-SP",
+    ),
+    tctrl_thermocouple_1_read_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Read temperature",
+        readpv=f"{pv_root}Thermocouple1-Mon",
+    ),
+    tctrl_thermocouple_2_read_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Read temperature",
+        readpv=f"{pv_root}Thermocouple2-Mon",
+    ),
+    tctrl_working_setpoint=device(
+        "nicos_ess.devices.epics.pva.EpicsNumericReadable",
+        description="Working setpoint",
+        readpv=f"{pv_root}WorkingSpt-Mon",
+    ),
+)
