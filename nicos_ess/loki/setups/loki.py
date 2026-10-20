@@ -2,5 +2,4 @@ description = "LoKI basic instrument setup"
 
 group = "basic"
 
-includes = [
-]
+includes = []
