@@ -38,6 +38,7 @@ ALLOWED_INSTRUMENT_NAMES = [
     "magic",
     "nmx",
     "odin",
+    "skadi",
     "tbl",
     "ymir",
 ]
