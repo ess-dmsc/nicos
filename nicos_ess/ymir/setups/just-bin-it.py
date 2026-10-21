@@ -42,6 +42,7 @@ devices = dict(
         "nicos_ess.devices.epics.pulse_charge_counter.PulseChargeCounter",
         description="Charge counter",
         readpv="YMIR:PBI-IOC-001:QSum",
+        reset_count_pv="YMIR:PBI-IOC-001:StartCmd",
         fmtstr="%d",
     ),
     det=device(
