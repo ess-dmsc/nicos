@@ -1,6 +1,6 @@
 import time
 
-from nicos.core import Override, Param, Value, oneof, status, pvname
+from nicos.core import Override, Param, Value, oneof, pvname, status
 from nicos.devices.generic import CounterChannelMixin, PassiveChannel
 from nicos_ess.devices.epics.pva import EpicsReadable
 from nicos_ess.devices.epics.pva.epics_common import command_channel, worst_status
