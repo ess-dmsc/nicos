@@ -1,602 +1,308 @@
-import json
+"""The chopper discs, drawn as seen from the moderator looking towards the sample.
+
+Disc angles (chopper_math) and Qt's arcs and polar lines share one convention:
+degrees anticlockwise from 3 o'clock on the screen. A disc point at angle ``a`` is
+drawn at ``rotation + a``.
+"""
+
 import math
-import sys
-from enum import Enum
 
 from nicos.guisupport.qt import (
-    QApplication,
-    QBrush,
     QColor,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineF,
     QPainter,
     QPainterPath,
     QPen,
+    QPixmap,
     QPointF,
-    QPolygonF,
     QRectF,
     Qt,
     QWidget,
     pyqtSignal,
 )
+from nicos_ess.devices.chopper_math import (
+    check_geometry,
+    clockwise,
+    guide_angle,
+    is_chopper_moving,
+    parked_rotation_deg,
+    phase_deg,
+    spinning_rotation_deg,
+)
+
+BLADE = QColor(Qt.GlobalColor.darkGray)
+COATING = QColor(Qt.GlobalColor.black)
+ROTATING = QColor(30, 255, 30)
+PARKED = QColor(Qt.GlobalColor.gray)
+GUIDE = QColor(Qt.GlobalColor.blue)
+WAITING = QColor(190, 190, 190, 130)
+
+LIVE_VALUES = ("speed", "total_delay", "park_angle")
 
 
-class Colors(Enum):
-    GREEN = QColor(30, 255, 30, 255)
-    GRAY = Qt.GlobalColor.gray
-    BLUE = Qt.GlobalColor.blue
-    DARK_GRAY = Qt.GlobalColor.darkGray
-    BLACK = Qt.GlobalColor.black
+def polar(center: QPointF, radius: float, angle_deg: float) -> QPointF:
+    return QLineF.fromPolar(radius, angle_deg).translated(center).p2()
+
+
+def square(center: QPointF, radius: float) -> QRectF:
+    return QRectF(center.x() - radius, center.y() - radius, 2 * radius, 2 * radius)
+
+
+def disc_material(center, inner, outer, slit_edges, rotation) -> QPainterPath:
+    """The ring between the radii minus one wedge per opening."""
+    ring = QPainterPath()
+    ring.addEllipse(center, outer, outer)
+    hole = QPainterPath()
+    hole.addEllipse(center, inner, inner)
+    ring = ring.subtracted(hole)
+    box = square(center, outer + 1.0)
+    for start, end in slit_edges:
+        sweep = (end - start) % 360.0 or (360.0 if end != start else 0.0)
+        wedge = QPainterPath(center)
+        wedge.arcTo(box, rotation + start, sweep)
+        wedge.closeSubpath()
+        ring = ring.subtracted(wedge)
+    return ring
+
+
+def spin_arc(guide: float, turns_clockwise: bool, span: float = 72.0):
+    """Start angle and sweep of the spin arrow, centred on the beam guide."""
+    if turns_clockwise:
+        return guide + span / 2.0, -span
+    return guide - span / 2.0, span
+
+
+def _swatch(size: int, draw) -> QLabel:
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    draw(painter, size)
+    painter.end()
+    label = QLabel()
+    label.setPixmap(pixmap)
+    return label
+
+
+class ChopperLegendWidget(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFrameShape(QFrame.Shape.StyledPanel)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(9, 5, 9, 5)
+        size = max(9, self.fontMetrics().height())
+
+        def blade(painter, s):
+            painter.fillRect(0, 0, s, s, BLADE)
+            painter.fillRect(0, s // 4, s, s // 2, COATING)
+
+        def guide(painter, s):
+            painter.setPen(QPen(GUIDE, max(2, s // 4)))
+            painter.drawLine(s // 2, 0, s // 2, s)
+
+        def fill(colour):
+            def draw(painter, s):
+                painter.setPen(COATING)
+                painter.setBrush(colour)
+                painter.drawRect(0, 0, s - 1, s - 1)
+
+            return draw
+
+        items = (
+            (blade, "Coated blade"),
+            (guide, "Beam guide"),
+            (fill(ROTATING), "Rotating"),
+            (fill(PARKED), "Parked"),
+        )
+        for draw, text in items:
+            layout.addWidget(_swatch(size, draw))
+            layout.addWidget(QLabel(text))
+            layout.addSpacing(11)
 
 
 class ChopperWidget(QWidget):
-    onChopperSelected = pyqtSignal(str)
+    onChopperSelected = pyqtSignal(object)
 
-    GUIDE_DIRS = {"RIGHT": 0.0, "UP": 90.0, "LEFT": 180.0, "DOWN": 270.0}
-
-    def __init__(self, parent=None, slit_direction="CW", guide_pos="UP"):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setMinimumSize(100, 100)
         self.chopper_data = []
-        self.angles = {}
         self._selected_chopper = None
-        self._slit_direction = slit_direction
-        self._guide_pos = (
-            guide_pos  # "UP" or "DOWN" for the beam guide line, also needs
-        )
-
-        self._guide_pos = (
-            guide_pos  # can be "UP", "DOWN", "LEFT", "RIGHT" or a number of degrees
-        )
-        self._guide_angle_deg = self._to_guide_deg(guide_pos)
-
-        self._default_rotation_offset = self._guide_angle_deg
+        self._show_guide_line = True
 
     def get_selected_chopper(self):
         return self._selected_chopper
 
-    def mousePressEvent(self, event):
-        """Handle mouse click events to select a chopper."""
-        click_pos = event.pos()
-        positions, chopper_radius = self.calculate_positions(len(self.chopper_data))
-
-        for i, center in enumerate(positions):
-            distance = math.sqrt(
-                (center.x() - click_pos.x()) ** 2 + (center.y() - click_pos.y()) ** 2
-            )
-            if distance <= chopper_radius:
-                self._selected_chopper = self.chopper_data[i]["chopper"]
-                self.onChopperSelected.emit(self._selected_chopper)
-                self.update()
-                return
-
-        self._selected_chopper = None
-        self.onChopperSelected.emit(None)
-        self.update()
-
-    def _to_guide_deg(self, pos) -> float:
-        if isinstance(pos, (int, float)):
-            return float(pos) % 360.0
-        key = str(pos).upper()
-        if key not in self.GUIDE_DIRS:
-            raise ValueError(f"Invalid guide position: {pos!r}")
-        return self.GUIDE_DIRS[key]
-
-    def set_guide_position(self, pos) -> None:
-        new_deg = self._to_guide_deg(pos)
-        delta = new_deg - self._guide_angle_deg
-        self._guide_pos = pos
-        self._guide_angle_deg = new_deg
-        self._default_rotation_offset = new_deg  # keep behavior consistent
-
-        # Shift already-stored angles so visuals remain aligned
-        for i in list(self.angles.keys()):
-            self.angles[i] += delta
-        self.update()
-
-    def _wrap360(self, x: float) -> float:
-        return (x % 360.0 + 360.0) % 360.0
-
-    def set_chopper_angle(self, chopper_name, angle):
-        for i, chopper in enumerate(self.chopper_data):
-            if chopper["chopper"] == chopper_name:
-                spin_direction = chopper.get("spin_direction", "CW").upper()
-                is_ccw = spin_direction == "CCW"
-                a_draw = (-angle if is_ccw else angle) + self._default_rotation_offset
-                self.angles[i] = self._wrap360(a_draw)
-        self.update()
-
-    def set_chopper_speed(self, chopper_name, speed):
-        try:
-            for i, chopper in enumerate(self.chopper_data):
-                if chopper["chopper"] == chopper_name:
-                    chopper["speed"] = speed
-                    self.update()
-                    return
-        except KeyError:
-            pass
-
-    def set_chopper_park_angle(self, chopper_name, angle):
-        try:
-            for i, chopper in enumerate(self.chopper_data):
-                if chopper["chopper"] == chopper_name:
-                    chopper["parking_angle"] = angle
-                    self.update()
-                    return
-        except KeyError:
-            pass
-
-    def resizeEvent(self, event):
-        self.update()
-
-    def paintEvent(self, event):
-        """Handle the drawing of the choppers."""
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        positions, chopper_radius = self.calculate_positions(len(self.chopper_data))
-        slit_height = chopper_radius * 0.3
-        line_length = chopper_radius * 1.1
-
-        for i, chopper in enumerate(self.chopper_data):
-            radius = chopper_radius
-            slit_edges = chopper["slit_edges"]
-            resolver_offset = chopper.get("resolver_offset", 0.0)
-            tdc_offset = chopper.get("tdc_offset", 0.0)
-            current_speed = chopper.get("speed", 0.0)
-            parking_angle = chopper.get("parking_angle", None)
-            center = positions[i]
-
-            is_selected = self._selected_chopper == chopper["chopper"]
-            is_moving = (
-                current_speed is not None and abs(current_speed) > 2
-            )  # resolver is active under 2hz
-
-            angle = self.angles[i]
-            angle += tdc_offset if is_moving else resolver_offset
-
-            self.draw_chopper(
-                painter,
-                center,
-                radius,
-                slit_edges,
-                slit_height,
-                angle,
-                is_selected,
-                is_moving,
-            )
-
-            painter.setPen(QPen(Colors.BLUE.value, 4))
-            # line_x = center.x()
-            # line_y = center.y() - line_length
-            theta = math.radians(
-                self._guide_angle_deg
-            )  # 0=right, 90=up, 180=left, 270=down
-            line_x = center.x() + line_length * math.cos(theta)
-            line_y = center.y() - line_length * math.sin(theta)
-            painter.drawLine(center, QPointF(line_x, line_y))
-
-            text_direction = -1 if self._guide_angle_deg == 270 else 1
-
-            chopper_name = chopper["chopper"]
-            if is_selected:
-                painter.setPen(Colors.BLUE.value)
-            else:
-                painter.setPen(Colors.BLACK.value)
-            font = painter.font()
-            font.setPointSize(int(radius / 8))
-            painter.setFont(font)
-
-            fm = painter.fontMetrics()
-            text_height = fm.height()
-
-            text_rect = QRectF(
-                center.x() - radius * 1.5,
-                center.y() + (radius + 5) * text_direction,
-                radius * 3.0,
-                text_height * text_direction,
-            )
-
-            painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, chopper_name)
-
-            if current_speed is None:
-                continue
-
-            painter.setPen(Colors.BLACK.value)
-            if not is_moving and parking_angle is not None:
-                value_text = f"{parking_angle:.3f}°"
-            else:
-                value_text = f"{current_speed:.3f} Hz"
-            value_rect = QRectF(
-                center.x() - radius * 1.5,
-                center.y() + text_height * text_direction,
-                radius * 3.0,
-                text_height * text_direction,
-            )
-            painter.drawText(value_rect, Qt.AlignmentFlag.AlignCenter, value_text)
-
-            status_text = "Rotating" if is_moving else "Parked"
-            status_rect = QRectF(
-                center.x() - radius * 1.5,
-                center.y() + (2 * text_height) * text_direction,
-                radius * 3.0,
-                text_height * text_direction,
-            )
-            painter.drawText(status_rect, Qt.AlignmentFlag.AlignCenter, status_text)
-
-        self.draw_legend(painter, chopper_radius)
-
-    def draw_legend(self, painter: QPainter, ref_radius: float) -> None:
-        painter.save()
-
-        icon = max(12, int(ref_radius * 0.20))
-        gap_y = 4
-        gap_x = 6
-        margin = 8
-
-        f = painter.font()
-        f.setPointSize(max(7, int(icon * 0.90)))
-        painter.setFont(f)
-        fm = painter.fontMetrics()
-
-        def text_baseline(y_pos: int) -> int:
-            return y_pos + (icon + fm.ascent()) // 2
-
-        def _row(y_pos: int, brush: QBrush, label: str) -> int:
-            painter.setPen(Colors.BLACK.value)
-            painter.setBrush(brush)
-            painter.drawRect(margin, y_pos, icon, icon)
-
-            painter.setPen(QPen(Colors.BLACK.value, 0))
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawText(margin + icon + gap_x, text_baseline(y_pos), label)
-            return y_pos + icon + gap_y
-
-        y = margin
-
-        gray_w = icon
-        gray_h = icon
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(Colors.DARK_GRAY.value)
-        painter.drawRect(margin, y, gray_w, gray_h)
-
-        stripe_h = gray_h // 2
-        stripe_y = y + (gray_h - stripe_h) // 2
-        painter.setBrush(Colors.BLACK.value)
-        painter.drawRect(margin, stripe_y, gray_w, stripe_h)
-
-        painter.setPen(QPen(Colors.BLACK.value, 0))
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawText(margin + gray_w + gap_x, text_baseline(y), "Coated blade")
-
-        y += icon + gap_y
-
-        painter.setPen(QPen(Colors.BLUE.value, 4))
-        line_x = margin + icon // 2
-        painter.drawLine(line_x, y, line_x, y + icon)
-
-        painter.setPen(QPen(Colors.BLACK.value, 0))
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawText(margin + icon + gap_x, text_baseline(y), "Beam guide")
-
-        y += gray_h + gap_y
-
-        y = _row(y, QBrush(Colors.GREEN.value), "Rotating")
-        _row(y, QBrush(Colors.GRAY.value), "Parked")
-
-        painter.restore()
-
-    def calculate_grid(self, count, aspect_ratio):
-        best_diff = float("inf")
-        best_rows = 1
-        best_cols = count
-
-        for cols in range(1, count + 1):
-            rows = math.ceil(count / cols)
-            grid_aspect = cols / rows
-
-            diff = abs(grid_aspect - aspect_ratio)
-            if diff < best_diff:
-                best_diff = diff
-                best_rows = rows
-                best_cols = cols
-
-        return best_rows, best_cols
-
-    def calculate_positions(self, count):
-        if count == 0:
-            return [], 0
-
-        widget_width = self.width()
-        widget_height = self.height()
-        if widget_height == 0 or widget_width == 0:
-            return [], 0
-
-        aspect_ratio = widget_width / widget_height
-
-        if count > 1:
-            rows, cols = self.calculate_grid(count, aspect_ratio)
-
-            padding_width = widget_width / cols / 6
-            padding_height = widget_height / rows / 6
-
-            cell_width = (widget_width - (cols + 1) * padding_width) / cols
-            cell_height = (widget_height - (rows + 1) * padding_height) / rows
-
-            chopper_radius = min(cell_width, cell_height) / 2
-
-        else:
-            rows, cols = 1, 1
-            padding_width = widget_width / 6
-            padding_height = widget_height / 6
-            cell_width = widget_width - 2 * padding_width
-            cell_height = widget_height - 2 * padding_height
-            chopper_radius = min(cell_width, cell_height) / 2
-
-        positions = []
-        for idx in range(count):
-            row = idx // cols
-            col = idx % cols
-
-            x = (
-                padding_width
-                + col * (cell_width + padding_width)
-                + (cell_width + padding_width) / 2
-            )
-            y = (
-                padding_height
-                + row * (cell_height + padding_height)
-                + (cell_height + padding_height) / 2
-            )
-
-            positions.append(QPointF(x, y))
-
-        return positions, chopper_radius
-
-    def _normalize_openings(self, slit_edges: list[list[float]]) -> list[list[float]]:
-        """Normalize openings (slits) to merged, unwrapped [start,end] with end>=start.
-        Keeps segments possibly >360 so we can represent wrap cleanly."""
-        if not slit_edges:
-            return []
-        segs = []
-        for s, e in slit_edges:
-            s %= 360.0
-            e %= 360.0
-            if e < s:
-                e += 360.0  # unwrap across 0°
-            segs.append([s, e])
-        segs.sort(key=lambda p: p[0])
-
-        # merge overlaps
-        merged = []
-        for s, e in segs:
-            if not merged:
-                merged.append([s, e])
-            else:
-                ls, le = merged[-1]
-                if s <= le + 1e-9:
-                    merged[-1][1] = max(le, e)
-                else:
-                    merged.append([s, e])
-
-        # If last overlaps first when wrapped (+360), merge them
-        if len(merged) > 1:
-            fs, fe = merged[0]
-            ls, le = merged[-1]
-            if le >= fs + 360.0 - 1e-9:
-                merged[-1][1] = max(le, fe + 360.0)
-                merged.pop(0)
-
-        return merged
-
-    def _sector_polygon(
-        self,
-        center: QPointF,
-        inner_r: float,
-        outer_r: float,
-        start_deg: float,
-        end_deg: float,
-        rotation_deg: float,
-        num_points: int = 72,
-    ) -> QPolygonF:
-        """Ring-sector polygon for [start_deg,end_deg] (math CCW degrees)."""
-        # unwrap so end >= start
-        s = start_deg
-        e = end_deg
-        if e < s:
-            e += 360.0
-        if e - s < 1e-6:
-            return QPolygonF()
-
-        def to_qt(a_deg: float) -> float:
-            if self._slit_direction == "CW":
-                return math.radians(-a_deg + rotation_deg)
-            elif self._slit_direction == "CCW":
-                return math.radians(a_deg + rotation_deg)
-            raise ValueError(f"Invalid slit direction: {self._slit_direction}")
-
-        step = (e - s) / num_points
-        pts = []
-
-        # outer arc s->e
-        for i in range(num_points + 1):
-            a = s + i * step
-            ar = to_qt(a)
-            pts.append(
-                QPointF(
-                    center.x() + outer_r * math.cos(ar),
-                    center.y() - outer_r * math.sin(ar),
-                )
-            )
-        # inner arc e->s
-        for i in range(num_points + 1):
-            a = e - i * step
-            ar = to_qt(a)
-            pts.append(
-                QPointF(
-                    center.x() + inner_r * math.cos(ar),
-                    center.y() - inner_r * math.sin(ar),
-                )
-            )
-
-        return QPolygonF(pts)
-
-    def _annulus_with_opening_holes(
-        self,
-        center: QPointF,
-        inner_r: float,
-        outer_r: float,
-        slit_edges: list[list[float]],
-        rotation_deg: float,
-    ) -> QPainterPath:
-        """Build one path: full annulus MINUS all openings, using Odd-Even fill."""
-        # Start with full annulus as a 360° sector
-        ring = self._sector_polygon(
-            center, inner_r, outer_r, 0.0, 360.0, rotation_deg, num_points=180
-        )
-        path = QPainterPath()
-        if not ring.isEmpty():
-            path.addPolygon(ring)
-
-        openings = self._normalize_openings(slit_edges)
-        for s, e in openings:
-            hole = self._sector_polygon(center, inner_r, outer_r, s, e, rotation_deg)
-            if not hole.isEmpty():
-                path.addPolygon(hole)
-
-        path.setFillRule(Qt.FillRule.OddEvenFill)
-        return path.simplified()
-
-    def draw_chopper(
-        self,
-        painter,
-        center,
-        radius,
-        slit_edges,
-        slit_height,
-        rotation_angle,
-        selected=False,
-        moving=False,
-    ):
-        reduced_radius = radius - slit_height
-        blades_path = self._annulus_with_opening_holes(
-            center, reduced_radius, radius, slit_edges, rotation_angle
-        )
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.fillPath(blades_path, QBrush(Colors.DARK_GRAY.value))
-
-        inner_coating = reduced_radius + radius * 0.05
-        outer_coating = radius * 0.95
-        coating_path = self._annulus_with_opening_holes(
-            center, inner_coating, outer_coating, slit_edges, rotation_angle
-        )
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.fillPath(coating_path, QBrush(Colors.BLACK.value))
-
-        painter.setBrush(QBrush(Colors.GREEN.value if moving else Colors.GRAY.value))
-        painter.setPen(
-            QPen(Colors.BLUE.value, 2) if selected else QPen(Colors.BLACK.value, 1)
-        )
-        painter.drawEllipse(center, radius - slit_height, radius - slit_height)
-
     def update_chopper_data(self, chopper_data):
-        self.chopper_data = chopper_data
-        self.angles = {
-            i: self._default_rotation_offset for i in range(len(self.chopper_data))
+        """Show these choppers in beam order; live values already shown are kept.
+
+        Discs without a distance from the moderator come last, in the given order.
+        """
+        live = {
+            c["chopper"]: {k: c.get(k) for k in LIVE_VALUES} for c in self.chopper_data
         }
+        chopper_data = sorted(
+            chopper_data,
+            key=lambda c: (c.get("distance") is None, c.get("distance") or 0.0),
+        )
+        for chopper in chopper_data:
+            check_geometry(chopper)
+            chopper["guide_angle"] = guide_angle(chopper)
+            chopper.update(live.get(chopper["chopper"], {}))
+        self.chopper_data = chopper_data
         self.update()
 
     def clear(self):
         self.chopper_data = []
-        self.angles = {}
         self._selected_chopper = None
         self.update()
 
+    def set_value(self, chopper_name, key, value):
+        """Set a live value (LIVE_VALUES): None while it is unknown."""
+        for chopper in self.chopper_data:
+            if chopper["chopper"] == chopper_name:
+                chopper[key] = None if value is None else float(value)
+                self.update()
 
-def traverse_json(json_obj, condition_fn, action_fn, path=[]) -> None:
-    """
-    Recursively traverse the JSON object applying a condition function
-    at each node. If the condition is met, applies an action function.
+    def rotation(self, chopper: dict) -> float | None:
+        """Screen angle of the disc's angle 0 (its TDC reference), or None while waiting."""
+        speed = chopper.get("speed")
+        if speed is None:
+            return None
+        if is_chopper_moving(speed):
+            delay = chopper.get("total_delay")
+            if delay is None:
+                return None
+            return spinning_rotation_deg(chopper, phase_deg(delay, speed), speed)
+        reading = chopper.get("park_angle")
+        if reading is None and chopper.get("resolver_sign") is not None:
+            return None
+        return parked_rotation_deg(chopper, reading)
 
-    :param json_obj: The JSON object or part of it being traversed.
-    :param condition_fn: A function that takes a node and returns
-    True if the condition is met.
-    :param action_fn: A function that performs an action
-     on nodes that meet the condition.
-    :param path: The current path to the node, used for
-    tracking the node's location within the JSON.
-    """
-    if condition_fn(json_obj):
-        action_fn(json_obj, path)
-
-    if isinstance(json_obj, dict):
-        for key, value in json_obj.items():
-            traverse_json(value, condition_fn, action_fn, path + [key])
-    elif isinstance(json_obj, list):
-        for index, item in enumerate(json_obj):
-            traverse_json(item, condition_fn, action_fn, path + [index])
-
-
-def find_all_nxdisk_choppers(json_obj) -> list[dict]:
-    found_choppers = []
-
-    def condition_fn(node):
-        return (
-            isinstance(node, dict)
-            and "attributes" in node
-            and any(
-                attr.get("name") == "NX_class"
-                and attr.get("values") == "NXdisk_chopper"
-                for attr in node["attributes"]
-            )
+    def layout_discs(self):
+        """Centres and radius of the discs, in a grid that suits the aspect ratio."""
+        count, width, height = len(self.chopper_data), self.width(), self.height()
+        if not count or not width or not height:
+            return [], 0.0
+        cols = min(
+            range(1, count + 1),
+            key=lambda c: abs(c / math.ceil(count / c) - width / height),
         )
+        rows = math.ceil(count / cols)
+        pad_w, pad_h = width / cols / 6, height / rows / 6
+        cell_w = (width - (cols + 1) * pad_w) / cols
+        cell_h = (height - (rows + 1) * pad_h) / rows
+        centres = []
+        for index in range(count):
+            row, col = divmod(index, cols)
+            centres.append(
+                QPointF(
+                    pad_w + col * (cell_w + pad_w) + (cell_w + pad_w) / 2,
+                    pad_h + row * (cell_h + pad_h) + (cell_h + pad_h) / 2,
+                )
+            )
+        return centres, min(cell_w, cell_h) / 2
 
-    def action_fn(node, path):
-        found_choppers.append(node)
+    def mousePressEvent(self, event):
+        centres, radius = self.layout_discs()
+        self._selected_chopper = None
+        for chopper, centre in zip(self.chopper_data, centres, strict=False):
+            if QLineF(centre, QPointF(event.pos())).length() <= radius:
+                self._selected_chopper = chopper["chopper"]
+        self.onChopperSelected.emit(self._selected_chopper)
+        self.update()
 
-    traverse_json(json_obj, condition_fn, action_fn)
-    return found_choppers
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        centres, radius = self.layout_discs()
+        for chopper, centre in zip(self.chopper_data, centres, strict=False):
+            selected = chopper["chopper"] == self._selected_chopper
+            outline = QPen(GUIDE, 2) if selected else QPen(COATING, 1)
+            rotation = self.rotation(chopper)
+            if rotation is None:
+                painter.setPen(outline)
+                painter.setBrush(WAITING)
+                painter.drawEllipse(centre, radius * 0.7, radius * 0.7)
+                self._draw_labels(
+                    painter, centre, radius, chopper, selected, ["Waiting"]
+                )
+                continue
 
+            speed = chopper["speed"]
+            moving = is_chopper_moving(speed)
+            edges = chopper["slit_edges"]
+            inner = radius * 0.7
+            painter.fillPath(
+                disc_material(centre, inner, radius, edges, rotation), BLADE
+            )
+            painter.fillPath(
+                disc_material(centre, radius * 0.75, radius * 0.95, edges, rotation),
+                COATING,
+            )
+            painter.setPen(outline)
+            painter.setBrush(ROTATING if moving else PARKED)
+            painter.drawEllipse(centre, inner, inner)
 
-def get_edges_from_nxdisk_choppers(choppers) -> dict[str, list[list[float]]]:
-    edges = {}
+            if self._show_guide_line:
+                painter.setPen(QPen(GUIDE, 4))
+                painter.drawLine(
+                    centre, polar(centre, radius * 1.1, chopper["guide_angle"])
+                )
+            if moving:
+                self._draw_spin_arrow(
+                    painter,
+                    centre,
+                    radius * 0.55,
+                    chopper["guide_angle"],
+                    clockwise(chopper, speed),
+                )
 
-    for chopper in choppers:
-        for child in chopper.get("children", []):
-            if (
-                isinstance(child, dict)
-                and "module" in child
-                and child["module"] == "dataset"
-            ):
-                name = child.get("config", {}).get("name")
-                if name == "slit_edges":
-                    values = child.get("config", {}).get("values")
-                    chopper_name = chopper.get("name", "Unknown Chopper")
-                    edge_pairs = [
-                        [values[i], values[i + 1]] for i in range(0, len(values), 2)
-                    ]
-                    edges[chopper_name] = edge_pairs
+            park_angle = chopper.get("park_angle")
+            parked = not moving and park_angle is not None
+            value = f"{park_angle:.3f}°" if parked else f"{speed:.3f} Hz"
+            status = "Rotating" if moving else "Parked"
+            self._draw_labels(
+                painter, centre, radius, chopper, selected, [value, status]
+            )
 
-    return edges
+    def _draw_spin_arrow(self, painter, centre, radius, guide, turns_clockwise):
+        start, sweep = spin_arc(guide, turns_clockwise)
+        box = square(centre, radius)
+        path = QPainterPath()
+        path.arcMoveTo(box, start)
+        path.arcTo(box, start, sweep)
+        tip, heading = path.pointAtPercent(1.0), path.angleAtPercent(1.0)
+        head = max(6.0, radius * 0.25)
+        for side in (-28.0, 28.0):
+            path.moveTo(tip)
+            path.lineTo(polar(tip, head, heading + 180.0 + side))
+        pen = QPen(QColor(15, 15, 15, 210), 2.0)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.strokePath(path, pen)
 
+    def _label_rects(self, chopper, centre, radius, count, row_height):
+        """The name outside the disc, the other rows inside; both away from the beam."""
+        width = radius * 3.0
+        left = centre.x() - radius * 1.5
+        if chopper["guide_angle"] == 270.0:  # beam down: text upwards
+            tops = [centre.y() - radius - 5 - row_height]
+            tops += [centre.y() - k * row_height for k in range(1, count)]
+        else:
+            tops = [centre.y() + radius + 5]
+            tops += [centre.y() + (k - 1) * row_height for k in range(1, count)]
+        return [QRectF(left, top, width, row_height) for top in tops]
 
-def format_slit_edges(edge_data):
-    return [{"slit_edges": data, "chopper": name} for name, data in edge_data.items()]
-
-
-if __name__ == "__main__":
-    json_path = "/home/jonas/code/nexus-json-templates/bifrost/bifrost-dynamic.json"
-    with open(json_path) as file:
-        data = json.load(file)
-
-    choppers = find_all_nxdisk_choppers(data)
-    edges = get_edges_from_nxdisk_choppers(choppers)
-    formatted_edges = format_slit_edges(edges)
-
-    print(formatted_edges)
-
-    app = QApplication(sys.argv)
-
-    window = ChopperWidget()
-    window.update_chopper_data(formatted_edges)
-    window.show()
-
-    sys.exit(app.exec_())
+    def _draw_labels(self, painter, centre, radius, chopper, selected, rows):
+        font = painter.font()
+        font.setPointSize(max(1, int(radius / 8)))
+        painter.setFont(font)
+        rows = [chopper["chopper"], *rows]
+        rects = self._label_rects(
+            chopper, centre, radius, len(rows), painter.fontMetrics().height()
+        )
+        for index, (rect, text) in enumerate(zip(rects, rows, strict=True)):
+            painter.setPen(GUIDE if selected and index == 0 else COATING)
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
