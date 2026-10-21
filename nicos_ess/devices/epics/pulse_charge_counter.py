@@ -1,6 +1,6 @@
 import time
 
-from nicos.core import Override, Param, Value, oneof, status
+from nicos.core import Override, Param, Value, oneof, status, pvname
 from nicos.devices.generic import CounterChannelMixin, PassiveChannel
 from nicos_ess.devices.epics.pva import EpicsReadable
 from nicos_ess.devices.epics.pva.epics_common import command_channel, worst_status
@@ -10,6 +10,11 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
     """Counter channel for reading the acculumulated charge current from EPICS."""
 
     parameters = {
+        "reset_count_pv": Param(
+            "PV for resetting charge count to zero.",
+            type=pvname,
+            mandatory=True,
+        ),
         "total": Param(
             "The total amount summed so far", type=float, settable=True, internal=True
         ),
@@ -27,7 +32,10 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         "type": Override(default="counter", settable=False, mandatory=False),
     }
 
-    _reset_count = command_channel("ErrorReset-S")
+    def _build_epics_channels(self):
+        channels = dict(super()._build_epics_channels())
+        channels["reset_count"] = command_channel("", pv_name_attr="reset_count_pv")
+        return channels
 
     def _on_channel_update(self, update):
         if update.channel != "read":
@@ -61,7 +69,7 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         self._publish_state(0)
 
     def doStart(self):
-        # TODO: set the PV to zero the count.
+        self._epics.put_channel_value("reset_count", 1)
         self.started = True
         self._publish_state(0)
 
