@@ -66,6 +66,7 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         self._refresh_status(timestamp)
 
     def doPrepare(self):
+        self.total = 0
         self._publish_state(0)
 
     def doStart(self):
