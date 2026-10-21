@@ -14,7 +14,7 @@ devices = dict(
         description="Accumulated histogram of beam monitor 2",
         device_name="monitor2_histogram",
         source_name="monitor2",
-        workflow_id="nmx/monitor_histogram/2",
+        workflow_id="nmx/monitor_histogram/1",
         type="monitor",
     ),
     livedata_collector=device(
