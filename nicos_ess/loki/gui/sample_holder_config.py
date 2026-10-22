@@ -69,6 +69,8 @@ class LokiSampleHolderPanel(PanelBase):
         self.y_delegates = [LimitsDelegate() for _ in self.cartridge_tables]
         self.labelWarning.setStyleSheet("color: red")
         self.labelWarning.setVisible(False)
+        self.cancelButton.setVisible(False)
+        self.saveButton.setVisible(False)
         self._configure_combos()
         self._configure_tables()
         self._configure_sample_table()
@@ -81,6 +83,8 @@ class LokiSampleHolderPanel(PanelBase):
             "border-radius: 5px}"
         )
         self._style_scroll_area_contents(self.scrollAreaWidgetContents)
+        # Set to view only initially, then activate when client connects.
+        self.setViewOnly(True)
 
     def _style_scroll_area_contents(self, widget):
         # A workaround to get the formatting correct for the main widget
@@ -92,6 +96,7 @@ class LokiSampleHolderPanel(PanelBase):
         self.client.setup.connect(self.on_client_setup)
 
     def on_client_connected(self):
+        print("client connected")
         self._find_device()
         if self.number_cells:
             self._set_table_height(max(self.number_cells.values()))
