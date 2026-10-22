@@ -1,4 +1,5 @@
 """LoKI Samples Model."""
+
 import contextlib
 
 from nicos.core import ConfigurationError
@@ -50,7 +51,9 @@ class SamplesTableModel(TableModel):
     def extract_samples(self):
         samples = []
         sample_names = {}
-        for index, (pos, sample) in enumerate(zip(self.positions, self.raw_data)):
+        for index, (pos, sample) in enumerate(
+            zip(self.positions, self.raw_data, strict=True)
+        ):
             if self._is_sample_defined(sample):
                 name = sample.get("Name", "").strip()
                 if not name:

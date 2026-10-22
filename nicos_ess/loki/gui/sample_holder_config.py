@@ -206,7 +206,9 @@ class LokiSampleHolderPanel(PanelBase):
     def _edit_mode(self):
         xlimits = self.client.eval(f"{self._dev_name}.xlimits", (0, 0))
         ylimits = self.client.eval(f"{self._dev_name}.ylimits", (0, 0))
-        for x_delegate, y_delegate in zip(self.x_delegates, self.y_delegates):
+        for x_delegate, y_delegate in zip(
+            self.x_delegates, self.y_delegates, strict=True
+        ):
             x_delegate.limits = xlimits
             y_delegate.limits = ylimits
 
@@ -259,7 +261,7 @@ class LokiSampleHolderPanel(PanelBase):
     def _set_table_height(self, num_rows):
         row_height = self.tableTopFirst.verticalHeader().defaultSectionSize()
         for x_delegate, y_delegate, table in zip(
-            self.x_delegates, self.y_delegates, self.cartridge_tables
+            self.x_delegates, self.y_delegates, self.cartridge_tables, strict=True
         ):
             table.setItemDelegateForColumn(0, x_delegate)
             table.setItemDelegateForColumn(1, y_delegate)
@@ -273,6 +275,7 @@ class LokiSampleHolderPanel(PanelBase):
             self.calculate_buttons,
             self.x_delegates,
             self.y_delegates,
+            strict=True,
         ):
             combo.currentTextChanged.connect(
                 partial(self.on_cartridge_changed, table, button)
@@ -286,7 +289,10 @@ class LokiSampleHolderPanel(PanelBase):
             return
         if self.cartridges and self.number_cells:
             for settings, table, combo in zip(
-                self.cartridges, self.cartridge_tables, self.cartridge_combos
+                self.cartridges,
+                self.cartridge_tables,
+                self.cartridge_combos,
+                strict=True,
             ):
                 combo.setCurrentText(settings.get("type", "blank"))
                 for i, (x, y) in enumerate(settings.get("positions", [])):
@@ -340,7 +346,12 @@ class LokiSampleHolderPanel(PanelBase):
     def set_enabled_controls(self):
         is_rotation = False
         for i, (combo, table, button) in enumerate(
-            zip(self.cartridge_combos, self.cartridge_tables, self.calculate_buttons)
+            zip(
+                self.cartridge_combos,
+                self.cartridge_tables,
+                self.calculate_buttons,
+                strict=True,
+            )
         ):
             if i % 3 == 0:
                 current_text = combo.currentText()
@@ -406,6 +417,7 @@ class LokiSampleHolderPanel(PanelBase):
             self.cartridge_tables,
             self.x_delegates,
             self.y_delegates,
+            strict=True,
         ):
             data = {"type": combo.currentText(), "positions": [], "labels": []}
             for r in range(table.rowCount()):
