@@ -102,3 +102,30 @@ def test_delay_error_stats():
     single = delay_error_stats([50.0, 50.0])
     assert list(single["y"]) == [2]
     assert single["fwhm"] == pytest.approx(100.0)
+
+
+# The same disc, as an EssChopper's get_chopper_gui_info() returns it.
+ESS_CHOPPER_INFO = {
+    **INFO,
+    "speed_key": "tpsc/speed_readback",
+    "total_delay_key": "tpsc/total_delay",
+    "park_angle_key": "tpsc/park_position",
+    "delay_errors_key": None,
+}
+
+
+def test_an_ess_chopper_drives_the_drawing(gui_window_factory, fake_daemon, qtbot):
+    fake_daemon.evals[ALL_CHOPPERS] = {"tpsc": dict(ESS_CHOPPER_INFO)}
+    window = gui_window_factory(guiconfig_string=guiconfig_string)
+    panel = get_panel_by_class(window, PANEL)
+    qtbot.waitUntil(lambda: len(panel.chopper_widget.chopper_data) == 1, timeout=2000)
+
+    fake_daemon.push_cache("tpsc/speed_readback", 0.0, timestamp=1.0)
+    fake_daemon.push_cache("tpsc/park_position", 329.3, timestamp=1.0)
+    parked = parked_rotation_deg(ESS_CHOPPER_INFO, 329.3)
+    qtbot.waitUntil(lambda: _rotation(panel) == pytest.approx(parked), timeout=2000)
+
+    fake_daemon.push_cache("tpsc/speed_readback", 70.0, timestamp=2.0)
+    delay_ns = 12.6 / 360.0 / 70.0 * 1e9
+    fake_daemon.push_cache("tpsc/total_delay", delay_ns, timestamp=2.0)
+    qtbot.waitUntil(lambda: _rotation(panel) == pytest.approx(parked), timeout=2000)
