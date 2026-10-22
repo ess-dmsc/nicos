@@ -57,8 +57,8 @@ from nicos_ess.estia.devices.selene_calculations import SeleneCalculator
 
 class SeleneRobot(Moveable):
     parameters = {
-        "adjuster_backslash": Param(
-            "Backslash for rotation",
+        "adjuster_backlash": Param(
+            "Backlash for rotation",
             mandatory=False,
             userparam=True,
             default=10.0,
@@ -71,8 +71,8 @@ class SeleneRobot(Moveable):
             default=5.0,
             unit="deg",
         ),
-        "cart_backslash": Param(
-            "Backslash for rotation",
+        "cart_backlash": Param(
+            "Backlash for rotation",
             mandatory=False,
             userparam=True,
             default=0.2,
@@ -519,9 +519,9 @@ class SeleneRobot(Moveable):
         for i in range(retry + 1):
             try:
                 self.log.debug(
-                    f"Moving x to position-backlash, {(x - self.cart_backslash):.2f}"
+                    f"Moving x to position-backlash, {(x - self.cart_backlash):.2f}"
                 )
-                self._attached_move_x.maw(x - self.cart_backslash)
+                self._attached_move_x.maw(x - self.cart_backlash)
                 self.log.debug(f"Moving x to requested position, {x:.2f}")
                 self._attached_move_x.maw(x)
             except Exception as e:
@@ -536,9 +536,9 @@ class SeleneRobot(Moveable):
         for i in range(retry + 1):
             try:
                 self.log.debug(
-                    f"Moving z to position-backlash, {(z - self.cart_backslash):.2f}"
+                    f"Moving z to position-backlash, {(z - self.cart_backlash):.2f}"
                 )
-                self._attached_move_z.maw(z - self.cart_backslash)
+                self._attached_move_z.maw(z - self.cart_backlash)
                 self.log.debug(f"Moving z to requested position, {z:%.2f}")
                 self._attached_move_z.maw(z)
             except Exception as e:
@@ -553,10 +553,10 @@ class SeleneRobot(Moveable):
         for i in range(retry + 1):
             try:
                 self.log.debug(
-                    f"Moving x,z to position-backlash, {(x - self.cart_backslash):.2f}, {(z - self.cart_backslash):.2f}"
+                    f"Moving x,z to position-backlash, {(x - self.cart_backlash):.2f}, {(z - self.cart_backlash):.2f}"
                 )
-                self._attached_move_x.move(x - self.cart_backslash)
-                self._attached_move_z.maw(z - self.cart_backslash)
+                self._attached_move_x.move(x - self.cart_backlash)
+                self._attached_move_z.maw(z - self.cart_backlash)
                 self._attached_move_x.wait()
                 self.log.debug(f"Moving x,z to requested position, {x:.2f}, {z:.2f}")
                 self._attached_move_x.move(x)
@@ -638,7 +638,7 @@ class SeleneRobot(Moveable):
 
                 self._move_angle(angle + 60)
                 if self._hex_state() == "HexScrewInserted":
-                    self._move_angle(angle - self.adjuster_backslash)
+                    self._move_angle(angle - self.adjuster_backlash)
                     self._move_angle(angle + self.adjuster_play / 2.0)
                     self._move_angle(angle)
                     found_screw = True
@@ -659,8 +659,9 @@ class SeleneRobot(Moveable):
     def find_screw_rotation(self):
         angle = self._adjust()
 
-        for step in range(0, 60, 5):
+        for step in np.arange(0, 60, 2.5):
             self._approach.maw(self._retracted)
+            self.log.info(f"  Moving to angle: {angle + step}")
             self._move_angle(angle + step)
             self._engage_retry()
             if self._hex_state() == "HexScrewInserted":
@@ -764,9 +765,9 @@ class SeleneRobot(Moveable):
             return False
         self.log.debug(
             "Adjusting to position-play/2-backlash, %.2f"
-            % (angle - self.adjuster_play / 2.0 - self.adjuster_backslash)
+            % (angle - self.adjuster_play / 2.0 - self.adjuster_backlash)
         )
-        self._move_angle(angle - self.adjuster_play / 2.0 - self.adjuster_backslash)
+        self._move_angle(angle - self.adjuster_play / 2.0 - self.adjuster_backlash)
         # always overshoot with the expected play
         self.log.debug(
             "Adjusting to position+play/2, %.2f" % (angle + self.adjuster_play / 2.0)
@@ -869,7 +870,7 @@ class SeleneRobot(Moveable):
             self._adjust.reset()
             try:
                 self._adjust.maw(
-                    temp_dest - self.adjuster_play / 2.0 - self.adjuster_backslash
+                    temp_dest - self.adjuster_play / 2.0 - self.adjuster_backlash
                 )
             except Exception:
                 continue
