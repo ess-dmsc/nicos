@@ -259,7 +259,7 @@ class SeleneRobot(Moveable):
             self._item_zpos[item] = data[:, 1].mean()
 
             self._confirmed[item] = {}
-            for group in ditem.keys():
+            for group in ditem:
                 self._confirmed[item][group] = False
         self._xpos_zero1 /= items1
         self._xpos_zero2 /= items2
@@ -279,10 +279,10 @@ class SeleneRobot(Moveable):
             driver = self._get_driver(xpos)
 
         if driver in [1, 2]:
-            self.log.debug("Configuring driver %i" % driver)
+            self.log.info(f"Configuring driver {driver}")
             self.driver = driver
         else:
-            self.log.warning("Not valid for choose of driver %s" % driver)
+            self.log.warning(f"Not valid for choose of driver {driver}")
             self.driver = 0
 
     @property
@@ -331,7 +331,7 @@ class SeleneRobot(Moveable):
             raise ValueError("No valid screw driver selected")
 
     def _engage(self):
-        self.log.debug("Engaing driver")
+        self.log.debug("Engaging driver")
         self._select_driver()
         self._adjust.wait()  # make sure the driver is not rotating while moving stage
         self._approach.maw(self._engaged)
@@ -426,7 +426,7 @@ class SeleneRobot(Moveable):
         if driver:
             if nominal_driver != driver:
                 # the user selected a driver that is not configured for this position
-                self.log.debug(
+                self.log.info(
                     "Manual overwrite of driver, changing expected x position"
                 )
                 if nominal_driver == 1:
@@ -436,9 +436,8 @@ class SeleneRobot(Moveable):
         else:
             driver = nominal_driver
         self.driver = driver
-        self.log.debug(
-            "Selected driver = %s, moving to (%i,%i) at location (%.2f, %.2f)"
-            % (driver, position[0], position[1], x, z)
+        self.log.info(
+            f"Selected driver = {driver}, moving to ({position[0]},{position[1]}) at location ({x:.2f}, {z:.2f})"
         )
 
         self._disengage()
@@ -450,9 +449,6 @@ class SeleneRobot(Moveable):
         rot_diff = round((rot - cur_rot) / 360.0)
         adj_rot = cur_rot + 360 * rot_diff
         self._adjust.doAdjust(cur_rot, adj_rot)
-        # adjusting offset changes user limits so we reset full range
-        # TODO: fix the fucking userlimits for device without range!
-        self._adjust.userlimits = (-100000, 100000)
         self._adjust.move(rot)
 
     # TODO: Implement an intelligent doStop to prevent any hardware issues and loss of rotation info
@@ -514,7 +510,7 @@ class SeleneRobot(Moveable):
             smessage += "        "
 
         if self.driver in [1, 2]:
-            smessage += "D%i: %.1f°" % (self.driver, self._adjust())
+            smessage += f"D{self.driver}: {self._adjust():.1f°}"
         if len(motor_messages) > 0:
             smessage += " - " + ";".join(motor_messages)
         return (sout, smessage)
@@ -523,16 +519,16 @@ class SeleneRobot(Moveable):
         for i in range(retry + 1):
             try:
                 self.log.debug(
-                    "Moving x to position-backlash, %.2f" % (x - self.cart_backslash)
+                    f"Moving x to position-backlash, {(x - self.cart_backslash):.2f}"
                 )
                 self._attached_move_x.maw(x - self.cart_backslash)
-                self.log.debug("Moving x to requested position, %.2f" % x)
+                self.log.debug(f"Moving x to requested position, {x:.2f}")
                 self._attached_move_x.maw(x)
             except Exception as e:
                 if i == retry:
-                    self.log.error("Error in x-positioning: %s, giving up" % e)
+                    self.log.error(f"Error in x-positioning: {e}, giving up")
                 else:
-                    self.log.warning("Error in x-positioning: %s, retry" % e)
+                    self.log.warning(f"Error in x-positioning: {e}, retry")
             else:
                 return
 
@@ -540,16 +536,16 @@ class SeleneRobot(Moveable):
         for i in range(retry + 1):
             try:
                 self.log.debug(
-                    "Moving z to position-backlash, %.2f" % (z - self.cart_backslash)
+                    f"Moving z to position-backlash, {(z - self.cart_backslash):.2f}"
                 )
                 self._attached_move_z.maw(z - self.cart_backslash)
-                self.log.debug("Moving z to requested position, %.2f" % z)
+                self.log.debug(f"Moving z to requested position, {z:%.2f}")
                 self._attached_move_z.maw(z)
             except Exception as e:
                 if i == retry:
-                    self.log.error("Error in z-positioning: %s, giving up" % e)
+                    self.log.error(f"Error in z-positioning: {e}, giving up")
                 else:
-                    self.log.warning("Error in z-positioning: %s, retry" % e)
+                    self.log.warning(f"Error in z-positioning: {e}, retry")
             else:
                 return
 
@@ -557,21 +553,20 @@ class SeleneRobot(Moveable):
         for i in range(retry + 1):
             try:
                 self.log.debug(
-                    "Moving x,z to position-backlash, %.2f, %.2f"
-                    % (x - self.cart_backslash, z - self.cart_backslash)
+                    f"Moving x,z to position-backlash, {(x - self.cart_backslash):.2f}, {(z - self.cart_backslash):.2f}"
                 )
                 self._attached_move_x.move(x - self.cart_backslash)
                 self._attached_move_z.maw(z - self.cart_backslash)
                 self._attached_move_x.wait()
-                self.log.debug("Moving x,z to requested position, %.2f, %.2f" % (x, z))
+                self.log.debug(f"Moving x,z to requested position, {x:.2f}, {z:.2f}")
                 self._attached_move_x.move(x)
                 self._attached_move_z.maw(z)
                 self._attached_move_x.wait()
             except Exception as e:
                 if i == retry:
-                    self.log.error("Error in xz-positioning: %s, giving up" % e)
+                    self.log.error(f"Error in xz-positioning: {e}, giving up")
                 else:
-                    self.log.warning("Error in xz-positioning: %s, retry" % e)
+                    self.log.warning(f"Error in xz-positioning: {e}, retry")
             else:
                 return
 
@@ -581,9 +576,9 @@ class SeleneRobot(Moveable):
                 self._adjust.maw(phi)
             except Exception as e:
                 if i == retry:
-                    self.log.error("Error in adjuster-positioning: %s, giving up" % e)
+                    self.log.error(f"Error in adjuster-positioning: {e}, giving up")
                 else:
-                    self.log.warning("Error in adjuster-positioning: %s, retry" % e)
+                    self.log.warning(f"Error in adjuster-positioning: {e}, retry")
             else:
                 return
 
@@ -593,9 +588,9 @@ class SeleneRobot(Moveable):
                 self._approach.maw(self._engaged)
             except Exception as e:
                 if i == retry:
-                    self.log.error("Error in approach: %s, giving up" % e)
+                    self.log.error(f"Error in approach: {e}, giving up")
                 else:
-                    self.log.warning("Error in approach: %s, retry" % e)
+                    self.log.warning(f"Error in approach: {e}, retry")
                     self._approach.maw(self._retracted)
                     self._approach.maw(self._engaged)
             else:
@@ -620,7 +615,10 @@ class SeleneRobot(Moveable):
         x_start = self._attached_move_x()
         z_start = self._attached_move_z()
 
-        self.log.info("Searching for screw near %.2f, %.2f" % (x_start, z_start))
+        self.log.info(
+            f"Searching for screw near {x_start:.2f}, {z_start:.2f}"
+            % (x_start, z_start)
+        )
 
         found_screw = False
 
@@ -628,7 +626,7 @@ class SeleneRobot(Moveable):
             if found_screw:
                 break
             r = step_size * i_r
-            self.log.info("    search radius = %.2f" % r)
+            self.log.info(f"    search radius = {r:.2f}")
             for i_phi in range(7 * i_r + 1):
                 # to keep approximate step size around circle, use 4*i_r angular steps
                 phi = 2.0 * np.pi / max(1, 7 * i_r) * i_phi
@@ -651,8 +649,7 @@ class SeleneRobot(Moveable):
 
         if found_screw and auto_refine:
             self.log.info(
-                "    Screw found at (%.2f, %.2f), trying to refine position"
-                % (xpos, zpos)
+                f"    Screw found at ({xpos:.2f}, {zpos:.2f}), trying to refine position"
             )
             self.refine(auto_update=auto_update)
             return True
@@ -662,7 +659,8 @@ class SeleneRobot(Moveable):
     def find_screw_rotation(self):
         angle = self._adjust()
 
-        for step in range(5, 60, 5):
+        for step in range(0, 60, 5):
+            self._approach.maw(self._retracted)
             self._move_angle(angle + step)
             self._engage_retry()
             if self._hex_state() == "HexScrewInserted":
@@ -686,7 +684,7 @@ class SeleneRobot(Moveable):
         x_start = self._attached_move_x()
         z_start = self._attached_move_z()
 
-        self.log.info("Refining screw location around %.2f, %.2f" % (x_start, z_start))
+        self.log.info(f"Refining screw location around {x_start:.2f}, {z_start:.2f}")
 
         self._approach.maw(self._retracted)
 
@@ -700,7 +698,7 @@ class SeleneRobot(Moveable):
 
         pos_out = np.array(pos_out)
         x_insertions = pos_out[pos_out[:, 1] == 1, 0]
-        self.log.info("  Insertions in x-scan: %s" % (x_insertions))
+        self.log.info(f"  Insertions in x-scan: {x_insertions}")
         if len(x_insertions) == 0:
             raise ValueError("Scan never inserted into screw")
         self._move_x(x_insertions.mean())
@@ -714,7 +712,7 @@ class SeleneRobot(Moveable):
             self._approach.maw(self._retracted)
 
         vert_out = np.array(vert_out)
-        self.log.info("  Insertions in z-scan: %s" % (vert_out[vert_out[:, 1] == 1, 0]))
+        self.log.info(f"  Insertions in z-scan: {(vert_out[vert_out[:, 1] == 1, 0])}")
 
         # calculate new center
         cen_pos = pos_out[pos_out[:, 1] == 1, 0].mean()
@@ -739,22 +737,14 @@ class SeleneRobot(Moveable):
             )
             self.positions = pos
             self.log.info(
-                "Updated stored position for screw (%i, %02i) to (%.2f, %.2f)"
-                % (
-                    self.current_position[0],
-                    self.current_position[1],
-                    self.positions[self.current_position[0]][self.current_position[1]][
-                        0
-                    ],
-                    self.positions[self.current_position[0]][self.current_position[1]][
-                        1
-                    ],
-                )
+                f"Updated stored position for screw ({self.current_position[0]}, {self.current_position[1]:02i}) to "
+                f"({self.positions[self.current_position[0]][self.current_position[1]][0]:.2f}, "
+                f"{self.positions[self.current_position[0]][self.current_position[1]][1]:.2f})"
             )
 
     def update_rotation(self, angle):
         self.log.debug(
-            "Storing rotation for position (%i, %02i)" % self.current_position
+            f"Storing rotation for position ({self.current_position[0]}, {self.current_position:02i})"
         )
 
         rotations = dict([(k, dict(v)) for k, v in self.rotations.items()])
@@ -783,7 +773,7 @@ class SeleneRobot(Moveable):
         )
         self._move_angle(angle + self.adjuster_play / 2.0)
         # move back to desired angle for extractoin
-        self.log.debug("Releasing screw, %.2f" % (angle))
+        self.log.debug(f"Releasing screw, {angle:.2f}")
         self._move_angle(angle)
         self.update_rotation(angle)
 
@@ -811,12 +801,14 @@ class SeleneRobot(Moveable):
             "positions": dict([(k, dict(v)) for k, v in self.positions.items()]),
             "rotations": dict([(k, dict(v)) for k, v in self.rotations.items()]),
         }
-        yaml.dump(data, open(fname, "w"), indent=2, sort_keys=True)
+        with open(fname, "w") as f:
+            yaml.dump(data, f, indent=2, sort_keys=True)
 
     def load_data(self, fname=None):
         if fname is None:
             fname = self.position_data
-        data = yaml.load(open(fname), yaml.FullLoader)
+        with open(fname) as f:
+            data = yaml.load(f, yaml.FullLoader)
         self.positions = data["positions"]
         self.rotations = data["rotations"]
         self.calculate_zeros()
@@ -824,10 +816,10 @@ class SeleneRobot(Moveable):
     def confirm_all(self):
         self.log.info("Confirming screws...")
         for group in range(1, 16):
-            for item in self.positions.keys():
+            for item in self.positions:
                 if self._confirmed[item][group]:
                     continue
-                self.log.info("  position (%i, %02i)" % (item, group))
+                self.log.info(f"  position ({item}, {group:02i})")
                 self.doStart((item, group))
                 self._attached_move_x.wait()
                 self._attached_move_z.wait()
@@ -859,10 +851,10 @@ class SeleneRobot(Moveable):
         self.log.info("Moving screw to lower limit")
         try:
             self._adjust.maw(-15000)
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.info(f"Moving to negative: {e}")
         lpos = self._adjust()
-        self.log.info("   screw stopped moving at %.1f°" % lpos)
+        self.log.info(f"   screw stopped moving at {lpos:.1f°}")
         lpos_partial = (lpos + 180) % 360 - 180  # partial rotation of this position
         dest = self.rotations[self.current_position[0]][self.current_position[1]]
         if dest < (-nrot0 * 360):
@@ -872,8 +864,8 @@ class SeleneRobot(Moveable):
             rotations[self.current_position[0]][self.current_position[1]] = dest
             self.rotations = rotations
         temp_dest = lpos - lpos_partial + nrot0 * 360 + dest
-        self.log.debug("    moving to calculated position %.1f" % temp_dest)
-        for i in range(15):
+        self.log.debug(f"    moving to calculated position {temp_dest:.1f}")
+        for _i in range(15):
             self._adjust.reset()
             try:
                 self._adjust.maw(
@@ -885,7 +877,7 @@ class SeleneRobot(Moveable):
                 break
         self._move_angle(temp_dest + self.adjuster_play / 2.0)
         self._move_angle(temp_dest)
-        self.log.debug("    move driver back to nominal position %.1f" % dest)
+        self.log.debug(f"    move driver back to nominal position {dest:.1f}")
         self._disengage()
         self._move_angle(dest)
         return True
@@ -1127,7 +1119,7 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
                 raise MoveError(
                     self,
                     "Cannot start device, sequence is still "
-                    "running (at %s)!" % self._seq_status[1],
+                    f"running (at {self._seq_status[1]})!",
                 )
         # reset last values before starting to move, so any value but nan should be for the current location
         self.last_raw = (np.nan, np.nan, np.nan, np.nan)
@@ -1186,7 +1178,7 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
                 self._attached_ch_d_h2.read(maxage=0),
             )
             self.log.debug(
-                "Using downstream collimators; raw lengths: %s" % str(self.last_raw)
+                f"Using downstream collimators; raw lengths: {str(self.last_raw)}"
             )
             lv1 = nv - self.if_offset_d_v1
             lv2 = nv - self.if_offset_d_v2
@@ -1200,7 +1192,7 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
                 self._attached_ch_u_h2.read(maxage=0),
             )
             self.log.debug(
-                "Using upstream collimators; raw lengths: %s" % str(self.last_raw)
+                f"Using upstream collimators; raw lengths: {str(self.last_raw)}"
             )
             lv1 = nv - self.if_offset_u_v1
             lv2 = nv - self.if_offset_u_v2
@@ -1213,8 +1205,7 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
 
         self.last_delta = self._path_delta_to_screw_delta(dlv1, dlv2, dlh1, dlh2)
         self.log.debug(
-            "  From length differences %s calculate deviations %s"
-            % ((dlv1, dlv2, dlh1, dlh2), self.last_delta)
+            f"  From length differences {(dlv1, dlv2, dlh1, dlh2)} calculate deviations {self.last_delta}"
         )
 
     def calibrate(self):
@@ -1242,6 +1233,4 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
             if ch.status()[0] == status.OK:
                 setattr(self, f"if_offset_{chi}", li - ch())
             else:
-                self.log.warning(
-                    "Channel %s not measured correctly (%s)" % (chi, ch._name)
-                )
+                self.log.warning(f"Channel {chi} not measured correctly ({ch._name})")

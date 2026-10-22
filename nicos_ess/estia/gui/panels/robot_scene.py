@@ -85,7 +85,7 @@ class RobotScene(QGraphicsScene):
                     si.setBrush(QColor(75, 75, 75))
                 si.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
 
-            group_label = QGraphicsSimpleTextItem("%01i" % (si.screw_group))
+            group_label = QGraphicsSimpleTextItem(f"{si.screw_group:01i}")
             group_label.setFont(QFont("sans", 52))
             self.addItem(group_label)
             group_label.setPos(-(260 + 480 * group), 375)
@@ -241,6 +241,5 @@ class RobotScene(QGraphicsScene):
             self.client.tell(
                 "queue",
                 f"Moving to Screw ({item.screw_item},{item.screw_group})",
-                f"maw({self.robot}, ({item.screw_item},"
-                f"{item.screw_group}))\n{self.robot}.engage()",
+                f"maw({self.robot}, ({item.screw_item},{item.screw_group}))",
             )
