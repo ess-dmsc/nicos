@@ -43,6 +43,7 @@ from test.nicos_ess.test_devices.doubles import (
 )
 from test.nicos_ess.test_devices.doubles.serialised_messages import (
     create_status_message,
+    create_stop_message_with_error,
 )
 
 
@@ -379,28 +380,101 @@ class TestFileWriterControlSinkHarness:
 
         assert job_id_1 in daemon_device.get_active_jobs()
 
-    # def test_can_stop_writing_even_if_job_lost(
-    #     self,
-    #     monkeypatch,
-    #     device_harness,
-    #     filewriter_control_sink_devices,
-    # ):
-    #     daemon_device, poller_device = filewriter_control_sink_devices
-    #     # Simulate a file-writer crash by forcing the job to time out.
-    #     job_id_1 = "job id 1"
-    #     monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
-    #     monkeypatch.setattr(
-    #         file_writer.FileWriterController,
-    #         "_generate_uuid",
-    #         lambda self, file_num: job_id_1,
-    #     )
-    #     with device_harness.activate("daemon") as daemon_session:
-    #         daemon_session.experiment.propinfo["proposal"] = "123456"
-    #         daemon_device.start_job()
-    #     status_message = [(123, create_status_message(job_id_1))]
-    #     daemon_device._attached_status.new_messages_callback(status_message)
-    #     daemon_device._attached_status.timeoutinterval = -10
-    #     daemon_device._attached_status.no_messages_callback()
-    #
-    #     #with self.log.allow_errors():
-    #     daemon_device.stop_job()
+    def test_can_stop_writing_even_if_job_lost(
+        self,
+        monkeypatch,
+        device_harness,
+        filewriter_control_sink_devices,
+    ):
+        daemon_device, poller_device = filewriter_control_sink_devices
+        # Simulate a file-writer crash by forcing the job to time out.
+        job_id_1 = "job id 1"
+        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
+        monkeypatch.setattr(
+            file_writer.FileWriterController,
+            "_generate_uuid",
+            lambda self, file_num: job_id_1,
+        )
+        request_stop = Mock()
+        monkeypatch.setattr(
+            file_writer.FileWriterController, "request_stop", request_stop
+        )
+        with device_harness.activate("daemon") as daemon_session:
+            daemon_session.experiment.propinfo["proposal"] = "123456"
+            daemon_device.start_job()
+        status_message = [(123, create_status_message(job_id_1))]
+        daemon_device._attached_status.new_messages_callback(status_message)
+        daemon_device._attached_status.timeoutinterval = -10
+        daemon_device._attached_status.no_messages_callback()
+        daemon_device.stop_job()
+
+        for job in daemon_device._attached_status.job_history:
+            if job["job_id"] == job_id_1:
+                assert job["stop_time"] is not None
+        assert job_id_1 not in daemon_device.get_active_jobs()
+
+    def test_unacknowledged_start_still_considered_in_progress(
+        self,
+        monkeypatch,
+        device_harness,
+        filewriter_control_sink_devices,
+    ):
+        daemon_device, poller_device = filewriter_control_sink_devices
+        # For example: all file-writers are busy
+        job_id_1 = "job id 1"
+        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
+        monkeypatch.setattr(
+            file_writer.FileWriterController,
+            "_generate_uuid",
+            lambda self, file_num: job_id_1,
+        )
+        monkeypatch.setattr(
+            file_writer.FileWriterController,
+            "request_start",
+            lambda self, filename, structure, start_time, stop_time, job_id: (
+                job_id_1,
+                "not acknowledged",
+            ),
+        )
+        with device_harness.activate("daemon") as daemon_session:
+            daemon_session.experiment.propinfo["proposal"] = "123456"
+            daemon_device.start_job()
+
+        assert job_id_1 in daemon_device._attached_status.jobs_in_progress
+
+    def test_if_kafka_data_topics_not_present_still_considered_in_progress(
+        self,
+        monkeypatch,
+        device_harness,
+        filewriter_control_sink_devices,
+    ):
+        daemon_device, poller_device = filewriter_control_sink_devices
+        # If the topics containing the data do not exist then the file-writer
+        # will stop writing almost immediately.
+        job_id_1 = "job id 1"
+        monkeypatch.setattr(
+            file_writer.FileWriterController,
+            "request_start",
+            lambda self, filename, structure, start_time, stop_time, job_id: (
+                job_id_1,
+                "",
+            ),
+        )
+        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
+        monkeypatch.setattr(
+            file_writer.FileWriterController,
+            "_generate_uuid",
+            lambda self, file_num: job_id_1,
+        )
+        with device_harness.activate("daemon") as daemon_session:
+            daemon_session.experiment.propinfo["proposal"] = "123456"
+            daemon_device.start_job()
+
+        # First the file-writer sends a message to say it is writing
+        messages = [(123, create_status_message(job_id_1))]
+        daemon_device._attached_status.new_messages_callback(messages)
+        # file-writer sends a message to say it has stopped itself due to error
+        messages = [(124, create_stop_message_with_error(job_id_1))]
+        daemon_device._attached_status.new_messages_callback(messages)
+
+        assert job_id_1 in daemon_device._attached_status.jobs_in_progress
