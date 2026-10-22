@@ -1,24 +1,39 @@
+import math
 import time
 
 from nicos.core import (
     Attach,
+    DeviceMixinBase,
+    Moveable,
+    MoveError,
     Override,
     Param,
     Readable,
+    UsageError,
     Waitable,
     listof,
     none_or,
     oneof,
+    pvname,
     status,
 )
+from nicos.core.mixins import AutoDevice, HasAutoDevices
 from nicos.devices.abstract import MappedMoveable
+from nicos_ess.devices.chopper_math import phase_deg
 from nicos_ess.devices.epics.pva import (
     EpicsManualMappedAnalogMoveable,
     EpicsMappedReadable,
 )
 from nicos_ess.devices.epics.pva.epics_common import (
+    EpicsDeviceBase,
+    EpicsEnumParam,
     EpicsStatusOnlyReadable,
+    enum_readback_channel,
+    enum_setpoint_channel,
+    enum_status_channel,
     get_from_cache_or,
+    readback_channel,
+    setpoint_channel,
     status_channel,
 )
 
@@ -94,12 +109,10 @@ class ChopperAlarms(EpicsStatusOnlyReadable):
         )
 
 
-class EssChopperController(MappedMoveable):
-    """Handles the status and hardware control for an ESS chopper system.
-
-    The geometry parameters describe the disc as in the NeXus file and the chopper
-    records, for the chopper GUI: angles in degrees anticlockwise seen from the
-    moderator, from the disc's TDC mark.
+class HasChopperGeometry(DeviceMixinBase):
+    """The disc geometry for the chopper GUI, as in the NeXus file and the
+    chopper records: angles in degrees anticlockwise seen from the moderator,
+    from the disc's TDC mark.
     """
 
     parameters = {
@@ -138,14 +151,24 @@ class EssChopperController(MappedMoveable):
             type=oneof("RIGHT", "UP", "LEFT", "DOWN"),
             default="DOWN",
         ),
-        "legacy_spd_sign": Param(
-            "The speed device reads Spd_R (positive = clockwise seen from the "
-            "moderator) instead of SpdNexus-R; remove with the switch to SpdNexus-R",
+        "visual_geometry_verified": Param(
+            "Whether the chopper GUI drawing has been checked against the disc",
             type=bool,
             default=False,
         ),
-        "visual_geometry_verified": Param(
-            "Whether the chopper GUI drawing has been checked against the disc",
+    }
+
+    def _geometry_gui_info(self):
+        return {param: getattr(self, param) for param in HasChopperGeometry.parameters}
+
+
+class EssChopperController(HasChopperGeometry, MappedMoveable):
+    """Handles the status and hardware control for an ESS chopper system."""
+
+    parameters = {
+        "legacy_spd_sign": Param(
+            "The speed device reads Spd_R (positive = clockwise seen from the "
+            "moderator) instead of SpdNexus-R; remove with the switch to SpdNexus-R",
             type=bool,
             default=False,
         ),
@@ -224,17 +247,8 @@ class EssChopperController(MappedMoveable):
             "park_angle_key": f"{self._attached_park_angle.name}/value",
             "delay_errors_key": f"{self._attached_delay_errors.name}/raw_errors",
         }
-        for param in (
-            "slit_edges",
-            "beam_position",
-            "resolver_sign",
-            "tdc_resolver_position",
-            "distance",
-            "guide_position",
-            "legacy_spd_sign",
-            "visual_geometry_verified",
-        ):
-            info[param] = getattr(self, param)
+        info.update(self._geometry_gui_info())
+        info["legacy_spd_sign"] = self.legacy_spd_sign
         return info
 
 
@@ -358,3 +372,422 @@ class NewEssChopperController(EssChopperController):
     parameter_overrides = {
         "mapping": Override(settable=False),
     }
+
+
+# The speed PVs, with the chopper group's sign: setups set legacy_spd_sign.
+SPEED_READBACK = "Spd_R"
+SPEED_SETPOINT = "Spd_S"
+SPEED_APPLIED = "SpdS_RB"
+
+TRANSITIONAL_STATES = (
+    "Initialization",
+    "Coasting",
+    "Stopping",
+    "I. stopping",
+    "E. stopping",
+)
+
+
+class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
+    """One ESS chopper disc.
+
+    The value is the chopper state, and the status says what the disc is doing,
+    followed by the drive's last log message. Move the disc with::
+
+        maw(disc.speed, 14)    # Hz, as the speed PVs have it; 0 stops the disc
+        maw(disc.phase, 120)   # degrees, written as ChopDly-S at the target speed
+
+    Set the speed before the phase: the phase is kept as a delay, so its value
+    in degrees changes with the speed. A new speed or delay restarts the IOC's
+    statistics and drops InPhaseTS-R to Not in phase (evr_seq_calc 2.7.6); a
+    move completes when it reads In phase again with the disc at speed.
+    Stopping a script leaves the discs turning.
+
+    The drive commands and parking take the IOC's own choices::
+
+        disc.command = "Start"          # the choices are in ListParams(disc)
+        disc.park = "ParkOpen"          # the stopped disc only; wait(disc)
+        disc.park_angle = 42            # resolver position, stopped disc only
+        reset(disc)                     # clear the drive's alarms
+    """
+
+    parameters = {
+        "pv_root": Param(
+            "PV prefix of the disc", type=pvname, mandatory=True, userparam=False
+        ),
+        "chic_root": Param(
+            "PV prefix of the disc's CHIC", type=pvname, mandatory=True, userparam=False
+        ),
+        "legacy_spd_sign": Param(
+            "Whether the speed PVs are positive clockwise seen from the moderator, "
+            "the opposite of NeXus; the chopper GUI draws the disc accordingly",
+            type=bool,
+            default=False,
+            userparam=False,
+        ),
+        "in_phase": Param(
+            "Whether the IOC's last statistics evaluation found the disc in phase",
+            type=str,
+            volatile=True,
+        ),
+        "total_delay": Param(
+            "Delay of the drive signal after the timing event: MechDly + "
+            "BeamPosDly + ChopDly",
+            type=float,
+            unit="ns",
+            volatile=True,
+        ),
+        "park_position": Param(
+            "Resolver position of the disc", type=float, unit="deg", volatile=True
+        ),
+        "command": Param(
+            "Command to the drive, one of the IOC's choices",
+            type=EpicsEnumParam("command"),
+            settable=True,
+            volatile=True,
+        ),
+        "park": Param(
+            "Park command for the stopped disc, one of the IOC's choices",
+            type=EpicsEnumParam("park"),
+            settable=True,
+            volatile=True,
+        ),
+        "park_angle": Param(
+            "Resolver position to park the stopped disc at",
+            type=float,
+            unit="deg",
+            settable=True,
+            volatile=True,
+        ),
+        "delay": Param("The phase as ChopDly-S", type=float, unit="ns", volatile=True),
+        "park_status": Param("Park state of the disc", type=str, volatile=True),
+        "last_message": Param(
+            "Last message in the drive's log", type=str, volatile=True
+        ),
+        "delay_mean": Param(
+            "Mean TDC delay error in the last statistics evaluation",
+            type=float,
+            unit="ns",
+            volatile=True,
+        ),
+        "delay_stddev": Param(
+            "Standard deviation of the TDC delay error in the last statistics "
+            "evaluation",
+            type=float,
+            unit="ns",
+            volatile=True,
+        ),
+        "delay_fwhm": Param(
+            "FWHM of the TDC delay error in the last statistics evaluation",
+            type=float,
+            unit="ns",
+            volatile=True,
+        ),
+    }
+
+    parameter_overrides = {
+        "unit": Override(default="", mandatory=False, settable=False),
+        "fmtstr": Override(default="%s"),
+    }
+
+    valuetype = str
+    errorstates = {**Waitable.errorstates, status.UNKNOWN: MoveError}
+
+    _command_pv = "C_ExecuteUser"
+    _park_pv = "C_Park"
+
+    _default_pv_prefix_attr = "pv_root"
+    _primary_channel = "state"
+
+    def _build_epics_channels(self):
+        return {
+            "state": enum_readback_channel(
+                "ChopState_R", cache_key="value", primary=True
+            ),
+            "in_phase": enum_status_channel("InPhaseTS-R", cache_key="in_phase"),
+            "on_speed": enum_status_channel("OnSpd_R"),
+            "park_status": enum_status_channel("ParkStatus_R", cache_key="park_status"),
+            "chic": enum_status_channel("ConnectedR", pv_prefix_attr="chic_root"),
+            "alarm_level": enum_status_channel("Lvl_Alrm"),
+            "control_mode": enum_status_channel("CtrlMd_RB"),
+            "park_enabled": enum_readback_channel("ParkEnabled_R"),
+            "last_message": status_channel(
+                "Log_R", cache_key="last_message", as_string=True
+            ),
+            "total_delay": readback_channel("TotDly", cache_key="total_delay"),
+            "park_position": readback_channel("Pos_R", cache_key="park_position"),
+            "delay_mean": readback_channel("DiffTSMean", cache_key="delay_mean"),
+            "delay_stddev": readback_channel("DiffTSStdDev", cache_key="delay_stddev"),
+            "delay_fwhm": readback_channel("DiffTSFWHMWidth", cache_key="delay_fwhm"),
+            "command": enum_setpoint_channel(self._command_pv, cache_key="command"),
+            "park": enum_setpoint_channel(self._park_pv, cache_key="park"),
+            "park_angle": setpoint_channel("Park_S", cache_key="park_angle"),
+            "speed_readback": readback_channel(
+                SPEED_READBACK, cache_key="speed_readback"
+            ),
+            "speed_setpoint": setpoint_channel(
+                SPEED_SETPOINT, cache_key="speed_setpoint"
+            ),
+            "speed_applied": readback_channel(SPEED_APPLIED, cache_key="speed_applied"),
+            "max_speed": readback_channel("MaxSpd_R", subscribe=False),
+            "delay": setpoint_channel("ChopDly-S", cache_key="delay"),
+        }
+
+    def doInit(self, mode):
+        for name, cls in (("speed", ChopperSpeed), ("phase", ChopperPhase)):
+            self.add_autodevice(
+                name,
+                cls,
+                chopper=self,
+                maxage=0,
+                visibility=self.autodevice_visibility,
+            )
+        EpicsDeviceBase.doInit(self, mode)
+
+    def doShutdown(self):
+        HasAutoDevices.doShutdown(self)
+        EpicsDeviceBase.doShutdown(self)
+
+    def doReadIn_Phase(self):
+        return self._epics.get_channel_value("in_phase")
+
+    def doReadTotal_Delay(self):
+        return self._epics.get_channel_value("total_delay")
+
+    def doReadPark_Position(self):
+        return self._epics.get_channel_value("park_position")
+
+    def doReadCommand(self):
+        return self._epics.get_channel_value("command")
+
+    def doWriteCommand(self, value):
+        self._epics.put_channel_value("command", value)
+
+    def doReadPark(self):
+        return self._epics.get_channel_value("park")
+
+    def doWritePark(self, value):
+        self._check_stopped()
+        self._epics.put_channel_value("park", value)
+
+    def doReadPark_Angle(self):
+        return self._epics.get_channel_value("park_angle")
+
+    def doWritePark_Angle(self, value):
+        self._check_stopped()
+        self._epics.put_channel_value("park_angle", value)
+
+    def doReadDelay(self):
+        return self._epics.get_channel_value("delay")
+
+    def doReadPark_Status(self):
+        return self._epics.get_channel_value("park_status")
+
+    def doReadLast_Message(self):
+        return self._epics.get_channel_value("last_message")
+
+    def doReadDelay_Mean(self):
+        return self._epics.get_channel_value("delay_mean")
+
+    def doReadDelay_Stddev(self):
+        return self._epics.get_channel_value("delay_stddev")
+
+    def doReadDelay_Fwhm(self):
+        return self._epics.get_channel_value("delay_fwhm")
+
+    def _compute_status(self, maxage=0):
+        """The reason the disc is not OK, followed by the drive's last message."""
+        severity, reason = self._status_reason(maxage)
+        message = self._read_channel_cached("last_message", maxage=maxage)
+        return severity, "; ".join(part for part in (reason, message) if part)
+
+    def _status_reason(self, maxage):
+        def read(channel):
+            return self._read_channel_cached(channel, maxage=maxage)
+
+        if read("chic") != "Connected":
+            return status.ERROR, "no connection to the CHIC"
+        level = read("alarm_level")
+        if level == "Warnings":
+            return status.WARN, level
+        if level != "No Alarms":
+            return status.ERROR, level
+        mode = read("control_mode")
+        if mode != "Epics":
+            return status.WARN, f"controlled from {mode}, not EPICS"
+        state = read("state")
+        if state == "Comms not ok":
+            return status.ERROR, state
+        if state in TRANSITIONAL_STATES:
+            return status.BUSY, state
+        if read("park_status") == "Parking":
+            return status.BUSY, "parking"
+        if state == "Rotating" and read("on_speed") != "On speed":
+            return status.BUSY, "changing speed"
+        if state == "Rotating" and read("in_phase") != "In phase":
+            return status.BUSY, "not in phase"
+        return status.OK, ""
+
+    def doReset(self):
+        """Clear the alarms: "ClearAlarm" or "Clear Alarms", as the IOC names it."""
+        for choice in self.parameters["command"].type.vals:
+            if choice.replace(" ", "").lower().startswith("clearalarm"):
+                self._send(choice)
+                return
+        raise UsageError(self, "the drive has no command to clear alarms")
+
+    def _check_stopped(self):
+        if self.read(0) != "Ready":
+            raise UsageError(self, "stop the disc before parking it")
+        if self._epics.get_channel_value("park_enabled") == "Disabled":
+            raise UsageError(self, "parking is disabled on the drive")
+
+    def _send(self, command):
+        self._epics.put_channel_value("command", command)
+
+    def _write_setpoint(self, channel, value):
+        """Write a speed or delay. The IOC then restarts its statistics and
+        drops InPhaseTS-R until the disc is in phase at the new setpoint."""
+        self._epics.put_channel_value(channel, value)
+        if self._read_channel_cached("speed_setpoint", maxage=0):
+            self._epics.wait_for("in_phase", "Not in phase", timeout=2.0)
+
+    def _is_steady(self):
+        """Whether the disc runs at its speed setpoint, in phase, or is stopped.
+        The setpoint and InPhaseTS-R are read from the IOC: their cached values
+        lag a new setpoint."""
+        setpoint = self._read_channel_cached("speed_setpoint", maxage=0)
+        state = self.read()
+        if not setpoint:
+            return state == "Ready"
+        return (
+            state == "Rotating"
+            and self._read_channel_cached("on_speed") == "On speed"
+            and math.isclose(
+                self._read_channel_cached("speed_applied"), setpoint, abs_tol=1e-3
+            )
+            and self._read_channel_cached("in_phase", maxage=0) == "In phase"
+        )
+
+    def get_chopper_gui_info(self):
+        """Geometry and the cache keys the chopper panel subscribes to."""
+        info = {
+            "chopper": self.name,
+            "speed_key": f"{self.name}/speed_readback",
+            "total_delay_key": f"{self.name}/total_delay",
+            "park_angle_key": f"{self.name}/park_position",
+            "delay_errors_key": None,
+            "legacy_spd_sign": self.legacy_spd_sign,
+        }
+        info.update(self._geometry_gui_info())
+        return info
+
+
+class EssT0Chopper(EssChopper):
+    """The DREAM T0 chopper: commands on C_Execute, parks in the ParkPos_S
+    windows. Setting the park angle sets the selected window's angle."""
+
+    _command_pv = "C_Execute"
+    _park_pv = "ParkPos_S"
+
+
+class ChopperAxis(AutoDevice, Moveable):
+    """Speed or phase of an ``EssChopper`` disc, read and moved through it.
+    The status is the disc's; a move completes when the disc is in phase at
+    its new setpoint."""
+
+    attached_devices = {
+        "chopper": Attach("The chopper disc", EssChopper),
+    }
+
+    parameter_overrides = {
+        "fmtstr": Override(default="%.3f"),
+    }
+
+    valuetype = float
+    errorstates = {**Moveable.errorstates, status.UNKNOWN: MoveError}
+
+    def doStatus(self, maxage=0):
+        return self._attached_chopper.status(maxage)
+
+    def doStart(self, target):
+        if not self._is_setpoint(target) or not self._attached_chopper._is_steady():
+            self._write(target)
+
+    def doIsCompleted(self):
+        if self._sim_intercept:
+            return True
+        chopper = self._attached_chopper
+        current, message = chopper.status()
+        if current in self.errorstates:
+            raise self.errorstates[current](self, message)
+        return chopper._is_steady()
+
+
+class ChopperSpeed(ChopperAxis):
+    """Speed of the disc in Hz, with the sign of the speed PVs."""
+
+    parameter_overrides = {
+        "unit": Override(default="Hz", mandatory=False, settable=False),
+    }
+
+    def doRead(self, maxage=0):
+        return self._attached_chopper._read_channel_cached(
+            "speed_readback", maxage=maxage
+        )
+
+    def doReadTarget(self):
+        return self._attached_chopper._read_channel_cached("speed_setpoint")
+
+    def doIsAllowed(self, target):
+        if self._sim_intercept:
+            return True, ""
+        max_speed = self._attached_chopper._read_channel_cached("max_speed", maxage=0)
+        if max_speed and abs(target) > max_speed:
+            return False, f"the disc's maximum speed is {max_speed} Hz"
+        return True, ""
+
+    def _is_setpoint(self, target):
+        chopper = self._attached_chopper
+        return chopper._read_channel_cached("speed_setpoint", maxage=0) == target
+
+    def _write(self, target):
+        chopper = self._attached_chopper
+        chopper._write_setpoint("speed_setpoint", target)
+        chopper._send("Start" if target else "Stop")
+
+
+class ChopperPhase(ChopperAxis):
+    """Phase of the disc in degrees: ChopDly-S at the speed setpoint. The IOC
+    has no readback, so the value is the setpoint."""
+
+    parameter_overrides = {
+        "unit": Override(default="deg", mandatory=False, settable=False),
+    }
+
+    def doRead(self, maxage=0):
+        chopper = self._attached_chopper
+        return phase_deg(
+            chopper._read_channel_cached("delay", maxage=maxage),
+            chopper._read_channel_cached("speed_setpoint", maxage=maxage),
+        )
+
+    def doReadTarget(self):
+        return self.doRead(None)
+
+    def doIsAllowed(self, target):
+        if not 0 <= target < 360:
+            return False, "the phase must be in [0, 360) degrees"
+        if self._sim_intercept:
+            return True, ""
+        if not self._attached_chopper._read_channel_cached("speed_setpoint", maxage=0):
+            return False, "set a speed before the phase"
+        return True, ""
+
+    def _is_setpoint(self, target):
+        return abs(target - self.read(0)) < 1e-6
+
+    def _write(self, target):
+        chopper = self._attached_chopper
+        speed = chopper._read_channel_cached("speed_setpoint", maxage=0)
+        chopper._write_setpoint("delay", target / 360 / abs(speed) * 1e9)

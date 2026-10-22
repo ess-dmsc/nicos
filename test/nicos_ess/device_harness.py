@@ -99,7 +99,10 @@ class InMemoryCache:
         return cached_value
 
     def put(self, dev, key, value, time=None, ttl=None, flag=""):
-        del ttl, flag
+        del flag
+        if ttl == 0:
+            # as CacheClient.put: an immediately expired value is not stored
+            return
         timestamp = monotonic() if time is None else float(time)
         cache_key = self._cache_key(dev, key)
         self._data[cache_key] = (value, timestamp)
