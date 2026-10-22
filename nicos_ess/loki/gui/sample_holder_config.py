@@ -369,8 +369,11 @@ class LokiSampleHolderPanel(PanelBase):
         self.saveButton.setFocus()
         if not self._dev_name:
             return
+        if self.mainwindow.current_status == "disconnected":
+            self.showError("Cannot save settings when client is disconnected.")
+            return
         if self.mainwindow.current_status != "idle":
-            self.showError("Could not set values as a command/script is in progress.")
+            self.showError("Cannot save settings when a command/script is in progress.")
             return
         try:
             # Extract all data before sending to avoid samples and holders
