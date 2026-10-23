@@ -23,10 +23,11 @@ def dialog(gui_window_factory, fake_daemon, qtbot):
     fake_daemon.add_device(
         DeviceSpec(
             name="mini_chopper",
-            valuetype=str,
+            valuetype=tuple,
             params={
-                "value": "Rotating",
-                "status": (200, "Rotation: In Phase"),
+                "value": (14.0, 90.0),
+                "unit": "Hz deg",
+                "status": (200, "Rotating; Rotation: In Phase"),
                 "visibility": ("namespace", "devlist"),
                 "description": "The mini-chopper",
                 "in_phase": "In phase",
@@ -51,6 +52,7 @@ def dialog(gui_window_factory, fake_daemon, qtbot):
     fake_daemon.evals[f"{device}.parameters['park'].type.vals"] = PARK_CHOICES
     fake_daemon.evals[f"{device}.parameters['command'].type.vals"] = COMMAND_CHOICES
     for key, value in {
+        "mini_chopper/state": "Rotating",
         "mini_chopper/speed_readback": 14.0,
         "mini_chopper/speed_setpoint": 14.0,
         "mini_chopper/delay": 1e9 / 14 / 4,
@@ -72,7 +74,7 @@ def scripts(fake_daemon):
 def test_the_disc_opens_a_chopper_dialog(dialog):
     assert isinstance(dialog, ChopperDialog)
     assert dialog.state.text() == "Rotating"
-    assert dialog.status_text.text() == "Rotation: In Phase"
+    assert dialog.status_text.text() == "Rotating; Rotation: In Phase"
     assert dialog.speed.text() == "14.000 Hz"
     assert dialog.phase.text() == "90.000 deg"
     assert dialog.readbacks["delay_stddev"].text() == "254.4 ns"
@@ -90,11 +92,13 @@ def test_the_choices_are_the_iocs(dialog):
 
 def test_cache_updates_reach_the_dialog(dialog, fake_daemon, qtbot):
     fake_daemon.push_cache("mini_chopper/speed_readback", 7.0, timestamp=10.0)
+    fake_daemon.push_cache("mini_chopper/state", "Coasting", timestamp=10.0)
     fake_daemon.push_cache(
         "mini_chopper/status", (240, "Trip; Interlock"), timestamp=10.0
     )
 
     qtbot.waitUntil(lambda: dialog.speed.text() == "7.000 Hz", timeout=2000)
+    qtbot.waitUntil(lambda: dialog.state.text() == "Coasting", timeout=2000)
     qtbot.waitUntil(
         lambda: dialog.status_text.text() == "Trip; Interlock", timeout=2000
     )

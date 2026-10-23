@@ -96,7 +96,11 @@ def backend(fake_epics_backend_factory):
             backend.emit_update(f"{ROOT}ParkCmd_RB", value=PARK_COMMANDS.index(value))
             if value in PARK_TARGETS:
                 backend.emit_update(f"{ROOT}ParkS_RB", value=PARK_TARGETS[value])
-        elif pvname == f"{ROOT}Park_S":
+            elif value == "ParkSP":
+                backend.emit_update(
+                    f"{ROOT}ParkS_RB", value=backend.values[f"{ROOT}Park_S"]
+                )
+        elif pvname == f"{ROOT}Park_S" and changed:
             backend.emit_update(
                 f"{ROOT}ParkCmd_RB", value=PARK_COMMANDS.index("ParkSP")
             )
@@ -379,7 +383,7 @@ def test_stopping_does_not_touch_the_disc(device_harness, backend, disc):
 def test_status(device_harness, backend, disc, suffix, value, expected):
     spin(backend, 14.0)
     emit(backend, "Log_R", "")
-    assert run(device_harness, disc.status) == (status.OK, "")
+    assert run(device_harness, disc.status) == (status.OK, "Rotating")
 
     emit(backend, suffix, value)
     assert run(device_harness, disc.status) == expected
@@ -390,7 +394,10 @@ def test_status(device_harness, backend, disc, suffix, value, expected):
 def test_status_shows_the_drives_last_message(device_harness, backend, disc):
     spin(backend, 14.0)
     emit(backend, "Log_R", "Rotation: In Phase")
-    assert run(device_harness, disc.status) == (status.OK, "Rotation: In Phase")
+    assert run(device_harness, disc.status) == (
+        status.OK,
+        "Rotating; Rotation: In Phase",
+    )
 
     emit(backend, "Lvl_Alrm", 3)
     emit(backend, "Log_R", "Interlock: Vacuum lost")
@@ -422,7 +429,25 @@ def test_ioc_values_are_parameters(device_harness, backend, disc):
     assert run(device_harness, lambda: disc.delay_stddev) == 56.0
     assert run(device_harness, lambda: disc.in_phase) == "In phase"
     assert run(device_harness, lambda: disc.last_message) == "Ready: Entered state"
-    assert run(device_harness, disc.read) == "Ready"
+
+
+def test_the_value_is_speed_and_phase(device_harness, backend, disc):
+    spin(backend, 14.0)
+    emit(backend, "ChopDly-S", 1e9 / 14 / 4)
+
+    assert run(device_harness, disc.read) == pytest.approx((14.0, 90.0))
+    assert run(device_harness, disc.read, 0) == pytest.approx((14.0, 90.0))
+    assert (
+        run(device_harness, disc.format, (14.0, 90.0), True) == "[14.00, 90.00] Hz deg"
+    )
+    assert [value.unit for value in run(device_harness, disc.valueInfo)] == [
+        "Hz",
+        "deg",
+    ]
+
+    emit(backend, SPEED_SETPOINT, 7.0)
+    emit(backend, SPEED_READBACK, 7.0)
+    assert run(device_harness, disc.read) == pytest.approx((7.0, 45.0))
 
 
 def set_param(device_harness, device, param, value):
@@ -511,6 +536,20 @@ def test_a_repeated_park_command_is_sent_again(device_harness, backend, disc):
     set_param(device_harness, disc, "park", "ParkOpen")
 
     assert puts(backend) == [("C_Park", "Null"), ("C_Park", "ParkOpen")]
+
+
+def test_parking_at_the_angle_park_s_holds_sends_park_sp(device_harness, backend, disc):
+    # YMIR: Park_S already held 120 and the drive ignored writing it again
+    set_param(device_harness, disc, "park_angle", 120.0)
+    set_param(device_harness, disc, "park", "ParkOpen")
+    emit(backend, "Pos_R", 277.83)
+    backend.put_calls.clear()
+    set_param(device_harness, disc, "park_angle", 120.0)
+
+    assert puts(backend) == [("C_Park", "ParkSP")]
+    assert run(device_harness, disc.status)[0] == status.BUSY
+    emit(backend, "Pos_R", 120.0)
+    assert run(device_harness, disc.isCompleted)
 
 
 def test_a_repeated_start_is_sent_again(device_harness, backend, disc):
