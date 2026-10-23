@@ -264,19 +264,31 @@ class SeleneRobot(Moveable):
         self._xpos_zero1 /= items1
         self._xpos_zero2 /= items2
 
-    def _get_driver(self, xpos):
+    def _get_driver_old(self, xpos):
         # Return which driver is best suited for a certain x-position of the cart
         if abs(xpos % 480 - self._xpos_zero1) > abs(xpos % 480 - self._xpos_zero2):
             return 2
         else:
             return 1
 
-    def _select_driver(self, driver=None):
+    def _get_driver(self, position):
+        # Return which driver is best suited for a certain x-position of the cart
+        self.doRead()
+        if position[0] in [1, 2, 3] and self.positions[1][1][1] > 300:
+            return 1
+        if position[0] in [4, 5, 6] and self.positions[1][1][1] > 300:
+            return 2
+        if position[0] in [1, 2, 3] and self.positions[1][1][1] < 300:
+            return 2
+        if position[0] in [4, 5, 6] and self.positions[1][1][1] < 300:
+            return 1
+
+    def _select_driver(self, position, driver=None):
         # use x-position to find the right screw driver to use
-        xpos = self._attached_move_x.read()
+        # xpos = self._attached_move_x.read()
 
         if driver is None:
-            driver = self._get_driver(xpos)
+            driver = self._get_driver(position)
 
         if driver in [1, 2]:
             self.log.info(f"Configuring driver {driver}")
@@ -332,7 +344,7 @@ class SeleneRobot(Moveable):
 
     def _engage(self):
         self.log.debug("Engaging driver")
-        self._select_driver()
+        self._select_driver(self.current_position)
         self._adjust.wait()  # make sure the driver is not rotating while moving stage
         self._approach.maw(self._engaged)
 
@@ -422,7 +434,7 @@ class SeleneRobot(Moveable):
             )
 
         x, z = self.positions[position[0]][position[1]]
-        nominal_driver = self._get_driver(x)
+        nominal_driver = self._get_driver(position)
         if driver:
             if nominal_driver != driver:
                 # the user selected a driver that is not configured for this position
@@ -602,7 +614,7 @@ class SeleneRobot(Moveable):
         concentric circles with increasing radius.
         Assumes angle of the screw is unknown.
         """
-        self._select_driver()
+        self._select_driver(self.current_position)  # fix later
 
         if self.current_position != (-1, -1):
             angle = self.rotations[self.current_position[0]][self.current_position[1]]
@@ -657,6 +669,7 @@ class SeleneRobot(Moveable):
             return found_screw
 
     def find_screw_rotation(self):
+        self._select_driver(self.current_position)
         angle = self._adjust()
 
         for step in np.arange(0, 60, 2.5):
@@ -665,7 +678,7 @@ class SeleneRobot(Moveable):
             self._move_angle(angle + step)
             self._engage_retry()
             if self._hex_state() == "HexScrewInserted":
-                self._move_angle(angle - self.adjuster_play / 2.0)
+                self._move_angle(angle + step - self.adjuster_play / 2.0)
                 self.log.info(f"    Screw found at rotation {self._adjust()}")
                 self.update_rotation(self._adjust())
                 break
@@ -677,7 +690,7 @@ class SeleneRobot(Moveable):
         If robot could find the screw, use to refine the more exact
         position of the screw center.
         """
-        self._select_driver()
+        self._select_driver(self.current_position)
 
         pos_out = []
         vert_out = []
