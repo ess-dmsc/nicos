@@ -490,8 +490,10 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
     }
 
     parameter_overrides = {
-        "unit": Override(default="Hz deg", mandatory=False, settable=False),
-        "fmtstr": Override(default="[%.2f, %.2f]"),
+        "unit": Override(
+            default="Hz deg", mandatory=False, settable=False, prefercache=False
+        ),
+        "fmtstr": Override(default="[%.2f, %.2f]", settable=False, prefercache=False),
     }
 
     valuetype = tupleof(float, float)
@@ -517,6 +519,7 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
             "in_phase": enum_status_channel("InPhaseTS-R", cache_key="in_phase"),
             "on_speed": enum_status_channel("OnSpd_R"),
             "park_status": enum_status_channel("ParkStatus_R", cache_key="park_status"),
+            "dcu_state": enum_status_channel("DcuState_R"),
             "chic": enum_status_channel("ConnectedR", pv_prefix_attr="chic_root"),
             "alarm_level": enum_status_channel("Lvl_Alrm"),
             "control_mode": enum_status_channel("CtrlMd_RB"),
@@ -695,9 +698,14 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
 
     @staticmethod
     def _parking(read):
-        """Whether the disc is on its way to a park. ParkStatus_R is not enough:
-        YMIR's drive reports Parking seconds late and never stops reporting it.
-        ParkS_RB reads 0 when there is no park target, as after a stop."""
+        """Whether the disc is on its way to a park. The drive parks while both
+        DcuState_R and ParkStatus_R say so: YMIR's Beckhoff drive leaves
+        ParkStatus_R at Parking after the park, the SKF drives DcuState_R.
+        Until the drive reports Parking, seconds after a park command, the disc
+        parks while it is away from ParkS_RB, which reads 0 when there is no
+        park target, as after a stop."""
+        if read("dcu_state") == "Parking" and read("park_status") == "Parking":
+            return True
         target = read("park_setpoint")
         distance = abs(read("park_position") - target) % 360
         if min(distance, 360 - distance) <= PARK_TOLERANCE:

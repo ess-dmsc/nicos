@@ -2,6 +2,7 @@ import time
 
 import pytest
 
+from nicos import session
 from nicos.core import SIMULATION, status
 from nicos.core.errors import (
     CommunicationError,
@@ -38,6 +39,20 @@ PARK_COMMANDS = [
     "Delevitate",
 ]
 PARK_TARGETS = {"ParkOpen": 277.83, "ParkClosed": 7.83}
+DCU_STATES = [
+    "Unknown",
+    "Initialization",
+    "Ready",
+    "Idle/DCU off",
+    "Run to speed",
+    "Run to phase",
+    "Rotating",
+    "Coasting",
+    "Stopping",
+    "Interlock stopping",
+    "Parking",
+]
+DCU_READY, DCU_PARKING = 2, 10
 T0_PARKS = ["Close", "Open", *(f"Window {i}" for i in range(1, 11))]
 
 
@@ -62,7 +77,18 @@ def backend(fake_epics_backend_factory):
     enums = {
         f"{ROOT}ChopState_R": (STATES, READY),
         f"{ROOT}InPhaseTS-R": (["Not in phase", "In phase"], 0),
-        f"{ROOT}ParkStatus_R": (["Unknown", "Not Parked", "Parking"], 1),
+        f"{ROOT}ParkStatus_R": (
+            [
+                "Unknown",
+                "Not Parked",
+                "Parking",
+                "ParkedOpen",
+                "ParkedClose",
+                "ParkedSP",
+            ],
+            1,
+        ),
+        f"{ROOT}DcuState_R": (DCU_STATES, DCU_READY),
         f"{ROOT}OnSpd_R": (["Unknown", "Not on speed", "On speed"], 1),
         f"{CHIC}ConnectedR": (["Disconnected", "Connected"], 1),
         f"{ROOT}Lvl_Alrm": (["No Alarms", "Warnings", "Alarms", "Trip"], 0),
@@ -450,6 +476,21 @@ def test_the_value_is_speed_and_phase(device_harness, backend, disc):
     assert run(device_harness, disc.read) == pytest.approx((7.0, 45.0))
 
 
+def test_the_unit_and_format_replace_older_cached_ones(device_harness, backend, clock):
+    # the disc's value used to be the state, with unit "" and fmtstr "%s"
+    def cache_old_values():
+        session.cache.put("stale", "unit", "")
+        session.cache.put("stale", "fmtstr", "%s")
+
+    device_harness.run("daemon", cache_old_values)
+    disc = device_harness.create(
+        "daemon", EssChopper, name="stale", pv_root=ROOT, chic_root=CHIC
+    )
+
+    assert run(device_harness, lambda: disc.unit) == "Hz deg"
+    assert run(device_harness, lambda: disc.fmtstr) == "[%.2f, %.2f]"
+
+
 def set_param(device_harness, device, param, value):
     device_harness.run("daemon", setattr, device, param, value)
 
@@ -510,6 +551,38 @@ def test_a_disc_at_its_park_target_is_parked_whatever_park_status_says(
     emit(backend, "Pos_R", 277.82)
     assert run(device_harness, disc.status)[0] == status.OK
     assert run(device_harness, disc.isCompleted)
+
+
+def test_the_disc_parks_until_the_drive_is_done(device_harness, backend, disc):
+    # YMIR, 15:56:07: after a stop the drive parks at Park_S itself, and the
+    # disc passed within the tolerance before the drive was Ready; a park
+    # command sent then was ignored
+    emit(backend, "ParkS_RB", 120.0)
+    emit(backend, "DcuState_R", DCU_PARKING)
+    emit(backend, "ParkStatus_R", 2)
+    emit(backend, "Pos_R", 120.2)
+    assert run(device_harness, disc.status) == (
+        status.BUSY,
+        "parking; Ready: Entered state",
+    )
+    assert not run(device_harness, disc.isCompleted)
+
+    emit(backend, "DcuState_R", DCU_READY)
+    assert run(device_harness, disc.isCompleted)
+
+
+def test_a_parked_disc_is_not_parking_whichever_readback_sticks(
+    device_harness, backend, disc
+):
+    emit(backend, "ParkS_RB", 120.0)
+    emit(backend, "Pos_R", 120.0)
+    # YMIR's Beckhoff drive: ParkStatus_R stays at Parking
+    emit(backend, "ParkStatus_R", 2)
+    assert run(device_harness, disc.status)[0] == status.OK
+    # the SKF drives (DREAM OC-103): DcuState_R stays at Parking
+    emit(backend, "DcuState_R", DCU_PARKING)
+    emit(backend, "ParkStatus_R", 5)
+    assert run(device_harness, disc.status)[0] == status.OK
 
 
 def test_a_disc_stopped_without_a_park_is_not_parking(device_harness, backend, disc):
