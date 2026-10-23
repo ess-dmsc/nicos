@@ -1,7 +1,9 @@
 import time
+from contextlib import suppress
 
 from nicos.core import (
     Attach,
+    CommunicationError,
     DeviceMixinBase,
     Moveable,
     MoveError,
@@ -495,6 +497,8 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
 
     _command_pv = "C_ExecuteUser"
     _park_pv = "C_Park"
+    _park_readback_pv = "ParkCmd_RB"
+    _park_setpoint_readback = True
 
     _default_pv_prefix_attr = "pv_root"
     _primary_channel = "state"
@@ -514,10 +518,13 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
                 "Log_R", cache_key="last_message", as_string=True
             ),
             "total_delay": readback_channel("TotDly", cache_key="total_delay"),
-            "park_position": readback_channel("Pos_R", cache_key="park_position"),
-            "park_setpoint": readback_channel("ParkS_RB"),
-            # the drive state changes when parking ends, also where ParkStatus_R doesn't
-            "drive_state": enum_status_channel("DcuState_R"),
+            "park_position": readback_channel(
+                "Pos_R", cache_key="park_position", refresh_status=True
+            ),
+            "park_setpoint": readback_channel("ParkS_RB", refresh_status=True),
+            "park_readback": enum_readback_channel(
+                self._park_readback_pv, subscribe=False
+            ),
             "delay_mean": readback_channel("DiffTSMean", cache_key="delay_mean"),
             "delay_stddev": readback_channel("DiffTSStdDev", cache_key="delay_stddev"),
             "delay_fwhm": readback_channel("DiffTSFWHMWidth", cache_key="delay_fwhm"),
@@ -569,8 +576,18 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
         return self._epics.get_channel_value("park")
 
     def doWritePark(self, value):
+        """Park the stopped disc. The drive reports Parking only seconds later,
+        so wait for it to take the command and its new target (ParkS_RB)."""
         self._check_stopped()
+        target = self._read_channel_cached("park_setpoint", maxage=0)
         self._epics.put_channel_value("park", value)
+        self._epics.wait_for("park_readback", value, timeout=2.0)
+        if self._park_setpoint_readback:
+            # a park to the target already set leaves ParkS_RB unchanged
+            with suppress(CommunicationError):
+                self._epics.wait_for(
+                    "park_setpoint", lambda new: new != target, timeout=2.0
+                )
 
     def doReadPark_Angle(self):
         return self._epics.get_channel_value("park_angle")
@@ -578,6 +595,8 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
     def doWritePark_Angle(self, value):
         self._check_stopped()
         self._epics.put_channel_value("park_angle", value)
+        if self._park_setpoint_readback:
+            self._epics.wait_for("park_setpoint", value, timeout=2.0, precision=0.01)
 
     def doReadDelay(self):
         return self._epics.get_channel_value("delay")
@@ -622,7 +641,7 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
             return status.ERROR, state
         if state in TRANSITIONAL_STATES:
             return status.BUSY, state
-        if read("park_status") == "Parking" and not self._at_park_setpoint(read):
+        if state == "Ready" and self._parking(read):
             return status.BUSY, "parking"
         if state == "Rotating" and read("on_speed") != "On speed":
             return status.BUSY, "changing speed"
@@ -631,13 +650,21 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
         return status.OK, ""
 
     @staticmethod
-    def _at_park_setpoint(read):
-        """Some drives (YMIR's Beckhoff) never leave ParkStatus_R Parking."""
-        distance = abs(read("park_position") - read("park_setpoint")) % 360
-        return min(distance, 360 - distance) <= PARK_TOLERANCE
+    def _parking(read):
+        """Whether the disc is on its way to a park. ParkStatus_R is not enough:
+        YMIR's drive reports Parking seconds late and never stops reporting it.
+        ParkS_RB reads 0 when there is no park target, as after a stop."""
+        target = read("park_setpoint")
+        distance = abs(read("park_position") - target) % 360
+        if min(distance, 360 - distance) <= PARK_TOLERANCE:
+            return False
+        return bool(target) or read("park_status") == "Parking"
 
     def doReset(self):
-        """Clear the alarms: "ClearAlarm" or "Clear Alarms", as the IOC names it."""
+        """Clear the drive's alarms, if it has any: "ClearAlarm" or "Clear Alarms",
+        as the IOC names it."""
+        if self._read_channel_cached("alarm_level", maxage=0) == "No Alarms":
+            return
         for choice in self.parameters["command"].type.vals:
             if choice.replace(" ", "").lower().startswith("clearalarm"):
                 self._send(choice)
@@ -692,6 +719,9 @@ class EssT0Chopper(EssChopper):
 
     _command_pv = "C_Execute"
     _park_pv = "ParkPos_S"
+    _park_readback_pv = "ParkPos_RB"
+    # ParkS_RB does not follow the park target on the T0
+    _park_setpoint_readback = False
 
 
 class ChopperAxis(AutoDevice, Moveable):

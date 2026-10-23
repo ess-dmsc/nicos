@@ -38,6 +38,9 @@ from nicos.devices.epics.status import SEVERITY_TO_STATUS
 # we want to do this manually to avoid information loss
 _CONTEXT = Context("pva", nt=False)
 
+# What pvget shows for an enum index that is not among the choices
+UNDEFINED = "<undefined>"
+
 
 def _safe_monitor(context, name, callback, request, notify_disconnect):
     """Start a monitor without missing an update during setup.
@@ -180,7 +183,9 @@ class P4pWrapper:
                 if as_string:
                     if pvname not in self._choices:
                         self.get_value_choices(pvname)
-                    return self._choices[pvname][index]
+                    choices = self._choices[pvname]
+                    # an IOC can post an index that is not among its choices
+                    return choices[index] if 0 <= index < len(choices) else UNDEFINED
                 return index
         except AttributeError:
             # getID() doesn't (currently) exist for scalar
