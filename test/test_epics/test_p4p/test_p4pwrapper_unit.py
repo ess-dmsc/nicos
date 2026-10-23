@@ -147,6 +147,16 @@ def test_get_pv_value_enum_as_int_and_string(fake_context: FakeContext):
     assert pva_wrapper._choices["PV:ENUM"] == ["ZERO", "ONE", "TWO"]
 
 
+def test_enum_index_outside_the_choices_reads_undefined(fake_context: FakeContext):
+    # seen on the YMIR chopper's DcuState_R: index 11 with 11 choices
+    enum_val = FakeEnumValue(index=11, choices=[str(i) for i in range(11)])
+    fake_context.set_get_result("PV:ENUM", {"value": enum_val})
+    pva_wrapper = P4pWrapper(timeout=2.0, context=fake_context)
+
+    assert pva_wrapper.get_pv_value("PV:ENUM") == 11
+    assert pva_wrapper.get_pv_value("PV:ENUM", as_string=True) == "<undefined>"
+
+
 def test_put_pv_value_passes_process_true_timeout_and_wait(fake_context: FakeContext):
     pva_wrapper = P4pWrapper(timeout=1.5, context=fake_context)
 

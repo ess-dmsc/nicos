@@ -29,6 +29,16 @@ STATES = [
     "E. stopping",
 ]
 READY, ROTATING, STOPPING = 2, 3, 5
+PARK_COMMANDS = [
+    "Null",
+    "ParkOpen",
+    "ParkClosed",
+    "ParkSP",
+    "DisablePark",
+    "Delevitate",
+]
+PARK_TARGETS = {"ParkOpen": 277.83, "ParkClosed": 7.83}
+T0_PARKS = ["Close", "Open", *(f"Window {i}" for i in range(1, 11))]
 
 
 class Clock:
@@ -54,23 +64,18 @@ def backend(fake_epics_backend_factory):
         f"{ROOT}InPhaseTS-R": (["Not in phase", "In phase"], 0),
         f"{ROOT}ParkStatus_R": (["Unknown", "Not Parked", "Parking"], 1),
         f"{ROOT}OnSpd_R": (["Unknown", "Not on speed", "On speed"], 1),
-        f"{ROOT}DcuState_R": (["Unknown", "Init", "Ready", "Parking"], 2),
         f"{CHIC}ConnectedR": (["Disconnected", "Connected"], 1),
         f"{ROOT}Lvl_Alrm": (["No Alarms", "Warnings", "Alarms", "Trip"], 0),
         f"{ROOT}CtrlMd_RB": (["Epics", "Chic", "Local"], 0),
         f"{ROOT}C_ExecuteUser": (["No request", "Start", "Stop", "Clear Alarms"], 0),
-        f"{ROOT}C_Park": (
-            ["Null", "ParkOpen", "ParkClosed", "ParkSP", "DisablePark", "Delevitate"],
-            0,
-        ),
+        f"{ROOT}C_Park": (PARK_COMMANDS, 0),
+        f"{ROOT}ParkCmd_RB": (PARK_COMMANDS, 0),
         f"{ROOT}C_Execute": (
             ["Null", "Start", "Astart", "Stop", "Istop", "Coast", "ClearAlarm"],
             0,
         ),
-        f"{ROOT}ParkPos_S": (
-            ["Close", "Open", *(f"Window {i}" for i in range(1, 11))],
-            0,
-        ),
+        f"{ROOT}ParkPos_S": (T0_PARKS, 0),
+        f"{ROOT}ParkPos_RB": (T0_PARKS, 0),
     }
     for pv, (choices, index) in enums.items():
         backend.values[pv] = index
@@ -86,6 +91,18 @@ def backend(fake_epics_backend_factory):
         resets = pvname in (f"{ROOT}{SPEED_SETPOINT}", f"{ROOT}ChopDly-S")
         if backend.resets_statistics and resets and changed:
             backend.emit_update(f"{ROOT}InPhaseTS-R", value=0)
+        # the drive takes a park command and sets its new target, as YMIR's did
+        if pvname == f"{ROOT}C_Park":
+            backend.emit_update(f"{ROOT}ParkCmd_RB", value=PARK_COMMANDS.index(value))
+            if value in PARK_TARGETS:
+                backend.emit_update(f"{ROOT}ParkS_RB", value=PARK_TARGETS[value])
+        elif pvname == f"{ROOT}Park_S":
+            backend.emit_update(
+                f"{ROOT}ParkCmd_RB", value=PARK_COMMANDS.index("ParkSP")
+            )
+            backend.emit_update(f"{ROOT}ParkS_RB", value=value)
+        elif pvname == f"{ROOT}ParkPos_S":
+            backend.emit_update(f"{ROOT}ParkPos_RB", value=T0_PARKS.index(value))
 
     backend.put_pv_value = put_like_the_ioc
     backend.values.update(
@@ -95,14 +112,10 @@ def backend(fake_epics_backend_factory):
             f"{ROOT}TotDly": 0.0,
             f"{ROOT}Pos_R": 120.0,
             f"{ROOT}ParkS_RB": 120.0,
-            f"{ROOT}SampleSize-SP": 500,
             f"{ROOT}DiffTSMean": 0.0,
             f"{ROOT}DiffTSStdDev": 0.0,
             f"{ROOT}DiffTSFWHMWidth": 0.0,
             f"{ROOT}DiffTSSamples": [],
-            f"{ROOT}DiffTSMin": 0.0,
-            f"{ROOT}DiffTSMax": 0.0,
-            f"{ROOT}Frq-R": 0.0,
             f"{ROOT}{SPEED_READBACK}": 0.0,
             f"{ROOT}{SPEED_SETPOINT}": 0.0,
             f"{ROOT}MaxSpd_R": 14.0,
@@ -405,9 +418,17 @@ def test_commands_are_the_ioc_choices(device_harness, backend, disc):
 
 
 def test_reset_clears_the_alarms_with_the_iocs_choice(device_harness, backend, disc):
+    emit(backend, "Lvl_Alrm", 2)
     run(device_harness, disc.reset)
 
     assert puts(backend) == [("C_ExecuteUser", "Clear Alarms")]
+
+
+def test_reset_without_alarms_sends_nothing(device_harness, backend, disc):
+    # YMIR's drive answers "Command invalid in current state"
+    run(device_harness, disc.reset)
+
+    assert puts(backend) == []
 
 
 def test_park(device_harness, backend, disc):
@@ -424,26 +445,38 @@ def test_park(device_harness, backend, disc):
         set_param(device_harness, disc, "park", "open")
 
 
-def test_waiting_on_the_disc_waits_for_parking(device_harness, backend, disc):
-    set_param(device_harness, disc, "park", "ParkOpen")
-    emit(backend, "ParkS_RB", 277.84)
-    emit(backend, "ParkStatus_R", 2)
+def test_waiting_on_the_disc_waits_for_the_park_position(device_harness, backend, disc):
+    # YMIR: the drive takes the command at once, reports Parking seconds later
+    set_param(device_harness, disc, "park", "ParkClosed")
     assert not run(device_harness, disc.isCompleted)
-    emit(backend, "ParkStatus_R", 1)
+    emit(backend, "Pos_R", 7.83)
     assert run(device_harness, disc.isCompleted)
 
 
-def test_a_disc_at_its_park_setpoint_is_parked_whatever_park_status_says(
+def test_a_disc_at_its_park_target_is_parked_whatever_park_status_says(
     device_harness, backend, disc
 ):
     # YMIR's drive reaches the park and leaves ParkStatus_R at Parking
     set_param(device_harness, disc, "park", "ParkOpen")
-    emit(backend, "ParkS_RB", 277.84)
     emit(backend, "ParkStatus_R", 2)
     assert run(device_harness, disc.status)[0] == status.BUSY
-    emit(backend, "Pos_R", 277.83)
-    emit(backend, "DcuState_R", 2)
+    emit(backend, "Pos_R", 277.82)
     assert run(device_harness, disc.status)[0] == status.OK
+    assert run(device_harness, disc.isCompleted)
+
+
+def test_a_disc_stopped_without_a_park_is_not_parking(device_harness, backend, disc):
+    # after a stop, ParkS_RB reads 0 and the disc stays where it stopped
+    emit(backend, "ParkS_RB", 0.0)
+    emit(backend, "Pos_R", 346.3)
+
+    assert run(device_harness, disc.status)[0] == status.OK
+
+
+def test_parking_at_an_angle_waits_for_the_new_target(device_harness, backend, disc):
+    set_param(device_harness, disc, "park_angle", 42.0)
+    assert run(device_harness, disc.status)[0] == status.BUSY
+    emit(backend, "Pos_R", 42.0)
     assert run(device_harness, disc.isCompleted)
 
 
@@ -465,7 +498,18 @@ def t0(device_harness, backend, clock):
     return daemon
 
 
+def test_t0_parking_follows_park_status(device_harness, backend, t0):
+    # the T0's ParkS_RB does not follow its park target
+    set_param(device_harness, t0, "park", "Window 1")
+    emit(backend, "ParkS_RB", 0.0)
+    emit(backend, "ParkStatus_R", 2)
+    assert run(device_harness, t0.status)[0] == status.BUSY
+    emit(backend, "ParkStatus_R", 1)
+    assert run(device_harness, t0.isCompleted)
+
+
 def test_t0_commands_and_parking(device_harness, backend, t0):
+    emit(backend, "Lvl_Alrm", 2)
     set_param(device_harness, t0, "park", "Close")
     set_param(device_harness, t0, "park", "Window 1")
     set_param(device_harness, t0, "park_angle", 42.0)
