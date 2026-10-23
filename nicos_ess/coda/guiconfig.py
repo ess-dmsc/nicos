@@ -3,43 +3,42 @@
 main_window = docked(
     tabbed(
         ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
-        ("Setup", panel("nicos.clients.flowui.panels.setup_panel.SetupsPanel")),
-        ("  ", panel("nicos.clients.flowui.panels.empty.EmptyPanel")),
+        ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
+        ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
         (
             "Instrument interaction",
             hsplit(
                 vbox(
                     panel(
-                        "nicos.clients.flowui.panels.cmdbuilder.CommandPanel",
-                        modules=["nicos.clients.gui.cmdlets"],
+                        "nicos_ess.gui.panels.cmdbuilder.CommandPanel",
                     ),
                     tabbed(
                         (
                             "Output",
                             panel(
-                                "nicos.clients.flowui.panels.console.ConsolePanel",
+                                "nicos_ess.gui.panels.console.ConsolePanel",
                                 hasinput=False,
                             ),
                         ),
                         (
                             "Scan Plot",
-                            panel("nicos.clients.flowui.panels.scans.ScansPanel"),
+                            panel("nicos_ess.gui.panels.scans.ScansPanel"),
                         ),
                         (
                             "Detector Image",
-                            panel("nicos_ess.gui.panels.live.MultiLiveDataPanel"),
+                            panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
                         (
                             "Script Status",
                             panel(
-                                "nicos.clients.flowui.panels.status.ScriptStatusPanel",
+                                "nicos_ess.gui.panels.status.ScriptStatusPanel",
                                 eta=True,
                             ),
                         ),
                     ),
                 ),  # vsplit
                 panel(
-                    "nicos.clients.flowui.panels.devices.DevicesPanel",
+                    "nicos_ess.gui.panels.devices.DevicesPanel",
                     dockpos="right",
                     param_display={"Exp": ["lastpoint", "lastscan"]},
                     filters=[],
@@ -48,11 +47,11 @@ main_window = docked(
         ),
         (
             "Scripting",
-            panel("nicos.clients.flowui.panels.editor.EditorPanel", tools=None),
+            panel("nicos_ess.gui.panels.remote_editor.EditorPanel", tools=None),
         ),
         (
             "History",
-            panel("nicos.clients.flowui.panels.history.HistoryPanel"),
+            panel("nicos_ess.gui.panels.history.HistoryPanel"),
         ),
         (
             "Logs",
@@ -81,5 +80,5 @@ tools = [
 
 options = {
     "facility": "ess",
-    "mainwindow_class": "nicos.clients.flowui.mainwindow.MainWindow",
+    "mainwindow_class": "nicos_ess.gui.mainwindow.MainWindow",
 }
