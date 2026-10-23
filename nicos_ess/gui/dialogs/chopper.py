@@ -237,7 +237,7 @@ class ChopperDialog(QDialog):
         self.description.setVisible(bool(self.params.get("description")))
         self._fill_choices(self.park_choice, "park")
         self._fill_choices(self.command_choice, "command")
-        self.state.setText(self.devinfo.fmtValUnit().strip())
+        self.state.setText(str(self.params.get("state", "")))
         self._update_status(*self.devinfo.status)
         for param in READBACKS:
             self._update_param(param, self.params.get(param))
@@ -328,13 +328,13 @@ class ChopperDialog(QDialog):
     def on_cache_params(self, subkey, value):
         if subkey in MOTION_KEYS:
             self._update_motion(subkey, cache_load(value) if value else None)
+        elif subkey == "state":
+            self.state.setText(str(cache_load(value)) if value else "")
         elif value:
             self._update_param(subkey, cache_load(value))
             if subkey in self.params:
                 self.param_table.update_param(subkey, str(cache_load(value)))
 
     def on_cache(self, time, subkey, op, value):
-        if subkey == "value":
-            self.state.setText(self.devinfo.fmtValUnit().strip())
-        elif subkey == "status":
+        if subkey == "status":
             self._update_status(*self.devinfo.status)
