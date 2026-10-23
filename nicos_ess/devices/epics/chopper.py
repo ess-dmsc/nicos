@@ -1,5 +1,4 @@
 import time
-from contextlib import suppress
 
 from nicos.core import (
     Attach,
@@ -499,6 +498,7 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
     _park_pv = "C_Park"
     _park_readback_pv = "ParkCmd_RB"
     _park_setpoint_readback = True
+    _park_is_command = True
 
     _default_pv_prefix_attr = "pv_root"
     _primary_channel = "state"
@@ -570,7 +570,7 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
         return self._epics.get_channel_value("command")
 
     def doWriteCommand(self, value):
-        self._epics.put_channel_value("command", value)
+        self._put_command("command", value)
 
     def doReadPark(self):
         return self._epics.get_channel_value("park")
@@ -580,14 +580,15 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
         so wait for it to take the command and its new target (ParkS_RB)."""
         self._check_stopped()
         target = self._read_channel_cached("park_setpoint", maxage=0)
-        self._epics.put_channel_value("park", value)
-        self._epics.wait_for("park_readback", value, timeout=2.0)
+        if self._park_is_command:
+            self._put_command("park", value)
+        else:
+            self._epics.put_channel_value("park", value)
+        if not self._acknowledged("park_readback", value):
+            raise self._refused(f"take the park command {value}")
         if self._park_setpoint_readback:
             # a park to the target already set leaves ParkS_RB unchanged
-            with suppress(CommunicationError):
-                self._epics.wait_for(
-                    "park_setpoint", lambda new: new != target, timeout=2.0
-                )
+            self._acknowledged("park_setpoint", lambda new: new != target)
 
     def doReadPark_Angle(self):
         return self._epics.get_channel_value("park_angle")
@@ -595,8 +596,10 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
     def doWritePark_Angle(self, value):
         self._check_stopped()
         self._epics.put_channel_value("park_angle", value)
-        if self._park_setpoint_readback:
-            self._epics.wait_for("park_setpoint", value, timeout=2.0, precision=0.01)
+        if self._park_setpoint_readback and not self._acknowledged(
+            "park_setpoint", value, precision=0.01
+        ):
+            raise self._refused(f"take the park angle {value}")
 
     def doReadDelay(self):
         return self._epics.get_channel_value("delay")
@@ -676,14 +679,42 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
             raise UsageError(self, "stop the disc before parking it")
 
     def _send(self, command):
-        self._epics.put_channel_value("command", command)
+        self._put_command("command", command)
+
+    def _put_command(self, channel, value):
+        """The drive acts on a change of a command PV: to send the command it
+        already holds, write the PV's first, no-command choice in between."""
+        if self._epics.get_channel_value(channel) == value:
+            no_command = self.parameters[channel].type.vals[0]
+            self._epics.put_channel_value(channel, no_command)
+        self._epics.put_channel_value(channel, value)
 
     def _write_setpoint(self, channel, value):
         """Write a speed or delay. The IOC then restarts its statistics and
         drops InPhaseTS-R until the disc is in phase at the new setpoint."""
         self._epics.put_channel_value(channel, value)
-        if self._read_channel_cached("speed_setpoint", maxage=0):
-            self._epics.wait_for("in_phase", "Not in phase", timeout=2.0)
+        if self._read_channel_cached(
+            "speed_setpoint", maxage=0
+        ) and not self._acknowledged("in_phase", "Not in phase"):
+            raise MoveError(
+                self,
+                "the IOC did not restart its in-phase statistics for the new "
+                "setpoint (that needs evr_seq_calc 2.7.6 or later)",
+            )
+
+    def _acknowledged(self, channel, expected, precision=None):
+        """Wait for the IOC to acknowledge a write: False if it answers but does
+        not, raises if it does not answer at all."""
+        try:
+            self._epics.wait_for(channel, expected, timeout=2.0, precision=precision)
+        except CommunicationError:
+            self._epics.get_channel_value(channel)
+            return False
+        return True
+
+    def _refused(self, what):
+        message = self._read_channel_cached("last_message", maxage=0)
+        return MoveError(self, f"the drive did not {what}; its last message: {message}")
 
     def _is_steady(self):
         """Whether the disc runs at its speed setpoint, in phase, or is stopped.
@@ -722,6 +753,8 @@ class EssT0Chopper(EssChopper):
     _park_readback_pv = "ParkPos_RB"
     # ParkS_RB does not follow the park target on the T0
     _park_setpoint_readback = False
+    # ParkPos_S selects a park window; its first choice, Close, parks the disc
+    _park_is_command = False
 
 
 class ChopperAxis(AutoDevice, Moveable):

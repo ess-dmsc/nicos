@@ -264,8 +264,30 @@ def test_a_move_fails_when_the_ioc_does_not_reset_its_statistics(
     backend.resets_statistics = False
     spin(backend, 14.0)
 
-    with pytest.raises(CommunicationError):
+    with pytest.raises(MoveError, match="evr_seq_calc 2.7.6"):
         run(device_harness, disc.phase.start, 90.0)
+
+
+def test_a_park_command_the_drive_does_not_take_says_so(device_harness, backend, disc):
+    backend.put_pv_value = lambda pvname, value, wait=False: None
+
+    with pytest.raises(MoveError, match="did not take the park command ParkOpen"):
+        set_param(device_harness, disc, "park", "ParkOpen")
+
+
+def test_a_lost_ioc_during_the_acknowledgement_is_a_communication_error(
+    device_harness, backend, disc
+):
+    put = backend.put_pv_value
+
+    def put_and_disconnect(pvname, value, wait=False):
+        put(pvname, value, wait)
+        backend.disconnect_backend()
+
+    backend.put_pv_value = put_and_disconnect
+
+    with pytest.raises(CommunicationError):
+        set_param(device_harness, disc, "park_angle", 42.0)
 
 
 def test_a_lost_ioc_connection_aborts_a_move(device_harness, backend, disc):
@@ -478,6 +500,29 @@ def test_parking_at_an_angle_waits_for_the_new_target(device_harness, backend, d
     assert run(device_harness, disc.status)[0] == status.BUSY
     emit(backend, "Pos_R", 42.0)
     assert run(device_harness, disc.isCompleted)
+
+
+def test_a_repeated_park_command_is_sent_again(device_harness, backend, disc):
+    # YMIR: C_Park still holds ParkOpen after a park at an angle, and the drive
+    # ignores a write that does not change it
+    set_param(device_harness, disc, "park", "ParkOpen")
+    set_param(device_harness, disc, "park_angle", 120.0)
+    backend.put_calls.clear()
+    set_param(device_harness, disc, "park", "ParkOpen")
+
+    assert puts(backend) == [("C_Park", "Null"), ("C_Park", "ParkOpen")]
+
+
+def test_a_repeated_start_is_sent_again(device_harness, backend, disc):
+    # after an interlock stop, C_ExecuteUser still holds Start
+    emit(backend, "C_ExecuteUser", 1)
+    run(device_harness, disc.speed.start, 14.0)
+
+    assert puts(backend) == [
+        (SPEED_SETPOINT, 14.0),
+        ("C_ExecuteUser", "No request"),
+        ("C_ExecuteUser", "Start"),
+    ]
 
 
 def test_park_refuses_a_turning_disc(device_harness, backend, disc):
