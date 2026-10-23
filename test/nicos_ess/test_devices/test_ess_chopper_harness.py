@@ -10,7 +10,6 @@ from nicos.core.errors import (
     UsageError,
 )
 from nicos_ess.devices.epics.chopper import (
-    SPEED_APPLIED,
     SPEED_READBACK,
     SPEED_SETPOINT,
     EssChopper,
@@ -55,6 +54,7 @@ def backend(fake_epics_backend_factory):
         f"{ROOT}InPhaseTS-R": (["Not in phase", "In phase"], 0),
         f"{ROOT}ParkStatus_R": (["Unknown", "Not Parked", "Parking"], 1),
         f"{ROOT}OnSpd_R": (["Unknown", "Not on speed", "On speed"], 1),
+        f"{ROOT}DcuState_R": (["Unknown", "Init", "Ready", "Parking"], 2),
         f"{CHIC}ConnectedR": (["Disconnected", "Connected"], 1),
         f"{ROOT}Lvl_Alrm": (["No Alarms", "Warnings", "Alarms", "Trip"], 0),
         f"{ROOT}CtrlMd_RB": (["Epics", "Chic", "Local"], 0),
@@ -105,7 +105,6 @@ def backend(fake_epics_backend_factory):
             f"{ROOT}Frq-R": 0.0,
             f"{ROOT}{SPEED_READBACK}": 0.0,
             f"{ROOT}{SPEED_SETPOINT}": 0.0,
-            f"{ROOT}{SPEED_APPLIED}": 0.0,
             f"{ROOT}MaxSpd_R": 14.0,
             f"{ROOT}ChopDly-S": 0.0,
         }
@@ -133,7 +132,7 @@ def puts(backend):
 
 def spin(backend, speed):
     """The disc turns at the speed, in phase."""
-    for suffix in (SPEED_SETPOINT, SPEED_APPLIED, SPEED_READBACK):
+    for suffix in (SPEED_SETPOINT, SPEED_READBACK):
         emit(backend, suffix, speed)
     emit(backend, "ChopState_R", ROTATING)
     emit(backend, "OnSpd_R", 2)
@@ -186,8 +185,7 @@ def test_speed_zero_stops_the_disc_and_completes_when_ready(
 
 
 def settle(backend, speed):
-    """The IOC applies the speed, and the disc reaches it in phase."""
-    emit(backend, SPEED_APPLIED, speed)
+    """The disc reaches the speed, in phase."""
     emit(backend, SPEED_READBACK, speed)
     emit(backend, "OnSpd_R", 2)
     emit(backend, "InPhaseTS-R", 1)
@@ -200,7 +198,6 @@ def test_a_move_completes_when_the_disc_is_in_phase_again(
     run(device_harness, disc.speed.start, 14.0)
     # the IOC dropped InPhaseTS-R for the new setpoint, the disc is not there yet
     assert not run(device_harness, disc.speed.isCompleted)
-    emit(backend, SPEED_APPLIED, 14.0)
     emit(backend, SPEED_READBACK, 14.0)
     assert not run(device_harness, disc.speed.isCompleted)
     emit(backend, "InPhaseTS-R", 1)
@@ -229,12 +226,15 @@ def test_a_move_waits_while_the_disc_is_off_speed(device_harness, backend, disc)
     assert run(device_harness, disc.phase.isCompleted)
 
 
-def test_a_move_waits_for_the_ioc_to_apply_the_speed(device_harness, backend, disc):
+def test_a_direction_change_completes(device_harness, backend, disc):
+    # YMIR's drive reads SpdS_RB +7 at -7 Hz: the move must not depend on it
     spin(backend, 7.0)
-    run(device_harness, disc.speed.start, 14.0)
-    emit(backend, "InPhaseTS-R", 1)
+    run(device_harness, disc.speed.start, -7.0)
+    emit(backend, "OnSpd_R", 1)
+    emit(backend, SPEED_READBACK, -7.0)
+    emit(backend, "OnSpd_R", 2)
     assert not run(device_harness, disc.speed.isCompleted)
-    settle(backend, 14.0)
+    emit(backend, "InPhaseTS-R", 1)
     assert run(device_harness, disc.speed.isCompleted)
 
 
@@ -426,9 +426,24 @@ def test_park(device_harness, backend, disc):
 
 def test_waiting_on_the_disc_waits_for_parking(device_harness, backend, disc):
     set_param(device_harness, disc, "park", "ParkOpen")
+    emit(backend, "ParkS_RB", 277.84)
     emit(backend, "ParkStatus_R", 2)
     assert not run(device_harness, disc.isCompleted)
     emit(backend, "ParkStatus_R", 1)
+    assert run(device_harness, disc.isCompleted)
+
+
+def test_a_disc_at_its_park_setpoint_is_parked_whatever_park_status_says(
+    device_harness, backend, disc
+):
+    # YMIR's drive reaches the park and leaves ParkStatus_R at Parking
+    set_param(device_harness, disc, "park", "ParkOpen")
+    emit(backend, "ParkS_RB", 277.84)
+    emit(backend, "ParkStatus_R", 2)
+    assert run(device_harness, disc.status)[0] == status.BUSY
+    emit(backend, "Pos_R", 277.83)
+    emit(backend, "DcuState_R", 2)
+    assert run(device_harness, disc.status)[0] == status.OK
     assert run(device_harness, disc.isCompleted)
 
 

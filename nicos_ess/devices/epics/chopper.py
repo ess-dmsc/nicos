@@ -1,4 +1,3 @@
-import math
 import time
 
 from nicos.core import (
@@ -377,7 +376,8 @@ class NewEssChopperController(EssChopperController):
 # The speed PVs, with the chopper group's sign: setups set legacy_spd_sign.
 SPEED_READBACK = "Spd_R"
 SPEED_SETPOINT = "Spd_S"
-SPEED_APPLIED = "SpdS_RB"
+
+PARK_TOLERANCE = 0.5  # deg
 
 TRANSITIONAL_STATES = (
     "Initialization",
@@ -515,6 +515,9 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
             ),
             "total_delay": readback_channel("TotDly", cache_key="total_delay"),
             "park_position": readback_channel("Pos_R", cache_key="park_position"),
+            "park_setpoint": readback_channel("ParkS_RB"),
+            # the drive state changes when parking ends, also where ParkStatus_R doesn't
+            "drive_state": enum_status_channel("DcuState_R"),
             "delay_mean": readback_channel("DiffTSMean", cache_key="delay_mean"),
             "delay_stddev": readback_channel("DiffTSStdDev", cache_key="delay_stddev"),
             "delay_fwhm": readback_channel("DiffTSFWHMWidth", cache_key="delay_fwhm"),
@@ -528,7 +531,6 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
             "speed_setpoint": setpoint_channel(
                 SPEED_SETPOINT, cache_key="speed_setpoint"
             ),
-            "speed_applied": readback_channel(SPEED_APPLIED, cache_key="speed_applied"),
             "max_speed": readback_channel("MaxSpd_R", subscribe=False),
             "delay": setpoint_channel("ChopDly-S", cache_key="delay"),
         }
@@ -620,13 +622,19 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
             return status.ERROR, state
         if state in TRANSITIONAL_STATES:
             return status.BUSY, state
-        if read("park_status") == "Parking":
+        if read("park_status") == "Parking" and not self._at_park_setpoint(read):
             return status.BUSY, "parking"
         if state == "Rotating" and read("on_speed") != "On speed":
             return status.BUSY, "changing speed"
         if state == "Rotating" and read("in_phase") != "In phase":
             return status.BUSY, "not in phase"
         return status.OK, ""
+
+    @staticmethod
+    def _at_park_setpoint(read):
+        """Some drives (YMIR's Beckhoff) never leave ParkStatus_R Parking."""
+        distance = abs(read("park_position") - read("park_setpoint")) % 360
+        return min(distance, 360 - distance) <= PARK_TOLERANCE
 
     def doReset(self):
         """Clear the alarms: "ClearAlarm" or "Clear Alarms", as the IOC names it."""
@@ -661,9 +669,6 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
         return (
             state == "Rotating"
             and self._read_channel_cached("on_speed") == "On speed"
-            and math.isclose(
-                self._read_channel_cached("speed_applied"), setpoint, abs_tol=1e-3
-            )
             and self._read_channel_cached("in_phase", maxage=0) == "In phase"
         )
 
