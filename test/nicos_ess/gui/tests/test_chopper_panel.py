@@ -110,7 +110,7 @@ ESS_CHOPPER_INFO = {
     "speed_key": "tpsc/speed_readback",
     "total_delay_key": "tpsc/total_delay",
     "park_angle_key": "tpsc/park_position",
-    "delay_errors_key": None,
+    "delay_errors_key": "tpsc/delay_errors",
 }
 
 
@@ -129,3 +129,9 @@ def test_an_ess_chopper_drives_the_drawing(gui_window_factory, fake_daemon, qtbo
     delay_ns = 12.6 / 360.0 / 70.0 * 1e9
     fake_daemon.push_cache("tpsc/total_delay", delay_ns, timestamp=2.0)
     qtbot.waitUntil(lambda: _rotation(panel) == pytest.approx(parked), timeout=2000)
+
+    panel.chopper_widget._selected_chopper = "tpsc"
+    samples = np.array([0.0, 100.0, 100.0, 200.0, 400.0])
+    fake_daemon.push_cache("tpsc/delay_errors", samples, timestamp=3.0)
+    qtbot.waitUntil(lambda: "tpsc" in panel._latest, timeout=2000)
+    assert panel._latest["tpsc"]["mean"] == pytest.approx(samples.mean())

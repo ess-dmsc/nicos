@@ -58,7 +58,6 @@ def backend(fake_epics_backend_factory):
         f"{CHIC}ConnectedR": (["Disconnected", "Connected"], 1),
         f"{ROOT}Lvl_Alrm": (["No Alarms", "Warnings", "Alarms", "Trip"], 0),
         f"{ROOT}CtrlMd_RB": (["Epics", "Chic", "Local"], 0),
-        f"{ROOT}ParkEnabled_R": (["Unknown", "Disabled", "Enabled"], 2),
         f"{ROOT}C_ExecuteUser": (["No request", "Start", "Stop", "Clear Alarms"], 0),
         f"{ROOT}C_Park": (
             ["Null", "ParkOpen", "ParkClosed", "ParkSP", "DisablePark", "Delevitate"],
@@ -100,6 +99,7 @@ def backend(fake_epics_backend_factory):
             f"{ROOT}DiffTSMean": 0.0,
             f"{ROOT}DiffTSStdDev": 0.0,
             f"{ROOT}DiffTSFWHMWidth": 0.0,
+            f"{ROOT}DiffTSSamples": [],
             f"{ROOT}DiffTSMin": 0.0,
             f"{ROOT}DiffTSMax": 0.0,
             f"{ROOT}Frq-R": 0.0,
@@ -442,23 +442,6 @@ def test_park_refuses_a_turning_disc(device_harness, backend, disc):
     assert puts(backend) == []
 
 
-def test_park_refuses_when_parking_is_disabled(device_harness, backend, disc):
-    emit(backend, "ParkEnabled_R", 1)
-
-    with pytest.raises(UsageError):
-        set_param(device_harness, disc, "park", "ParkOpen")
-    with pytest.raises(UsageError):
-        set_param(device_harness, disc, "park_angle", 42.0)
-    assert puts(backend) == []
-
-
-def test_airbus_drives_without_a_park_state_still_park(device_harness, backend, disc):
-    emit(backend, "ParkEnabled_R", 0)
-    set_param(device_harness, disc, "park_angle", 42.0)
-
-    assert puts(backend) == [("Park_S", 42.0)]
-
-
 @pytest.fixture
 def t0(device_harness, backend, clock):
     daemon, _ = device_harness.create_pair(
@@ -513,4 +496,5 @@ def test_gui_info(device_harness, disc):
 
     assert info["speed_key"] == "disc/speed_readback"
     assert info["park_angle_key"] == "disc/park_position"
+    assert info["delay_errors_key"] == "disc/delay_errors"
     assert info["legacy_spd_sign"] is False

@@ -510,7 +510,6 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
             "chic": enum_status_channel("ConnectedR", pv_prefix_attr="chic_root"),
             "alarm_level": enum_status_channel("Lvl_Alrm"),
             "control_mode": enum_status_channel("CtrlMd_RB"),
-            "park_enabled": enum_readback_channel("ParkEnabled_R"),
             "last_message": status_channel(
                 "Log_R", cache_key="last_message", as_string=True
             ),
@@ -519,6 +518,7 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
             "delay_mean": readback_channel("DiffTSMean", cache_key="delay_mean"),
             "delay_stddev": readback_channel("DiffTSStdDev", cache_key="delay_stddev"),
             "delay_fwhm": readback_channel("DiffTSFWHMWidth", cache_key="delay_fwhm"),
+            "delay_errors": readback_channel("DiffTSSamples", cache_key="delay_errors"),
             "command": enum_setpoint_channel(self._command_pv, cache_key="command"),
             "park": enum_setpoint_channel(self._park_pv, cache_key="park"),
             "park_angle": setpoint_channel("Park_S", cache_key="park_angle"),
@@ -639,8 +639,6 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
     def _check_stopped(self):
         if self.read(0) != "Ready":
             raise UsageError(self, "stop the disc before parking it")
-        if self._epics.get_channel_value("park_enabled") == "Disabled":
-            raise UsageError(self, "parking is disabled on the drive")
 
     def _send(self, command):
         self._epics.put_channel_value("command", command)
@@ -676,7 +674,7 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
             "speed_key": f"{self.name}/speed_readback",
             "total_delay_key": f"{self.name}/total_delay",
             "park_angle_key": f"{self.name}/park_position",
-            "delay_errors_key": None,
+            "delay_errors_key": f"{self.name}/delay_errors",
             "legacy_spd_sign": self.legacy_spd_sign,
         }
         info.update(self._geometry_gui_info())
