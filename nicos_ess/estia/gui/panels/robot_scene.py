@@ -85,7 +85,7 @@ class RobotScene(QGraphicsScene):
                     si.setBrush(QColor(75, 75, 75))
                 si.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
 
-            group_label = QGraphicsSimpleTextItem(f"{si.screw_group:01i}")
+            group_label = QGraphicsSimpleTextItem(f"{si.screw_group:01}")
             group_label.setFont(QFont("sans", 52))
             self.addItem(group_label)
             group_label.setPos(-(260 + 480 * group), 375)
