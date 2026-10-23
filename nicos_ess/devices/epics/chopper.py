@@ -1,5 +1,6 @@
 import time
 
+from nicos import session
 from nicos.core import (
     Attach,
     CommunicationError,
@@ -381,6 +382,7 @@ SPEED_READBACK = "Spd_R"
 SPEED_SETPOINT = "Spd_S"
 
 PARK_TOLERANCE = 0.5  # deg
+NO_COMMAND_HOLD = 0.5  # s
 
 TRANSITIONAL_STATES = (
     "Initialization",
@@ -732,10 +734,12 @@ class EssChopper(HasChopperGeometry, HasAutoDevices, EpicsDeviceBase, Waitable):
 
     def _put_command(self, channel, value):
         """The drive acts on a change of a command PV: to send the command it
-        already holds, write the PV's first, no-command choice in between."""
+        already holds, write the PV's first, no-command choice in between, and
+        hold it long enough for the PLC to see it."""
         if self._epics.get_channel_value(channel) == value:
             no_command = self.parameters[channel].type.vals[0]
             self._epics.put_channel_value(channel, no_command)
+            session.delay(NO_COMMAND_HOLD)
         self._epics.put_channel_value(channel, value)
 
     def _write_setpoint(self, channel, value):

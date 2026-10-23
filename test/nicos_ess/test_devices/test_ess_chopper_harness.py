@@ -11,12 +11,14 @@ from nicos.core.errors import (
     UsageError,
 )
 from nicos_ess.devices.epics.chopper import (
+    NO_COMMAND_HOLD,
     SPEED_READBACK,
     SPEED_SETPOINT,
     EssChopper,
     EssT0Chopper,
 )
 from nicos_ess.devices.epics.pva import epics_common
+from test.nicos_ess.device_harness import UnitTestSession
 
 ROOT = "SIM:CHOP:"
 CHIC = "SIM:CHIC:"
@@ -623,6 +625,26 @@ def test_parking_at_the_angle_park_s_holds_sends_park_sp(device_harness, backend
     assert run(device_harness, disc.status)[0] == status.BUSY
     emit(backend, "Pos_R", 120.0)
     assert run(device_harness, disc.isCompleted)
+
+
+def test_a_resent_command_holds_the_no_command_for_the_plc(
+    device_harness, backend, disc, monkeypatch
+):
+    # YMIR, 16:48:55: Null and ParkOpen 3 ms apart, and the drive ignored it
+    def delay(session, seconds):
+        backend.put_calls.append(("delay", seconds, False))
+
+    monkeypatch.setattr(UnitTestSession, "delay", delay)
+    set_param(device_harness, disc, "park", "ParkOpen")
+    set_param(device_harness, disc, "park_angle", 120.0)
+    backend.put_calls.clear()
+    set_param(device_harness, disc, "park", "ParkOpen")
+
+    assert puts(backend) == [
+        ("C_Park", "Null"),
+        ("delay", NO_COMMAND_HOLD),
+        ("C_Park", "ParkOpen"),
+    ]
 
 
 def test_a_repeated_start_is_sent_again(device_harness, backend, disc):
