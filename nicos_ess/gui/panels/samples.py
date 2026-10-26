@@ -2,6 +2,7 @@ from nicos.guisupport.qt import (
     QAbstractItemView,
     QHBoxLayout,
     QHeaderView,
+    QObject,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -14,28 +15,36 @@ from nicos.guisupport.qt import (
 from nicos_ess.gui.panels.panel import PanelBase
 
 
-class SampleModel:
+class SampleModel(QObject):
     updated = pyqtSignal()
 
     def __init__(self, client):
+        QObject.__init__(self)
         self.client = client
         self.data = {}
 
     def load_data(self):
         samples = self.client.eval("session.experiment.get_samples()")
         self.data = samples
+        self.updated.emit()
 
 
 class SamplePanel(PanelBase):
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
 
-        self._build_ui()
         self.samples = SampleModel(self.client)
+        self._build_ui()
         self.initialise_connection_status_listeners()
 
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
+        self.client.register(self, "sample/samples")
+
+    def on_keyChange(self, key, value, time, expired):
+        if key == "sample/samples":
+            self.samples.load_data()
+            self.update_tree_widget_data()
 
     def on_client_connected(self):
         PanelBase.on_client_connected(self)
@@ -43,19 +52,22 @@ class SamplePanel(PanelBase):
         self.update_tree_widget_data()
 
     def update_tree_widget_data(self):
+        self.tree.clear()
         for sample in self.samples.data:
-            item = QTreeWidgetItem(self.tree, [sample["name"]])
-            self.tree.addTopLevelItem(item)
+            QTreeWidgetItem(self.tree, [sample["name"]])
 
-    def update_table_widget_data(self, current, previous):
-        if current:
-            selected_sample = current.text(0)
-            self.table.clearContents()
-            for sample in self.samples.data:
-                if sample["name"] == selected_sample:
-                    for i, (key, value) in enumerate(sample.items()):
-                        self.table.setItem(i, 0, QTableWidgetItem(str(key)))
-                        self.table.setItem(i, 1, QTableWidgetItem(str(value)))
+    def update_table_widget_data(self):
+        self.table.clearContents()
+        selected_items = self.tree.selectedItems()
+        if not selected_items:
+            return
+
+        selected_sample = selected_items[0].text(0)
+        for sample in self.samples.data:
+            if sample["name"] == selected_sample:
+                for i, (key, value) in enumerate(sample.items()):
+                    self.table.setItem(i, 0, QTableWidgetItem(str(key)))
+                    self.table.setItem(i, 1, QTableWidgetItem(str(value)))
 
     def _build_ui(self):
         self._create_widgets()
@@ -117,4 +129,5 @@ class SamplePanel(PanelBase):
         self.tree.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
     def _add_signals(self):
-        self.tree.currentItemChanged.connect(self.update_table_widget_data)
+        self.tree.itemSelectionChanged.connect(self.update_table_widget_data)
+        self.samples.updated.connect(self.update_tree_widget_data)
