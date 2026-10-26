@@ -4,6 +4,8 @@ from nicos.guisupport.qt import (
     QHeaderView,
     QObject,
     QPushButton,
+    QStyledItemDelegate,
+    Qt,
     QTableWidget,
     QTableWidgetItem,
     QTimer,
@@ -34,6 +36,7 @@ class SamplePanel(PanelBase):
         PanelBase.__init__(self, parent, client, options)
 
         self.samples = SampleModel(self.client)
+        self.edit_ongoing = False
         self._build_ui()
         self.initialise_connection_status_listeners()
 
@@ -53,8 +56,9 @@ class SamplePanel(PanelBase):
 
     def update_tree_widget_data(self):
         self.tree.clear()
-        for sample in self.samples.data:
-            QTreeWidgetItem(self.tree, [sample["name"]])
+        for i, sample in enumerate(self.samples.data):
+            item = QTreeWidgetItem(self.tree, [sample["name"]])
+            item.setData(0, Qt.ItemDataRole.UserRole, i)
 
     def update_table_widget_data(self):
         self.table.clearContents()
@@ -68,6 +72,25 @@ class SamplePanel(PanelBase):
                 for i, (key, value) in enumerate(sample.items()):
                     self.table.setItem(i, 0, QTableWidgetItem(str(key)))
                     self.table.setItem(i, 1, QTableWidgetItem(str(value)))
+
+    def on_text_changed(self, row, col, text):
+        if self.edit_ongoing and row == 0 and col == 1:
+            selected_item = self.tree.selectedItems()[0]
+            selected_item.setText(0, text)
+
+    def _new_sample_btn_clicked(self):
+        self.edit_ongoing = True
+        new_sample_index = len(self.samples.data)
+        item = QTreeWidgetItem(self.tree, ["Sample"])
+        item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
+        self.tree.setCurrentItem(item)
+        self.table.clearContents()
+        self.table.setItem(0, 0, QTableWidgetItem("name"))
+        self.table.setItem(0, 1, QTableWidgetItem("Sample"))
+
+    def _cancel_changes_btn_clicked(self):
+        self.edit_ongoing = False
+        self.update_tree_widget_data()
 
     def _build_ui(self):
         self._create_widgets()
@@ -131,3 +154,20 @@ class SamplePanel(PanelBase):
     def _add_signals(self):
         self.tree.itemSelectionChanged.connect(self.update_table_widget_data)
         self.samples.updated.connect(self.update_tree_widget_data)
+        self.btn_new.clicked.connect(self._new_sample_btn_clicked)
+        self.btn_cancel.clicked.connect(self._cancel_changes_btn_clicked)
+        self.live_edit = LiveEditDelegate(self.on_text_changed, self.table)
+        self.table.setItemDelegate(self.live_edit)
+
+
+class LiveEditDelegate(QStyledItemDelegate):
+    def __init__(self, callback, parent=None):
+        super().__init__(parent)
+        self.callback = callback
+
+    def createEditor(self, parent, option, index):
+        editor = super().createEditor(parent, option, index)
+        editor.textChanged.connect(
+            lambda text: self.callback(index.row(), index.column(), text)
+        )
+        return editor
