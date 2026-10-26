@@ -52,7 +52,7 @@ class SamplesTableModel(TableModel):
         samples = []
         sample_names = {}
         for index, (pos, sample) in enumerate(
-            zip(self.positions, self.raw_data, strict=True)
+            zip(self.positions, self.raw_data, strict=False)
         ):
             if self._is_sample_defined(sample):
                 name = sample.get("Name", "").strip()
