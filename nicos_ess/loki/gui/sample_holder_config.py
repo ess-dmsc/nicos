@@ -69,6 +69,8 @@ class LokiSampleHolderPanel(PanelBase):
         self.y_delegates = [LimitsDelegate() for _ in self.cartridge_tables]
         self.labelWarning.setStyleSheet("color: red")
         self.labelWarning.setVisible(False)
+        self.cancelButton.setVisible(False)
+        self.saveButton.setVisible(False)
         self._configure_combos()
         self._configure_tables()
         self._configure_sample_table()
@@ -81,6 +83,8 @@ class LokiSampleHolderPanel(PanelBase):
             "border-radius: 5px}"
         )
         self._style_scroll_area_contents(self.scrollAreaWidgetContents)
+        # Set to view only initially, then activate when client connects.
+        self.setViewOnly(True)
 
     def _style_scroll_area_contents(self, widget):
         # A workaround to get the formatting correct for the main widget
@@ -201,7 +205,9 @@ class LokiSampleHolderPanel(PanelBase):
     def _edit_mode(self):
         xlimits = self.client.eval(f"{self._dev_name}.xlimits", (0, 0))
         ylimits = self.client.eval(f"{self._dev_name}.ylimits", (0, 0))
-        for x_delegate, y_delegate in zip(self.x_delegates, self.y_delegates):
+        for x_delegate, y_delegate in zip(
+            self.x_delegates, self.y_delegates, strict=False
+        ):
             x_delegate.limits = xlimits
             y_delegate.limits = ylimits
 
@@ -254,7 +260,7 @@ class LokiSampleHolderPanel(PanelBase):
     def _set_table_height(self, num_rows):
         row_height = self.tableTopFirst.verticalHeader().defaultSectionSize()
         for x_delegate, y_delegate, table in zip(
-            self.x_delegates, self.y_delegates, self.cartridge_tables
+            self.x_delegates, self.y_delegates, self.cartridge_tables, strict=False
         ):
             table.setItemDelegateForColumn(0, x_delegate)
             table.setItemDelegateForColumn(1, y_delegate)
@@ -268,6 +274,7 @@ class LokiSampleHolderPanel(PanelBase):
             self.calculate_buttons,
             self.x_delegates,
             self.y_delegates,
+            strict=False,
         ):
             combo.currentTextChanged.connect(
                 partial(self.on_cartridge_changed, table, button)
@@ -281,7 +288,10 @@ class LokiSampleHolderPanel(PanelBase):
             return
         if self.cartridges and self.number_cells:
             for settings, table, combo in zip(
-                self.cartridges, self.cartridge_tables, self.cartridge_combos
+                self.cartridges,
+                self.cartridge_tables,
+                self.cartridge_combos,
+                strict=False,
             ):
                 combo.setCurrentText(settings.get("type", "blank"))
                 for i, (x, y) in enumerate(settings.get("positions", [])):
@@ -335,7 +345,12 @@ class LokiSampleHolderPanel(PanelBase):
     def set_enabled_controls(self):
         is_rotation = False
         for i, (combo, table, button) in enumerate(
-            zip(self.cartridge_combos, self.cartridge_tables, self.calculate_buttons)
+            zip(
+                self.cartridge_combos,
+                self.cartridge_tables,
+                self.calculate_buttons,
+                strict=False,
+            )
         ):
             if i % 3 == 0:
                 current_text = combo.currentText()
@@ -369,8 +384,11 @@ class LokiSampleHolderPanel(PanelBase):
         self.saveButton.setFocus()
         if not self._dev_name:
             return
+        if self.mainwindow.current_status == "disconnected":
+            self.showError("Cannot save settings when client is disconnected.")
+            return
         if self.mainwindow.current_status != "idle":
-            self.showError("Could not set values as a command/script is in progress.")
+            self.showError("Cannot save settings when a command/script is in progress.")
             return
         try:
             # Extract all data before sending to avoid samples and holders
@@ -387,6 +405,8 @@ class LokiSampleHolderPanel(PanelBase):
         self._read_mode()
 
     def _write_samples(self, samples):
+        # Clear the current samples before setting the new ones.
+        self.client.run("Exp.sample.clear()")
         self.client.run(f"Exp.sample.set_samples({dict(samples)})")
 
     def _extract_cartridges(self):
@@ -398,6 +418,7 @@ class LokiSampleHolderPanel(PanelBase):
             self.cartridge_tables,
             self.x_delegates,
             self.y_delegates,
+            strict=False,
         ):
             data = {"type": combo.currentText(), "positions": [], "labels": []}
             for r in range(table.rowCount()):
