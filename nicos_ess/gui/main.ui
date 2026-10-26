@@ -7,14 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>889</width>
-    <height>766</height>
+    <height>133</height>
    </rect>
   </property>
   <property name="toolButtonStyle">
    <enum>Qt::ToolButtonIconOnly</enum>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QVBoxLayout" name="verticalLayout">
     <property name="leftMargin">
      <number>5</number>
     </property>
@@ -27,6 +27,9 @@
     <property name="bottomMargin">
      <number>5</number>
     </property>
+    <item>
+     <layout class="QHBoxLayout" name="menuBar"/>
+    </item>
     <item>
      <layout class="QVBoxLayout" name="centralLayout">
       <item>
