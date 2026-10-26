@@ -405,6 +405,8 @@ class LokiSampleHolderPanel(PanelBase):
         self._read_mode()
 
     def _write_samples(self, samples):
+        # Clear the current samples before setting the new ones.
+        self.client.run("Exp.sample.clear()")
         self.client.run(f"Exp.sample.set_samples({dict(samples)})")
 
     def _extract_cartridges(self):
