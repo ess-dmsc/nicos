@@ -1,5 +1,7 @@
 """LoKI Samples Model."""
 
+import contextlib
+
 from nicos.core import ConfigurationError
 from nicos.guisupport.qt import Qt
 from nicos.guisupport.tablemodel import TableModel
@@ -49,7 +51,9 @@ class SamplesTableModel(TableModel):
     def extract_samples(self):
         samples = []
         sample_names = {}
-        for index, (pos, sample) in enumerate(zip(self.positions, self.raw_data)):
+        for index, (pos, sample) in enumerate(
+            zip(self.positions, self.raw_data, strict=False)
+        ):
             if self._is_sample_defined(sample):
                 name = sample.get("Name", "").strip()
                 if not name:
@@ -70,11 +74,15 @@ class SamplesTableModel(TableModel):
         return sample and any(v.strip() for v in sample.values())
 
     def set_samples(self, samples):
-        raw_data = [{} for _ in self.positions]
-        for sample in samples:
-            data = {k: sample[v] for k, v in self.columns.items() if v in sample}
-            if data and sample["position"] in self.positions:
-                raw_data[self.positions.index(sample["position"])] = data
-        while len(raw_data) < len(self.positions):
-            raw_data.append({})
-        self.raw_data = raw_data[: len(self.positions)]
+        # If the samples are the wrong format then ignore them.
+        # They may have been created for a different sample environment
+        # device, such as the rheometer, so are not relevant.
+        with contextlib.suppress(Exception):
+            raw_data = [{} for _ in self.positions]
+            for sample in samples:
+                data = {k: sample[v] for k, v in self.columns.items() if v in sample}
+                if data and sample["position"] in self.positions:
+                    raw_data[self.positions.index(sample["position"])] = data
+            while len(raw_data) < len(self.positions):
+                raw_data.append({})
+            self.raw_data = raw_data[: len(self.positions)]
