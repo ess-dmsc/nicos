@@ -60,21 +60,23 @@ class SamplePanel(PanelBase):
             item = QTreeWidgetItem(self.tree, [sample["name"]])
             item.setData(0, Qt.ItemDataRole.UserRole, i)
 
-    def update_table_widget_data(self):
+    def _add_table_data(self, data):
+        for i, (key, value) in enumerate(data.items()):
+            self.table.setItem(i, 0, QTableWidgetItem(str(key)))
+            self.table.setItem(i, 1, QTableWidgetItem(str(value)))
+
+    def _on_sample_selected(self):
         self.table.clearContents()
         selected_items = self.tree.selectedItems()
         if not selected_items:
             return
 
-        selected_sample = selected_items[0].text(0)
-        for sample in self.samples.data:
-            if sample["name"] == selected_sample:
-                for i, (key, value) in enumerate(sample.items()):
-                    self.table.setItem(i, 0, QTableWidgetItem(str(key)))
-                    self.table.setItem(i, 1, QTableWidgetItem(str(value)))
+        index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
+        if index < len(self.samples.data):
+            self._add_table_data(self.samples.data[index])
 
     def on_text_changed(self, row, col, text):
-        if self.edit_ongoing and row == 0 and col == 1:
+        if row == 0 and col == 1:
             selected_item = self.tree.selectedItems()[0]
             selected_item.setText(0, text)
 
@@ -87,6 +89,17 @@ class SamplePanel(PanelBase):
         self.table.clearContents()
         self.table.setItem(0, 0, QTableWidgetItem("name"))
         self.table.setItem(0, 1, QTableWidgetItem("Sample"))
+
+    def _duplicate_sample_btn_clicked(self):
+        self.edit_ongoing = True
+        sample_to_duplicate = self.tree.selectedItems()[0]
+        index = sample_to_duplicate.data(0, Qt.ItemDataRole.UserRole)
+        name = sample_to_duplicate.text(0)
+        new_sample_index = len(self.samples.data)
+        item = QTreeWidgetItem(self.tree, [name])
+        item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
+        self.tree.setCurrentItem(item)
+        self._add_table_data(self.samples.data[index])
 
     def _cancel_changes_btn_clicked(self):
         self.edit_ongoing = False
@@ -152,9 +165,10 @@ class SamplePanel(PanelBase):
         self.tree.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
     def _add_signals(self):
-        self.tree.itemSelectionChanged.connect(self.update_table_widget_data)
+        self.tree.itemSelectionChanged.connect(self._on_sample_selected)
         self.samples.updated.connect(self.update_tree_widget_data)
         self.btn_new.clicked.connect(self._new_sample_btn_clicked)
+        self.btn_duplicate.clicked.connect(self._duplicate_sample_btn_clicked)
         self.btn_cancel.clicked.connect(self._cancel_changes_btn_clicked)
         self.live_edit = LiveEditDelegate(self.on_text_changed, self.table)
         self.table.setItemDelegate(self.live_edit)
