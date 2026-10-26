@@ -206,7 +206,7 @@ class LokiSampleHolderPanel(PanelBase):
         xlimits = self.client.eval(f"{self._dev_name}.xlimits", (0, 0))
         ylimits = self.client.eval(f"{self._dev_name}.ylimits", (0, 0))
         for x_delegate, y_delegate in zip(
-            self.x_delegates, self.y_delegates, strict=True
+            self.x_delegates, self.y_delegates, strict=False
         ):
             x_delegate.limits = xlimits
             y_delegate.limits = ylimits
@@ -260,7 +260,7 @@ class LokiSampleHolderPanel(PanelBase):
     def _set_table_height(self, num_rows):
         row_height = self.tableTopFirst.verticalHeader().defaultSectionSize()
         for x_delegate, y_delegate, table in zip(
-            self.x_delegates, self.y_delegates, self.cartridge_tables, strict=True
+            self.x_delegates, self.y_delegates, self.cartridge_tables, strict=False
         ):
             table.setItemDelegateForColumn(0, x_delegate)
             table.setItemDelegateForColumn(1, y_delegate)
@@ -274,7 +274,7 @@ class LokiSampleHolderPanel(PanelBase):
             self.calculate_buttons,
             self.x_delegates,
             self.y_delegates,
-            strict=True,
+            strict=False,
         ):
             combo.currentTextChanged.connect(
                 partial(self.on_cartridge_changed, table, button)
@@ -291,7 +291,7 @@ class LokiSampleHolderPanel(PanelBase):
                 self.cartridges,
                 self.cartridge_tables,
                 self.cartridge_combos,
-                strict=True,
+                strict=False,
             ):
                 combo.setCurrentText(settings.get("type", "blank"))
                 for i, (x, y) in enumerate(settings.get("positions", [])):
@@ -349,7 +349,7 @@ class LokiSampleHolderPanel(PanelBase):
                 self.cartridge_combos,
                 self.cartridge_tables,
                 self.calculate_buttons,
-                strict=True,
+                strict=False,
             )
         ):
             if i % 3 == 0:
@@ -418,7 +418,7 @@ class LokiSampleHolderPanel(PanelBase):
             self.cartridge_tables,
             self.x_delegates,
             self.y_delegates,
-            strict=True,
+            strict=False,
         ):
             data = {"type": combo.currentText(), "positions": [], "labels": []}
             for r in range(table.rowCount()):
