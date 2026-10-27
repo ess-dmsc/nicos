@@ -32,6 +32,9 @@
       <property name="leftMargin">
        <number>6</number>
       </property>
+      <property name="topMargin">
+       <number>6</number>
+      </property>
       <property name="rightMargin">
        <number>10</number>
       </property>
@@ -52,15 +55,7 @@
        </spacer>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="menuRight">
-        <item>
-         <widget class="QLabel" name="userLabel">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <layout class="QHBoxLayout" name="menuRight"/>
       </item>
      </layout>
     </item>

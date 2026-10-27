@@ -37,6 +37,7 @@ from nicos.guisupport.qt import (
     QApplication,
     QDialog,
     QIcon,
+    QLabel,
     QMainWindow,
     QMenu,
     QMessageBox,
@@ -266,7 +267,10 @@ class MainWindow(DlgUtils, QMainWindow):
         helpMenu.addSeparator()
         helpMenu.addAction(self.actionAbout)
 
-        self.loginBtn = QPushButton("")
+        self.userLabel = QLabel("User: ")
+        self.userLabel.setStyleSheet("font-size: 17pt; color: white")
+        self.loginBtn = QPushButton("Login")
+        self.menuRight.addWidget(self.userLabel)
         self.menuRight.addWidget(self.loginBtn)
 
         self.menu = QPushButton("Application")
@@ -601,6 +605,8 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionEmergencyStop.setEnabled(not self.client.viewonly)
         self.actionConnect.setText("Disconnect")
         self.actionViewOnly.setChecked(self.client.viewonly)
+        self.loginBtn.setText("Logout")
+        self.loginBtn.setIcon(get_icon("exit_to_app-24px.svg"))
 
         # set focus to command input, if present
         for panel in self.panels:
@@ -629,6 +635,8 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionExpert.setEnabled(False)
         self.actionViewOnly.setEnabled(False)
         self.actionEmergencyStop.setEnabled(False)
+        self.loginBtn.setText("Login")
+        self.loginBtn.setIcon(get_icon(""))
         self.setTitlebar(False)
 
     def on_client_showhelp(self, data):
