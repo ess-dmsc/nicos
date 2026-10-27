@@ -36,14 +36,13 @@ READBACKS = {
     "delay_stddev": ("Delay error std dev", "ns"),
     "delay_fwhm": ("Delay error FWHM", "ns"),
     "park_status": (None, ""),
-    "park_position": (None, "deg"),
-    "command": (None, ""),
+    "position": (None, "deg"),
 }
 
 
 class ChopperDialog(QDialog):
     """Dialog to control an ESS chopper disc: speed and phase first, then
-    parking, the drive commands and the IOC's delay statistics."""
+    parking, clearing alarms and the IOC's delay statistics."""
 
     closed = pyqtSignal(object)
 
@@ -136,24 +135,14 @@ class ChopperDialog(QDialog):
             grid,
             1,
             "Angle",
-            self.readbacks["park_position"],
+            self.readbacks["position"],
             self.park_angle,
             self.btn_park_angle,
         )
 
         drive, grid = self._group("Drive")
-        self.command_choice = self._choice("The IOC's drive commands")
-        self.btn_command = self._button("Send")
         self.btn_reset = self._button("Clear alarms")
-        self._row(
-            grid,
-            0,
-            "Command",
-            self.readbacks["command"],
-            self.command_choice,
-            self.btn_command,
-        )
-        grid.addWidget(self.btn_reset, 1, 3)
+        grid.addWidget(self.btn_reset, 0, 3)
 
         buttons = QHBoxLayout()
         self.btn_history = QPushButton("History")
@@ -170,7 +159,6 @@ class ChopperDialog(QDialog):
         self.phase_target.returnPressed.connect(self._move_phase)
         self.btn_park.clicked.connect(self._park)
         self.btn_park_angle.clicked.connect(self._park_at_angle)
-        self.btn_command.clicked.connect(self._send_command)
         self.btn_reset.clicked.connect(self._reset)
         self.btn_history.clicked.connect(
             lambda: self.devices_panel.plot_history(self.devname)
@@ -235,8 +223,7 @@ class ChopperDialog(QDialog):
 
         self.description.setText(self.params.get("description", ""))
         self.description.setVisible(bool(self.params.get("description")))
-        self._fill_choices(self.park_choice, "park")
-        self._fill_choices(self.command_choice, "command")
+        self._fill_choices(self.park_choice, "park_command")
         self.state.setText(str(self.params.get("state", "")))
         self._update_status(*self.devinfo.status)
         for param in READBACKS:
@@ -306,17 +293,12 @@ class ChopperDialog(QDialog):
     def _park(self):
         if self.park_choice.currentIndex() >= 0:
             choice = self.park_choice.currentText()
-            self._exec(f"set({self.devname!r}, 'park', {choice!r})")
+            self._exec(f"{self.devrepr}.park({choice!r})")
 
     def _park_at_angle(self):
         angle = self._target(self.park_angle)
         if angle is not None:
-            self._exec(f"set({self.devname!r}, 'park_angle', {angle!r})")
-
-    def _send_command(self):
-        if self.command_choice.currentIndex() >= 0:
-            choice = self.command_choice.currentText()
-            self._exec(f"set({self.devname!r}, 'command', {choice!r})")
+            self._exec(f"move({self.devrepr}.position, {angle!r})")
 
     def _reset(self):
         self._exec(f"reset({self.devrepr})")

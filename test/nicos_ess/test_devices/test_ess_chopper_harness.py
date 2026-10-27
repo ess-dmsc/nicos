@@ -3,11 +3,13 @@ import time
 import pytest
 
 from nicos import session
-from nicos.core import SIMULATION, status
+from nicos.core import SIMULATION, mixins, status
 from nicos.core.errors import (
     CommunicationError,
-    ConfigurationError,
+    InvalidValueError,
+    LimitError,
     MoveError,
+    PositionError,
     UsageError,
 )
 from nicos_ess.devices.epics.chopper import (
@@ -261,6 +263,71 @@ def test_a_phase_move_completes_when_the_disc_is_in_phase_again(
     assert run(device_harness, disc.phase.read) == pytest.approx(90.0)
 
 
+def test_moving_the_disc_sets_the_speed_then_the_phase(device_harness, backend, disc):
+    run(device_harness, disc.start, (14.0, 90.0))
+
+    assert puts(backend) == [
+        (SPEED_SETPOINT, 14.0),
+        ("C_ExecuteUser", "Start"),
+        ("ChopDly-S", pytest.approx(1e9 / 14 / 4)),
+    ]
+    assert not run(device_harness, disc.isCompleted)
+    spin(backend, 14.0)
+    assert run(device_harness, disc.isCompleted)
+    assert run(device_harness, disc.read) == pytest.approx((14.0, 90.0))
+
+
+def test_moving_the_disc_to_speed_zero_only_stops_it(device_harness, backend, disc):
+    spin(backend, 14.0)
+    run(device_harness, disc.start, (0.0, 90.0))
+
+    assert puts(backend) == [(SPEED_SETPOINT, 0.0), ("C_ExecuteUser", "Stop")]
+
+
+def test_the_disc_checks_speed_and_phase(device_harness, backend, disc):
+    assert run(device_harness, disc.isAllowed, (14.0, 90.0))[0]
+    assert run(device_harness, disc.isAllowed, (0.0, 400.0))[0]
+    assert not run(device_harness, disc.isAllowed, (20.0, 90.0))[0]
+    assert not run(device_harness, disc.isAllowed, (14.0, 360.0))[0]
+
+
+def test_a_move_that_never_phases_in_times_out(
+    device_harness, backend, disc, monkeypatch
+):
+    now = [1000.0]
+    monkeypatch.setattr(mixins, "monotonic", lambda: now[0])
+    spin(backend, 14.0)
+    run(device_harness, disc.phase.start, 90.0)
+    assert not run(device_harness, disc.phase.isCompleted)
+    now[0] += 601
+    with pytest.raises(PositionError, match="not done after 600 s: not in phase"):
+        run(device_harness, disc.phase.isCompleted)
+
+
+def test_a_finished_move_does_not_time_out_later(
+    device_harness, backend, disc, monkeypatch
+):
+    now = [1000.0]
+    monkeypatch.setattr(mixins, "monotonic", lambda: now[0])
+    spin(backend, 14.0)
+    run(device_harness, disc.phase.start, 90.0)
+    emit(backend, "InPhaseTS-R", 1)
+    assert run(device_harness, disc.phase.isCompleted)
+    now[0] += 601
+    emit(backend, "InPhaseTS-R", 0)
+    assert not run(device_harness, disc.phase.isCompleted)
+
+
+def test_waiting_for_a_park_times_out(device_harness, backend, disc, monkeypatch):
+    now = [1000.0]
+    monkeypatch.setattr(mixins, "monotonic", lambda: now[0])
+    run(device_harness, disc.park, "ParkClosed")
+    assert not run(device_harness, disc.isCompleted)
+    now[0] += 601
+    with pytest.raises(PositionError, match="parking"):
+        run(device_harness, disc.isCompleted)
+
+
 def test_a_move_waits_while_the_disc_is_off_speed(device_harness, backend, disc):
     spin(backend, 14.0)
     run(device_harness, disc.phase.start, 90.0)
@@ -304,7 +371,7 @@ def test_a_park_command_the_drive_does_not_take_says_so(device_harness, backend,
     backend.put_pv_value = lambda pvname, value, wait=False: None
 
     with pytest.raises(MoveError, match="did not take the park command ParkOpen"):
-        set_param(device_harness, disc, "park", "ParkOpen")
+        run(device_harness, disc.park, "ParkOpen")
 
 
 def test_a_lost_ioc_during_the_acknowledgement_is_a_communication_error(
@@ -319,7 +386,7 @@ def test_a_lost_ioc_during_the_acknowledgement_is_a_communication_error(
     backend.put_pv_value = put_and_disconnect
 
     with pytest.raises(CommunicationError):
-        set_param(device_harness, disc, "park_angle", 42.0)
+        run(device_harness, disc.position.start, 42.0)
 
 
 def test_a_lost_ioc_connection_aborts_a_move(device_harness, backend, disc):
@@ -376,7 +443,6 @@ def test_phase_is_chopdly_at_the_target_speed(device_harness, backend, disc):
     assert run(device_harness, disc.phase.read) == pytest.approx(90.0)
     assert run(device_harness, disc.phase.read, 0) == pytest.approx(90.0)
     assert run(device_harness, lambda: disc.phase.unit) == "deg"
-    assert run(device_harness, lambda: disc.delay) == pytest.approx(1e9 / 56)
 
     run(device_harness, disc.phase.start, 180.0)
     assert puts(backend) == [("ChopDly-S", pytest.approx(1e9 / 14 / 2))]
@@ -493,20 +559,6 @@ def test_the_unit_and_format_replace_older_cached_ones(device_harness, backend, 
     assert run(device_harness, lambda: disc.fmtstr) == "[%.2f, %.2f]"
 
 
-def set_param(device_harness, device, param, value):
-    device_harness.run("daemon", setattr, device, param, value)
-
-
-def test_commands_are_the_ioc_choices(device_harness, backend, disc):
-    choices = run(device_harness, lambda: disc.parameters["command"].type.vals)
-    assert choices == ("No request", "Start", "Stop", "Clear Alarms")
-
-    set_param(device_harness, disc, "command", "Clear Alarms")
-    assert puts(backend) == [("C_ExecuteUser", "Clear Alarms")]
-    with pytest.raises(ConfigurationError):
-        set_param(device_harness, disc, "command", "ClearAlarm")
-
-
 def test_reset_clears_the_alarms_with_the_iocs_choice(device_harness, backend, disc):
     emit(backend, "Lvl_Alrm", 2)
     run(device_harness, disc.reset)
@@ -522,22 +574,24 @@ def test_reset_without_alarms_sends_nothing(device_harness, backend, disc):
 
 
 def test_park(device_harness, backend, disc):
-    set_param(device_harness, disc, "park", "ParkOpen")
-    set_param(device_harness, disc, "park", "ParkClosed")
-    set_param(device_harness, disc, "park_angle", 42.0)
+    run(device_harness, disc.park, "ParkOpen")
+    run(device_harness, disc.park, "ParkClosed")
+    run(device_harness, disc.position.start, 42.0)
 
     assert puts(backend) == [
         ("C_Park", "ParkOpen"),
         ("C_Park", "ParkClosed"),
         ("Park_S", 42.0),
     ]
-    with pytest.raises(ConfigurationError):
-        set_param(device_harness, disc, "park", "open")
+    with pytest.raises(InvalidValueError):
+        run(device_harness, disc.park, "open")
+    choices = run(device_harness, lambda: disc.parameters["park_command"].type.vals)
+    assert choices == tuple(PARK_COMMANDS)
 
 
 def test_waiting_on_the_disc_waits_for_the_park_position(device_harness, backend, disc):
     # YMIR: the drive takes the command at once, reports Parking seconds later
-    set_param(device_harness, disc, "park", "ParkClosed")
+    run(device_harness, disc.park, "ParkClosed")
     assert not run(device_harness, disc.isCompleted)
     emit(backend, "Pos_R", 7.83)
     assert run(device_harness, disc.isCompleted)
@@ -547,7 +601,7 @@ def test_a_disc_at_its_park_target_is_parked_whatever_park_status_says(
     device_harness, backend, disc
 ):
     # YMIR's drive reaches the park and leaves ParkStatus_R at Parking
-    set_param(device_harness, disc, "park", "ParkOpen")
+    run(device_harness, disc.park, "ParkOpen")
     emit(backend, "ParkStatus_R", 2)
     assert run(device_harness, disc.status)[0] == status.BUSY
     emit(backend, "Pos_R", 277.82)
@@ -595,31 +649,70 @@ def test_a_disc_stopped_without_a_park_is_not_parking(device_harness, backend, d
     assert run(device_harness, disc.status)[0] == status.OK
 
 
+def test_position_is_the_resolver_position(device_harness, backend, disc):
+    emit(backend, "Pos_R", 61.8)
+
+    assert run(device_harness, disc.position.read) == 61.8
+    assert run(device_harness, lambda: disc.position.unit) == "deg"
+
+
 def test_parking_at_an_angle_waits_for_the_new_target(device_harness, backend, disc):
-    set_param(device_harness, disc, "park_angle", 42.0)
+    run(device_harness, disc.position.start, 42.0)
     assert run(device_harness, disc.status)[0] == status.BUSY
+    assert not run(device_harness, disc.position.isCompleted)
     emit(backend, "Pos_R", 42.0)
     assert run(device_harness, disc.isCompleted)
+    assert run(device_harness, disc.position.isCompleted)
+
+
+def test_a_position_move_waits_for_the_precision(device_harness, backend, disc):
+    # YMIR: the drive reports Ready 0.2-0.45 deg short of the target and the
+    # disc creeps there over the next seconds
+    run(device_harness, disc.position.start, 62.0)
+    emit(backend, "Pos_R", 61.7)
+    assert run(device_harness, disc.status)[0] == status.OK
+    assert not run(device_harness, disc.position.isCompleted)
+    emit(backend, "Pos_R", 61.93)
+    assert run(device_harness, disc.position.isCompleted)
+
+
+def test_a_position_move_completes_across_zero(device_harness, backend, disc):
+    run(device_harness, disc.position.start, 0.0)
+    emit(backend, "Pos_R", 359.95)
+
+    assert run(device_harness, disc.position.isCompleted)
+
+
+def test_a_position_move_times_out(device_harness, backend, disc, monkeypatch):
+    # after a park to 120 YMIR's disc sat 0.13-0.16 deg off for minutes
+    now = [1000.0]
+    monkeypatch.setattr(mixins, "monotonic", lambda: now[0])
+    run(device_harness, disc.position.start, 120.5)
+    emit(backend, "Pos_R", 120.35)
+    assert not run(device_harness, disc.position.isCompleted)
+    now[0] += 61
+    with pytest.raises(PositionError):
+        run(device_harness, disc.position.isCompleted)
 
 
 def test_a_repeated_park_command_is_sent_again(device_harness, backend, disc):
     # YMIR: C_Park still holds ParkOpen after a park at an angle, and the drive
     # ignores a write that does not change it
-    set_param(device_harness, disc, "park", "ParkOpen")
-    set_param(device_harness, disc, "park_angle", 120.0)
+    run(device_harness, disc.park, "ParkOpen")
+    run(device_harness, disc.position.start, 120.0)
     backend.put_calls.clear()
-    set_param(device_harness, disc, "park", "ParkOpen")
+    run(device_harness, disc.park, "ParkOpen")
 
     assert puts(backend) == [("C_Park", "Null"), ("C_Park", "ParkOpen")]
 
 
 def test_parking_at_the_angle_park_s_holds_sends_park_sp(device_harness, backend, disc):
     # YMIR: Park_S already held 120 and the drive ignored writing it again
-    set_param(device_harness, disc, "park_angle", 120.0)
-    set_param(device_harness, disc, "park", "ParkOpen")
+    run(device_harness, disc.position.start, 120.0)
+    run(device_harness, disc.park, "ParkOpen")
     emit(backend, "Pos_R", 277.83)
     backend.put_calls.clear()
-    set_param(device_harness, disc, "park_angle", 120.0)
+    run(device_harness, disc.position.start, 120.0)
 
     assert puts(backend) == [("C_Park", "ParkSP")]
     assert run(device_harness, disc.status)[0] == status.BUSY
@@ -635,10 +728,10 @@ def test_a_resent_command_holds_the_no_command_for_the_plc(
         backend.put_calls.append(("delay", seconds, False))
 
     monkeypatch.setattr(UnitTestSession, "delay", delay)
-    set_param(device_harness, disc, "park", "ParkOpen")
-    set_param(device_harness, disc, "park_angle", 120.0)
+    run(device_harness, disc.park, "ParkOpen")
+    run(device_harness, disc.position.start, 120.0)
     backend.put_calls.clear()
-    set_param(device_harness, disc, "park", "ParkOpen")
+    run(device_harness, disc.park, "ParkOpen")
 
     assert puts(backend) == [
         ("C_Park", "Null"),
@@ -659,13 +752,39 @@ def test_a_repeated_start_is_sent_again(device_harness, backend, disc):
     ]
 
 
+def resend_start(device_harness, backend, choices):
+    backend.value_choices[f"{ROOT}C_ExecuteUser"] = choices
+    backend.values[f"{ROOT}C_ExecuteUser"] = choices.index("Start")
+    disc, _ = device_harness.create_pair(
+        EssChopper, name="disc", shared={"pv_root": ROOT, "chic_root": CHIC}
+    )
+    run(device_harness, disc.speed.start, 14.0)
+
+
+def test_a_resent_command_finds_the_no_command_by_name(device_harness, backend, clock):
+    resend_start(device_harness, backend, ["Coast", "Start", "Null", "Stop"])
+
+    assert puts(backend) == [
+        (SPEED_SETPOINT, 14.0),
+        ("C_ExecuteUser", "Null"),
+        ("C_ExecuteUser", "Start"),
+    ]
+
+
+def test_a_command_without_a_no_command_is_not_resent(device_harness, backend, clock):
+    with pytest.raises(UsageError, match="no Null command to send Start again"):
+        resend_start(device_harness, backend, ["Coast", "Start", "Stop"])
+
+    assert puts(backend) == [(SPEED_SETPOINT, 14.0)]
+
+
 def test_park_refuses_a_turning_disc(device_harness, backend, disc):
     spin(backend, 14.0)
 
-    with pytest.raises(UsageError):
-        set_param(device_harness, disc, "park", "ParkOpen")
-    with pytest.raises(UsageError):
-        set_param(device_harness, disc, "park_angle", 42.0)
+    with pytest.raises(LimitError, match="stop the disc"):
+        run(device_harness, disc.park, "ParkOpen")
+    with pytest.raises(LimitError, match="stop the disc"):
+        run(device_harness, disc.position.start, 42.0)
     assert puts(backend) == []
 
 
@@ -679,7 +798,7 @@ def t0(device_harness, backend, clock):
 
 def test_t0_parking_follows_park_status(device_harness, backend, t0):
     # the T0's ParkS_RB does not follow its park target
-    set_param(device_harness, t0, "park", "Window 1")
+    run(device_harness, t0.park, "Window 1")
     emit(backend, "ParkS_RB", 0.0)
     emit(backend, "ParkStatus_R", 2)
     assert run(device_harness, t0.status)[0] == status.BUSY
@@ -689,9 +808,9 @@ def test_t0_parking_follows_park_status(device_harness, backend, t0):
 
 def test_t0_commands_and_parking(device_harness, backend, t0):
     emit(backend, "Lvl_Alrm", 2)
-    set_param(device_harness, t0, "park", "Close")
-    set_param(device_harness, t0, "park", "Window 1")
-    set_param(device_harness, t0, "park_angle", 42.0)
+    run(device_harness, t0.park, "Close")
+    run(device_harness, t0.park, "Window 1")
+    run(device_harness, t0.position.start, 42.0)
     run(device_harness, t0.speed.start, 14.0)
     run(device_harness, t0.speed.start, 0.0)
     run(device_harness, t0.reset)
@@ -716,13 +835,17 @@ def test_a_dry_run_does_not_touch_the_ioc(device_harness, backend, clock):
 
     with device_harness.activate("daemon") as active_session:
         active_session.setMode(SIMULATION)
+        disc.start((14.0, 90.0))
         disc.speed.start(14.0)
         disc.phase.start(90.0)
-        disc.park = "ParkOpen"
+        disc.park("ParkOpen")
+        disc.position.start(42.0)
         disc.reset()
         assert backend.put_calls == []
+        disc.wait()
         disc.speed.wait()
         disc.phase.wait()
+        disc.position.wait()
         values = disc.speed.read(), disc.phase.read()
 
     assert values == (14.0, 90.0)
@@ -733,6 +856,6 @@ def test_gui_info(device_harness, disc):
     info = run(device_harness, disc.get_chopper_gui_info)
 
     assert info["speed_key"] == "disc/speed_readback"
-    assert info["park_angle_key"] == "disc/park_position"
+    assert info["park_angle_key"] == "disc/position"
     assert info["delay_errors_key"] == "disc/delay_errors"
     assert info["legacy_spd_sign"] is False

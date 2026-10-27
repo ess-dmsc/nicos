@@ -32,6 +32,12 @@ def wrap360(value: float) -> float:
     return float(value) % 360.0
 
 
+def angle_distance(a: float, b: float) -> float:
+    """Distance between two angles in degrees, across 0/360."""
+    distance = abs(a - b) % 360.0
+    return min(distance, 360.0 - distance)
+
+
 def is_chopper_moving(speed_hz) -> bool:
     return speed_hz is not None and abs(float(speed_hz)) >= 2.0
 
