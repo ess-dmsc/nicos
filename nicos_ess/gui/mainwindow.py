@@ -271,13 +271,17 @@ class MainWindow(DlgUtils, QMainWindow):
         helpMenu.addAction(self.actionAbout)
         self.help.setMenu(helpMenu)
 
-        self.userInfo = QLabel("User: ")
+        self.menu.setProperty("class", "mainMenuDropdown")
+        self.help.setProperty("class", "mainMenuDropdown")
+
+        self.userInfo = QLabel("User:")
         self.userLabel = QLabel("")
         self.userInfo.setStyleSheet("font-size: 16pt; color:white; font-weight:bold")
         self.userLabel.setStyleSheet("font-size: 16pt; color: white")
 
         self.loginBtn = QPushButton("Login")
         self.loginBtn.clicked.connect(self.on_actionlogin_triggered)
+        self.loginBtn.setProperty("class", "loginButton")
 
         self.menuLeft.addWidget(self.menu)
         self.menuLeft.addWidget(self.help)
@@ -515,10 +519,11 @@ class MainWindow(DlgUtils, QMainWindow):
         if connected:
             hoststr = f"{self.client.login} at {self.client.host}:{self.client.port}"
             self.setWindowTitle(f"{inststr} - {hoststr}")
-            self.userLabel.setText(f"{self.client.login}     ")
+            username = str(self.client.login).upper()
+            self.userLabel.setText(f"{username}   ")
         else:
             self.setWindowTitle(f"{inststr} - disconnected")
-            self.userLabel.setText("NONE     ")
+            self.userLabel.setText("NONE   ")
 
     def setStatus(self, status, exception=False):
         if status == self.current_status:

@@ -17,7 +17,6 @@ QMenuBar {
 MainWindow > QSplitter::hover {
     background: transparent;
 }
-
 /* ----- QMessageBox ------------------------------------------------ */
 
 QMessageBox QLabel {
@@ -36,7 +35,6 @@ QMenuBar::item:pressed {
     background: white ;
     color:black;
 }
-
 /* -------------------- QToolBar -------------------- */
 
 QToolBar {
@@ -253,7 +251,7 @@ Dashboard > QPushButton:Enabled{
     color:white;
     font-weight:bold;
     background-color: red;
-    border-color:red
+    border-color:red;
 }
 
 Dashboard > QPushButton:Disabled{
@@ -503,7 +501,6 @@ QPushButton:checked:pressed {
     color: #0094ca;
     background-color: white;
 }
-
 /* -------------------- QDialog ------------------------ */
 /* At the end, so that it overrides QTab*/
 
@@ -601,3 +598,48 @@ QCheckBox:disabled {
 
 /* Remove icons from built-in Qt dialogs. */
 QDialogButtonBox { dialogbuttonbox-buttons-have-icons: 0; }
+
+/*Special mainwindow properties to avoid overriding child panel styles*/
+.mainMenuDropdown{
+    background-color: #1f5366;
+    color: white;
+    border-color: #1f5366;
+}
+
+.mainMenuDropdown:menu-indicator{
+    width:0px
+}
+.mainMenuDropdown:!checked:hover {
+    border-color: #0094ca;
+    background-color: #0094ca;
+    color: white;
+}
+
+.mainMenuDropdown:!checked:pressed {
+    border-color: #0094ca;
+    background-color: #0094ca;
+}
+
+.mainMenuDropdown:focus {
+    background-color: #1f5366;
+    color: white;
+    border-color: #1f5366
+}
+
+.loginButton{
+    background-color: #1f5366;
+    border-color: white;
+    color: white;
+}
+
+.loginButton:!checked:hover {
+    border-color: #0094ca;
+    background-color: #0094ca;
+    color: white;
+}
+
+.loginButton:focus {
+    background-color: #1f5366;
+    border-color: white;
+    color: white;
+}
