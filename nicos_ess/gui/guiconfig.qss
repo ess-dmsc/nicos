@@ -609,7 +609,14 @@ QDialogButtonBox { dialogbuttonbox-buttons-have-icons: 0; }
 .mainMenuDropdown:menu-indicator{
     width:0px
 }
+
 .mainMenuDropdown:!checked:hover {
+    border-color: #0094ca;
+    background-color: #0094ca;
+    color: white;
+}
+
+.mainMenuDropdown:checked:hover {
     border-color: #0094ca;
     background-color: #0094ca;
     color: white;
