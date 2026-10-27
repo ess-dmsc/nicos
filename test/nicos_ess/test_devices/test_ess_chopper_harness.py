@@ -683,6 +683,11 @@ def test_a_position_move_completes_across_zero(device_harness, backend, disc):
     assert run(device_harness, disc.position.isCompleted)
 
 
+def test_a_position_above_359_is_not_allowed(device_harness, disc):
+    assert run(device_harness, disc.position.isAllowed, 359.0)[0]
+    assert not run(device_harness, disc.position.isAllowed, 359.5)[0]
+
+
 def test_a_position_move_times_out(device_harness, backend, disc, monkeypatch):
     # after a park to 120 YMIR's disc sat 0.13-0.16 deg off for minutes
     now = [1000.0]

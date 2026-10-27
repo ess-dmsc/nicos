@@ -951,7 +951,7 @@ class ChopperPosition(HasPrecision, ChopperAxis):
     """Resolver position of the disc in degrees. Moving it parks the stopped
     disc there; the move completes when the drive is done and the disc is
     within the precision, which can take some seconds after the drive reports
-    Ready."""
+    Ready. The drive parks a target above 359 degrees at 359."""
 
     parameter_overrides = {
         "unit": Override(default="deg", mandatory=False, settable=False),
@@ -963,8 +963,8 @@ class ChopperPosition(HasPrecision, ChopperAxis):
         return self._attached_chopper._read_channel_cached("position", maxage=maxage)
 
     def doIsAllowed(self, target):
-        if not 0 <= target < 360:
-            return False, "the position must be in [0, 360) degrees"
+        if not 0 <= target <= 359:
+            return False, "the drive parks in [0, 359] degrees"
         return self._attached_chopper._park_allowed()
 
     def doStart(self, target):
