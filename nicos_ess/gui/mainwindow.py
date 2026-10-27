@@ -41,6 +41,7 @@ from nicos.guisupport.qt import (
     QMenu,
     QMessageBox,
     QPixmap,
+    QPushButton,
     QSystemTrayIcon,
     Qt,
     QTimer,
@@ -242,21 +243,38 @@ class MainWindow(DlgUtils, QMainWindow):
 
         # create initial state
         self.set_icons()
-        self._create_cheeseburger_menu()
+        self._create_menu_bar()
         self.actionUser.setIconVisibleInMenu(True)
         self.actionExpert.setEnabled(self.client.isconnected)
         self.actionEmergencyStop.setEnabled(self.client.isconnected)
         self.on_client_disconnected()
 
-    def _create_cheeseburger_menu(self):
-        dropdown = QMenu("")
-        dropdown.addAction(self.actionConnect)
-        dropdown.addAction(self.actionViewOnly)
-        dropdown.addAction(self.actionPreferences)
-        dropdown.addAction(self.actionExpert)
-        dropdown.addSeparator()
-        dropdown.addAction(self.actionExit)
-        self.dropdown = dropdown
+    def _create_menu_bar(self):
+        applicationMenu = QMenu("")
+        applicationMenu.addAction(self.actionConnect)
+        applicationMenu.addAction(self.actionViewOnly)
+        applicationMenu.addAction(self.actionPreferences)
+        applicationMenu.addAction(self.actionExpert)
+        applicationMenu.addSeparator()
+        applicationMenu.addAction(self.actionExit)
+
+        helpMenu = QMenu("")
+        helpMenu.addAction(self.actionNicosHelp)
+        helpMenu.addAction(self.actionNicosDocu)
+        helpMenu.addSeparator()
+        helpMenu.addAction(self.actionDebugConsole)
+        helpMenu.addSeparator()
+        helpMenu.addAction(self.actionAbout)
+
+        self.loginBtn = QPushButton("")
+        self.menuRight.addWidget(self.loginBtn)
+
+        self.menu = QPushButton("Application")
+        self.menu.setMenu(applicationMenu)
+        self.menuLeft.addWidget(self.menu)
+        self.help = QPushButton("Help")
+        self.help.setMenu(helpMenu)
+        self.menuLeft.addWidget(self.help)
 
     def set_icons(self):
         self.actionUser.setIcon(get_icon("settings_applications-24px.svg"))
@@ -305,23 +323,6 @@ class MainWindow(DlgUtils, QMainWindow):
         if len(self.splitstate) == len(self.splitters):
             for sp, st in zip(self.splitters, self.splitstate, strict=True):
                 sp.restoreState(st)
-
-        if not self.gui_conf.windows:
-            self.menuBar().removeAction(self.menuWindows.menuAction())
-        for i, wconfig in enumerate(self.gui_conf.windows):
-            action = ToolAction(
-                self.client,
-                QIcon(":/" + wconfig.icon),
-                wconfig.name,
-                wconfig.options,
-                self,
-            )
-            self.menuWindows.addAction(action)
-
-            def window_callback(on, i=i):
-                self.createWindow(i)
-
-            action.triggered[bool].connect(window_callback)
 
         if isinstance(self.gui_conf.main_window, tabbed) and widget:
             widget.tabChangedTab(0)
@@ -505,8 +506,10 @@ class MainWindow(DlgUtils, QMainWindow):
         if connected:
             hoststr = f"{self.client.login} at {self.client.host}:{self.client.port}"
             self.setWindowTitle(f"{inststr} - {hoststr}")
+            self.userLabel.setText(f"User: {self.client.login}     ")
         else:
             self.setWindowTitle(f"{inststr} - disconnected")
+            self.userLabel.setText("User: None     ")
 
     def setStatus(self, status, exception=False):
         if status == self.current_status:

@@ -28,7 +28,41 @@
      <number>5</number>
     </property>
     <item>
-     <layout class="QHBoxLayout" name="menuBar"/>
+     <layout class="QHBoxLayout" name="menuLayout" stretch="0,1,0">
+      <property name="leftMargin">
+       <number>6</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <item>
+       <layout class="QHBoxLayout" name="menuLeft"/>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="menuRight">
+        <item>
+         <widget class="QLabel" name="userLabel">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
     </item>
     <item>
      <layout class="QVBoxLayout" name="centralLayout">
@@ -50,47 +84,6 @@
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>889</width>
-     <height>22</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuWindows">
-    <property name="title">
-     <string>&amp;Windows</string>
-    </property>
-   </widget>
-   <widget class="QMenu" name="menuHelp">
-    <property name="title">
-     <string>&amp;Help</string>
-    </property>
-    <addaction name="actionNicosHelp"/>
-    <addaction name="actionNicosDocu"/>
-    <addaction name="separator"/>
-    <addaction name="actionDebugConsole"/>
-    <addaction name="separator"/>
-    <addaction name="actionAbout"/>
-   </widget>
-   <widget class="QMenu" name="menuFile">
-    <property name="title">
-     <string>&amp;Application</string>
-    </property>
-    <addaction name="actionConnect"/>
-    <addaction name="actionViewOnly"/>
-    <addaction name="actionExpert"/>
-    <addaction name="separator"/>
-    <addaction name="actionPreferences"/>
-    <addaction name="separator"/>
-    <addaction name="actionExit"/>
-   </widget>
-   <addaction name="menuFile"/>
-   <addaction name="menuWindows"/>
-   <addaction name="menuHelp"/>
-  </widget>
   <action name="actionConnect">
    <property name="checkable">
     <bool>false</bool>
@@ -99,7 +92,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="../../resources/nicos-gui.qrc">
      <normaloff>:/connect</normaloff>
      <normalon>:/disconnect</normalon>:/connect</iconset>
    </property>
@@ -121,7 +114,7 @@
   </action>
   <action name="actionExit">
    <property name="icon">
-    <iconset>
+    <iconset resource="../../resources/nicos-gui.qrc">
      <normaloff>:/quit</normaloff>:/quit</iconset>
    </property>
    <property name="text">
@@ -183,7 +176,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="../../resources/nicos-gui.qrc">
      <normaloff>:/viewonly</normaloff>:/viewonly</iconset>
    </property>
    <property name="text">
@@ -198,7 +191,7 @@
   </action>
   <action name="actionUser">
    <property name="icon">
-    <iconset>
+    <iconset resource="../../resources/nicos-gui.qrc">
      <normaloff>:/hamburger</normaloff>:/hamburger</iconset>
    </property>
    <property name="text">
@@ -210,7 +203,7 @@
   </action>
   <action name="actionEmergencyStop">
    <property name="icon">
-    <iconset>
+    <iconset resource="../../resources/nicos-gui.qrc">
      <normaloff>:/emergency</normaloff>:/emergency</iconset>
    </property>
    <property name="text">
@@ -222,7 +215,7 @@
   </action>
  </widget>
  <resources>
-  <include location="../../../resources/nicos-gui.qrc"/>
+  <include location="../../resources/nicos-gui.qrc"/>
  </resources>
  <connections>
   <connection>
