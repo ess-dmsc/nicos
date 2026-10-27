@@ -251,6 +251,7 @@ class MainWindow(DlgUtils, QMainWindow):
         self.on_client_disconnected()
 
     def _create_menu_bar(self):
+        self.menu = QPushButton("Application")
         applicationMenu = QMenu("")
         applicationMenu.addAction(self.actionConnect)
         applicationMenu.addAction(self.actionViewOnly)
@@ -258,7 +259,9 @@ class MainWindow(DlgUtils, QMainWindow):
         applicationMenu.addAction(self.actionExpert)
         applicationMenu.addSeparator()
         applicationMenu.addAction(self.actionExit)
+        self.menu.setMenu(applicationMenu)
 
+        self.help = QPushButton("Help")
         helpMenu = QMenu("")
         helpMenu.addAction(self.actionNicosHelp)
         helpMenu.addAction(self.actionNicosDocu)
@@ -266,19 +269,21 @@ class MainWindow(DlgUtils, QMainWindow):
         helpMenu.addAction(self.actionDebugConsole)
         helpMenu.addSeparator()
         helpMenu.addAction(self.actionAbout)
+        self.help.setMenu(helpMenu)
 
-        self.userLabel = QLabel("User: ")
-        self.userLabel.setStyleSheet("font-size: 17pt; color: white")
+        self.userInfo = QLabel("User: ")
+        self.userLabel = QLabel("")
+        self.userInfo.setStyleSheet("font-size: 16pt; color:white; font-weight:bold")
+        self.userLabel.setStyleSheet("font-size: 16pt; color: white")
+
         self.loginBtn = QPushButton("Login")
+        self.loginBtn.clicked.connect(self.on_actionlogin_triggered)
+
+        self.menuLeft.addWidget(self.menu)
+        self.menuLeft.addWidget(self.help)
+        self.menuRight.addWidget(self.userInfo)
         self.menuRight.addWidget(self.userLabel)
         self.menuRight.addWidget(self.loginBtn)
-
-        self.menu = QPushButton("Application")
-        self.menu.setMenu(applicationMenu)
-        self.menuLeft.addWidget(self.menu)
-        self.help = QPushButton("Help")
-        self.help.setMenu(helpMenu)
-        self.menuLeft.addWidget(self.help)
 
     def set_icons(self):
         self.actionUser.setIcon(get_icon("settings_applications-24px.svg"))
@@ -510,10 +515,10 @@ class MainWindow(DlgUtils, QMainWindow):
         if connected:
             hoststr = f"{self.client.login} at {self.client.host}:{self.client.port}"
             self.setWindowTitle(f"{inststr} - {hoststr}")
-            self.userLabel.setText(f"User: {self.client.login}     ")
+            self.userLabel.setText(f"{self.client.login}     ")
         else:
             self.setWindowTitle(f"{inststr} - disconnected")
-            self.userLabel.setText("User: None     ")
+            self.userLabel.setText("NONE     ")
 
     def setStatus(self, status, exception=False):
         if status == self.current_status:
@@ -606,7 +611,7 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionConnect.setText("Disconnect")
         self.actionViewOnly.setChecked(self.client.viewonly)
         self.loginBtn.setText("Logout")
-        self.loginBtn.setIcon(get_icon("exit_to_app-24px.svg"))
+        self.loginBtn.setIcon(get_icon("power_off-24px.svg"))
 
         # set focus to command input, if present
         for panel in self.panels:
@@ -635,8 +640,8 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionExpert.setEnabled(False)
         self.actionViewOnly.setEnabled(False)
         self.actionEmergencyStop.setEnabled(False)
+        self.loginBtn.setIcon(get_icon("power-24px.svg"))
         self.loginBtn.setText("Login")
-        self.loginBtn.setIcon(get_icon(""))
         self.setTitlebar(False)
 
     def on_client_showhelp(self, data):
@@ -840,3 +845,7 @@ class MainWindow(DlgUtils, QMainWindow):
     @pyqtSlot()
     def on_actionEmergencyStop_triggered(self):
         self.client.tell_action("emergency")
+
+    @pyqtSlot()
+    def on_actionlogin_triggered(self):
+        self.actionConnect.trigger()
