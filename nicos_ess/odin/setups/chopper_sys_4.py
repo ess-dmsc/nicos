@@ -68,17 +68,12 @@ devices = dict(
         readpv=f"{foc5_pv_root}InPhaseTS-R",
     ),
     foc5_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{foc5_pv_root}Pos_R",
         writepv=f"{foc5_pv_root}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     foc5_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -97,6 +92,16 @@ devices = dict(
         pv_root=foc5_pv_root,
         visibility=(),
     ),
+    foc5_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{foc5_pv_root}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     foc5_chopper=device(
         "nicos_ess.devices.epics.chopper.NewEssChopperController",
         description="The chopper controller",
@@ -107,6 +112,9 @@ devices = dict(
         speed="foc5_chopper_speed",
         chic_conn="chpsy4_chopper_chic",
         alarms="foc5_chopper_alarms",
+        total_delay="foc5_chopper_total_delay",
+        park_angle="foc5_chopper_park_angle",
+        delay_errors="foc5_chopper_delay_errors",
         slit_edges=[
             [0.0, 50.81],
             [62.36, 110.91],
@@ -115,9 +123,11 @@ devices = dict(
             [229.21, 266.66],
             [278.355, 316.095],
         ],
-        resolver_offset=-42.36,
-        tdc_offset=-42.36,
-        spin_direction="CW",
+        beam_position=42.36,
+        resolver_sign=-1,
+        tdc_resolver_position=0.0,
+        distance=33.0,
+        legacy_spd_sign=True,
     ),
     foc5_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

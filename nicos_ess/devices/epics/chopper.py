@@ -7,6 +7,7 @@ from nicos.core import (
     Readable,
     Waitable,
     listof,
+    none_or,
     oneof,
     status,
 )
@@ -94,28 +95,59 @@ class ChopperAlarms(EpicsStatusOnlyReadable):
 
 
 class EssChopperController(MappedMoveable):
-    """Handles the status and hardware control for an ESS chopper system"""
+    """Handles the status and hardware control for an ESS chopper system.
+
+    The geometry parameters describe the disc as in the NeXus file and the chopper
+    records, for the chopper GUI: angles in degrees anticlockwise seen from the
+    moderator, from the disc's TDC mark.
+    """
 
     parameters = {
         "slit_edges": Param(
-            "Slit edges of the chopper", type=listof(listof(float)), default=[]
+            "Openings [start, end] as in the NeXus file",
+            type=listof(listof(float)),
+            default=[],
         ),
-        "resolver_offset": Param(
-            "Offset of the resolver in degrees",
-            type=float,
-            default=0.0,
+        "beam_position": Param(
+            "Angle from the TDC sensor to the beam, as in the NeXus file",
+            type=none_or(float),
+            default=None,
             unit="degrees",
         ),
-        "tdc_offset": Param(
-            "Offset of the TDC in degrees",
-            type=float,
-            default=0.0,
+        "resolver_sign": Param(
+            "+1 if the resolver reading rises while the disc turns clockwise "
+            "seen from the moderator, -1 if it falls",
+            type=none_or(oneof(1, -1)),
+            default=None,
+        ),
+        "tdc_resolver_position": Param(
+            "Resolver reading with the TDC mark at the TDC sensor",
+            type=none_or(float),
+            default=None,
             unit="degrees",
         ),
-        "spin_direction": Param(
-            "Direction of rotation of the chopper",
-            type=oneof("CW", "CCW"),
-            default="CW",
+        "distance": Param(
+            "Distance of the disc from the moderator along the beam, as in the "
+            "NeXus file",
+            type=none_or(float),
+            default=None,
+            unit="m",
+        ),
+        "guide_position": Param(
+            "Where the beam is drawn, seen from the moderator",
+            type=oneof("RIGHT", "UP", "LEFT", "DOWN"),
+            default="DOWN",
+        ),
+        "legacy_spd_sign": Param(
+            "The speed device reads Spd_R (positive = clockwise seen from the "
+            "moderator) instead of SpdNexus-R; remove with the switch to SpdNexus-R",
+            type=bool,
+            default=False,
+        ),
+        "visual_geometry_verified": Param(
+            "Whether the chopper GUI drawing has been checked against the disc",
+            type=bool,
+            default=False,
         ),
     }
 
@@ -124,6 +156,9 @@ class EssChopperController(MappedMoveable):
         "command": Attach("Command PV of the chopper", MappedMoveable),
         "alarms": Attach("Alarms of the chopper", ChopperAlarms, optional=True),
         "speed": Attach("Speed PV of the chopper", MappedMoveable),
+        "total_delay": Attach("Total applied chopper delay", Readable),
+        "park_angle": Attach("Resolver park angle", Readable),
+        "delay_errors": Attach("Delay-error samples", Readable),
         "chic_conn": Attach("Status of the CHIC connection", Readable),
     }
 
@@ -160,6 +195,11 @@ class EssChopperController(MappedMoveable):
         # Ignore - resetting the chopper is done via the move command.
         pass
 
+    def _getWaiters(self):
+        # the park angle is BUSY whenever the disc spins
+        gui_only = ("total_delay", "park_angle", "delay_errors")
+        return {name: dev for name, dev in self._adevs.items() if name not in gui_only}
+
     def doStatus(self, maxage=0):
         if self._attached_alarms:
             stat, msg = self._attached_alarms.status(maxage)
@@ -174,6 +214,28 @@ class EssChopperController(MappedMoveable):
 
     def doReadMapping(self):
         return self._attached_command.mapping
+
+    def get_chopper_gui_info(self):
+        """Geometry and the cache keys the chopper panel subscribes to."""
+        info = {
+            "chopper": self.name,
+            "speed_key": f"{self._attached_speed.name}/value",
+            "total_delay_key": f"{self._attached_total_delay.name}/value",
+            "park_angle_key": f"{self._attached_park_angle.name}/value",
+            "delay_errors_key": f"{self._attached_delay_errors.name}/raw_errors",
+        }
+        for param in (
+            "slit_edges",
+            "beam_position",
+            "resolver_sign",
+            "tdc_resolver_position",
+            "distance",
+            "guide_position",
+            "legacy_spd_sign",
+            "visual_geometry_verified",
+        ):
+            info[param] = getattr(self, param)
+        return info
 
 
 class NewChopperAlarms(ChopperAlarms):
