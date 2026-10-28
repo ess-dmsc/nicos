@@ -247,17 +247,6 @@ Dashboard > QLabel {
     color: white;
 }
 
-Dashboard > QPushButton:Enabled{
-    color:white;
-    font-weight:bold;
-    background-color: red;
-    border-color:red;
-}
-
-Dashboard > QPushButton:Disabled{
-    background-color:white;
-}
-
 /* QTabBar::tab  ------------------------------------------------
 
 https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qtabwidget-and-qtabbar
@@ -649,4 +638,15 @@ QDialogButtonBox { dialogbuttonbox-buttons-have-icons: 0; }
     background-color: #1f5366;
     border-color: white;
     color: white;
+}
+
+.stopButton:Enabled{
+    color:white;
+    font-weight:bold;
+    background-color: red;
+    border-color:red;
+}
+
+.stopButton:Disabled{
+    background-color:white;
 }

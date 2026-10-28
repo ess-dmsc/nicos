@@ -22,6 +22,7 @@ from nicos.protocols.daemon import (
 from nicos.utils import (
     findResource,
 )
+from nicos_ess.gui.utils import get_icon
 
 try:
     from nicos.clients.gui.dialogs.help import HelpWindow
@@ -121,6 +122,10 @@ class Dashboard(Panel):
 
         self.emergency_button = QPushButton("STOP")
         self.emergency_button.clicked.connect(self.on_actionEmergencyStop_triggered)
+        self.emergency_button.setProperty("class", "stopButton")
+        self.login_button = QPushButton("Logout")
+        self.login_button.clicked.connect(self.on_actionLogin_triggered)
+        self.login_button.setProperty("class", "loginButton")
 
         self.dashboard = self.dashTopR
         self.dashboard.addWidget(
@@ -134,6 +139,14 @@ class Dashboard(Panel):
             Qt.AlignmentFlag.AlignRight,
             Qt.AlignmentFlag.AlignBottom,
         )
+        self.dashboard.addWidget(
+            self.login_button,
+            Qt.AlignmentFlag.AlignRight,
+            Qt.AlignmentFlag.AlignBottom,
+        )
+
+    def on_actionLogin_triggered(self):
+        self.parent.actionConnect.trigger()
 
     def _init_dashboard_labels(self, *args):
         dashboardRow1 = self.leftRow1
@@ -184,6 +197,8 @@ class Dashboard(Panel):
             self.client.signal("initstatus", initstatus)
 
         self.emergency_button.setEnabled(not self.client.viewonly)
+        self.login_button.setText("Logout")
+        self.login_button.setIcon(get_icon("power_off-24px.svg"))
 
     def on_client_status(self, data):
         status = data[0]
@@ -202,6 +217,8 @@ class Dashboard(Panel):
     def on_client_disconnected(self):
         self.setStatus("disconnected")
         self.emergency_button.setEnabled(False)
+        self.login_button.setIcon(get_icon("power-24px.svg"))
+        self.login_button.setText("Login")
 
     def _update_dashboard_info(self):
         if self.current_status != "disconnected":
