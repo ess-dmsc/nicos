@@ -30,6 +30,11 @@ def _import_instrument_commands(file_location):
 
 @usercommand
 def import_instrument_commands():
+    """Import the instrument specific commands.
+
+    It is automatically called when the NICOS server starts but also needs to
+    be called if the commands are edited.
+    """
     file = os.path.join(
         session.experiment.instrument_scripts_directory,
         FILENAME,
