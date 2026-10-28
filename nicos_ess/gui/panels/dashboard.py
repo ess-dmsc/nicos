@@ -245,7 +245,7 @@ class Dashboard(Panel):
         self.emergency_button.setEnabled(False)
         self.login_button.setIcon(get_icon("power-24px.svg"))
         self.login_button.setText("Login")
-        self.userLabel.setText("   ")
+        self.userLabel.setText("NONE   ")
 
     def _update_dashboard_info(self):
         if self.current_status != "disconnected":

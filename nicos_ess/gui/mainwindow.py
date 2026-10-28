@@ -37,12 +37,10 @@ from nicos.guisupport.qt import (
     QApplication,
     QDialog,
     QIcon,
-    QLabel,
     QMainWindow,
     QMenu,
     QMessageBox,
     QPixmap,
-    QPushButton,
     QSystemTrayIcon,
     Qt,
     QTimer,
@@ -244,44 +242,10 @@ class MainWindow(DlgUtils, QMainWindow):
 
         # create initial state
         self.set_icons()
-        # self._create_menu_bar()
         self.actionUser.setIconVisibleInMenu(True)
         self.actionExpert.setEnabled(self.client.isconnected)
         self.actionEmergencyStop.setEnabled(self.client.isconnected)
         self.on_client_disconnected()
-
-    def _create_menu_bar(self):
-        self.menu = QPushButton("Application")
-        applicationMenu = QMenu("")
-        applicationMenu.addAction(self.actionConnect)
-        applicationMenu.addAction(self.actionViewOnly)
-        applicationMenu.addAction(self.actionPreferences)
-        applicationMenu.addAction(self.actionExpert)
-        applicationMenu.addSeparator()
-        applicationMenu.addAction(self.actionExit)
-        self.menu.setMenu(applicationMenu)
-
-        self.help = QPushButton("Help")
-        helpMenu = QMenu("")
-        helpMenu.addAction(self.actionNicosHelp)
-        helpMenu.addAction(self.actionNicosDocu)
-        helpMenu.addSeparator()
-        helpMenu.addAction(self.actionDebugConsole)
-        helpMenu.addSeparator()
-        helpMenu.addAction(self.actionAbout)
-        self.help.setMenu(helpMenu)
-
-        self.menu.setProperty("class", "mainMenuDropdown")
-        self.help.setProperty("class", "mainMenuDropdown")
-
-        self.userInfo = QLabel("User:")
-        self.userLabel = QLabel("")
-        self.userInfo.setStyleSheet("font-size: 16pt; color:white; font-weight:bold")
-        self.userLabel.setStyleSheet("font-size: 16pt; color: white")
-
-        self.loginBtn = QPushButton("Login")
-        self.loginBtn.clicked.connect(self.on_actionlogin_triggered)
-        self.loginBtn.setProperty("class", "loginButton")
 
     def set_icons(self):
         self.actionUser.setIcon(get_icon("settings_applications-24px.svg"))
