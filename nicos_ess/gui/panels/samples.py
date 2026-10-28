@@ -31,6 +31,18 @@ class SampleModel(QObject):
         self.data = samples
         self.updated.emit()
 
+    def save_data(self, samples):
+        formatted_samples = self.format_samples_to_nicos_style(samples)
+        self.client.run(f"Sample.set_samples({formatted_samples})")
+
+    def format_samples_to_nicos_style(self, samples):
+        indexed_samples_dict = {}
+        for index, sample in enumerate(samples):
+            if not sample.get("name", ""):
+                sample["name"] = f"sample {index + 1}"
+            indexed_samples_dict[index] = sample
+        return indexed_samples_dict
+
 
 class SamplePanel(PanelBase):
     def __init__(self, parent, client, options):
@@ -106,6 +118,26 @@ class SamplePanel(PanelBase):
         self.tree.setCurrentItem(item)
         self._add_table_data(self.samples.data[index])
 
+    def _save_btn_clicked(self):
+        sample_data = self.samples.data
+        edited_index = self.tree.currentItem().data(0, Qt.ItemDataRole.UserRole)
+        table_data = self._get_table_data()
+        if edited_index < len(self.samples.data):
+            sample_data[edited_index] = table_data
+        else:
+            sample_data.append(table_data)
+        self.samples.save_data(sample_data)
+
+    def _get_table_data(self):
+        table_data = {}
+        for row in range(self.table.rowCount()):
+            if self.table.item(row, 0) is None:
+                continue
+            key = self.table.item(row, 0).text()
+            val = self.table.item(row, 1).text()
+            table_data[key] = val
+        return table_data
+
     def _cancel_changes_btn_clicked(self):
         self.edit_ongoing = False
         self.changes_label.setText("")
@@ -177,6 +209,7 @@ class SamplePanel(PanelBase):
         self.samples.updated.connect(self.update_tree_widget_data)
         self.btn_new.clicked.connect(self._new_sample_btn_clicked)
         self.btn_duplicate.clicked.connect(self._duplicate_sample_btn_clicked)
+        self.btn_save.clicked.connect(self._save_btn_clicked)
         self.btn_cancel.clicked.connect(self._cancel_changes_btn_clicked)
         self.live_edit = LiveEditDelegate(self.on_text_changed, self.table)
         self.table.setItemDelegate(self.live_edit)
