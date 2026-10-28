@@ -5,6 +5,7 @@ from nicos.guisupport.qt import (
     QHeaderView,
     QStandardItem,
     QStandardItemModel,
+    Qt,
     pyqtSignal,
 )
 from nicos.utils import findResource
@@ -42,44 +43,61 @@ class SampleDialog(QDialog):
     def set_up_metadata_table(self):
         """QTableView setup"""
         table = self.metadataTable
-        self.metadata_model = QStandardItemModel(self)
+        self.metadata_model = QStandardItemModel(0, 2, self)
         self.metadata_model.setHorizontalHeaderLabels(["Parameter", "Value"])
         table.setModel(self.metadata_model)
+
         font = table.font()
-        font.setPointSize(max(font.pointSize() - 4, 7))
-        table.setFont(font)
-        table.horizontalHeader().setFont(font)
-        table.verticalHeader().setDefaultSectionSize(table.fontMetrics().height() + 4)
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        table.verticalHeader().hide()
+        font.setPointSizeF(max(font.pointSizeF() * 0.8, 7))
+        table.setFont(font)  # headers inherit this
+
+        vh = table.verticalHeader()
+        vh.hide()
+        vh.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+        vh.setDefaultSectionSize(table.fontMetrics().height() + 4)
+
+        hh = table.horizontalHeader()
+        hh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        hh.setStretchLastSection(True)
+        hh.setHighlightSections(False)
+
         table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        table.setAlternatingRowColors(True)
+        table.setTextElideMode(Qt.TextElideMode.ElideMiddle)
+        table.setWordWrap(False)
 
     def load_samples(self):
         """Initial load of available samples from the experiment session"""
 
         raw_samples = self.client.eval(
-            "session.experiment.get_samples()",
-            [],
+            "session.experiment.sample.samples",
+            {},
         )
-        if isinstance(raw_samples, dict):
-            raw_samples = raw_samples.values()
+        samples = (
+            raw_samples.items()
+            if isinstance(raw_samples, dict)
+            else enumerate(raw_samples or [])
+        )
 
         self.samples = {
-            sample["name"]: sample for sample in (raw_samples or []) if "name" in sample
+            number: sample for number, sample in samples if "name" in sample
         }
 
         self.samples_CB.clear()
-        self.samples_CB.addItems(list(self.samples.keys()))
+        for number, sample in self.samples.items():
+            self.samples_CB.addItem(f"{number} : {sample['name']}", number)
 
     def on_set_btn_pressed(self):
-        sample_name = self.samples_CB.currentText()
-        self.update_current_sample(sample_name)
+        sample_number = self.samples_CB.currentData()
+        self.update_current_sample(sample_number)
 
-    def update_current_sample(self, sample_name):
+    def update_current_sample(self, sample_number):
         """Update sample name and metadata table"""
 
-        self.sampleName.setText(f"{sample_name}")
-        sample = self.samples.get(sample_name)
+        sample = self.samples.get(sample_number)
+        self.sampleName.setText(sample["name"] if sample else "")
 
         self.metadata_model.removeRows(0, self.metadata_model.rowCount())
         if not sample:
