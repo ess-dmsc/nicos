@@ -91,6 +91,7 @@ class Dashboard(Panel):
         colors.init_palette(self.palette())
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/dashboard.ui"))
         # state members
+        self.parent = parent
         self.current_status = None
         self.gui_conf = parent.gui_conf
 
@@ -116,31 +117,54 @@ class Dashboard(Panel):
 
     def _init_dashboard(self):
         self.status_label = QLabel()
+        self.status_label.setSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
+        )
         self.status_label.setStyleSheet("font-size: 17pt; font-weight: bold")
         self.status_text = QLabel()
+        self.status_text.setSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
+        )
         self.status_text.setStyleSheet("font-size: 17pt")
+        self.userInfo = QLabel("User: ")
+        self.userInfo.setSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
+        )
+        self.userInfo.setStyleSheet("font-size: 14pt; font-weight: bold")
+        self.userLabel = QLabel("")
+        self.userLabel.setSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
+        )
+        self.userLabel.setStyleSheet("font-size: 14pt")
 
         self.emergency_button = QPushButton("STOP")
         self.emergency_button.clicked.connect(self.on_actionEmergencyStop_triggered)
         self.emergency_button.setProperty("class", "stopButton")
-        self.login_button = QPushButton("Logout")
+        self.login_button = QPushButton("")
         self.login_button.clicked.connect(self.on_actionLogin_triggered)
         self.login_button.setProperty("class", "loginButton")
 
-        self.dashboard = self.dashTopR
-        self.dashboard.addWidget(
-            self.status_label, Qt.AlignmentFlag.AlignRight, Qt.AlignmentFlag.AlignBottom
+        self.rightRow1.addWidget(
+            self.userInfo, Qt.AlignmentFlag.AlignRight, Qt.AlignmentFlag.AlignBottom
         )
-        self.dashboard.addWidget(
-            self.status_text, Qt.AlignmentFlag.AlignRight, Qt.AlignmentFlag.AlignBottom
+        self.rightRow1.addWidget(
+            self.userLabel, Qt.AlignmentFlag.AlignRight, Qt.AlignmentFlag.AlignBottom
         )
-        self.dashboard.addWidget(
-            self.emergency_button,
+
+        self.rightRow1.addWidget(
+            self.login_button,
             Qt.AlignmentFlag.AlignRight,
             Qt.AlignmentFlag.AlignBottom,
         )
-        self.dashboard.addWidget(
-            self.login_button,
+
+        self.rightRow2.addWidget(
+            self.status_label, Qt.AlignmentFlag.AlignRight, Qt.AlignmentFlag.AlignBottom
+        )
+        self.rightRow2.addWidget(
+            self.status_text, Qt.AlignmentFlag.AlignRight, Qt.AlignmentFlag.AlignBottom
+        )
+        self.rightRow2.addWidget(
+            self.emergency_button,
             Qt.AlignmentFlag.AlignRight,
             Qt.AlignmentFlag.AlignBottom,
         )
@@ -196,6 +220,8 @@ class Dashboard(Panel):
             # propagate info to all components
             self.client.signal("initstatus", initstatus)
 
+        username = str(self.client.login).upper()
+        self.userLabel.setText(f"{username}   ")
         self.emergency_button.setEnabled(not self.client.viewonly)
         self.login_button.setText("Logout")
         self.login_button.setIcon(get_icon("power_off-24px.svg"))
@@ -219,6 +245,7 @@ class Dashboard(Panel):
         self.emergency_button.setEnabled(False)
         self.login_button.setIcon(get_icon("power-24px.svg"))
         self.login_button.setText("Login")
+        self.userLabel.setText("   ")
 
     def _update_dashboard_info(self):
         if self.current_status != "disconnected":

@@ -243,10 +243,6 @@ Dashboard > QFrame {
     color: white;
 }
 
-Dashboard > QLabel {
-    color: white;
-}
-
 /* QTabBar::tab  ------------------------------------------------
 
 https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qtabwidget-and-qtabbar
@@ -588,39 +584,7 @@ QCheckBox:disabled {
 /* Remove icons from built-in Qt dialogs. */
 QDialogButtonBox { dialogbuttonbox-buttons-have-icons: 0; }
 
-/*Special mainwindow properties to avoid overriding child panel styles*/
-.mainMenuDropdown{
-    background-color: #1f5366;
-    color: white;
-    border-color: #1f5366;
-}
-
-.mainMenuDropdown:menu-indicator{
-    width:0px
-}
-
-.mainMenuDropdown:!checked:hover {
-    border-color: #0094ca;
-    background-color: #0094ca;
-    color: white;
-}
-
-.mainMenuDropdown:checked:hover {
-    border-color: #0094ca;
-    background-color: #0094ca;
-    color: white;
-}
-
-.mainMenuDropdown:!checked:pressed {
-    border-color: #0094ca;
-    background-color: #0094ca;
-}
-
-.mainMenuDropdown:focus {
-    background-color: #1f5366;
-    color: white;
-    border-color: #1f5366
-}
+/*-----------------Class Properties-------------------------*/
 
 .loginButton{
     background-color: #1f5366;

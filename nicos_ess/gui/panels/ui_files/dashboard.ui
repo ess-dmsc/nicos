@@ -90,13 +90,53 @@
         </spacer>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="dashTopR">
+        <layout class="QVBoxLayout" name="dashTopR">
          <property name="spacing">
-          <number>6</number>
+          <number>10</number>
          </property>
          <property name="rightMargin">
           <number>6</number>
          </property>
+         <item>
+          <layout class="QHBoxLayout" name="holder3">
+           <item>
+            <spacer name="horizontalSpacer_4">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="rightRow1"/>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="holder4">
+           <item>
+            <spacer name="horizontalSpacer_5">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="rightRow2"/>
+           </item>
+          </layout>
+         </item>
         </layout>
        </item>
       </layout>

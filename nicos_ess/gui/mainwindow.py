@@ -244,7 +244,7 @@ class MainWindow(DlgUtils, QMainWindow):
 
         # create initial state
         self.set_icons()
-        self._create_menu_bar()
+        # self._create_menu_bar()
         self.actionUser.setIconVisibleInMenu(True)
         self.actionExpert.setEnabled(self.client.isconnected)
         self.actionEmergencyStop.setEnabled(self.client.isconnected)
@@ -282,12 +282,6 @@ class MainWindow(DlgUtils, QMainWindow):
         self.loginBtn = QPushButton("Login")
         self.loginBtn.clicked.connect(self.on_actionlogin_triggered)
         self.loginBtn.setProperty("class", "loginButton")
-
-        self.menuLeft.addWidget(self.menu)
-        self.menuLeft.addWidget(self.help)
-        self.menuRight.addWidget(self.userInfo)
-        self.menuRight.addWidget(self.userLabel)
-        self.menuRight.addWidget(self.loginBtn)
 
     def set_icons(self):
         self.actionUser.setIcon(get_icon("settings_applications-24px.svg"))
@@ -519,11 +513,8 @@ class MainWindow(DlgUtils, QMainWindow):
         if connected:
             hoststr = f"{self.client.login} at {self.client.host}:{self.client.port}"
             self.setWindowTitle(f"{inststr} - {hoststr}")
-            username = str(self.client.login).upper()
-            self.userLabel.setText(f"{username}   ")
         else:
             self.setWindowTitle(f"{inststr} - disconnected")
-            self.userLabel.setText("NONE   ")
 
     def setStatus(self, status, exception=False):
         if status == self.current_status:
@@ -615,8 +606,6 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionEmergencyStop.setEnabled(not self.client.viewonly)
         self.actionConnect.setText("Disconnect")
         self.actionViewOnly.setChecked(self.client.viewonly)
-        self.loginBtn.setText("Logout")
-        self.loginBtn.setIcon(get_icon("power_off-24px.svg"))
 
         # set focus to command input, if present
         for panel in self.panels:
@@ -645,8 +634,6 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionExpert.setEnabled(False)
         self.actionViewOnly.setEnabled(False)
         self.actionEmergencyStop.setEnabled(False)
-        self.loginBtn.setIcon(get_icon("power-24px.svg"))
-        self.loginBtn.setText("Login")
         self.setTitlebar(False)
 
     def on_client_showhelp(self, data):
