@@ -70,17 +70,12 @@ devices = dict(
         readpv=f"{bpc2_pv_root}InPhaseTS-R",
     ),
     bpc2_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{bpc2_pv_root}Pos_R",
         writepv=f"{bpc2_pv_root}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     bpc2_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -99,6 +94,16 @@ devices = dict(
         pv_root=bpc2_pv_root,
         visibility=(),
     ),
+    bpc2_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{bpc2_pv_root}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     bpc2_chopper=device(
         "nicos_ess.devices.epics.chopper.NewEssChopperController",
         description="The chopper controller",
@@ -109,10 +114,15 @@ devices = dict(
         speed="bpc2_chopper_speed",
         chic_conn="chpsy2_chopper_chic",
         alarms="bpc2_chopper_alarms",
+        total_delay="bpc2_chopper_total_delay",
+        park_angle="bpc2_chopper_park_angle",
+        delay_errors="bpc2_chopper_delay_errors",
         slit_edges=[[0.0, 67.49]],
-        resolver_offset=108.05,
-        tdc_offset=108.05,
-        spin_direction="CW",
+        beam_position=251.95,
+        resolver_sign=-1,
+        tdc_resolver_position=0.0,
+        distance=12.25,
+        legacy_spd_sign=True,
     ),
     bpc2_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -172,17 +182,12 @@ devices = dict(
         readpv=f"{foc2_pv_root}InPhaseTS-R",
     ),
     foc2_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{foc2_pv_root}Pos_R",
         writepv=f"{foc2_pv_root}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     foc2_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -201,6 +206,16 @@ devices = dict(
         pv_root=foc2_pv_root,
         visibility=(),
     ),
+    foc2_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{foc2_pv_root}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     foc2_chopper=device(
         "nicos_ess.devices.epics.chopper.NewEssChopperController",
         description="The chopper controller",
@@ -211,6 +226,9 @@ devices = dict(
         speed="foc2_chopper_speed",
         chic_conn="chpsy2_chopper_chic",
         alarms="foc2_chopper_alarms",
+        total_delay="foc2_chopper_total_delay",
+        park_angle="foc2_chopper_park_angle",
+        delay_errors="foc2_chopper_delay_errors",
         slit_edges=[
             [0.0, 34.31],
             [60.625, 93.525],
@@ -219,9 +237,11 @@ devices = dict(
             [250.85, 285.22],
             [306.54, 341.43],
         ],
-        resolver_offset=49.995,
-        tdc_offset=49.995,
-        spin_direction="CCW",
+        beam_position=310.005,
+        resolver_sign=1,
+        tdc_resolver_position=0.0,
+        distance=12.2,
+        legacy_spd_sign=True,
     ),
     foc2_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -281,17 +301,12 @@ devices = dict(
         readpv=f"{foc3_pv_root}InPhaseTS-R",
     ),
     foc3_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{foc3_pv_root}Pos_R",
         writepv=f"{foc3_pv_root}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     foc3_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -310,6 +325,16 @@ devices = dict(
         pv_root=foc3_pv_root,
         visibility=(),
     ),
+    foc3_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{foc3_pv_root}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     foc3_chopper=device(
         "nicos_ess.devices.epics.chopper.NewEssChopperController",
         description="The chopper controller",
@@ -320,6 +345,9 @@ devices = dict(
         speed="foc3_chopper_speed",
         chic_conn="chpsy2_chopper_chic",
         alarms="foc3_chopper_alarms",
+        total_delay="foc3_chopper_total_delay",
+        park_angle="foc3_chopper_park_angle",
+        delay_errors="foc3_chopper_delay_errors",
         slit_edges=[
             [0.0, 36.06],
             [78.95, 119.27],
@@ -328,9 +356,11 @@ devices = dict(
             [257.575, 295.885],
             [309.86, 347.58],
         ],
-        resolver_offset=35.89,
-        tdc_offset=35.89,
-        spin_direction="CW",
+        beam_position=324.11,
+        resolver_sign=-1,
+        tdc_resolver_position=0.0,
+        distance=17.0,
+        legacy_spd_sign=True,
     ),
     foc3_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -390,17 +420,12 @@ devices = dict(
         readpv=f"{foc4_pv_root}InPhaseTS-R",
     ),
     foc4_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{foc4_pv_root}Pos_R",
         writepv=f"{foc4_pv_root}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     foc4_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -419,6 +444,16 @@ devices = dict(
         pv_root=foc4_pv_root,
         visibility=(),
     ),
+    foc4_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{foc4_pv_root}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     foc4_chopper=device(
         "nicos_ess.devices.epics.chopper.NewEssChopperController",
         description="The chopper controller",
@@ -429,6 +464,9 @@ devices = dict(
         speed="foc4_chopper_speed",
         chic_conn="chpsy2_chopper_chic",
         alarms="foc4_chopper_alarms",
+        total_delay="foc4_chopper_total_delay",
+        park_angle="foc4_chopper_park_angle",
+        delay_errors="foc4_chopper_delay_errors",
         slit_edges=[
             [0.0, 32.98],
             [44.52, 76.34],
@@ -437,9 +475,11 @@ devices = dict(
             [162.125, 190.895],
             [197.66, 224.42],
         ],
-        resolver_offset=112.98,
-        tdc_offset=112.98,
-        spin_direction="CW",
+        beam_position=247.02,
+        resolver_sign=-1,
+        tdc_resolver_position=0.0,
+        distance=23.69,
+        legacy_spd_sign=True,
     ),
     foc4_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

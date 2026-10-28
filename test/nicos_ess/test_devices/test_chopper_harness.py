@@ -76,6 +76,21 @@ def attached_chopper_devices(device_harness, fake_backend):
     )
     device_harness.create_pair(
         HarnessReadable,
+        name="ess_total_delay",
+        shared={"initial": "12.5"},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_park_angle",
+        shared={"initial": "30.0"},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_delay_errors",
+        shared={"initial": ""},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
         name="ess_chic_conn",
         shared={"initial": "Connected"},
     )
@@ -103,6 +118,21 @@ def attached_new_chopper_devices(device_harness, fake_backend):
         HarnessMappedMoveable,
         name="ess_command",
         shared={"mapping": {"stop": 0, "start": 1}},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_total_delay",
+        shared={"initial": "12.5"},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_park_angle",
+        shared={"initial": "30.0"},
+    )
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_delay_errors",
+        shared={"initial": ""},
     )
     device_harness.create_pair(
         HarnessReadable,
@@ -163,6 +193,26 @@ def chopper_speed_devices(device_harness, fake_backend):
             "pva": True,
         },
     )
+
+
+def ess_chopper_config(**overrides):
+    config = {
+        "state": "ess_state",
+        "command": "ess_command",
+        "speed": "ess_speed",
+        "total_delay": "ess_total_delay",
+        "park_angle": "ess_park_angle",
+        "delay_errors": "ess_delay_errors",
+        "chic_conn": "ess_chic_conn",
+        "mapping": {"stop": "stop", "start": "start"},
+        "slit_edges": [[0.0, 90.0]],
+        "beam_position": 75.0,
+        "resolver_sign": 1,
+        "tdc_resolver_position": 60.0,
+        "distance": 6.5,
+    }
+    config.update(overrides)
+    return config
 
 
 class TestChopperAlarmsHarness:
@@ -228,17 +278,86 @@ class TestEssChopperControllerHarness:
         daemon_device, poller_device = device_harness.create_pair(
             chopper_mod.EssChopperController,
             name="ess_chopper",
-            shared={
-                "state": "ess_state",
-                "command": "ess_command",
-                "speed": "ess_speed",
-                "chic_conn": "ess_chic_conn",
-                "mapping": {"stop": "stop", "start": "start"},
-            },
+            shared=ess_chopper_config(),
         )
 
         assert daemon_device is not None
         assert poller_device is not None
+
+    @pytest.mark.parametrize(
+        "alarm_cls",
+        [chopper_mod.ChopperAlarms, chopper_mod.NewChopperAlarms],
+        ids=["alarms", "new-alarms"],
+    )
+    def test_accepts_alarm_devices(
+        self, alarm_cls, device_harness, fake_backend, attached_chopper_devices
+    ):
+        del fake_backend, attached_chopper_devices
+        device_harness.create_pair(
+            alarm_cls,
+            name="ess_alarms",
+            shared={
+                "pv_root": "SIM:CHOP:",
+                "monitor": True,
+                "pva": True,
+            },
+        )
+        daemon_device, poller_device = device_harness.create_pair(
+            chopper_mod.EssChopperController,
+            name="ess_chopper",
+            shared=ess_chopper_config(alarms="ess_alarms"),
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
+        assert device_harness.run_daemon(daemon_device.status, 0) == (status.OK, "")
+
+    def test_status_ignores_the_devices_attached_for_the_gui(
+        self, device_harness, fake_backend, attached_chopper_devices
+    ):
+        del fake_backend, attached_chopper_devices
+        daemon_device, _poller_device = device_harness.create_pair(
+            chopper_mod.EssChopperController,
+            name="ess_chopper",
+            shared=ess_chopper_config(),
+        )
+
+        def set_busy(name):
+            getattr(daemon_device, f"_attached_{name}").busy = True
+
+        # A spinning disc: Pos_R is not at Park_S, so the park angle is BUSY.
+        for name in ("park_angle", "total_delay", "delay_errors"):
+            device_harness.run_daemon(set_busy, name)
+        assert device_harness.run_daemon(daemon_device.status, 0) == (status.OK, "")
+
+        device_harness.run_daemon(set_busy, "state")
+        assert device_harness.run_daemon(daemon_device.status, 0)[0] == status.BUSY
+
+    def test_chopper_gui_info_uses_attached_device_names(
+        self, device_harness, fake_backend, attached_chopper_devices
+    ):
+        del fake_backend, attached_chopper_devices
+        daemon_device, _poller_device = device_harness.create_pair(
+            chopper_mod.EssChopperController,
+            name="ess_chopper",
+            shared=ess_chopper_config(),
+        )
+
+        info = device_harness.run_daemon(daemon_device.get_chopper_gui_info)
+
+        assert info["chopper"] == "ess_chopper"
+        assert info["speed_key"] == "ess_speed/value"
+        assert info["total_delay_key"] == "ess_total_delay/value"
+        assert info["park_angle_key"] == "ess_park_angle/value"
+        assert info["delay_errors_key"] == "ess_delay_errors/raw_errors"
+        assert info["slit_edges"] == [[0.0, 90.0]]
+        assert info["beam_position"] == 75.0
+        assert info["resolver_sign"] == 1
+        assert info["tdc_resolver_position"] == 60.0
+        assert info["distance"] == 6.5
+        assert info["guide_position"] == "DOWN"
+        assert info["legacy_spd_sign"] is False
+        assert info["visual_geometry_verified"] is False
 
 
 class TestNewEssChopperControllerHarness:
@@ -249,17 +368,37 @@ class TestNewEssChopperControllerHarness:
         daemon_device, poller_device = device_harness.create_pair(
             chopper_mod.NewEssChopperController,
             name="ess_chopper",
-            shared={
-                "state": "ess_state",
-                "command": "ess_command",
-                "speed": "ess_speed",
-                "chic_conn": "ess_chic_conn",
-                "mapping": {"stop": "stop", "start": "start"},
-            },
+            shared=ess_chopper_config(),
         )
 
         assert daemon_device is not None
         assert poller_device is not None
+
+    def test_chopper_gui_info_uses_attached_device_names(
+        self, device_harness, fake_backend, attached_new_chopper_devices
+    ):
+        del fake_backend, attached_new_chopper_devices
+        daemon_device, _poller_device = device_harness.create_pair(
+            chopper_mod.NewEssChopperController,
+            name="ess_chopper",
+            shared=ess_chopper_config(),
+        )
+
+        info = device_harness.run_daemon(daemon_device.get_chopper_gui_info)
+
+        assert info["chopper"] == "ess_chopper"
+        assert info["speed_key"] == "ess_speed/value"
+        assert info["total_delay_key"] == "ess_total_delay/value"
+        assert info["park_angle_key"] == "ess_park_angle/value"
+        assert info["delay_errors_key"] == "ess_delay_errors/raw_errors"
+        assert info["slit_edges"] == [[0.0, 90.0]]
+        assert info["beam_position"] == 75.0
+        assert info["resolver_sign"] == 1
+        assert info["tdc_resolver_position"] == 60.0
+        assert info["distance"] == 6.5
+        assert info["guide_position"] == "DOWN"
+        assert info["legacy_spd_sign"] is False
+        assert info["visual_geometry_verified"] is False
 
 
 class TestEssChopperSpeed:

@@ -36,6 +36,16 @@ devices = dict(
         writepv=f"{pv_root_1}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
+    bwc1_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{pv_root_1}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     bwc1_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -60,17 +70,12 @@ devices = dict(
         readpv=f"{pv_root_1}InPhaseTS-R",
     ),
     bwc1_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{pv_root_1}Pos_R",
         writepv=f"{pv_root_1}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     bwc1_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -104,10 +109,17 @@ devices = dict(
         state="bwc1_status",
         command="bwc1_control",
         speed="bwc1_speed",
+        total_delay="bwc1_total_delay",
+        park_angle="bwc1_park_angle",
+        delay_errors="bwc1_delay_errors",
         chic_conn="bwc1_chic",
         alarms="bwc1_alarms",
-        slit_edges=[[0, 90]],
-        resolver_offset=-105,
+        slit_edges=[[0.0, 90.0]],
+        beam_position=45.0,
+        resolver_sign=1,
+        tdc_resolver_position=150.0,
+        distance=6.5125,
+        legacy_spd_sign=True,
     ),
     bwc2_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -140,6 +152,16 @@ devices = dict(
         writepv=f"{pv_root_2}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
+    bwc2_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{pv_root_2}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     bwc2_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -164,17 +186,12 @@ devices = dict(
         readpv=f"{pv_root_2}InPhaseTS-R",
     ),
     bwc2_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{pv_root_2}Pos_R",
         writepv=f"{pv_root_2}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     bwc2_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -207,9 +224,16 @@ devices = dict(
         state="bwc2_status",
         command="bwc2_control",
         speed="bwc2_speed",
+        total_delay="bwc2_total_delay",
+        park_angle="bwc2_park_angle",
+        delay_errors="bwc2_delay_errors",
         chic_conn="bwc2_chic",
         alarms="bwc2_alarms",
-        slit_edges=[[0, 260]],
-        resolver_offset=-20,
+        slit_edges=[[0.0, 260.0]],
+        beam_position=130.0,
+        resolver_sign=-1,
+        tdc_resolver_position=150.0,
+        distance=6.4875,
+        legacy_spd_sign=True,
     ),
 )

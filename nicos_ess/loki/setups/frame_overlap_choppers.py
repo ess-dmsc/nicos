@@ -36,6 +36,16 @@ devices = dict(
         writepv=f"{pv_root_1}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
+    foc1_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{pv_root_1}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     foc1_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -60,17 +70,12 @@ devices = dict(
         readpv=f"{pv_root_1}InPhaseTS-R",
     ),
     foc1_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{pv_root_1}Pos_R",
         writepv=f"{pv_root_1}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     foc1_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -104,10 +109,18 @@ devices = dict(
         state="foc1_status",
         command="foc1_control",
         speed="foc1_speed",
+        total_delay="foc1_total_delay",
+        park_angle="foc1_park_angle",
+        delay_errors="foc1_delay_errors",
         chic_conn="foc1_chic",
         alarms="foc1_alarms",
-        slit_edges=[[0, 190]],
-        resolver_offset=-145,
+        slit_edges=[[0.0, 190.0]],
+        beam_position=185.0,
+        resolver_sign=-1,
+        tdc_resolver_position=150.0,
+        distance=15.0875,
+        guide_position="LEFT",
+        legacy_spd_sign=True,
     ),
     foc2_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -140,6 +153,16 @@ devices = dict(
         writepv=f"{pv_root_2}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
+    foc2_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{pv_root_2}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     foc2_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -164,17 +187,12 @@ devices = dict(
         readpv=f"{pv_root_2}InPhaseTS-R",
     ),
     foc2_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{pv_root_2}Pos_R",
         writepv=f"{pv_root_2}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     foc2_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -207,9 +225,17 @@ devices = dict(
         state="foc2_status",
         command="foc2_control",
         speed="foc2_speed",
+        total_delay="foc2_total_delay",
+        park_angle="foc2_park_angle",
+        delay_errors="foc2_delay_errors",
         chic_conn="foc2_chic",
         alarms="foc2_alarms",
-        slit_edges=[[0, 190]],
-        resolver_offset=35,
+        slit_edges=[[0.0, 190.0]],
+        beam_position=185.0,
+        resolver_sign=1,
+        tdc_resolver_position=150.0,
+        distance=15.1125,
+        guide_position="RIGHT",
+        legacy_spd_sign=True,
     ),
 )

@@ -60,17 +60,12 @@ devices = dict(
         readpv=f"{pv_root_1}InPhaseTS-R",
     ),
     wls1_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{pv_root_1}Pos_R",
         writepv=f"{pv_root_1}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 90,
-            "park pos 2": 180,
-            "park pos 3": 270,
-        },
     ),
     wls1_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -96,6 +91,16 @@ devices = dict(
         pv_root=pv_root_1,
         visibility=(),
     ),
+    wls1_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{pv_root_1}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     wls1_chopper=device(
         "nicos_ess.devices.epics.chopper.NewEssChopperController",
         description="The chopper controller",
@@ -106,9 +111,14 @@ devices = dict(
         speed="wls1_chopper_speed",
         chic_conn="wls1_chopper_chic",
         alarms="wls1_chopper_alarms",
-        slit_edges=[[0, 170]],
-        resolver_offset=280.0,
-        tdc_offset=232.5,
-        spin_direction="CCW",
+        total_delay="wls1_chopper_total_delay",
+        park_angle="wls1_chopper_park_angle",
+        delay_errors="wls1_chopper_delay_errors",
+        slit_edges=[[0.0, 86.0]],
+        beam_position=190.5,
+        resolver_sign=1,
+        tdc_resolver_position=342.5,
+        distance=27.975,
+        legacy_spd_sign=True,
     ),
 )
