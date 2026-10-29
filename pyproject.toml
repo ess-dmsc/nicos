@@ -13,7 +13,8 @@ dependencies = [
     "keyring>=24.3.0",
     "keyrings-alt>=5.0.0",
     "ldap3>=2.0.0",
-    "lttb",
+    "frappy-core>=0.19.9",
+    "lttb>=0.2.2",
     "nicos-pyctl>=1.0",
     "numpy<2.0",
     "p4p>=4.0.0",
@@ -25,7 +26,7 @@ dependencies = [
     "rsa>=3.1.2",
     "scipy>=0.9.0",
     "systemd-python>=230 ; sys_platform == 'linux'",
-    "toml>=0.10",
+    "tomlkit>=0.8.0",
     "urllib3>=1.26.20",
     "platformdirs",
     "importlib_metadata>=4.6;python_version<'3.10' and python_version>='3.6'",  # 3.10 brings recent-enough importlib.metadata
@@ -132,8 +133,12 @@ docs = [
     "sphinx-rtd-theme>=3.0",
 ]
 dev = [
+    "astropy>=3.0",
+    "docutils>=0.12",
+    "markdown>=2.6.9",
     "memory-profiler>=0.61.0",
     "mock>=1.0",
+    "nicos-quickyaml>=1.2.1",
     "pre-commit>=4.3.0",
     "pylint>=2.1.0",
     "pytest>=4.6",

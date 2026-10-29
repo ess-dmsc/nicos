@@ -41,6 +41,38 @@ wheels = [
 ]
 
 [[package]]
+name = "astropy"
+version = "7.2.3"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+dependencies = [
+    { name = "astropy-iers-data" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "pyerfa" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/6e/18/5223c55246f6536ba59da1e04cdfe6f45dfcea5a06f6729cc163ea43051c/astropy-7.2.3.tar.gz", hash = "sha256:1deab51837331aabb4fa25a72e9b8a28754990896794832a38ad89810dd9b568" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/24/2e/e6f94a5cb070c0cdc73c99802a8758b8d4dbdea5158a77c9292fda3ec40a/astropy-7.2.3-cp311-abi3-macosx_10_9_x86_64.whl", hash = "sha256:722ac871627899dcf5eb6a8a8374887abb9d15234075607a3d0c5ee44c067091" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/f7/0a/23ba81f70ab8d0b0f897cbc729dc559f3ebac01d242f25a0074badf4b865/astropy-7.2.3-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:292b442ecba854b9b529e05f1e7b25754ca39da1a270c6a88ac125622d7247f8" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/10/16/eae64625555963003739b6aa6e5ff223fb2a1e3ca807593ae92da3f12f4d/astropy-7.2.3-cp311-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:78e0abac1120f8b882521c788ee0f9db6000a98842a15ea58d5f9a746950078c" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/e0/ab/ff4056a3bdd1c4b4d69b968a0ab9d235aa55f4f3005b3bb882ec434efec5/astropy-7.2.3-cp311-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b5c11f668eccebfb7dfcd2103702e38d92850257caf9c227beee38be2d545cad" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/02/6c/1db7eebe43d59b672e0889892c3b8f9b8e67ec6c1a19d4b33ec552627ff9/astropy-7.2.3-cp311-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:928c2198ea9d7c9f9034e1ea460538f64ff2ddc23dd60dd723b305a42c29140c" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/4b/21/8ff0ed859d977af48207101832183ba08c2ce3a6063c9c6c40eae26147be/astropy-7.2.3-cp311-abi3-win32.whl", hash = "sha256:e000a3633f4f10ce374690bedf8f411ae29ef317b878814856c166f7dd251b7f" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/e2/42/130f3bbb83325a114fe54370c4b31938d2f396e7308477112b8dc824d1b6/astropy-7.2.3-cp311-abi3-win_amd64.whl", hash = "sha256:139adb9e427682981429baa88f96cf6da1c5d41e6184371b453b5aed8a6587cc" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/bc/6a/01a1b57148625b7b51ac81b7ab69e6e64189ca728529402d365eaaec6d54/astropy-7.2.3-cp311-abi3-win_arm64.whl", hash = "sha256:71d0c225dca0a10c63f423c1fc239e1e76f012a39017b70843c40a20eab68a5f" },
+]
+
+[[package]]
+name = "astropy-iers-data"
+version = "0.2026.10.19.0.52.1"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/15/55/9a88631602dc790d9a92f47d4a1c748a37927feec2dc9b205a4f3dc4c599/astropy_iers_data-0.2026.10.19.0.52.1.tar.gz", hash = "sha256:94e790f1aa10619e3715a2b7193ccc118701a3aa37f5adf2e52c58ee13c8f2ba" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/13/00/b3f595b34b339e4c3a9f8f622ee7e2a6f3b85a9af9b69789aecf3ef18752/astropy_iers_data-0.2026.10.19.0.52.1-py3-none-any.whl", hash = "sha256:14665720aa481c7b97dfd104d7218b38ed7e2ba30a70ff53a5c26a0e14d4025c" },
+]
+
+[[package]]
 name = "babel"
 version = "2.18.0"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
@@ -627,6 +659,21 @@ wheels = [
 ]
 
 [[package]]
+name = "frappy-core"
+version = "0.20.9"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+dependencies = [
+    { name = "mlzlog" },
+    { name = "psutil" },
+    { name = "pyserial" },
+    { name = "python-daemon" },
+]
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/1a/15/c113193fbf9d92fcebe926faeda8f34875b9aadaaf410f0ca2e3523cf52d/frappy_core-0.20.9.tar.gz", hash = "sha256:3da462b3d4e9900a716bd52b806ce7c63af34866ed2afc6ce9391c92cdd12244" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/79/61/c30c836bcdfa8f5838935befde59354c8a69adaf27882084ca15fcb6a999/frappy_core-0.20.9-py3-none-any.whl", hash = "sha256:c7327418d7443342b94062c203e2b6449399e025ffbfd456b8b5ae029245b44e" },
+]
+
+[[package]]
 name = "gitdb"
 version = "4.0.12"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
@@ -990,6 +1037,15 @@ wheels = [
 ]
 
 [[package]]
+name = "lockfile"
+version = "0.12.2"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/17/47/72cb04a58a35ec495f96984dddb48232b551aafb95bde614605b754fe6f7/lockfile-0.12.2.tar.gz", hash = "sha256:6aed02de03cba24efabcd600b30540140634fc06cfa603822d508d5361e9f799" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/c8/22/9460e311f340cb62d26a38c419b1381b8593b0bb6b5d1f056938b086d362/lockfile-0.12.2-py2.py3-none-any.whl", hash = "sha256:6c3cb24f344923d30b2785d5ad75182c8ea7ac1b6171b08657258ec7429d50fa" },
+]
+
+[[package]]
 name = "lttb"
 version = "0.3.2"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
@@ -999,6 +1055,15 @@ dependencies = [
 sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/fa/af/422282fcfe21179a4e25a03bea607d51f426957956b18fbe97b7bda8ba13/lttb-0.3.2.tar.gz", hash = "sha256:b7f280d3ad71a68497f75eee3d03f1bcaccac0d56c430b7afa562682bf6c69c0" }
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/f9/83/146c427d76d647a474da827c7d896b8114fb17db93b1393939cecde45af3/lttb-0.3.2-py3-none-any.whl", hash = "sha256:10fddd96bc4b6084ce9146045aeed2016176b78057d8803424a6740af102ef50" },
+]
+
+[[package]]
+name = "markdown"
+version = "3.11.2"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/f4/32/0b4d0297064244f04af4331b65de16237cc3cce07474171ee14222a28981/markdown-3.11.2.tar.gz", hash = "sha256:87bf5d90f2d2882e2c02fcda182c2800456b985bff38913867c49706481514b0" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/fe/66/bcab3b677b71ad286b4e607e3427499537c76e13ad2e22584ba7a7d9882c/markdown-3.11.2-py3-none-any.whl", hash = "sha256:f80390747a2a0ff2ba54da074ce4f862f72a6685f608cd2637b646a6d83993f5" },
 ]
 
 [[package]]
@@ -1138,6 +1203,15 @@ sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/p
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/49/26/aaca612a0634ceede20682e692a6c55e35a94c21ba36b807cc40fe910ae1/memory_profiler-0.61.0-py3-none-any.whl", hash = "sha256:400348e61031e3942ad4d4109d18753b2fb08c2f6fb8290671c5513a34182d84" },
 ]
+
+[[package]]
+name = "mlzlog"
+version = "0.5.0"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/b6/c4/0740348775e142b84e75a3adbdc2aaca3b4a4a8be7bcc1318fbbc66e0730/mlzlog-0.5.0.tar.gz", hash = "sha256:22e0c33fd37407fb7ad31c5e301542e7a5b84c1c85e2e038a7c6d5f774ff7fd4" }
 
 [[package]]
 name = "mock"
@@ -1301,6 +1375,7 @@ name = "nicos-fork"
 source = { editable = "." }
 dependencies = [
     { name = "caproto" },
+    { name = "frappy-core" },
     { name = "gitpython" },
     { name = "h5py" },
     { name = "html2text" },
@@ -1320,7 +1395,7 @@ dependencies = [
     { name = "rsa" },
     { name = "scipy" },
     { name = "systemd-python", marker = "sys_platform == 'linux'" },
-    { name = "toml" },
+    { name = "tomlkit" },
     { name = "urllib3" },
 ]
 
@@ -1348,9 +1423,13 @@ gui-qt6 = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "astropy" },
     { name = "codespell" },
+    { name = "docutils" },
+    { name = "markdown" },
     { name = "memory-profiler" },
     { name = "mock" },
+    { name = "nicos-quickyaml" },
     { name = "pre-commit" },
     { name = "pylint" },
     { name = "pytest" },
@@ -1373,6 +1452,7 @@ requires-dist = [
     { name = "caproto", specifier = ">=1.3.0" },
     { name = "flake8", marker = "extra == 'gui'" },
     { name = "flake8", marker = "extra == 'gui-qt6'" },
+    { name = "frappy-core", specifier = ">=0.19.9" },
     { name = "gitpython", specifier = ">=3.1.45" },
     { name = "gr", marker = "extra == 'gui'", specifier = ">=1.23.2" },
     { name = "gr", marker = "extra == 'gui-qt6'", specifier = ">=1.23.2" },
@@ -1382,7 +1462,7 @@ requires-dist = [
     { name = "keyring", specifier = ">=24.3.0" },
     { name = "keyrings-alt", specifier = ">=5.0.0" },
     { name = "ldap3", specifier = ">=2.0.0" },
-    { name = "lttb" },
+    { name = "lttb", specifier = ">=0.2.2" },
     { name = "matplotlib", marker = "extra == 'gui'", specifier = ">=3.9.4" },
     { name = "matplotlib", marker = "extra == 'gui-qt6'", specifier = ">=3.9.4" },
     { name = "nicos-pyctl", specifier = ">=1.0" },
@@ -1407,16 +1487,20 @@ requires-dist = [
     { name = "rsa", specifier = ">=3.1.2" },
     { name = "scipy", specifier = ">=0.9.0" },
     { name = "systemd-python", marker = "sys_platform == 'linux'", specifier = ">=230" },
-    { name = "toml", specifier = ">=0.10" },
+    { name = "tomlkit", specifier = ">=0.8.0" },
     { name = "urllib3", specifier = ">=1.26.20" },
 ]
 provides-extras = ["gui", "gui-qt6"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "astropy", specifier = ">=3.0" },
     { name = "codespell" },
+    { name = "docutils", specifier = ">=0.12" },
+    { name = "markdown", specifier = ">=2.6.9" },
     { name = "memory-profiler", specifier = ">=0.61.0" },
     { name = "mock", specifier = ">=1.0" },
+    { name = "nicos-quickyaml", specifier = ">=1.2.1" },
     { name = "pre-commit", specifier = ">=4.3.0" },
     { name = "pylint", specifier = ">=2.1.0" },
     { name = "pytest", specifier = ">=4.6" },
@@ -1441,6 +1525,20 @@ wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/nicos-pyctl/1.4/nicos_pyctl-1.4-cp312-cp312-linux_x86_64.whl", hash = "sha256:7df3fcf044dc866bd66df589a7b1e37a3c8e31ec8bff1d72c111779159eeb12e" },
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/nicos-pyctl/1.4/nicos_pyctl-1.4-cp313-cp313-linux_x86_64.whl", hash = "sha256:aef39a8bc8fc9a6c75d7dbe5afe953739d2d729100e8102d1ea291999d179d71" },
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/nicos-pyctl/1.4/nicos_pyctl-1.4-cp314-cp314-linux_x86_64.whl", hash = "sha256:ddbf46fcce5e05d0e570a45dead37c1d266d4a752c195f37cd409c1172b7178e" },
+]
+
+[[package]]
+name = "nicos-quickyaml"
+version = "1.3.3"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/e2/6a/ed35a9e47ae2b07e58423b673f582efc15e2f0d755182752d9413d736c71/nicos_quickyaml-1.3.3.tar.gz", hash = "sha256:d0e42540b478f0852e308dabc2cb34e775b36333e139c020a063621dc0881d8d" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/66/0d/0a19d347955416fe25cfdf666cf77603e55f4df8c3c1e43d21cc9684ab5c/nicos_quickyaml-1.3.3-cp312-cp312-manylinux1_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:577b83b5f9c97a1f0415ffa5957a7dc100d56440edbb9bfc0b0b528fef19b6a1" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/24/25/c3287d2b8f6efd45baa07da982fc1fd09776fea12123c0cb0697e529ac5e/nicos_quickyaml-1.3.3-cp313-cp313-manylinux1_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:dba1102e6929d2f3f8bf194dd947ff13981bca2dd451f377a3010b74283937d2" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/98/54/6690b3febea17792f01e5fecfdb956f26647914359ac390a8523563239c2/nicos_quickyaml-1.3.3-cp314-cp314-manylinux1_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:51eb24e4b286e66bb19b1ae046426ee9195ff4341ba133ddb2832b0a6b36c72a" },
 ]
 
 [[package]]
@@ -1830,6 +1928,24 @@ wheels = [
 ]
 
 [[package]]
+name = "pyerfa"
+version = "2.0.1.5"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/71/39/63cc8291b0cf324ae710df41527faf7d331bce573899199d926b3e492260/pyerfa-2.0.1.5.tar.gz", hash = "sha256:17d6b24fe4846c65d5e7d8c362dcb08199dc63b30a236aedd73875cc83e1f6c0" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/7d/d9/3448a57cb5bd19950de6d6ab08bd8fbb3df60baa71726de91d73d76c481b/pyerfa-2.0.1.5-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:b282d7c60c4c47cf629c484c17ac504fcb04abd7b3f4dfcf53ee042afc3a5944" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/11/4a/31a363370478b63c6289a34743f2ba2d3ae1bd8223e004d18ab28fb92385/pyerfa-2.0.1.5-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:be1aeb70390dd03a34faf96749d5cabc58437410b4aab7213c512323932427df" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/cb/96/b6210fc624123c8ae13e1eecb68fb75e3f3adff216d95eee1c7b05843e3e/pyerfa-2.0.1.5-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b0603e8e1b839327d586c8a627cdc634b795e18b007d84f0cda5500a0908254e" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/e5/e0/050018d855d26d3c0b4a7d1b2ed692be758ce276d8289e2a2b44ba1014a5/pyerfa-2.0.1.5-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0e43c7194e3242083f2350b46c09fd4bf8ba1bcc0ebd1460b98fc47fe2389906" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/b9/f5/ff91ee77308793ae32fa1e1de95e9edd4551456dd888b4e87c5938657ca5/pyerfa-2.0.1.5-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:07b80cd70701f5d066b1ac8cce406682cfcd667a1186ec7d7ade597239a6021d" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/2c/56/b22b35c8551d2228ff8d445e63787112927ca13f6dc9e2c04f69d742c95b/pyerfa-2.0.1.5-cp39-abi3-win32.whl", hash = "sha256:d30b9b0df588ed5467e529d851ea324a67239096dd44703125072fd11b351ea2" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/b4/11/97233cf23ad5411ac6f13b1d6ee3888f90ace4f974d9bf9db887aa428912/pyerfa-2.0.1.5-cp39-abi3-win_amd64.whl", hash = "sha256:66292d437dcf75925b694977aa06eb697126e7b86553e620371ed3e48b5e0ad0" },
+]
+
+[[package]]
 name = "pyflakes"
 version = "4.0.0"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
@@ -2061,6 +2177,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyserial"
+version = "3.5"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/1e/7d/ae3f0a63f41e4d2f6cb66a5b57197850f919f59e558159a4dd3a818f5082/pyserial-3.5.tar.gz", hash = "sha256:3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/07/bc/587a445451b253b285629263eb51c2d8e9bcea4fc97826266d186f96f558/pyserial-3.5-py2.py3-none-any.whl", hash = "sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0" },
+]
+
+[[package]]
 name = "pytest"
 version = "9.1.1"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
@@ -2126,6 +2251,18 @@ dependencies = [
 sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/ac/82/4c9ecabab13363e72d880f2fb504c5f750433b2b6f16e99f4ec21ada284c/pytest_timeout-2.4.0.tar.gz", hash = "sha256:7e68e90b01f9eff71332b25001f85c75495fc4e3a836701876183c4bcfd0540a" }
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/fa/b6/3127540ecdf1464a00e5a01ee60a1b09175f6913f0644ac748494d9c4b21/pytest_timeout-2.4.0-py3-none-any.whl", hash = "sha256:c42667e5cdadb151aeb5b26d114aff6bdf5a907f176a007a30b940d3d865b5c2" },
+]
+
+[[package]]
+name = "python-daemon"
+version = "3.1.2"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+dependencies = [
+    { name = "lockfile" },
+]
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/3d/37/4f10e37bdabc058a32989da2daf29e57dc59dbc5395497f3d36d5f5e2694/python_daemon-3.1.2.tar.gz", hash = "sha256:f7b04335adc473de877f5117e26d5f1142f4c9f7cd765408f0877757be5afbf4" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/45/3c/b88167e2d6785c0e781ee5d498b07472aeb9b6765da3b19e7cc9e0813841/python_daemon-3.1.2-py3-none-any.whl", hash = "sha256:b906833cef63502994ad48e2eab213259ed9bb18d54fa8774dcba2ff7864cec6" },
 ]
 
 [[package]]
@@ -2583,15 +2720,6 @@ name = "systemd-python"
 version = "235"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
 sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/10/9e/ab4458e00367223bda2dd7ccf0849a72235ee3e29b36dce732685d9b7ad9/systemd-python-235.tar.gz", hash = "sha256:4e57f39797fd5d9e2d22b8806a252d7c0106c936039d1e71c8c6b8008e695c0a" }
-
-[[package]]
-name = "toml"
-version = "0.10.2"
-source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
-sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/be/ba/1f744cdc819428fc6b5084ec34d9b30660f6f9daaf70eead706e3203ec3c/toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f" }
-wheels = [
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b" },
-]
 
 [[package]]
 name = "tomlkit"
