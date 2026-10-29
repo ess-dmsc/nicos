@@ -9,7 +9,9 @@ import sys
 from os import path
 from shutil import which
 
-sys.path.insert(0, path.dirname(path.dirname(path.dirname(path.realpath(__file__)))))
+# copied to test/root/bin/: four levels up is the checkout root
+sys.path.insert(0, path.dirname(path.dirname(path.dirname(path.dirname(
+    path.realpath(__file__))))))
 
 from nicos import config
 from nicos.core.sessions.simulation import SimulationSession

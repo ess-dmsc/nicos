@@ -457,6 +457,7 @@ class DummyObject:
 
 class EmptyCacheServer:
     _connected = {}
+    _connected_clients = []
 
 
 def _set_historydays(db, days):

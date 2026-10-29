@@ -92,8 +92,9 @@ custom_subdirs = {}
 
 
 def find_scripts():
+    # ESS carries nicos_mlz only for the core test setups, not its instruments
     for custom_dir in [d for d in Path(module_root).glob('nicos_*')
-                       if d.is_dir() and d.name != 'nicos_demo']:
+                       if d.is_dir() and d.name not in ('nicos_demo', 'nicos_mlz')]:
         facility = custom_dir.name
         for testdir in Path(custom_dir).rglob('testscripts'):
             if not testdir.is_dir():
