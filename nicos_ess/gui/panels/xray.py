@@ -54,9 +54,8 @@ class XrayPanel(Panel):
         client.cache.connect(self.on_client_cache)  # update position and status info
 
     def _is_live(self):
-        check = self.client.getDeviceList()
-        # name returns as a non-empty list if something exists
-        return check != []
+        devices = {name.lower() for name in self.client.getDeviceList()}
+        return bool(self.devxray) and self.devxray.lower() in devices
 
     def on_client_setup(self):
         if self._is_live():
