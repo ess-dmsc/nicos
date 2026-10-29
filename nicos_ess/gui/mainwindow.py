@@ -2,16 +2,10 @@
 
 import sys
 import traceback
+from contextlib import suppress
+from importlib.metadata import PackageNotFoundError, entry_points, version
 from time import strftime
 from time import time as current_time
-
-if sys.version_info < (3, 10):
-    from importlib_metadata import PackageNotFoundError, entry_points, version
-else:
-    from importlib.metadata import PackageNotFoundError, entry_points, version
-
-
-from contextlib import suppress
 
 import gr
 
@@ -54,7 +48,7 @@ from nicos.guisupport.qt import (
     QSystemTrayIcon,
     Qt,
     QTimer,
-    QWebView,
+    QWebEngineView,
     QWidget,
     pyqtSignal,
     pyqtSlot,
@@ -569,7 +563,7 @@ class MainWindow(DlgUtils, QMainWindow):
             # load auxiliary windows state
             self.loadAuxWindows(settings)
         if len(self.splitstate) == len(self.splitters):
-            for sp, st in zip(self.splitters, self.splitstate):
+            for sp, st in zip(self.splitters, self.splitstate, strict=True):
                 sp.restoreState(st)
 
         if not self.gui_conf.windows:
@@ -1012,7 +1006,7 @@ class MainWindow(DlgUtils, QMainWindow):
 
     @pyqtSlot()
     def on_actionNicosDocu_triggered(self):
-        if not QWebView:
+        if not QWebEngineView:
             self.showError(
                 "Cannot open documentation window: Qt web extension"
                 " is not available on your system."
