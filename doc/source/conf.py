@@ -48,7 +48,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "ext.setupdoc",
     "ext.daemondoc",
-    "ext.stubs",
     "ext.nicosclassdoc",
 ]
 
@@ -412,7 +411,6 @@ autodoc_mock_imports = [
     "pamela",
     "influxdb_client",
     "slack",
-    "frappy",
 ]
 
 # GUI code and guiconfig files are not importable outside a running GUI and

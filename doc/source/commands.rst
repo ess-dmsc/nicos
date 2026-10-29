@@ -17,7 +17,6 @@ User Commands
 - `Triple-axis commands`_
 - `Imaging commands`_
 - `Sample utility functions`_
-- `Simple parameter mode`_
 
 Getting help
 ------------
@@ -100,9 +99,6 @@ Miscellaneous commands
 .. autofunction:: ClearCache
 .. .. autofunction:: UserInfo
 .. autofunction:: SetErrorAbort
-.. autofunction:: SetSimpleMode
-
-   See spm_.
 
 Device commands
 ---------------
@@ -257,12 +253,3 @@ Sample utility functions
 ------------------------
 
 .. autofunction:: activation
-
-
-Simple parameter mode
----------------------
-
-.. _spm:
-
-.. automodule:: nicos.core.spm
-   :no-members:
