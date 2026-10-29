@@ -1131,7 +1131,8 @@ def whyExited(status):
 
 def formatExtendedFrame(frame):
     ret = []
-    secret_indicators = ('credentials', 'passwd', 'password', 'secret')
+    secret_indicators = ('credentials', 'passwd', 'password', 'pw', 'secret',
+                         'token')
     for key, value in frame.f_locals.items():
         if key.startswith(secret_indicators) or key.endswith(secret_indicators):
             continue
