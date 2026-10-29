@@ -3,7 +3,6 @@ from nicos.guisupport.qt import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QObject,
     QPushButton,
     QStyledItemDelegate,
     Qt,
@@ -13,45 +12,24 @@ from nicos.guisupport.qt import (
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
-    pyqtSignal,
 )
 from nicos_ess.gui.panels.panel import PanelBase
-
-
-class SampleModel(QObject):
-    updated = pyqtSignal()
-
-    def __init__(self, client):
-        QObject.__init__(self)
-        self.client = client
-        self.data = {}
-
-    def load_data(self):
-        samples = self.client.eval("session.experiment.get_samples()")
-        self.data = samples
-        self.updated.emit()
-
-    def save_data(self, samples):
-        formatted_samples = self.format_samples_to_nicos_style(samples)
-        self.client.run(f"Sample.set_samples({formatted_samples})")
-
-    def format_samples_to_nicos_style(self, samples):
-        indexed_samples_dict = {}
-        for index, sample in enumerate(samples):
-            if not sample.get("name", ""):
-                sample["name"] = f"sample {index + 1}"
-            indexed_samples_dict[index] = sample
-        return indexed_samples_dict
 
 
 class SamplePanel(PanelBase):
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
 
-        self.samples = SampleModel(self.client)
+        self.samples = []
         self.edit_ongoing = False
         self._build_ui()
         self.initialise_connection_status_listeners()
+
+    def load_sample_data(self):
+        self.samples = self.client.eval("session.experiment.get_samples()")
+
+    def save_sample_data(self, samples):
+        self.client.run(f"Exp.set_samples({samples})")
 
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
@@ -59,17 +37,17 @@ class SamplePanel(PanelBase):
 
     def on_keyChange(self, key, value, time, expired):
         if key == "sample/samples":
-            self.samples.load_data()
+            self.load_sample_data()
             self.update_tree_widget_data()
 
     def on_client_connected(self):
         PanelBase.on_client_connected(self)
-        self.samples.load_data()
+        self.load_sample_data()
         self.update_tree_widget_data()
 
     def update_tree_widget_data(self):
         self.tree.clear()
-        for i, sample in enumerate(self.samples.data):
+        for i, sample in enumerate(self.samples):
             item = QTreeWidgetItem(self.tree, [sample["name"]])
             item.setData(0, Qt.ItemDataRole.UserRole, i)
 
@@ -85,8 +63,8 @@ class SamplePanel(PanelBase):
             return
 
         index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
-        if index < len(self.samples.data):
-            self._add_table_data(self.samples.data[index])
+        if index < len(self.samples):
+            self._add_table_data(self.samples[index])
 
     def on_text_changed(self, row, col, text):
         if self.edit_ongoing:
@@ -98,7 +76,7 @@ class SamplePanel(PanelBase):
     def _new_sample_btn_clicked(self):
         self.edit_ongoing = True
         self.changes_label.setText("Changes made to samples, save or cancel")
-        new_sample_index = len(self.samples.data)
+        new_sample_index = len(self.samples)
         item = QTreeWidgetItem(self.tree, ["Sample"])
         item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
         self.tree.setCurrentItem(item)
@@ -112,21 +90,21 @@ class SamplePanel(PanelBase):
         sample_to_duplicate = self.tree.selectedItems()[0]
         index = sample_to_duplicate.data(0, Qt.ItemDataRole.UserRole)
         name = sample_to_duplicate.text(0)
-        new_sample_index = len(self.samples.data)
+        new_sample_index = len(self.samples)
         item = QTreeWidgetItem(self.tree, [name])
         item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
         self.tree.setCurrentItem(item)
-        self._add_table_data(self.samples.data[index])
+        self._add_table_data(self.samples[index])
 
     def _save_btn_clicked(self):
-        sample_data = self.samples.data
+        sample_data = self.samples
         edited_index = self.tree.currentItem().data(0, Qt.ItemDataRole.UserRole)
         table_data = self._get_table_data()
-        if edited_index < len(self.samples.data):
+        if edited_index < len(self.samples):
             sample_data[edited_index] = table_data
         else:
             sample_data.append(table_data)
-        self.samples.save_data(sample_data)
+        self.save_sample_data(sample_data)
 
     def _get_table_data(self):
         table_data = {}
@@ -206,7 +184,7 @@ class SamplePanel(PanelBase):
 
     def _add_signals(self):
         self.tree.itemSelectionChanged.connect(self._on_sample_selected)
-        self.samples.updated.connect(self.update_tree_widget_data)
+        # self.samples.updated.connect(self.update_tree_widget_data)
         self.btn_new.clicked.connect(self._new_sample_btn_clicked)
         self.btn_duplicate.clicked.connect(self._duplicate_sample_btn_clicked)
         self.btn_save.clicked.connect(self._save_btn_clicked)
