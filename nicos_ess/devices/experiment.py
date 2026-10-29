@@ -433,7 +433,10 @@ class EssExperiment(Device):
 
     def _update_proposal_cache(self):
         while True:
-            self._yuos_client.update_cache()
+            try:
+                self._yuos_client.update_cache()
+            except BaseYuosException as error:
+                self.log.warning("could not update the proposal cache: %s", error)
             time.sleep(self.update_interval * 3600)
 
     def _queryProposals(self, proposal=None, kwds=None):
