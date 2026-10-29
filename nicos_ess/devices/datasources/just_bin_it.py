@@ -19,6 +19,7 @@ from nicos.core import (
     tupleof,
 )
 from nicos.core.constants import MASTER, SIMULATION
+from nicos.core.device import DeviceMetaInfo, DeviceParInfo
 from nicos.devices.generic import Detector, ImageChannelMixin, PassiveChannel
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
@@ -388,7 +389,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             )
         ]
         result.extend(hist_type_by_name[self.hist_type].get_info(**self._params))
-        return result
+        return [DeviceMetaInfo(key, DeviceParInfo(*info)) for key, *info in result]
 
     def doShutdown(self):
         if self._kafka_subscriber:
