@@ -132,6 +132,8 @@ docs = [
     "sphinx-rtd-theme>=3.0",
 ]
 dev = [
+    "coverage>=7.10",
+    "diff-cover>=9.0",
     "memory-profiler>=0.61.0",
     "mock>=1.0",
     "pre-commit>=4.3.0",
@@ -143,6 +145,27 @@ dev = [
     "pyyaml>=3.0",
     "ruff>=0.9.2",
     "codespell",
+]
+
+[tool.coverage.run]
+# ESS code: nicos_ess plus the ESS-only modules that live in nicos/.
+source_pkgs = [
+    "nicos_ess",
+    "nicos.devices.epics.mixins",
+    "nicos.devices.epics.pva",
+    "nicos.services.cache.database.redis",
+    "nicos.services.cache.endpoints",
+]
+# Measure the cache, daemon, poller etc. started as subprocesses by the tests.
+patch = ["subprocess"]
+# Lets data from the integration container combine with the unit test data.
+relative_files = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
 ]
 
 [tool.ruff]

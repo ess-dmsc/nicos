@@ -23,6 +23,7 @@ doc/source/nicos_*/**/setups
 
 .coverage.*
 .coverage
+*.coverage
 .cache/
 .pytest_cache/
 htmlcov/

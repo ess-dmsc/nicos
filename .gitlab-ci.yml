@@ -33,22 +33,23 @@ stages:
   - lint
   - test
   - integration
+  - coverage
   - docs
 
 
-tests_py312_cov:
+tests_py313_cov:
   stage: test
   script:
-    - uv run pytest test/ --cov=nicos --cov=nicos_ess --cov-report term --cov-report xml:coverage.xml --junitxml=test-output.xml
-  coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
+    - uv run pytest test/ --cov --cov-report term --junitxml=test-output.xml
   artifacts:
     paths:
       - test-output.xml
-      - coverage.xml
+      - unit.coverage
     reports:
       junit: test-output.xml
   variables:
-    UV_PYTHON: 3.12
+    UV_PYTHON: 3.13
+    COVERAGE_FILE: unit.coverage
 
 
 tests_py3xx:
@@ -57,7 +58,7 @@ tests_py3xx:
     - uv run pytest test/ --junitxml=test-output.xml
   parallel:
     matrix:
-      - PYTHON_VERSION: ["3.13", "3.14"]
+      - PYTHON_VERSION: ["3.12", "3.14"]
   artifacts:
     paths:
       - test-output.xml
@@ -104,17 +105,14 @@ integration-smoke:
     - mkdir -p smoke-artifacts
     # The shared Docker daemon needs per-job compose names to avoid collisions.
     - export COMPOSE_PROJECT_NAME="nicos-smoke-${CI_JOB_ID:-local}"
-    - docker info > smoke-artifacts/docker-info.log 2>&1
-    - docker_exit=$?
+    # GitLab echoes each line before running it, so $? must be read on the same line.
+    - docker_exit=0; docker info > smoke-artifacts/docker-info.log 2>&1 || docker_exit=$?
     - cat smoke-artifacts/docker-info.log
     - if [ "$docker_exit" -ne 0 ]; then exit "$docker_exit"; fi
-    - set +e
-    - docker compose -f integration_test/smoke/docker-compose.yml --profile ci build --progress plain nicos-integration > smoke-artifacts/docker-build.log 2>&1
-    - build_exit=$?
+    - build_exit=0; docker compose -f integration_test/smoke/docker-compose.yml --profile ci build --progress plain nicos-integration > smoke-artifacts/docker-build.log 2>&1 || build_exit=$?
     - cat smoke-artifacts/docker-build.log
     - if [ "$build_exit" -ne 0 ]; then exit "$build_exit"; fi
-    - docker compose -f integration_test/smoke/docker-compose.yml --profile ci up --abort-on-container-exit --exit-code-from nicos-integration > smoke-artifacts/docker-compose-up.log 2>&1
-    - test_exit=$?
+    - test_exit=0; docker compose -f integration_test/smoke/docker-compose.yml --profile ci up --abort-on-container-exit --exit-code-from nicos-integration > smoke-artifacts/docker-compose-up.log 2>&1 || test_exit=$?
     - cat smoke-artifacts/docker-compose-up.log
     - docker compose -f integration_test/smoke/docker-compose.yml ps -a > smoke-artifacts/docker-compose-ps.txt 2>&1 || true
     - docker compose -f integration_test/smoke/docker-compose.yml logs --no-color > smoke-artifacts/docker-compose.log 2>&1 || true
@@ -132,8 +130,47 @@ integration-smoke:
       - smoke-artifacts/docker-compose-ps.txt
       - smoke-artifacts/docker-compose.log
       - smoke-artifacts/docker-info.log
+      - smoke-artifacts/coverage/
     reports:
       junit: smoke-artifacts/smoke-junit.xml
+
+
+coverage:
+  stage: coverage
+  needs:
+    - job: tests_py313_cov
+      artifacts: true
+    - job: integration-smoke
+      artifacts: true
+  script:
+    - uv run coverage combine --keep unit.coverage smoke-artifacts/coverage/smoke.coverage
+    - uv run coverage report
+    - uv run coverage xml -o coverage.xml
+  coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
+  artifacts:
+    paths:
+      - coverage.xml
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+  variables:
+    UV_PYTHON: 3.13
+
+
+# Lines added or changed in a merge request must be covered by tests.
+coverage:diff:
+  stage: coverage
+  needs:
+    - job: coverage
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA
+    - uv run diff-cover coverage.xml --compare-branch=$CI_MERGE_REQUEST_DIFF_BASE_SHA --diff-range-notation=.. --fail-under=80
+  variables:
+    UV_PYTHON: 3.13
 
 
 docs:
