@@ -88,6 +88,40 @@ tests_gui_qt6_py313:
     PYTEST_QT_API: pyqt6
 
 
+# Trial merge of the latest upstream NICOS, run from a pipeline schedule with
+# UPSTREAM_SYNC=1. Nothing is pushed; see UPSTREAM.md for the manual sync.
+upstream-sync:
+  stage: test
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $UPSTREAM_SYNC == "1"
+  variables:
+    GIT_DEPTH: 0
+    HTTP_PROXY: $ESS_HTTP_PROXY
+    HTTPS_PROXY: $ESS_HTTP_PROXY
+    http_proxy: $ESS_HTTP_PROXY
+    https_proxy: $ESS_HTTP_PROXY
+    UV_PYTHON: 3.13
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - git config --global user.name "upstream-sync"
+    - git config --global user.email "upstream-sync@invalid"
+  script:
+    - set -o pipefail
+    - uv run --no-project python ci/sync_upstream.py | tee upstream-sync.txt
+    - uv sync --extra gui --all-packages --group gui-test
+    - find ./nicos_ess -type d -name setups -exec uv run tools/check-setups {} \; | tee check-setups.txt
+    - test -z "$(grep ERROR check-setups.txt)"
+    - uv run pytest test/ --junitxml=upstream-sync-junit.xml
+  artifacts:
+    when: always
+    paths:
+      - upstream-sync.txt
+      - check-setups.txt
+    reports:
+      junit: upstream-sync-junit.xml
+
+
 integration-smoke:
   stage: integration
   image: docker:28-cli

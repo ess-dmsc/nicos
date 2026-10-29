@@ -250,6 +250,9 @@ lint.select = [
 "**/scripts/**/*.py" = [
     "T20"   # print found
 ]
+"ci/**/*.py" = [
+    "T20"   # print found
+]
 "test/**/*.py" = [
     "T20"   # print found
 ]
