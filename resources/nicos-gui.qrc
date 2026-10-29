@@ -71,15 +71,6 @@
     <file alias="psi-logo-auth">psi-logo-auth.png</file>
     <file alias="ess-logo-auth">ess-logo-auth.png</file>
   </qresource>
-  <qresource prefix="mgml">
-    <file alias="mgml-logo-auth">../nicos_mgml/resources/mgml-logo-auth.png</file>
-  </qresource>
-  <qresource prefix="lahn">
-    <file alias="lahn-logo-auth">../nicos_lahn/resources/lahn-logo-auth.png</file>
-  </qresource>
-  <qresource prefix="brin">
-    <file alias="brin-logo-auth">../nicos_batan/resources/brin-logo-auth.png</file>
-  </qresource>
   <qresource prefix="leds">
     <file alias="status_white">leds/simplewhite.png</file>
     <file alias="status_unknown">leds/simpleunknown.png</file>
@@ -103,6 +94,10 @@
     <file alias="gray_off">leds/ledgrayoff.png</file>
   </qresource>
   <qresource prefix="material">
+    <file alias="document">material/icons/document-24px.svg</file>
+    <file alias="find">material/icons/find-24px.svg</file>
+    <file alias="reset_zoom">material/icons/reset_zoom-24px.svg</file>
+    <file alias="save_as">material/icons/save_as-24px.svg</file>
     <file alias="add">material/icons/add-24px.svg</file>
     <file alias="add_circle_outline">material/icons/add_circle_outline-24px.svg</file>
     <file alias="archive">material/icons/archive-24px.svg</file>
