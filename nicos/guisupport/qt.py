@@ -27,11 +27,13 @@
 # pylint: disable=wildcard-import, unused-import, unused-wildcard-import
 
 import os
+import platform
 import sys
 
 NICOS_QT = os.environ.get('NICOS_QT')
 
-if NICOS_QT == '6':
+if NICOS_QT == '6' or (NICOS_QT is None and platform.system() == 'Darwin'
+                       and platform.processor() == 'arm'):
     # pylint: disable=import-error
 
     from PyQt6 import uic
