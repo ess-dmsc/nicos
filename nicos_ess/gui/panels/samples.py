@@ -1,8 +1,11 @@
+from copy import deepcopy
+
 from nicos.guisupport.qt import (
     QAbstractItemView,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
     QPushButton,
     QStyledItemDelegate,
     Qt,
@@ -52,6 +55,9 @@ class SamplePanel(PanelBase):
             item.setData(0, Qt.ItemDataRole.UserRole, i)
 
     def _add_table_data(self, data):
+        data = deepcopy(data)
+        sample = data.pop("name")
+        self.sample_edit.setText(str(sample))
         for i, (key, value) in enumerate(data.items()):
             self.table.setItem(i, 0, QTableWidgetItem(str(key)))
             self.table.setItem(i, 1, QTableWidgetItem(str(value)))
@@ -72,6 +78,11 @@ class SamplePanel(PanelBase):
             if row == 0 and col == 1:
                 selected_item = self.tree.selectedItems()[0]
                 selected_item.setText(0, text)
+
+    def on_sample_name_changed(self, text):
+        self.changes_label.setText("Changes made to samples, save or cancel")
+        selected_item = self.tree.selectedItems()[0]
+        selected_item.setText(0, text)
 
     def _new_sample_btn_clicked(self):
         self.edit_ongoing = True
@@ -133,8 +144,10 @@ class SamplePanel(PanelBase):
         self.btn_new = QPushButton("New")
         self.btn_remove = QPushButton("Remove")
         self.btn_duplicate = QPushButton("Duplicate")
-        self.changes_label = QLabel()
 
+        self.sample_label = QLabel("Sample:")
+        self.sample_edit = QLineEdit()
+        self.metadata_label = QLabel("Metadata:")
         self.table = QTableWidget()
         self.table.setRowCount(100)
         self.table.setColumnCount(2)
@@ -143,29 +156,36 @@ class SamplePanel(PanelBase):
         self.btn_save = QPushButton("Apply changes")
         self.btn_cancel = QPushButton("Discard changes")
 
+        self.changes_label = QLabel()
+
     def _set_layout(self):
         tree_btn_layout = QHBoxLayout()
         tree_btn_layout.addWidget(self.btn_new)
         tree_btn_layout.addWidget(self.btn_duplicate)
         tree_btn_layout.addWidget(self.btn_remove)
         tree_btn_layout.addStretch()
-        tree_layout = QVBoxLayout()
-        tree_layout.addWidget(self.tree)
-        tree_layout.addLayout(tree_btn_layout)
+        self.tree_layout = QVBoxLayout()
+        self.tree_layout.addWidget(self.tree)
+        self.tree_layout.addLayout(tree_btn_layout)
 
+        table_header_layout = QHBoxLayout()
+        table_header_layout.addWidget(self.sample_label)
+        table_header_layout.addWidget(self.sample_edit)
         table_btn_layout = QHBoxLayout()
         table_btn_layout.addWidget(self.btn_edit)
         table_btn_layout.addWidget(self.btn_save)
         table_btn_layout.addWidget(self.btn_cancel)
         table_btn_layout.addStretch()
         table_btn_layout.addWidget(self.changes_label)
-        table_layout = QVBoxLayout()
-        table_layout.addWidget(self.table)
-        table_layout.addLayout(table_btn_layout)
+        self.table_layout = QVBoxLayout()
+        self.table_layout.addLayout(table_header_layout)
+        self.table_layout.addWidget(self.metadata_label)
+        self.table_layout.addWidget(self.table)
+        self.table_layout.addLayout(table_btn_layout)
 
         self.layout = QHBoxLayout()
-        self.layout.addLayout(tree_layout)
-        self.layout.addLayout(table_layout)
+        self.layout.addLayout(self.tree_layout)
+        self.layout.addLayout(self.table_layout)
         self.setLayout(self.layout)
 
     def _format_layout(self):
@@ -181,6 +201,9 @@ class SamplePanel(PanelBase):
         QTimer.singleShot(0, _initial_label_column_width)
         self.tree.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.changes_label.setStyleSheet("color: red; font-weight: bold;")
+        self.sample_label.setStyleSheet("font-weight: bold;")
+        self.metadata_label.setStyleSheet("font-weight: bold;")
+        self.tree_layout.setContentsMargins(0, 0, 20, 0)
 
     def _add_signals(self):
         self.tree.itemSelectionChanged.connect(self._on_sample_selected)
@@ -189,8 +212,9 @@ class SamplePanel(PanelBase):
         self.btn_duplicate.clicked.connect(self._duplicate_sample_btn_clicked)
         self.btn_save.clicked.connect(self._save_btn_clicked)
         self.btn_cancel.clicked.connect(self._cancel_changes_btn_clicked)
-        self.live_edit = LiveEditDelegate(self.on_text_changed, self.table)
-        self.table.setItemDelegate(self.live_edit)
+        self.table_live_edit = LiveEditDelegate(self.on_text_changed, self.table)
+        self.table.setItemDelegate(self.table_live_edit)
+        self.sample_edit.textEdited.connect(self.on_sample_name_changed)
 
 
 class LiveEditDelegate(QStyledItemDelegate):
