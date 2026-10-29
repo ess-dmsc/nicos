@@ -580,7 +580,8 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._send_command(self.command_topic, b'{"cmd": "stop"}')
 
     def doShutdown(self):
-        self._do_stop()
+        if self._stop_lock is not None:
+            self._do_stop()
         if self._response_consumer is not None:
             self._response_consumer.close()
 
