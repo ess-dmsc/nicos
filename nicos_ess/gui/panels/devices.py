@@ -765,7 +765,8 @@ class DevicesPanel(Panel):
                 for field in ("temperature", "electric_field", "magnetic_field")
                 if sample_params.get(field) and sample_params[field] not in curr_devs
             ]
-            self.client.eval(f"session.clearSampleFields({clear_fields!r})")
+            if clear_fields:
+                self.client.eval(f"clear_sample_fields(*{clear_fields!r})", None)
 
     # API shared with ControlDialog
     def exec_command(self, command, ask_queue=True, immediate=False):
