@@ -219,7 +219,7 @@ class ImageView(QWidget):
         crosshair_stats = {**vert_stats, **hori_stats}
 
         stats_dialog = StatisticsDialog(image_stats, roi_stats, crosshair_stats)
-        stats_dialog.exec_()
+        stats_dialog.exec()
 
     def initialize_ui(self):
         self.ui = QVBoxLayout(self)
@@ -798,10 +798,7 @@ class ImageView(QWidget):
                 return float(label_arr[0]), float(label_arr[-1])
             elif size == n_samples:
                 # bin centers, build edges by assuming constant spacing
-                if size > 1:
-                    step = float(label_arr[1] - label_arr[0])
-                else:
-                    step = 1.0
+                step = float(label_arr[1] - label_arr[0]) if size > 1 else 1.0
                 return (
                     float(label_arr[0] - step / 2.0),
                     float(label_arr[-1] + step / 2.0),
@@ -964,7 +961,7 @@ class ImageView(QWidget):
         new_pos = np.exp(np.linspace(-5, 0, 10))
         new_pos[0], new_pos[-1] = 0.0, 1.0
         new_colors = [
-            [int(np.interp(x, pos, c)) for c in zip(*colors)]
+            [int(np.interp(x, pos, c)) for c in zip(*colors, strict=False)]
             for x in np.linspace(0, 1, 10)
         ]
 
@@ -989,7 +986,9 @@ class ImageView(QWidget):
             self.bottom_plot.setLabel("bottom", x_label, units=x_unit)
         if hasattr(self, "left_plot"):
             self.left_plot.setLabel("left", y_label, units=y_unit)
-        # if hasattr(self, "line_plot"): # we probably don't want to change this because it's a profile along arbitrary line
+        # we probably don't want to change this because it's a profile along
+        # arbitrary line
+        # if hasattr(self, "line_plot"):
         #     self.line_plot.setLabel("bottom", x_label, units=x_unit)
 
     def save_state(self):
@@ -1206,15 +1205,17 @@ class ImageView(QWidget):
         data_x = roi_data.mean(axis=1)  # vs x
         data_y = roi_data.mean(axis=0)  # vs y
 
-        if x_coords is not None and x_coords.size >= ix1:
-            xvals = x_coords[ix0:ix1]
-        else:
-            xvals = np.arange(ix0, ix1, dtype=float)
+        xvals = (
+            x_coords[ix0:ix1]
+            if x_coords is not None and x_coords.size >= ix1
+            else np.arange(ix0, ix1, dtype=float)
+        )
 
-        if y_coords is not None and y_coords.size >= iy1:
-            yvals = y_coords[iy0:iy1]
-        else:
-            yvals = np.arange(iy0, iy1, dtype=float)
+        yvals = (
+            y_coords[iy0:iy1]
+            if y_coords is not None and y_coords.size >= iy1
+            else np.arange(iy0, iy1, dtype=float)
+        )
 
         # bottom plot: intensity vs x (linked to image X axis)
         self.bottom_roi_trace.setData(x=xvals, y=data_x)

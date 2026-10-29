@@ -387,7 +387,7 @@ class ImageViewController(QWidget):
         self.crosshair_roi_pos_y_label = QLabel("Y")
 
     def toggle_use_defined_length(self, state):
-        use_defined_length = state == Qt.Checked
+        use_defined_length = Qt.CheckState(state) == Qt.CheckState.Checked
         self.plotwidget.update_scale(use_defined_length)
 
     def update_pix_mm_ratio(self):
@@ -463,7 +463,7 @@ class ImageViewController(QWidget):
         )
 
     def toggle_log_mode(self, state):
-        log_mode = state == Qt.Checked
+        log_mode = Qt.CheckState(state) == Qt.CheckState.Checked
         self.plotwidget.toggle_log_mode(log_mode)
         if self.disp_image is not None:
             self.plotwidget.update_image(force_image=self.disp_image)
@@ -514,7 +514,7 @@ class ImageViewController(QWidget):
 
     def selector_roi_display(self):
         pixel_dialog = PixelDialog(self.plotwidget.selected_pixels, parent=self)
-        if pixel_dialog.exec_() == QDialog.Accepted:
+        if pixel_dialog.exec() == QDialog.DialogCode.Accepted:
             self.plotwidget.selected_pixels = pixel_dialog.selected_pixels
         self.update_selected_pixel_counter()
 

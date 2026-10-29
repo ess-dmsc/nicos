@@ -36,7 +36,9 @@ class LayoutDialog(QDialog):
         form = QFormLayout(self)
         form.addRow("Rows:", self.rows_sb)
         form.addRow("Columns:", self.cols_sb)
-        btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btn_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         btn_box.accepted.connect(self.accept)
         btn_box.rejected.connect(self.reject)
         form.addWidget(btn_box)
@@ -95,14 +97,14 @@ class LiveDataPlot(QFrame):
         else:
             dlg.log_line_cb.setChecked(self.current_view.plot_widget.logY)
 
-        if dlg.open() == QDialog.Accepted:
-            # persist choices
-            if isinstance(self.current_view, ImageView):
-                self._expert_mode = dlg.expert_cb.isChecked()
-                if self._expert_mode:
-                    self.show_imageview_expert_modes()
-                else:
-                    self.hide_imageview_expert_modes()
+        if dlg.open() == QDialog.DialogCode.Accepted and isinstance(
+            self.current_view, ImageView
+        ):
+            self._expert_mode = dlg.expert_cb.isChecked()
+            if self._expert_mode:
+                self.show_imageview_expert_modes()
+            else:
+                self.hide_imageview_expert_modes()
 
     def show_imageview_expert_modes(self):
         if not isinstance(self.current_view, ImageView):
@@ -208,7 +210,7 @@ class LiveDataPanel(Panel):
     @pyqtSlot()
     def show_layout_dialog(self):
         dlg = LayoutDialog(self)
-        if dlg.exec_() == QDialog.Accepted:
+        if dlg.exec() == QDialog.DialogCode.Accepted:
             rows, cols = dlg.dims
             self.create_splitter_grid(rows, cols)
 
@@ -241,16 +243,15 @@ class LiveDataPanel(Panel):
         row_splitters: list[QSplitter] = []
         col_splitters: list[QSplitter] = []
 
-        for r in range(rows):
+        for _r in range(rows):
             hsplit = QSplitter(Qt.Orientation.Horizontal, root)
             row_splitters.append(hsplit)
-            for c in range(cols):
+            for _c in range(cols):
                 plot = LiveDataPlot(self)
                 self.plot_widgets.append(plot)
                 hsplit.addWidget(plot)
 
                 if len(col_splitters) < cols:
-                    vs = QSplitter(Qt.Orientation.Vertical)
                     col_splitters.append(hsplit)
 
         for sp in row_splitters:
@@ -297,7 +298,7 @@ class LiveDataPanel(Panel):
         if label_shape:
             raw = blobs[1]  # single concatenated float64 buffer
             offset = 0
-            for shape, dtype in zip(label_shape, label_dtypes):
+            for shape, dtype in zip(label_shape, label_dtypes, strict=False):
                 nbytes = shape * 8  # float64
                 arr = np.frombuffer(
                     raw[offset : offset + nbytes], dtype=np.float64
@@ -383,9 +384,8 @@ class LiveDataPanel(Panel):
         selected_plot, selected_cb = self.connected_plots.get(
             params["det"], (None, None)
         )
-        if selected_plot and selected_cb:
-            if selected_cb.currentText() == params["det"]:
-                self._on_plot_livedata(selected_plot, params, blobs)
+        if selected_plot and selected_cb and selected_cb.currentText() == params["det"]:
+            self._on_plot_livedata(selected_plot, params, blobs)
 
     def on_client_connected(self):
         self.client.tell("eventunmask", ["livedata"])
@@ -440,7 +440,8 @@ class PlotSettingsDialog(QDialog):
             self.log_line_cb.toggled.connect(lambda s: view.plot_widget.setLogMode(y=s))
 
         btns = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=self
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+            parent=self,
         )
         btns.accepted.connect(self.accept)
         btns.rejected.connect(self.reject)

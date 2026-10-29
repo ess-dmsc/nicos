@@ -24,7 +24,7 @@ def clearCheckedComponents(listwidget):
     for i in range(listwidget.count()):
         item = listwidget.item(i)
         if item.checkState() == Qt.CheckState.Checked:
-            item.setCheckState(0)
+            item.setCheckState(Qt.CheckState.Unchecked)
 
 
 class SetupsPanel(Panel):

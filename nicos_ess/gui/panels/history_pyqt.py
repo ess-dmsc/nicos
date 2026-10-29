@@ -218,7 +218,7 @@ class NewViewDialog(DlgUtils, QDialog):
                 item.setText(2, "1")
             if not item.text(3):
                 item.setText(3, "0")
-            suffix = "".join("[%s]" % i for i in index.split(",")) if index else ""
+            suffix = "".join(f"[{i}]" for i in index.split(",")) if index else ""
             scale = float_with_default(item.text(2), 1)
             offset = float_with_default(item.text(3), 0)
             if scale != 1:
@@ -510,7 +510,7 @@ class HistoryPanel(Panel):
 
     def _open_view_dialog(self, dialog_class, info=None, item=None):
         dialog = dialog_class(self, info=info, client=self.client)
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             view_info = dialog.infoDict()
             if item:
                 self.update_view(item, view_info)
@@ -667,8 +667,8 @@ class HistoryPanel(Panel):
         devices, expressions, descriptions = parseKeyExpression(
             devices_expr, multiple=True
         )
-        for i, (device, expr, desc) in enumerate(
-            zip(devices, expressions, descriptions)
+        for i, (device, _expr, desc) in enumerate(
+            zip(devices, expressions, descriptions, strict=False)
         ):
             fr = time.time() - self._window_length if simple_query else info["fromdate"]
             to = time.time() + 60 if live_updating else info["todate"]
@@ -748,7 +748,7 @@ class HistoryPanel(Panel):
 
     def _remove_expired_data(self):
         start_time = self.get_start_time()
-        for key, line in self._lines.items():
+        for line in self._lines.values():
             if line.does_expire():
                 line.trim_data(start_time)
 

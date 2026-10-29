@@ -316,4 +316,4 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     viewer = TrendViewer()
     viewer.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

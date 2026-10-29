@@ -173,11 +173,15 @@ class StatusWidget(QWidget):
 
     def add_status(self, label, key, initial_value, status_type="icon"):
         label_widget = QLabel(f"{label}:")
-        label_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        label_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         label_widget.setStyleSheet("font-size: 17pt; font-weight: bold;")
 
         value_widget = QLabel(initial_value)
-        value_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        value_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         value_widget.setStyleSheet("font-size: 17pt;")
 
         if self.current_column >= self.maximum_status_columns:
@@ -961,7 +965,7 @@ class MainWindow(DlgUtils, QMainWindow):
         dlg.show()
 
     def on_trayIcon_activated(self, reason):
-        if reason == QSystemTrayIcon.Trigger:
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.activateWindow()
 
     def on_actionExpert_toggled(self, on):

@@ -48,9 +48,8 @@ class StatisticsDialog(QDialog):
                 self._statistic_looper(stats)
 
     def export_as_csv(self):
-        options = QFileDialog.Options()
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Statistics", "", "CSV Files (*.csv)", options=options
+            self, "Save Statistics", "", "CSV Files (*.csv)"
         )
         if not file_path.endswith(".csv"):
             file_path += ".csv"

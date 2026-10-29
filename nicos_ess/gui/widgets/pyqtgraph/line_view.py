@@ -153,7 +153,7 @@ class LineView(QWidget):
             self.plot_widget.setTitle(title)
 
     def toggle_mode(self, state):
-        if state == Qt.Checked:
+        if Qt.CheckState(state) == Qt.CheckState.Checked:
             self.plot_latest_curve()
             self.legend.hide()
             self.vertical_line.hide()
@@ -167,7 +167,7 @@ class LineView(QWidget):
                 self.vertical_line_changed()
 
     def toggle_log_mode(self, state):
-        log_mode = state == Qt.Checked
+        log_mode = Qt.CheckState(state) == Qt.CheckState.Checked
         self.plot_widget.setLogMode(y=log_mode)
         self.plot_widget_sliced.setLogMode(y=log_mode)
 

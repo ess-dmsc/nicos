@@ -25,11 +25,13 @@ class PixelDialog(QDialog):
         layout.addWidget(self.stats_table)
 
         self.add_row_button = QTableWidgetItem("+")
-        self.add_row_button.setFlags(Qt.ItemIsEnabled)
+        self.add_row_button.setFlags(Qt.ItemFlag.ItemIsEnabled)
         self.stats_table.insertRow(0)
         self.stats_table.setItem(0, 0, self.add_row_button)
         self.stats_table.setSpan(0, 0, 1, 2)
-        self.stats_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.stats_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
 
         save_button = QPushButton("Save Changes", self)
         save_button.clicked.connect(self.save_changes)
@@ -64,7 +66,7 @@ class PixelDialog(QDialog):
         self.accept()
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Delete:
+        if event.key() == Qt.Key.Key_Delete:
             self.delete_selected_pixels()
         else:
             super().keyPressEvent(event)
