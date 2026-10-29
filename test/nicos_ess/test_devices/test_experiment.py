@@ -2,6 +2,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from nicos.commands.measure import count
+from nicos.commands.scan import scan
 from nicos.core import UsageError
 from nicos_ess.devices.experiment import EssExperiment
 from nicos_ess.devices.sample import EssSample
@@ -275,3 +277,28 @@ class TestEssExperimentWithSession:
     def test_get_proposal_path(self, session):
         proposal_path = session.experiment.proposalpath_of("123456")
         assert proposal_path == "ymir/123456/raw"
+
+
+class TestEssExperimentScan:
+    @pytest.fixture
+    def scan_session(self, session, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data").mkdir()
+        session.unloadSetup()
+        session.loadSetup("ess_experiment_scan", {})
+        session.experiment.setDetectors([session.getDevice("det")])
+        yield session
+        session.unloadSetup()
+
+    def test_scan_counts_in_dataroot_only(self, scan_session, tmp_path):
+        scan(scan_session.getDevice("motor"), [0, 1], t=0.01)
+
+        assert (tmp_path / "data" / "counters").read_text() == "scan 1\n"
+        assert not (tmp_path / "counters").exists()
+        assert scan_session.experiment.lastscan == 1
+
+    def test_count(self, scan_session):
+        count(t=0.01)
+
+    def test_title_before_first_proposal_is_empty(self, scan_session):
+        assert scan_session.experiment.title == ""
