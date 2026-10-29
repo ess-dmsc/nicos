@@ -138,10 +138,10 @@ class SamplePanel(PanelBase):
         self.table = QTableWidget()
         self.table.setRowCount(100)
         self.table.setColumnCount(2)
-        self.table.setHorizontalHeaderLabels(["Label", "Value"])
+        self.table.setHorizontalHeaderLabels(["Property", "Value"])
         self.btn_edit = QPushButton("Edit")
-        self.btn_save = QPushButton("Save")
-        self.btn_cancel = QPushButton("Cancel")
+        self.btn_save = QPushButton("Apply changes")
+        self.btn_cancel = QPushButton("Discard changes")
 
     def _set_layout(self):
         tree_btn_layout = QHBoxLayout()
