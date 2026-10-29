@@ -36,8 +36,6 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        watercooler_mode="watercooler_mode",
-        watercooler_temperature="watercooler_temperature",
     ),
     orca_chip_temperature=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

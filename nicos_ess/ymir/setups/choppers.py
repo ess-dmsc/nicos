@@ -33,7 +33,6 @@ devices = dict(
         description="The current delay.",
         readpv=f"{pv_root}ChopDly-S",
         writepv=f"{pv_root}ChopDly-S",
-        abslimits=(0.0, 0.0),
     ),
     mini_chopper_total_delay=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -57,7 +56,6 @@ devices = dict(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv=f"{pv_root}DiffTSSamples",
-        unit="ns",
         visibility=(
             "metadata",
             "namespace",

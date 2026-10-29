@@ -50,7 +50,6 @@ devices = dict(
         description="Set Tube Voltage",
         readpv=f"{pv_root}Voltage-RB",
         writepv=f"{pv_root}Voltage-S",
-        abslimits=(20, 300),
     ),
     voltage_r=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
@@ -63,7 +62,6 @@ devices = dict(
         description="Set Tube Current",
         readpv=f"{pv_root}Current-RB",
         writepv=f"{pv_root}Current-S",
-        abslimits=(0, 1000),
     ),
     current_r=device(
         "nicos_ess.devices.epics.pva.EpicsNumericReadable",
@@ -76,7 +74,6 @@ devices = dict(
         description="Set Focus Value",
         readpv=f"{pv_root}Focus-RB",
         writepv=f"{pv_root}Focus-S",
-        abslimits=(0, 23000),
     ),
     # Environment/Misc Monitoring
     vacuum_r=device(
@@ -95,14 +92,12 @@ devices = dict(
         description="Set X-dir Object Align",
         readpv=f"{pv_root}AlignX-RB",
         writepv=f"{pv_root}AlignX-S",
-        abslimits=(-1200, 1200),
     ),
     align_y=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",  # might change to digital
         description="Set Y-dir Object Align",
         readpv=f"{pv_root}AlignY-RB",
         writepv=f"{pv_root}AlignY-S",
-        abslimits=(-1200, 1200),
     ),
     # Alignment Execution Commands
     align_beam=device(

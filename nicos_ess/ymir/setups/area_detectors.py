@@ -32,8 +32,6 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        watercooler_mode="watercooler_mode",
-        watercooler_temperature="watercooler_temperature",
     ),
     orca_image_type=device(
         "nicos_ess.devices.epics.area_detector.ImageType",

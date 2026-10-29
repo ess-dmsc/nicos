@@ -19,7 +19,6 @@ devices = dict(
         writepv="TEST:SMOKE:MOVE.VAL",
         monitor=True,
         pva=True,
-        unit="Hz",
         precision=0.01,
     ),
 )

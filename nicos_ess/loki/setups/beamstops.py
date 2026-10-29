@@ -7,7 +7,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Beamstop motor along beam axis - electrical axis 3 in motion cabinet 5",
         motorpv=f"{pv_root}MC-LinX-01:Mtr",
-        monitor_deadband=0.01,
     ),
     beamstop_x_positioner=device(
         "nicos_ess.devices.mapped_controller.MappedController",
@@ -26,7 +25,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Beamstop motor horizontal axis - electrical axis 4 in motion cabinet 5",
         motorpv=f"{pv_root}MC-LinY-01:Mtr",
-        monitor_deadband=0.01,
     ),
     beamstop_y_positioner=device(
         "nicos_ess.devices.mapped_controller.MappedController",
@@ -38,7 +36,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Detector beamstop Z1 M4 Transmission - electrical axis 5 in motion cabinet 5",
         motorpv=f"{pv_root}MC-LinZ-01:Mtr",
-        monitor_deadband=0.01,
     ),
     beamstop1_positioner=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
@@ -50,7 +47,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Detector beamstop Z2 20x25 - electrical axis 6 in motion cabinet 5",
         motorpv=f"{pv_root}MC-LinZ-02:Mtr",
-        monitor_deadband=0.01,
     ),
     beamstop2_positioner=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
@@ -62,7 +58,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Detector beamstop Z3 50x60 - electrical axis 7 in motion cabinet 5",
         motorpv=f"{pv_root}MC-LinZ-03:Mtr",
-        monitor_deadband=0.01,
     ),
     beamstop3_positioner=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
@@ -74,7 +69,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Detector beamstop Z4 65x75 - electrical axis 8 in motion cabinet 5",
         motorpv=f"{pv_root}MC-LinZ-04:Mtr",
-        monitor_deadband=0.01,
     ),
     beamstop4_positioner=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
@@ -86,7 +80,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Detector beamstop Z5 100x105 - electrical axis 9 in motion cabinet 5",
         motorpv=f"{pv_root}MC-LinZ-05:Mtr",
-        monitor_deadband=0.01,
     ),
     beamstop5_positioner=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",

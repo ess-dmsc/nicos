@@ -44,7 +44,6 @@ devices = dict(
         description="The current delay.",
         readpv=f"{bpc2_pv_root}ChopDly-S",
         writepv=f"{bpc2_pv_root}ChopDly-S",
-        abslimits=(0.0, 0.0),
     ),
     bpc2_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
@@ -58,7 +57,6 @@ devices = dict(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv=f"{bpc2_pv_root}DiffTSSamples",
-        unit="ns",
         visibility=(
             "metadata",
             "namespace",
@@ -159,7 +157,6 @@ devices = dict(
         description="The current delay.",
         readpv=f"{foc2_pv_root}ChopDly-S",
         writepv=f"{foc2_pv_root}ChopDly-S",
-        abslimits=(0.0, 0.0),
     ),
     foc2_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
@@ -173,7 +170,6 @@ devices = dict(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv=f"{foc2_pv_root}DiffTSSamples",
-        unit="ns",
         visibility=("metadata", "namespace"),
     ),
     foc2_chopper_phased=device(
@@ -278,7 +274,6 @@ devices = dict(
         description="The current delay.",
         readpv=f"{foc3_pv_root}ChopDly-S",
         writepv=f"{foc3_pv_root}ChopDly-S",
-        abslimits=(0.0, 0.0),
     ),
     foc3_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
@@ -292,7 +287,6 @@ devices = dict(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv=f"{foc3_pv_root}DiffTSSamples",
-        unit="ns",
         visibility=("metadata", "namespace"),
     ),
     foc3_chopper_phased=device(
@@ -397,7 +391,6 @@ devices = dict(
         description="The current delay.",
         readpv=f"{foc4_pv_root}ChopDly-S",
         writepv=f"{foc4_pv_root}ChopDly-S",
-        abslimits=(0.0, 0.0),
     ),
     foc4_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
@@ -411,7 +404,6 @@ devices = dict(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv=f"{foc4_pv_root}DiffTSSamples",
-        unit="ns",
         visibility=("metadata", "namespace"),
     ),
     foc4_chopper_phased=device(

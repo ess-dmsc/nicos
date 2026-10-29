@@ -10,7 +10,6 @@ devices = dict(
         has_msgtxt=False,
         has_errorbit=False,
         has_reseterror=False,
-        monitor_deadband=0.01,
     ),
     sample_slit_y_m=device(
         "nicos_ess.devices.epics.pva.motor.SmaractPiezoMotor",
@@ -20,7 +19,6 @@ devices = dict(
         has_msgtxt=False,
         has_errorbit=False,
         has_reseterror=False,
-        monitor_deadband=0.01,
     ),
     sample_slit_width=device(
         "nicos.devices.generic.slit.HorizontalGap",
@@ -38,7 +36,6 @@ devices = dict(
         has_msgtxt=False,
         has_errorbit=False,
         has_reseterror=False,
-        monitor_deadband=0.01,
     ),
     sample_slit_z_m=device(
         "nicos_ess.devices.epics.pva.motor.SmaractPiezoMotor",
@@ -48,7 +45,6 @@ devices = dict(
         has_msgtxt=False,
         has_errorbit=False,
         has_reseterror=False,
-        monitor_deadband=0.01,
     ),
     sample_slit_height=device(
         "nicos.devices.generic.slit.VerticalGap",

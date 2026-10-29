@@ -219,7 +219,6 @@ devices = dict(
         description="Cold valve target position",
         readpv=f"{pv_root}CValve-Target-s",
         writepv=f"{pv_root}CValve-Target-s",
-        abslimits=(0, 100),
         userlimits=(0, 100),
         nexus_config=[
             {
@@ -269,7 +268,6 @@ devices = dict(
         description="Regulation temperature setpoint",
         readpv=f"{pv_root}regulation-setpoint-s",
         writepv=f"{pv_root}regulation-setpoint-s",
-        abslimits=(0, 1500),
         userlimits=(0, 1500),
         nexus_config=[
             {
@@ -319,7 +317,6 @@ devices = dict(
         description="Sample temperature setpoint",
         readpv=f"{pv_root}sample-setpoint-s",
         writepv=f"{pv_root}sample-setpoint-s",
-        abslimits=(0, 1500),
         userlimits=(0, 1500),
         nexus_config=[
             {

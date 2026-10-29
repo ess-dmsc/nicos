@@ -16,7 +16,6 @@ devices = dict(
         description="The setpoint for the cuvette",
         readpv=f"{pv_root_ls_1}SETP3",
         writepv=f"{pv_root_ls_1}SETP_S3",
-        abslimits=(0.0, 400),
     ),
     T_cuvette_2=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -28,7 +27,6 @@ devices = dict(
         description="The setpoint for the cuvette",
         readpv=f"{pv_root_ls_1}SETP4",
         writepv=f"{pv_root_ls_1}SETP_S4",
-        abslimits=(0.0, 400),
     ),
     T_cuvette_3=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -40,7 +38,6 @@ devices = dict(
         description="The setpoint for the cuvette",
         readpv=f"{pv_root_ls_2}SETP3",
         writepv=f"{pv_root_ls_2}SETP_S3",
-        abslimits=(0.0, 400),
     ),
     T_cuvette_4=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -52,7 +49,6 @@ devices = dict(
         description="The setpoint for the cuvette",
         readpv=f"{pv_root_ls_2}SETP4",
         writepv=f"{pv_root_ls_2}SETP_S4",
-        abslimits=(0.0, 400),
     ),
     T_cuvette_5=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -64,6 +60,5 @@ devices = dict(
         description="The setpoint for the cuvette",
         readpv=f"{pv_root_ls_3}SETP3",
         writepv=f"{pv_root_ls_3}SETP_S3",
-        abslimits=(0.0, 400),
     ),
 )

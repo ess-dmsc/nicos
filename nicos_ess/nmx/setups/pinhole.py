@@ -32,21 +32,18 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole exchanger (as a motor)",
         motorpv=f"{pinhole_pv_root}MC-Pin-01:Mtr",
-        monitor_deadband=0.01,
         visibility={},
     ),
     pinhole__carousel_rotation=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole exchanger carousel rotation",
         motorpv=f"{aux_pv_root}MC-RotZ-01:Mtr",
-        monitor_deadband=0.01,
         visibility={},
     ),
     pinhole__carousel_electromagnet=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole exchanger carousel electromagnet",
         motorpv=f"{aux_pv_root}MC-LinZ-01:Mtr",
-        monitor_deadband=0.01,
         visibility={},
     ),
     pinhole__carousel_v_raise=device(

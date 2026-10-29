@@ -32,19 +32,16 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Rotational sample stack",
         motorpv="BIFRO-SpRot:MC-RotZ-01:Mtr",
-        monitor_deadband=0.01,
     ),
     detector_tank_rotation=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Rotational detector tank",
         motorpv="BIFRO-DtCar:MC-RotZ-01:Mtr",
-        monitor_deadband=0.01,
     ),
     divergence_slit_1_p=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Divergence slit 1 left",
         motorpv="BIFRO-DivSl1:MC-SlYp-01:Mtr",
-        monitor_deadband=0.01,
     ),
     divergence_slit_1_p_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -55,7 +52,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Divergence slit 1 right",
         motorpv="BIFRO-DivSl1:MC-SlYm-01:Mtr",
-        monitor_deadband=0.01,
     ),
     divergence_slit_1_m_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -74,7 +70,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Divergence slit 2 left",
         motorpv="BIFRO-DivSl2:MC-SlYp-01:Mtr",
-        monitor_deadband=0.01,
     ),
     divergence_slit_2_p_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -85,7 +80,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Divergence slit 2 right",
         motorpv="BIFRO-DivSl2:MC-SlYm-01:Mtr",
-        monitor_deadband=0.01,
     ),
     divergence_slit_2_m_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -104,7 +98,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Divergence slit 3 left",
         motorpv="BIFRO-DivSl3:MC-SlYp-01:Mtr",
-        monitor_deadband=0.01,
     ),
     divergence_slit_3_p_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -115,7 +108,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Divergence slit 3 right",
         motorpv="BIFRO-DivSl3:MC-SlYm-01:Mtr",
-        monitor_deadband=0.01,
     ),
     divergence_slit_3_m_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -134,12 +126,10 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Goniometer X",
         motorpv="BIFRO-SpGon:MC-RotX-01:Mtr",
-        monitor_deadband=0.01,
     ),
     goniometer_y=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Goniometer Y",
         motorpv="BIFRO-SpGon:MC-RotY-01:Mtr",
-        monitor_deadband=0.01,
     ),
 )

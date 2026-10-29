@@ -13,7 +13,6 @@ devices = dict(
         description="The volume to be pumped",
         readpv=f"{pv_root}VOLUME",
         writepv=f"{pv_root}SET_VOLUME",
-        abslimits=(-1e308, 1e308),
     ),
     pump_volume_units_9000=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
@@ -26,7 +25,6 @@ devices = dict(
         description="The pump rate",
         readpv=f"{pv_root}RATE",
         writepv=f"{pv_root}SET_RATE",
-        abslimits=(-1e308, 1e308),
     ),
     pump_rate_units_9000=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
@@ -85,7 +83,6 @@ devices = dict(
         description="How long to pause for",
         readpv=f"{pv_root}SET_PAUSE",
         writepv=f"{pv_root}SET_PAUSE",
-        abslimits=(-1e308, 1e308),
     ),
     zero_volume_withdrawn_9000=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

@@ -29,13 +29,11 @@ devices = dict(
         description="Photonis intensifier gain",
         readpv="TBL-DtTPX:NDet-ImgInt-001:AO0",
         writepv="TBL-DtTPX:NDet-ImgInt-001:AO0Set",
-        abslimits=(0, 10),
     ),
     photonis_intensifier_bias=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Photonis intensifier bias voltage",
         readpv="TBL-DtTPX:NDet-ImgInt-001:AO1",
         writepv="TBL-DtTPX:NDet-ImgInt-001:AO1Set",
-        abslimits=(0, 10),
     ),
 )

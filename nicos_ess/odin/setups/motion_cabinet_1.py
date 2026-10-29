@@ -18,7 +18,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Bunker 1 WFMC Translation Stage (Z)",
         motorpv="ODIN-ChpLin:MC-LinX-01:Mtr",
-        monitor_deadband=0.01,
     ),
     # --- Cabinet health ---
     cabinet_1_status=device(

@@ -15,14 +15,12 @@ devices = dict(
         description="The setpoint for the sub cryo",
         readpv=f"{pv_root}SUBCRYO_SETP",
         writepv=f"{pv_root}SUBCRYO_SETP_S",
-        abslimits=(0.0, 400),
     ),
     T_maincryo_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The setpoint for the main cryo",
         readpv=f"{pv_root}MAINCRYO_SETP",
         writepv=f"{pv_root}MAINCRYO_SETP",
-        abslimits=(0.0, 400),
     ),
     T_sample=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
