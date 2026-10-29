@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -26,27 +26,22 @@
 import os
 from time import monotonic, sleep
 
-from nicos.core import LimitError
-from nicos.devices.generic.sequence import (
-    SeqCall,
-    SeqDev,
-    SeqMethod,
-    SeqNOP,
-    SeqParam,
-    SeqSleep,
-)
-from test.utils import raises
+import pytest
 
-session_setup = "sequencer"
+from nicos.core import InvalidValueError
+from nicos.devices.generic.sequence import SeqCall, SeqDev, SeqMethod, \
+    SeqNOP, SeqParam, SeqSleep
+
+session_setup = 'sequencer'
 methods_called = set()
 
 # due to time.time() and time.sleep() resolution on windows
-DELTA = 0.05 if os.name == "nt" else 0
+DELTA = 0.05 if os.name == 'nt' else 0
 
 
 def test_lockeddevice(session):
-    ld = session.getDevice("ld")
-    sm1 = session.getDevice("sm1")
+    ld = session.getDevice('ld')
+    sm1 = session.getDevice('sm1')
     ld.move(3)
     ld.wait()
     assert sm1.read(0) == 3
@@ -54,19 +49,19 @@ def test_lockeddevice(session):
 
 def test_sequence_items():
     # parameter checking
-    assert raises(TypeError, SeqDev)
-    assert raises(TypeError, SeqParam)
-    assert raises(TypeError, SeqMethod)
-    assert raises(TypeError, SeqCall)
-    assert raises(TypeError, SeqSleep)
+    pytest.raises(TypeError, SeqDev)
+    pytest.raises(TypeError, SeqParam)
+    pytest.raises(TypeError, SeqMethod)
+    pytest.raises(TypeError, SeqCall)
+    pytest.raises(TypeError, SeqSleep)
     SeqNOP()
 
 
 def test_seqdev(session):
     # Device move
-    sm1 = session.getDevice("sm1")
+    sm1 = session.getDevice('sm1')
     sd = SeqDev(sm1, 3)
-    assert repr(sd) == "sm1 -> 3.000"
+    assert repr(sd) == 'sm1 -> 3.000'
     sm1.start(0)
     sm1.wait()
     assert sm1.read(0) == 0
@@ -80,10 +75,10 @@ def test_seqdev(session):
 
 def test_seqparam(session):
     # Param setting
-    sm3 = session.getDevice("sm3")
-    sp = SeqParam(sm3, "speed", 1)
-    assert "sm3.speed" in repr(sp)
-    assert repr(sp).endswith("1")
+    sm3 = session.getDevice('sm3')
+    sp = SeqParam(sm3, 'speed', 1)
+    assert 'sm3.speed' in repr(sp)
+    assert repr(sp).endswith('1')
 
     sm3.speed = 5
     assert sm3.speed == 5
@@ -96,17 +91,17 @@ def test_seqparam(session):
 
 def test_seqmethod(session):
     # method calling, use fix/release here
-    sm1 = session.getDevice("sm1")
-    sm = SeqMethod(sm1, "fix", "blubb")
-    assert repr(sm) == "sm1 fix"
+    sm1 = session.getDevice('sm1')
+    sm = SeqMethod(sm1, 'fix', 'blubb')
+    assert repr(sm) == 'sm1 fix'
 
-    assert sm1.fixed == ""  # pylint:disable=compare-to-empty-string
+    assert sm1.fixed == ''  # pylint:disable=compare-to-empty-string
 
     sm.check()
     sm.run()
     while not sm.isCompleted():
         pass
-    assert "blubb" in sm1.fixed
+    assert 'blubb' in sm1.fixed
 
     sm1.release()
 
@@ -114,7 +109,7 @@ def test_seqmethod(session):
 def test_seqsleep(session):
     # Sleeping??
     sw = SeqSleep(0.1)
-    assert repr(sw).startswith("0.1")
+    assert repr(sw).startswith('0.1')
     a = monotonic()
     sw.check()
     sw.run()
@@ -128,7 +123,7 @@ def test_seqsleep(session):
 def test_seqcall():
     # Calling
     sc = SeqCall(sleep, 0.1)
-    assert repr(sc) == "sleep"
+    assert repr(sc) == 'sleep'
     a = monotonic()
     sc.check()
     sc.run()
@@ -149,5 +144,5 @@ def test_seqnop():
 
 def test_locked_multiswitcher(session):
     # Guard against regression of #1315
-    lms = session.getDevice("ld2")
-    assert raises(LimitError, lms.move, 0)
+    lms = session.getDevice('ld2')
+    pytest.raises(InvalidValueError, lms.move, 0)

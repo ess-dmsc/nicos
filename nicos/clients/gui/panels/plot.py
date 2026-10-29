@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,14 +32,16 @@ from nicos.guisupport.qt import QDialog
 
 
 class PlotPanel(Panel):
+
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         # current plot object
         self.currentPlot = None
 
     def attachElogDialogExec(self, filename):
-        """Opens an attach to elog dialog and executes attach to elog on accept."""
-        newdlg = dialogFromUi(self, "panels/plot_attach.ui")
+        """Opens an attach to elog dialog and executes attach to elog on accept.
+        """
+        newdlg = dialogFromUi(self, 'panels/plot_attach.ui')
         newdlg.filename.setText(filename)
         ret = newdlg.exec()
         if ret != QDialog.DialogCode.Accepted:
@@ -50,8 +52,8 @@ class PlotPanel(Panel):
         fnames, remotefns, extensions = [], [], []
         for pathname, ext in self.currentPlot.saveQuietly():
             try:
-                with open(pathname, "rb") as fp:
-                    remotefn = self.client.ask("transfer", fp.read())
+                with open(pathname, 'rb') as fp:
+                    remotefn = self.client.ask('transfer', fp.read())
                     if remotefn is not None:
                         remotefns.append(remotefn)
                         extensions.append(ext)
@@ -60,6 +62,6 @@ class PlotPanel(Panel):
                 os.unlink(pathname)
         if remotefns:
             self.client.eval(
-                "_LogAttachImage(%r, %r, %r, %r)"
-                % (descr, remotefns, extensions, fnames)
+                '_LogAttachImage(%r, %r, %r, %r)' % (descr, remotefns,
+                                                     extensions, fnames)
             )

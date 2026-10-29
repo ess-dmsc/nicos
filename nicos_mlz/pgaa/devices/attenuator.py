@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,59 +21,51 @@
 #
 # *****************************************************************************
 
-"""The PGAA attentuator."""
+"""The PGAA attenuator."""
 
 from nicos.core import Override, multiWait
-from nicos.core.errors import InvalidValueError
 from nicos.core.device import Moveable
+from nicos.core.errors import InvalidValueError
 from nicos.core.params import Attach
 from nicos.devices.generic.switcher import MultiSwitcher
 
 
 class Attenuator(MultiSwitcher):
-    """Attentuator with 3 elements."""
+    """Attenuator with 3 elements."""
 
     attached_devices = {
-        "moveables": Attach("The 3 devices which are controlled", Moveable, multiple=3),
+        'moveables': Attach('The 3 devices which are controlled', Moveable,
+                            multiple=3),
     }
 
     parameter_overrides = {
-        "unit": Override(
-            default="%",
-            settable=False,
-            mandatory=False,
-        ),
-        "fmtstr": Override(
-            default="%.f",
-            mandatory=False,
-        ),
+        'unit': Override(default='%', settable=False, mandatory=False, ),
+        'fmtstr': Override(default='%.f', mandatory=False, ),
     }
 
     def _startRaw(self, target):
         """Target is the raw value, i.e. a list of positions."""
         moveables = self._attached_moveables
-        if not isinstance(target, (tuple, list)) or len(target) < len(moveables):
-            raise InvalidValueError(
-                self,
-                "doStart needs a tuple of %d "
-                "positions for this device!" % len(moveables),
-            )
+        if not isinstance(target, (tuple, list)) or \
+                len(target) < len(moveables):
+            raise InvalidValueError(self, 'doStart needs a tuple of %d '
+                                    'positions for this device!' %
+                                    len(moveables))
         # only check and move the moveables, which are first in self.devices
         for d, t in zip(moveables, target):
             if not d.isAllowed(t):
-                raise InvalidValueError(
-                    self, f"target value {t!r} not " f"accepted by device {t.name}"
-                )
+                raise InvalidValueError(self, f'target value {t!r} not '
+                                        f'accepted by device {t.name}')
         # Move first in all needed blades into the beam to reduce the
         # activation of sample and/or save the detector and them move out the
         # not needed ones
         for d, t in zip(moveables, target):
-            self.log.debug("moving %r to %r", d, t)
-            if t == "in":
+            self.log.debug('moving %r to %r', d, t)
+            if t == 'in':
                 d.start(t)
         for d, t in zip(moveables, target):
-            self.log.debug("moving %r to %r", d, t)
-            if t == "out":
+            self.log.debug('moving %r to %r', d, t)
+            if t == 'out':
                 d.start(t)
         if self.blockingmove:
             multiWait(moveables)

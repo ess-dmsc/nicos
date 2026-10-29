@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -27,14 +27,14 @@ from nicos.commands.basic import sleep
 from nicos.commands.scan import scan
 from nicos.core import SIMULATION
 
-session_setup = "simscan"
+session_setup = 'simscan'
 session_mode = SIMULATION
 
 
 def test_simmode(session):
-    m = session.getDevice("motor")
-    det = session.getDevice("det")
-    scan(m, 0, 1, 5, 0.0, det, "test scan")
+    m = session.getDevice('motor')
+    det = session.getDevice('det')
+    scan(m, 0, 1, 5, 0., det, 'test scan')
     assert m._sim_min == 0
     assert m._sim_max == 4
     assert m._sim_value == 4
@@ -42,11 +42,11 @@ def test_simmode(session):
 
 def test_special_behavior(session):
     oldtime = session.clock.time
-    sleep(1000)  # should take no time in simulation mode, but advance clock
+    sleep(1000)   # should take no time in simulation mode, but advance clock
     newtime = session.clock.time
     assert newtime - oldtime == 1000
 
 
 def test_simulated_read(session):
-    m = session.getDevice("manualsim")
+    m = session.getDevice('manualsim')
     assert m.read() == m.default

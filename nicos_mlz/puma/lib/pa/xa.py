@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -38,8 +38,5 @@ def xA(alpha, gamma, lsa, lsd, y, xp, nv):
     """
     if nv == 0:
         return xp + (lsa - y) * tan(radians(alpha))
-    return (
-        xp
-        + lsd * tan(radians(alpha))
-        + (lsa - lsd - y) * tan(radians(2 * gamma - alpha))
-    )
+    return xp + lsd * tan(radians(alpha)) + \
+        (lsa - lsd - y) * tan(radians(2 * gamma - alpha))

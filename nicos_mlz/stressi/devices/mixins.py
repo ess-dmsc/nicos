@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -40,16 +40,16 @@ class Formula:
     """
 
     # take the whole math module function bunch into the namespace
-    _globals = {k: v for k, v in vars(math).items() if not k.startswith("__")}
+    _globals = {k: v for k, v in vars(math).items() if not k.startswith('__')}
     # This should avoid to take others modules into the namespace (see python
     # doc of eval function
-    _globals["__builtins__"] = globals()["__builtins__"]
+    _globals['__builtins__'] = globals()['__builtins__']
 
     def __init__(self, formula):
         self._formula = formula
 
     def eval(self, x):
-        return eval(self._formula, self._globals, {"x": x})
+        return eval(self._formula, self._globals, {'x': x})
 
     def __str__(self):
         return self._formula
@@ -68,27 +68,24 @@ class TransformRead(DeviceMixinBase):
     This mixin could be inherited by classes which want to recalculate their
     read values with a formula.
 
-    It adds automtically the `informula` parameter.
+    It automatically adds the `informula` parameter.
     """
 
     _informula = None
 
     parameters = {
-        "informula": Param(
-            "Input conversion formula",
-            type=str,
-            settable=False,
-            default="x",
-            ext_desc=ext_formula_desc,
-        ),
+        'informula': Param('Input conversion formula',
+                           type=str, settable=False, default='x',
+                           ext_desc=ext_formula_desc,
+                           ),
     }
 
     parameter_overrides = {
-        "unit": Override(volatile=True, mandatory=False),
+        'unit': Override(volatile=True, mandatory=False),
     }
 
     attached_devices = {
-        "dev": Attach("Base device", Readable),
+        'dev': Attach('Base device', Readable),
     }
 
     def _mapReadValue(self, value):
@@ -96,14 +93,14 @@ class TransformRead(DeviceMixinBase):
 
     def _readRaw(self, maxage=0):
         raw = self._attached_dev.read(maxage)
-        self.log.debug("Raw value: %r", raw)
+        self.log.debug('Raw value: %r', raw)
         return raw
 
     def doReadUnit(self):
         return self._attached_dev.unit
 
     def doUpdateInformula(self, formula):
-        self.log.debug("Informula: %r" % formula)
+        self.log.debug('Informula: %r', formula)
         self._informula = Formula(formula)
         return formula
 
@@ -114,23 +111,20 @@ class TransformMove(TransformRead):
     This mixin could be inherited by classes which want to recalculate their
     write value with a formula and write this one.
 
-    It adds automtically the `outformula` parameter.
+    It automatically adds the `outformula` parameter.
     """
 
     _outformula = None
 
     attached_devices = {
-        "dev": Attach("Base device", Moveable),
+        'dev': Attach('Base device', Moveable),
     }
 
     parameters = {
-        "outformula": Param(
-            "Output conversion formula",
-            type=str,
-            settable=False,
-            default="x",
-            ext_desc=ext_formula_desc,
-        ),
+        'outformula': Param('Output conversion formula',
+                            type=str, settable=False, default='x',
+                            ext_desc=ext_formula_desc,
+                            ),
     }
 
     def _mapTargetValue(self, target):
@@ -140,6 +134,6 @@ class TransformMove(TransformRead):
         self._attached_dev.start(target)
 
     def doUpdateOutformula(self, formula):
-        self.log.debug("Outformula: %r", formula)
+        self.log.debug('Outformula: %r', formula)
         self._outformula = Formula(formula)
         return formula

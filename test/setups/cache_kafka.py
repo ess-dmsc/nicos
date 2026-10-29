@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,24 +25,20 @@ import os
 
 from test.utils import alt_cache_addr
 
-name = "setup for cache stresstest with kafka db"
+name = 'setup for cache stress test with kafka db'
 
 devices = dict(
-    Server=device(
-        "nicos.services.cache.server.CacheServer",
-        server=alt_cache_addr,
-        db="DB4",
-        loglevel="debug",
+    Server = device('nicos.services.cache.server.CacheServer',
+        server = alt_cache_addr,
+        db = 'DB4',
+        loglevel = 'debug',
     ),
-    DB4=device(
-        "nicos.services.cache.database.kafka.KafkaCacheDatabaseWithHistory",
-        currenttopic="test-flatbuffers",
-        historytopic="test-flatbuffers-history",
-        brokers=[os.environ.get("KAFKA_URI", "localhost:9092")],
-        loglevel="debug",
-        serializer="serializer",
+    DB4 = device('nicos.services.cache.database.kafka.KafkaCacheDatabaseWithHistory',
+        currenttopic = 'test-flatbuffers',
+        historytopic = 'test-flatbuffers-history',
+        brokers = [os.environ.get('KAFKA_URI', 'localhost:9092')],
+        loglevel = 'debug',
+        serializer = 'serializer'
     ),
-    serializer=device(
-        "nicos.services.cache.entry.serializer.flatbuffers.FlatbuffersCacheEntrySerializer"
-    ),
+    serializer = device('nicos.services.cache.entry.serializer.flatbuffers.FlatbuffersCacheEntrySerializer'),
 )

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,9 +32,9 @@ class Beam(QGraphicsLineItem):
         self._start = fromObj
         self._end = toObj
         QGraphicsLineItem.__init__(self, parent)
-        self.setPen(QPen(QColor("white"), 4))
+        self.setPen(QPen(QColor('white'), 4))
         self._beam = QGraphicsLineItem(parent)
-        self._beam.setPen(QPen(QColor("blue"), 1))
+        self._beam.setPen(QPen(QColor('blue'), 1))
         if not parent and scene:
             scene.addItem(self)
             scene.addItem(self._beam)

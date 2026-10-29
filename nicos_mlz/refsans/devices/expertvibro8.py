@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,6 +24,7 @@
 """Devices for the Refsans expertvibro."""
 
 from nicos.core import Override, Param, Readable, intrange, status
+from nicos.core.constants import SIMULATION
 from nicos.devices.tango import PyTangoDevice
 
 
@@ -36,9 +37,9 @@ class Base(PyTangoDevice, Readable):
     hardware_access = True
 
     parameters = {
-        "firmware": Param(
-            "Firmware version", type=float, settable=False, volatile=True, fmtstr="%.1f"
-        ),
+        'firmware': Param('Firmware version',
+                          type=float, settable=False, volatile=True,
+                          fmtstr='%.1f'),
     }
 
     def _readBuffer(self):
@@ -51,20 +52,29 @@ class Base(PyTangoDevice, Readable):
         return 0
 
     def doStatus(self, maxage=0):
-        return status.OK, ""
+        return status.OK, ''
 
 
 class AnalogValue(Base):
+
     parameters = {
-        "channel": Param("Channel for readout", type=intrange(0, 16), settable=True),
+        'channel': Param('Channel for readout',
+                         type=intrange(0, 16), settable=True),
     }
 
     parameter_overrides = {
-        "unit": Override(mandatory=False, volatile=True, settable=False),
+        'unit': Override(mandatory=False, volatile=True, settable=False),
     }
 
     def doReadUnit(self):
-        return "foo"
+        return 'foo'
 
     def doRead(self, maxage=0):
         return self._readBuffer()[self.channel]
+
+    def doReset(self):
+        self._dev.WriteOutputWord((32, 1))
+
+    def clear(self):
+        if self._mode != SIMULATION:
+            self._dev.WriteOutputWord((32, 0))

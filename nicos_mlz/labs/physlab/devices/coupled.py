@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -27,21 +27,19 @@ from nicos.devices.abstract import Moveable
 
 
 class CoupledMotor(Moveable):
+
+    hardware_access = False
+    valuetype = float
+
     attached_devices = {
-        "maxis": Attach("Main axis to move", Moveable),
-        "caxis": Attach(
-            "Coupled axis (to main axis) by the relation " "caxis = maxis / 2 + offset",
-            Moveable,
-        ),
+        'maxis': Attach('Main axis to move', Moveable),
+        'caxis': Attach('Coupled axis (to main axis) by the relation '
+                        'caxis = maxis / 2 + offset', Moveable)
     }
 
     parameters = {
-        "offset": Param(
-            "Offset between mainAxis and slaveAxis",
-            type=float,
-            default=0.0,
-            settable=True,
-        )
+        'offset': Param('Offset between main and coupled axis',
+                        type=float, default=.0, settable=True)
     }
 
     def doStart(self, value):
@@ -50,9 +48,10 @@ class CoupledMotor(Moveable):
 
     def doIsAtTarget(self, pos, target):
         axis = self._attached_maxis.isAtTarget(pos, target)
-        coupled = self._attached_caxis.isAtTarget(target=target / 2 + self.offset)
+        coupled = self._attached_caxis.isAtTarget(
+            target=target / 2 + self.offset)
 
         return axis and coupled
 
-    def doRead(self, maxage=None):
+    def doRead(self, maxage=0):
         return self._attached_maxis.read(maxage)

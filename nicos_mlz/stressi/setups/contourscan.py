@@ -1,20 +1,19 @@
-description = "Perform shape of sample scanning"
+description = 'Perform shape of sample scanning'
 
-group = "basic"
+group = 'basic'
 
 includes = [
-    "standard",
-    "sampletable",
-    "sick",
+    'standard',
+    'sampletable',
+    'sick',
 ]
 
 sysconfig = dict(
-    datasinks=["contoursink"],
+    datasinks = ['contoursink'],
 )
 
 devices = dict(
-    contoursink=device(
-        "nicos.devices.datasinks.AsciiScanfileSink",
-        filenametemplate=["contour%(scancounter)08d.txt"],
+    contoursink = device('nicos.devices.datasinks.AsciiScanfileSink',
+        filenametemplate = ['contour%(scancounter)08d.txt'],
     ),
 )

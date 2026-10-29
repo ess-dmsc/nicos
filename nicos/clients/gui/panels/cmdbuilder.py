@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,21 +25,13 @@
 """NICOS GUI single cmdlet command input."""
 
 from os import path
-from nicos.clients.gui.cmdlets import (
-    get_priority_sorted_categories,
-    get_priority_sorted_cmdlets,
-)
+
+from nicos.clients.gui.cmdlets import get_priority_sorted_categories, \
+    get_priority_sorted_cmdlets
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi, modePrompt
-from nicos.guisupport.qt import (
-    QAction,
-    QApplication,
-    QKeyEvent,
-    QMenu,
-    Qt,
-    QToolButton,
-    pyqtSlot,
-)
+from nicos.guisupport.qt import QAction, QApplication, QKeyEvent, QMenu, Qt, \
+    QToolButton, pyqtSlot
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import importString
 
@@ -52,14 +44,14 @@ class CommandPanel(Panel):
 
     Options:
 
-    * ``modules`` (default ``[]``) -- list of additional Python modules that
-      contain cmdlets and should be loaded.
+    * ``modules`` (default ``['nicos.clients.gui.cmdlets']``) -- list of
+      additional Python modules that contain cmdlets and should be loaded.
     * ``add_presets`` (default ``[]``) -- list of tuples consisting of
       additional preset keys and names (e.g. ``[('m', 'monitor counts')]``).
     """
 
-    panelName = "Command"
-    ui = path.join("panels", "cmdbuilder.ui")
+    panelName = 'Command'
+    ui = path.join('panels', 'cmdbuilder.ui')
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
@@ -83,7 +75,7 @@ class CommandPanel(Panel):
         client.mode.connect(self.on_client_mode)
         client.simresult.connect(self.on_client_simresult)
 
-        modules = options.get("modules", [])
+        modules = options.get('modules', ['nicos.clients.gui.cmdlets'])
         for module in modules:
             importString(module)  # should register cmdlets
 
@@ -92,7 +84,6 @@ class CommandPanel(Panel):
 
             def callback(on, cmdlet=cmdlet):
                 self.selectCmdlet(cmdlet)
-
             action.triggered.connect(callback)
             self.mapping.setdefault(cmdlet.category, []).append(action)
 
@@ -108,22 +99,21 @@ class CommandPanel(Panel):
             self.btnLayout.insertWidget(1, toolbtn)
 
     def postInit(self):
-        self.console = self.parent_window.getPanel("Console")
+        self.console = self.parent_window.getPanel('Console')
         if self.console:
             self.console.outView.anchorClicked.connect(
-                self.on_consoleView_anchorClicked
-            )
+                self.on_consoleView_anchorClicked)
 
     def setViewOnly(self, viewonly):
         self.inputFrame.setVisible(not viewonly)
 
     def loadSettings(self, settings):
-        self.cmdhistory = settings.value("cmdhistory") or []
+        self.cmdhistory = settings.value('cmdhistory') or []
 
     def saveSettings(self, settings):
         # only save 100 entries of the history
         cmdhistory = self.commandInput.history[-100:]
-        settings.setValue("cmdhistory", cmdhistory)
+        settings.setValue('cmdhistory', cmdhistory)
 
     def updateStatus(self, status, exception=False):
         self.commandInput.setStatus(status)
@@ -141,12 +131,13 @@ class CommandPanel(Panel):
 
     def completeInput(self, fullstring, lastword):
         try:
-            return self.client.ask("complete", fullstring, lastword, default=[])
+            return self.client.ask('complete', fullstring, lastword,
+                                   default=[])
         except Exception:
             return []
 
     def on_client_initstatus(self, state):
-        self.on_client_mode(state["mode"])
+        self.on_client_mode(state['mode'])
 
     def on_client_mode(self, mode):
         self.label.setText(modePrompt(mode))
@@ -154,7 +145,7 @@ class CommandPanel(Panel):
     def on_consoleView_anchorClicked(self, url):
         """Called when the user clicks a link in the out view."""
         scheme = url.scheme()
-        if scheme == "exec":
+        if scheme == 'exec':
             self.commandInput.setText(url.path())
             self.commandInput.setFocus()
 
@@ -177,21 +168,18 @@ class CommandPanel(Panel):
         self.updateCommand()
 
     def _generate(self):
-        mode = "python"
         if self.current_cmdlet is None:
             return
-        if self.client.eval("session.spMode", False):
-            mode = "simple"
         if not self.current_cmdlet.isValid():
             return
-        return self.current_cmdlet.generate(mode).rstrip()
+        return self.current_cmdlet.generate().rstrip()
 
     def updateCommand(self):
         code = self._generate()
         if code is not None:
             self.commandInput.setText(code)
         else:
-            self.commandInput.setText("")
+            self.commandInput.setText('')
 
     @pyqtSlot()
     def on_simBtn_clicked(self):
@@ -199,7 +187,7 @@ class CommandPanel(Panel):
         if not script:
             return
         self.simBtn.setEnabled(False)
-        self.client.tell("simulate", "", script, "0")
+        self.client.tell('simulate', '', script, '0')
 
     def on_client_simresult(self, data):
         self.simBtn.setEnabled(True)
@@ -207,15 +195,14 @@ class CommandPanel(Panel):
     @pyqtSlot()
     def on_runBtn_clicked(self):
         # Make sure we add the command to the history.
-        event = QKeyEvent(
-            QKeyEvent.Type.KeyPress, Qt.Key.Key_Enter, Qt.KeyboardModifier.NoModifier
-        )
+        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Enter,
+                          Qt.KeyboardModifier.NoModifier)
         QApplication.postEvent(self.commandInput, event)
 
     def on_commandInput_execRequested(self, script, action):
-        if action == "queue":
+        if action == 'queue':
             self.client.run(script)
         else:
-            self.client.tell("exec", script)
+            self.client.tell('exec', script)
         self.commandInput.selectAll()
         self.commandInput.setFocus()

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -42,30 +42,28 @@ from nicos_mlz.reseda.utils import MiezeFit
 
 my_uipath = path.dirname(__file__)
 
-COLOR_BLUE = GRCOLORS["blue"]
+COLOR_BLUE = GRCOLORS['blue']
 
-DOT_MARKER = GRMARKS["dot"]
+DOT_MARKER = GRMARKS['dot']
+CIRCLE_MARKER = GRMARKS['circle']
 
 
 class MiniPlot(LiveWidget1D):
+
     client = None
 
     def __init__(self, parent=None, **kwds):
         LiveWidget1D.__init__(self, parent, **kwds)
-        self.setTitles({"x": "time slots", "y": "summed counts"})
+        self.setTitles({'x': 'time slots', 'y': 'summed counts'})
         self.axes.resetCurves()
         self._curves = [
-            MaskedPlotCurve(
-                [0],
-                [1],
-                linecolor=GRCOLORS["blue"],
-                markertype=DOT_MARKER,
-                linetype=None,
-            ),
-            NicosPlotCurve([0], [0.1], linecolor=COLOR_BLUE, markertype=DOT_MARKER),
+            MaskedPlotCurve([0], [1], linecolor=COLOR_BLUE,
+                            markertype=CIRCLE_MARKER, markercolor=COLOR_BLUE,
+                            linetype=None),
+            NicosPlotCurve([0], [.1], linecolor=COLOR_BLUE,
+                           markertype=DOT_MARKER, markercolor=COLOR_BLUE)
         ]
         self._curves[0].markersize = 3
-        self._curves[0].markertype = GRMARKS["circle"]
         for curve in self._curves:
             self.axes.addCurves(curve)
         # Disable creating a mouse selection to zoom
@@ -79,51 +77,51 @@ class MiniPlot(LiveWidget1D):
 
 
 class FoilWidget(QWidget):
+
     fitter = MiezeFit()
 
-    def __init__(self, name="unknown", parent=None, **kwds):
+    def __init__(self, name='unknown', parent=None, **kwds):
         QWidget.__init__(self, parent)
-        loadUi(self, findResource("nicos_mlz/reseda/gui/mieze_display_foil.ui"))
+        loadUi(self, findResource('nicos_mlz/reseda/gui/mieze_display_foil.ui'))
         # set name
         self.name = name
         self.groupBox.setTitle(name)
-
+        self.tofchannels = kwds.get('tofchannels', 16)
         # insert plot widget + store reference
         self.plotwidget = MiniPlot(self)
-        self.plotwidget.setSizePolicy(
-            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding
-        )
+        self.plotwidget.setSizePolicy(QSizePolicy.Policy.MinimumExpanding,
+                                      QSizePolicy.Policy.MinimumExpanding)
         self.verticalLayout.insertWidget(0, self.plotwidget)
-        self.do_update([[0.0] * 4, [0.0] * 4, [0] * 16] * 2)
+        self.do_update([[0.] * 4, [0.] * 4, [0] * self.tofchannels] * 2)
 
     def do_update(self, data, roi=False):
         # data contains a list [avg, avgErr, contrast, contrastErr,
-        # freq, freErr, phase, phaseErr, 16 * counts]
-        popt, perr, counts = data[int(roi) * 3 : (int(roi) + 1) * 3]
+        # freq, freErr, phase, phaseErr, self.tofchannels * counts]
+        popt, perr, counts = data[int(roi) * 3:(int(roi) + 1) * 3]
+        self.tofchannels = len(counts)
         avg, contrast, phase, freq = popt
         davg, dcontrast, dphase, dfreq = perr
 
-        self.avg_value.setText("%.0f" % abs(avg))
-        self.avg_error.setText("%.1f" % davg)
-        self.contrast_value.setText("%.2f" % abs(contrast))
-        self.contrast_error.setText("%.3f" % dcontrast)
-        self.freq_value.setText("%.2f" % freq)
-        self.freq_error.setText("%.3f" % dfreq)
-        self.phase_value.setText("%.2f" % (phase + pi if contrast < 0 else phase))
-        self.phase_error.setText("%.3f" % dphase)
+        self.avg_value.setText('%.0f' % abs(avg))
+        self.avg_error.setText('%.1f' % davg)
+        self.contrast_value.setText('%.2f' % abs(contrast))
+        self.contrast_error.setText('%.3f' % dcontrast)
+        self.freq_value.setText('%.2f' % freq)
+        self.freq_error.setText('%.3f' % dfreq)
+        self.phase_value.setText('%.2f' % (phase + pi if contrast < 0
+                                           else phase))
+        self.phase_error.setText('%.3f' % dphase)
 
         # now update plot
         datacurve, fitcurve = self.plotwidget._curves
-        fitcurve.x = np.arange(-0.5, 16.5, 0.1)
-        fitcurve.y = self.fitter.fit_model(fitcurve.x, avg, contrast, phase, freq)
-        datacurve.x = np.arange(0, 16, 1)
+        fitcurve.x = np.arange(-0.5, 0.5 + self.tofchannels, 0.1)
+        fitcurve.y = self.fitter.fit_model(
+            fitcurve.x, avg, contrast, phase, freq)
+        datacurve.x = np.arange(0, self.tofchannels, 1)
         datacurve.y = np.array(counts)
-        datacurve.errorBar1 = ErrorBar(
-            datacurve.x,
-            datacurve.y,
-            np.sqrt(datacurve.y),
-            markercolor=datacurve.markercolor,
-        )
+        datacurve.errorBar1 = ErrorBar(datacurve.x, datacurve.y,
+                                       np.sqrt(datacurve.y),
+                                       markercolor=datacurve.markercolor)
         self.plotwidget.reset()
         self.plotwidget.update()
 
@@ -144,7 +142,7 @@ class MiezePanel(Panel):
                  default: 2
     """
 
-    panelName = "Cascade Mieze display"
+    panelName = 'Cascade Mieze display'
     bar = None
     menu = None
 
@@ -153,24 +151,23 @@ class MiezePanel(Panel):
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource("nicos_mlz/reseda/gui/mieze_display.ui"))
+        loadUi(self, findResource('nicos_mlz/reseda/gui/mieze_display.ui'))
         self.mywidgets = []
-        self.foils = options.get("foils", [7, 6, 5, 0, 1, 2])
-        self.columns = options.get("columns", 3)
-        self.rows = options.get("rows", 2)
-        for foil, x, y in zip(
-            self.foils,
-            self.rows * list(range(self.columns)),
-            sum([self.columns * [i] for i in range(self.rows)], []),
-        ):
-            foilwidget = FoilWidget(name=f"Foil {foil + 1}", parent=self)
+        self.foils = options.get('foils', [7, 6, 5, 0, 1, 2])
+        self.columns = options.get('columns', 3)
+        self.rows = options.get('rows', 2)
+        for foil, x, y in zip(self.foils, self.rows * list(range(self.columns)),
+                              sum([self.columns * [i] for i in
+                                   range(self.rows)], [])):
+            # Is there a way to get tof channels on start?
+            foilwidget = FoilWidget(name=f'Foil {foil + 1}', parent=self, tofchannels=16)
             self.mywidgets.append(foilwidget)
             self.gridLayout.addWidget(foilwidget, y, x)
         self.client.cache.connect(self.on_client_cache)
         self.client.connected.connect(self.on_client_connected)
 
     def _init_data(self):
-        data = self.client.getCacheKey("psd_channel/_foildata")
+        data = self.client.getCacheKey('psd_channel/_foildata')
         if data:
             self._data = data[1]
         self.do_update()
@@ -186,11 +183,12 @@ class MiezePanel(Panel):
 
     def do_update(self):
         if self._do_updates and self._data:
-            for d, w in zip([self._data[i] for i in self.foils], self.mywidgets):
+            for d, w in zip([self._data[i] for i in self.foils],
+                            self.mywidgets):
                 w.do_update(d, self.roiCheckBox.isChecked())
 
     def on_client_cache(self, data):
         _time, key, _op, value = data
-        if key == "psd_channel/_foildata":
+        if key == 'psd_channel/_foildata':
             self._data = cache_load(value)
             self.do_update()

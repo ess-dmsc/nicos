@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,19 +21,18 @@
 #
 # *****************************************************************************
 
-name = "test_alias_config setup"
+name = 'test_alias_config setup'
 
-includes = ["stdsystem", "alias_T"]
+includes = ['stdsystem', 'alias_T']
 
 devices = dict(
-    T_cryo4=device(
-        "nicos.devices.generic.VirtualMotor",
-        abslimits=(0, 5),
-        unit="K",
-        speed=1.5,
+    T_cryo4 = device('nicos.devices.generic.VirtualMotor',
+        abslimits = (0, 5),
+        unit = 'K',
+        speed = 1.5,
     ),
 )
 
 alias_config = {
-    "T": {"T_cryo4": 200},
+    'T': {'T_cryo4': 200},
 }

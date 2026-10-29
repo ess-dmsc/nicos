@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,27 +23,21 @@
 
 """Special detector devices for the SANS1"""
 
+
 from nicos.core.mixins import DeviceMixinBase
-from nicos.core.params import Param, floatrange, tupleof
-from nicos.devices.generic import (
-    Detector as GenericDetector,
-    GatedDetector as GenericGatedDetector,
-    LockedDevice,
-)
+from nicos.core.params import Param, floatrange, nonzero, tupleof
+from nicos.devices.generic import Detector as GenericDetector, \
+    GatedDetector as GenericGatedDetector, LockedDevice
 
 
 class DetectorMixin(DeviceMixinBase):
     """Provide the size parameter."""
-
     parameters = {
-        "size": Param(
-            "physical size of the active detector area",
-            type=tupleof(floatrange(0), floatrange(0)),
-            settable=False,
-            mandatory=False,
-            unit="mm",
-            default=(1000.0, 1000.0),
-        ),
+        'size': Param('physical size of the active detector area',
+                      type=tupleof(nonzero(floatrange(0)),
+                                   nonzero(floatrange(0))),
+                      settable=False, mandatory=False, unit='mm',
+                      default=(1000., 1000.)),
     }
 
 
@@ -61,7 +55,7 @@ class DetectorTranslation(LockedDevice):
     def doIsAtTarget(self, pos=None, target=None):
         if pos is None:
             pos = self.read(0)
-        self.log.debug("Current pos: %s, target: %s", pos, target)
+        self.log.debug('Current pos: %s, target: %s', pos, target)
         if target is None:
             if self._attached_device.target:
                 return self._attached_device.isAtTarget(pos)

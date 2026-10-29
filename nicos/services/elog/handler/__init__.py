@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,78 +29,128 @@ from nicos.core.device import Device
 
 
 class Handler(Device):
+
     def doInit(self, mode):
+        self._hidden = False
         self._dir = self._logdir = None
+        self._proposal = self._title = None
+        self._instr = None
+        self._users = self._localcontact = None
 
     def handle(self, key, timestamp, data):
-        fun = getattr(self, f"handle_{key}", None)
+        fun = getattr(self, f'handle_{key}', None)
         if fun:
-            fun(timestamp, data)
+            fun(timestamp, data)  # pylint: disable=not-callable
+
+    def handle_hidden(self, time, data):
+        """Handle the 'hidden' event.
+
+            data = bool
+        """
+        self._hidden = data
 
     def handle_directory(self, time, data):
         """Handle the 'directory' event.
 
-        data = [directory, instrument, proposal]
+            data = [directory, instrument, proposal]
         """
         self._dir, self._instr, self._proposal = data
-        self._logdir = path.join(self._dir, "logbook")
+        self._logdir = path.join(self._dir, 'logbook')
 
     def handle_newexperiment(self, time, data):
         """Handle the 'newexperiment' event.
 
-        data = [proposal, title]
+            data = [proposal, title, users, localcontact]
         """
+        self._proposal, self._title, self._users, self._localcontact = data[:4]
 
     def handle_setup(self, time, setupnames):
-        """Handle the 'setup' event."""
+        """Handle the 'setup' event.
+
+            setupnames = ['setupname1', ...]
+        """
 
     def handle_entry(self, time, data):
-        """Handle the 'entry' event."""
+        """Handle the 'entry' event.
+
+            data = text to write into log
+        """
 
     def handle_remark(self, time, remark):
-        """Handle the 'remark' event."""
+        """Handle the 'remark' event.
+
+            remark = content of the experiment.remark
+        """
 
     def handle_scriptbegin(self, time, script):
-        """Handle the 'scriptbegin' event."""
+        """Handle the 'scriptbegin' event.
+
+            script = script or file name
+        """
 
     def handle_scriptend(self, time, script):
-        """Handle the 'scriptend' event."""
+        """Handle the 'scriptend' event.
+
+            script = script or file name
+        """
 
     def handle_sample(self, time, sample):
-        """Handle the 'sample' event."""
+        """Handle the 'sample' event.
+
+            sample = sample name
+        """
 
     def handle_detectors(self, time, dlist):
-        """Handle the 'detectors' event."""
+        """Handle the 'detectors' event.
+
+            dlist = ['detectorname1', ...]
+        """
 
     def handle_environment(self, time, elist):
-        """Handle the 'environment' event."""
+        """Handle the 'environment' event.
+
+            elist = ['environmentdevicename1', ...]
+        """
 
     def handle_offset(self, time, data):
         """Handle the 'offset' event.
 
-        data = [devices, oldoffset, newoffset]
+           data = [devices, oldoffset, newoffset]
         """
 
     def handle_attachment(self, time, data):
         """Handle the 'attachment' event.
 
-        data = [description, fpaths, names]
+           data = [description, fpaths, names]
         """
 
     def handle_image(self, time, data):
         """Handle the 'image' event.
 
-        data = [description, fpaths, extensions, names]
+           data = [description, fpaths, extensions, names]
         """
 
     def handle_message(self, time, message):
-        """Handle the 'message' event."""
+        """Handle the 'message' event.
+
+            message = [name, created, levelno, message, exc_text, reqid]
+        """
 
     def handle_scanbegin(self, time, dataset):
-        """Handle the 'scanbegin' event."""
+        """Handle the 'scanbegin' event.
+
+            dataset = ScanData
+
+            `nicos.core.data.dataset.ScanData`
+        """
 
     def handle_scanend(self, time, dataset):
-        """Handle the 'scanend' event."""
+        """Handle the 'scanend' event.
+
+            dataset = ScanData
+
+            `nicos.core.data.dataset.ScanData`
+        """
 
 
 # more ideas:

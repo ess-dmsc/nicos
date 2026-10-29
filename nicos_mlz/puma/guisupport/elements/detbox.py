@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -22,28 +22,19 @@
 # *****************************************************************************
 """Classes to display the PUMA Multi analyzer."""
 
-from nicos.guisupport.qt import (
-    QGraphicsPathItem,
-    QLineF,
-    QPainter,
-    QPainterPath,
-    QPointF,
-    QPolygonF,
-    QRectF,
-    Qt,
-)
+from nicos.guisupport.qt import QGraphicsPathItem, QLineF, QPainter, \
+    QPainterPath, QPointF, QPolygonF, QRectF, Qt
 
 
 class DetectorBox(QGraphicsPathItem):
+
     def __init__(self, r=762, span=48, parent=None):
         self.radius1 = r - 329
         self.radius2 = r + 58
-        self.circle1 = QRectF(
-            -self.radius1, -self.radius1, 2 * self.radius1, 2 * self.radius1
-        )
-        self.circle2 = QRectF(
-            -self.radius2, -self.radius2, 2 * self.radius2, 2 * self.radius2
-        )
+        self.circle1 = QRectF(-self.radius1, -self.radius1, 2 * self.radius1,
+                              2 * self.radius1)
+        self.circle2 = QRectF(-self.radius2, -self.radius2, 2 * self.radius2,
+                              2 * self.radius2)
         self.startAngle = 180 - span
         self.spanAngle = span
         w = 10
@@ -61,7 +52,8 @@ class DetectorBox(QGraphicsPathItem):
 
         # draw inner circle of the detector box
         path.arcMoveTo(self.circle1, self.startAngle - aoffs)
-        path.arcTo(self.circle1, self.startAngle - aoffs, self.spanAngle + 2 * aoffs)
+        path.arcTo(self.circle1, self.startAngle - aoffs,
+                   self.spanAngle + 2 * aoffs)
 
         # draw outer circle of the detector box
         path.arcMoveTo(self.circle2, self.startAngle)
@@ -72,7 +64,8 @@ class DetectorBox(QGraphicsPathItem):
         tmpLine.setAngle(tmpLine.angle() + aoffs)
 
         # draw left line
-        path.addPolygon(QPolygonF([tmpLine.p2(), QPointF(-self.radius2, 0)]))
+        path.addPolygon(QPolygonF([tmpLine.p2(),
+                                   QPointF(-self.radius2, 0)]))
 
         # calculate right inner point of the box
         tmpLine = QLineF(QPointF(0, 0), QPointF(-self.radius1, 0))

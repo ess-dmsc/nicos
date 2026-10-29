@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -22,7 +22,9 @@
 # *****************************************************************************
 
 """Dataset classes."""
-
+import json
+import time
+from collections import namedtuple
 from math import sqrt
 from threading import Lock
 from time import localtime, time as currenttime
@@ -34,6 +36,9 @@ from nicos.core.errors import ProgrammingError
 from nicos.utils import lazy_property, number_types
 
 SETTYPES = (POINT, SCAN, SUBSCAN, BLOCK)
+
+
+Statistics = namedtuple('Statistics', ['mean', 'stddev', 'min', 'max'])
 
 
 class finish_property(lazy_property):
@@ -57,7 +62,7 @@ class BaseDataset:
     settype = UNKNOWN
     countertype = UNKNOWN
 
-    def __init__(self, **kwds):
+    def __init__(self, info='', userinfo='', **kwds):
         # Unique id of the scan.
         self.uid = uuid4()
 
@@ -94,14 +99,25 @@ class BaseDataset:
         # Preset for this dataset.
         self.preset = {}
 
+        # Latest values of "interesting" devices.
+        self.values = {}
+        # More stats about "interesting" devices (to allow statistics).
+        self._valuestats = {}
+        # Values of "interesting" devices taken at a "canonical time".
+        # Used as *the* position for scanned over devices.
+        self.canonical_values = {}
+
         # Subsets of this dataset.  (Empty for point datasets.)
         self.subsets = []
 
         # Sink handlers involved in this dataset.
         self.handlers = []
 
+        # A nicos-generated "info string" for this dataset.
+        self.info = '' if info is None else info
+
         # A user-defined "info string" for this dataset.
-        self.info = ""
+        self.userinfo = '' if userinfo is None else userinfo
 
         # A lock to suppress updates to valuestats from the cacheCallback in
         # the datamanager
@@ -109,19 +125,69 @@ class BaseDataset:
 
         self.__dict__.update(kwds)
 
+    def _addvalues(self, values):
+        with self._statslock:
+            for devname, (timestamp, value) in values.items():
+                self.values[devname] = value
+                if timestamp is None:
+                    self.canonical_values[devname] = value
+                    continue
+                elif isinstance(value, number_types):
+                    # collect statistics
+                    current = self._valuestats.setdefault(devname, [])
+                    if not current:
+                        # first value: record timestamp and value
+                        current.extend([0, 0, 0, value, value, timestamp, value])
+                    else:
+                        oldtime, oldvalue = current[-2:]
+                        dt = timestamp - oldtime
+                        if dt >= 0:
+                            current[0] += dt  # t0
+                            current[1] += dt * oldvalue  # t1
+                            current[2] += dt * oldvalue ** 2  # t2
+                            current[3] = min(current[3], value)  # mini
+                            current[4] = max(current[4], value)  # maxi
+                            current[5] = timestamp  # _
+                            current[6] = value  # lastv
+
+                    # mean = t1 / t0
+                    # stdev = sqrt(abs(t2 / t0 - t1 ** 2 / t0 ** 2))
+
+    @property
+    def combinedinfo(self):
+        return ' - '.join(info for info in [self.userinfo, self.info] if info)
+
+    @property
+    def valuestats(self):
+        """Value statistics.
+
+        The value statistics is a dictionary where the key is the device name
+        and the value is a tuple of mean value, standard deviation, minimum
+        value and maximum value.
+        """
+        res = {}
+        with self._statslock:
+            for devname, (t0, t1, t2,
+                          mini, maxi, _, lastv) in self._valuestats.items():
+                if t0 > 0:
+                    mean = t1 / t0
+                    stdev = sqrt(abs(t2 / t0 - t1 ** 2 / t0 ** 2))
+                else:
+                    mean = lastv
+                    stdev = float('inf')
+                res[devname] = Statistics(mean, stdev, mini, maxi)
+        return res
+
     def __str__(self):
-        return "<%s dataset %s..%s>" % (
-            self.settype,
-            str(self.uid)[:3],
-            str(self.uid)[-3:],
-        )
+        return '<%s dataset %s..%s>' % (self.settype, str(self.uid)[:3],
+                                        str(self.uid)[-3:])
 
     def __getstate__(self):
         # Pickling support: remove sink handler instances that likely contain
         # data that cannot be pickled, such as file objects.
         state = self.__dict__.copy()
-        state.pop("handlers", None)
-        state.pop("_statslock", None)
+        state.pop('handlers', None)
+        state.pop('_statslock', None)
         return state
 
     def dispatch(self, method, *args):
@@ -145,7 +211,7 @@ class BaseDataset:
 
     @lazy_property
     def detvalueinfo(self):
-        """Detector value info info."""
+        """Detector value info."""
         return sum((dev.valueInfo() for dev in self.detectors), ())
 
 
@@ -159,45 +225,18 @@ class PointDataset(BaseDataset):
         # Point results: values of detectors.
         self.results = {}
 
-        # Latest values of "interesting" devices.
-        self.values = {}
-        # Values of "interesting" devices taken at a "canonical time".
-        # Used as *the* position for scanned over devices.
-        self.canonical_values = {}
-        # More stats about "interesting" devices (to allow statistics).
-        self._valuestats = {}
-
         #: Instrument metainfo ("header data").
         #: A dictionary of (devname, key) -> (value, str_value, unit, category).
         #: Keys are usually parameters or 'value', 'status'.
         self.metainfo = {}
 
-        BaseDataset.__init__(self, **kwds)
+        # Mapping for experiment metadata (for e.g. the catalogue).
+        # Dictionary with two dict entries 'devs' and 'constants'.
+        # Both contain metadata names mapped to dev(.param) entries (devs) or
+        # constant values (constants).
+        self.metamapping = {}
 
-    def _addvalues(self, values):
-        with self._statslock:
-            for devname, (timestamp, value) in values.items():
-                self.values[devname] = value
-                if timestamp is None:
-                    self.canonical_values[devname] = value
-                    continue
-                elif isinstance(value, number_types):
-                    # collect statistics
-                    current = self._valuestats.setdefault(devname, [])
-                    if not current:
-                        # first value: record timestamp and value
-                        current.extend([0, 0, 0, value, value, timestamp, value])
-                    else:
-                        oldtime, oldvalue = current[-2:]
-                        dt = timestamp - oldtime
-                        if dt >= 0:
-                            current[0] += dt
-                            current[1] += dt * oldvalue
-                            current[2] += dt * oldvalue**2
-                            current[3] = min(current[3], value)
-                            current[4] = max(current[4], value)
-                            current[5] = timestamp
-                            current[6] = value
+        BaseDataset.__init__(self, **kwds)
 
     def _reslist(self, devices, resdict, index=-1):
         ret = []
@@ -221,36 +260,16 @@ class PointDataset(BaseDataset):
         """Trim objects that are not required to be kept after finish()."""
         BaseDataset.trimResult(self)
         # remove arrays from memory in cached datasets
-        for key, value in self.results.items():
+        for (key, value) in self.results.items():
             if value is not None:
                 self.results[key] = (value[0], [])
-
-    @property
-    def valuestats(self):
-        """Value statistics.
-
-        The value statistics is a dictionary where the key is the device name
-        and the value is a tuple of mean value, standard deviation, minimum
-        value and maximum value.
-        """
-        res = {}
-        with self._statslock:
-            for devname, (t0, t1, t2, mini, maxi, _, lastv) in self._valuestats.items():
-                if t0 > 0:
-                    mean = t1 / t0
-                    stdev = sqrt(abs(t2 / t0 - t1**2 / t0**2))
-                else:
-                    mean = lastv
-                    stdev = float("inf")
-                res[devname] = mean, stdev, mini, maxi
-        return res
 
     @finish_property
     def devvaluelist(self):
         """List of all device values.
 
         The order of the values is the same as in the ``devvalueinfo`` list, so
-        mapping between device and value can be made..
+        a mapping between device and value can be made.
         """
         return self._reslist(self.devices, self.canonical_values)
 
@@ -259,7 +278,7 @@ class PointDataset(BaseDataset):
         """List of values of all devices in the ``session.experiment.envlist`` list.
 
         The order of the values is the same as in the ``envvalueinfo`` list, so
-        mapping between environment device and value can be made..
+        a mapping between environment device and value can be made.
         """
         return self._reslist(self.environment, self.values)
 
@@ -268,7 +287,7 @@ class PointDataset(BaseDataset):
         """List of values of all devices in the ``session.experiment.detectors`` list.
 
         The order of the values is the same as in the ``detvalueinfo`` list, so
-        mapping between detector device and value can be made..
+        a mapping between detector device and value can be made.
         """
         return self._reslist(self.detectors, self.results, 0)
 
@@ -303,36 +322,41 @@ class ScanDataset(BaseDataset):
                 # pylint: disable=pointless-statement
                 (subset.devvaluelist, subset.envvaluelist, subset.detvaluelist)
                 # clear all other data
-                for d in (
-                    subset.metainfo,
-                    subset.values,
-                    subset._valuestats,
-                    subset.canonical_values,
-                    subset.results,
-                ):
+                for d in (subset.metainfo, subset.values, subset._valuestats,
+                          subset.canonical_values, subset.results):
                     d.clear()
 
     @property
     def metainfo(self):
         """The metainfo is the same as for the first datapoint or subscan."""
         if not self.subsets:
-            raise ProgrammingError("metainfo is not available without points")
+            raise ProgrammingError('metainfo is not available without points')
         return self.subsets[0].metainfo
 
     @property
+    def metamapping(self):
+        """The metamapping is the same as for the first datapoint or subscan."""
+        if not self.subsets:
+            raise ProgrammingError('metamapping is not available without points')
+        return self.subsets[0].metamapping
+
+    @property
     def devvaluelists(self):
-        """List of all subset devvaluelist."""
-        return [subset.devvaluelist for subset in self.subsets if subset.finished]
+        """List of all subset devvaluelist. """
+        return [subset.devvaluelist for subset in self.subsets
+                if subset.finished]
 
     @property
     def envvaluelists(self):
-        """List of all subset envvaluelist."""
-        return [subset.envvaluelist for subset in self.subsets if subset.finished]
+        """List of all subset envvaluelist. """
+        return [subset.envvaluelist for subset in self.subsets
+                if subset.finished]
 
     @property
     def detvaluelists(self):
-        """List of all subset detvaluelist."""
-        return [subset.detvaluelist for subset in self.subsets if subset.finished]
+        """List of all subset detvaluelist. """
+        return [subset.detvaluelist for subset in self.subsets
+                if subset.finished]
 
 
 class SubscanDataset(ScanDataset):
@@ -356,13 +380,12 @@ class ScanData:
     """Simplified object containing scan data for serialized transfer to the
     GUI/ELog.
     """
-
     # unique id as a string
-    uid = ""
+    uid = ''
     # start time
     started = 0
     # scan info
-    scaninfo = ""
+    scaninfo = ''
     # assigned number
     counter = 0
     # file name(s)
@@ -372,7 +395,7 @@ class ScanData:
     # number of env. values
     envvalues = 0
     # chaining info
-    chain = ""
+    chain = ''
     # value info
     xvalueinfo = []
     yvalueinfo = []
@@ -397,34 +420,30 @@ class ScanData:
         else:
             self.uid = str(dataset.uid)
             self.started = localtime(dataset.started)
-            self.scaninfo = dataset.info
+            self.scaninfo = dataset.combinedinfo
             self.counter = dataset.counter
             self.filepaths = dataset.filepaths
             self.xindex = dataset.xindex
             self.envvalues = len(dataset.envvalueinfo)
-            self.chain = ",".join(str(uid) for uid in dataset.chain)
+            self.chain = ','.join(str(uid) for uid in dataset.chain)
             self.xvalueinfo = dataset.devvalueinfo + dataset.envvalueinfo
             self.yvalueinfo = dataset.detvalueinfo
 
             # convert result points to result lists (no arrays)
-            self.xresults = [
-                subset.devvaluelist + subset.envvaluelist for subset in dataset.subsets
-            ]
+            self.xresults = [subset.devvaluelist + subset.envvaluelist
+                             for subset in dataset.subsets]
             self.yresults = dataset.detvaluelists
 
             # convert metainfo to headerinfo
             self.headerinfo = {}
             if dataset.subsets:
-                for (devname, key), (
-                    _,
-                    val,
-                    unit,
-                    category,
-                ) in dataset.metainfo.items():
-                    if len(val) > 100:  # omit large values
+                for (devname, key), info in \
+                        dataset.metainfo.items():
+                    if len(info.strvalue) > 100:  # omit large values
                         continue
-                    catlist = self.headerinfo.setdefault(category, [])
-                    catlist.append((devname, key, (val + " " + unit).strip()))
+                    catlist = self.headerinfo.setdefault(info.category, [])
+                    catlist.append(
+                        (devname, key, (info.strvalue + ' ' + info.unit).strip()))
 
     # info derived from valueinfo
     @lazy_property
@@ -442,3 +461,33 @@ class ScanData:
     @lazy_property
     def yunits(self):
         return [v.unit for v in self.yvalueinfo]
+
+    def to_json(self):
+        return json.dumps({
+            'uid': self.uid,
+            'started': time.strftime("%Y-%m-%dT%H:%M:%S%z", self.started),
+            'scaninfo': self.scaninfo,
+            'counter': self.counter,
+            'filepaths': self.filepaths,
+            'xindex': self.xindex,
+            'envvalues': self.envvalues,
+            'chain': self.chain,
+
+            'xvalueinfo': [
+                {'name': v.name, 'unit': v.unit}
+                for v in self.xvalueinfo
+            ],
+            'yvalueinfo': [
+                {'name': v.name, 'unit': v.unit}
+                for v in self.yvalueinfo
+            ],
+
+            'headerinfo': self.headerinfo,
+            'xresults': self.xresults,
+            'yresults': self.yresults,
+
+            'xnames': self.xnames,
+            'xunits': self.xunits,
+            'ynames': self.ynames,
+            'yunits': self.yunits,
+        })

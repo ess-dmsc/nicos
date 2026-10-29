@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,13 +28,13 @@ from nicos.core.params import Override
 class HighlevelDeviceAlias(DeviceAlias):
     """Ensure the visibility of the DeviceAlias in any case.
 
-    This class may used to hide the lowlevel devices and make only the link
+    This class may be used to hide the low level devices and make only the link
     to them visible.
     """
 
     parameter_overrides = {
-        "visibility": Override(volatile=True),
+        'visibility': Override(volatile=True),
     }
 
     def doReadVisibility(self):
-        return {"namespace", "metadata", "devlist"}
+        return {'namespace', 'metadata', 'devlist'}

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -22,12 +22,12 @@
 # *****************************************************************************
 
 
-from nicos.devices.vendor.qmesydaq.taco import Timer as MesyTimer
+from nicos.devices.vendor.qmesydaq.tango import TimerChannel as MesyTimer
 
 
 class Timer(MesyTimer):
     def getLastListModeFile(self):
-        return self._taco_guard(self._dev.deviceQueryResource, "lastlistfile")
+        return self._getProperty('lastlistfile')
 
     def getLastHistModeFile(self):
-        return self._taco_guard(self._dev.deviceQueryResource, "lasthistfile")
+        return self._getProperty('lasthistfile')

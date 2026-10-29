@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,10 +31,11 @@ import sys
 
 from nicos.utils.proxy import NicosProxy
 
-sys.path.append("/home/pedersen/Eclispe_projects_git/singlecounter")
-sys.path.append("/usr/local/nonius_new/app")
+sys.path.append('/home/pedersen/Eclispe_projects_git/singlecounter')
+sys.path.append('/usr/local/nonius_new/app')
 # pylint: disable=import-error
 from goniometer.position import PositionFromStorage  # isort:skip
+
 
 
 class ResiPositionProxy(NicosProxy):
@@ -42,15 +43,13 @@ class ResiPositionProxy(NicosProxy):
     proxy class to make  position objects really picklable
 
     """
-
     __hardware = None
 
     @classmethod
-    def SetHardware(cls, hw):
+    def SetHardware(cls,hw):
         ResiPositionProxy.__hardware = hw
 
     def __getstate__(self):
         return self._obj.storable()
-
-    def __setstate__(self, state):
+    def __setstate__(self,state):
         self._obj = PositionFromStorage(ResiPositionProxy.__hardware, state)

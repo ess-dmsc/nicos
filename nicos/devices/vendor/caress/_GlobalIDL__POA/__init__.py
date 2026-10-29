@@ -4,7 +4,6 @@
 # isort:skip_file
 
 import omniORB
-
 omniORB.updateModule("_GlobalIDL__POA")
 
 # ** 1. Stub files contributing to this module

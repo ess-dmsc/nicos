@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,29 +31,30 @@ from nicos_mlz.sans1.lib import qrange
 
 
 class Resolution(Readable):
+
     valuetype = (float, float)
 
     attached_devices = {
-        "detector": Attach("Detector device with size information", Detector),
-        "beamstop": Attach("Beam stop device with size information", BeamStop),
-        "detpos": Attach("Detector position device", Readable),
-        "wavelength": Attach("Wavelength device", Readable),
+        'detector': Attach('Detector device with size information',
+                           Detector),
+        'beamstop': Attach('Beamstop device with size information',
+                           BeamStop),
+        'detpos': Attach('Detector position device', Readable),
+        'wavelength': Attach('Wavelength device', Readable),
     }
 
     parameter_overrides = {
-        "unit": Override(mandatory=False, volatile=True),
-        "fmtstr": Override(default="%3.f - %3.f"),
+        'unit': Override(mandatory=False, volatile=True),
+        'fmtstr': Override(default='%3.f - %3.f'),
     }
 
     def doRead(self, maxage=0):
         bs = self._attached_beamstop
-        return qrange(
-            self._attached_wavelength.read(maxage),
-            self._attached_detpos.read(0),
-            bs.slots[bs.shape][1][0] / 2.0,
-            self._attached_detector.size[0] / 2.0,
-        )
+        return qrange(self._attached_wavelength.read(maxage),
+                      self._attached_detpos.read(0),
+                      bs.slots[bs.shape][1][0] / 2.,
+                      self._attached_detector.size[0] / 2.)
 
     def doReadUnit(self):
         unit = self._attached_wavelength.unit
-        return "%s-1" % unit
+        return '%s-1' % unit

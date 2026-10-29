@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,23 +23,22 @@
 
 """Special devices for the WMI microwave generator."""
 
+
 from nicos.core import Param, oneof
 from nicos.devices.entangle import AnalogOutput
 
 
 class Frequency(AnalogOutput):
     """Device for RF generator frequency and frequency modulation settings."""
-
     parameters = {
-        "deviation": Param("FM signal deviation", type=float, settable=True),
-        "modulationsource": Param(
-            "Modulation source",
-            type=oneof("internal_1", "internal_2", "external_1", "noise"),
-            settable=True,
-        ),
-        "enablemodulation": Param(
-            "Enable frequency modulation", type=bool, settable=True
-        ),
+        'deviation': Param('FM signal deviation', type=float, settable=True),
+        'modulationsource': Param('Modulation source', type=oneof('internal_1',
+                                                                  'internal_2',
+                                                                  'external_1',
+                                                                  'noise'),
+                                  settable=True),
+        'enablemodulation': Param('Enable frequency modulation', type=bool,
+                                  settable=True),
     }
 
     def doReadDeviation(self):

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,9 +29,9 @@ def test_shell(console):
     stdout, _ = console.communicate()
     stdout = stdout.decode().splitlines()
 
-    assert "nicos: setups loaded: startup" in stdout
-    assert "nicos: setups loaded: axis" in stdout
-    assert any(line.endswith("nicos: >>> 1/0") for line in stdout)
-    assert "nicos: ZeroDivisionError - division by zero" in stdout
-    assert any(line.endswith("nicos: >>> read()") for line in stdout)
-    assert "nicos: shutting down..." in stdout
+    assert 'nicos: setups loaded: startup' in stdout
+    assert 'nicos: setups loaded: axis' in stdout
+    assert any(line.endswith('nicos: >>> 1/0') for line in stdout)
+    assert 'nicos: ZeroDivisionError - division by zero' in stdout
+    assert any(line.endswith('nicos: >>> read()') for line in stdout)
+    assert 'nicos: shutting down...' in stdout

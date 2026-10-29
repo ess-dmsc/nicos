@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -35,17 +35,15 @@ class AsymmetricMagnet(HasTimeout, Actuator):
     """
 
     parameters = {
-        "asymmetry": Param(
-            "Asymmetry ratio",
-            type=oneof(0, 11, 25, 39, 53, 70),
-            settable=True,
-            volatile=True,
-        ),
+        'asymmetry': Param('Asymmetry ratio',
+                           type=oneof(0, 11, 25, 39, 53, 70),
+                           settable=True,
+                           volatile=True),
     }
 
     parameter_overrides = {
         # max range * max ramp + 5'
-        "timeout": Override(mandatory=False, default=5400 + 300)
+        'timeout': Override(mandatory=False, default=5400 + 300)
     }
 
     def doReadAsymmetry(self):

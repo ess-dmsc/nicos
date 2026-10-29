@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,38 +24,35 @@
 """Module for output/logging user commands."""
 
 from nicos import session
-from nicos.commands import helparglist, hiddenusercommand, parallel_safe, usercommand
+from nicos.commands import helparglist, hiddenusercommand, parallel_safe, \
+    usercommand
 
 __all__ = [
-    "printdebug",
-    "printinfo",
-    "printwarning",
-    "printerror",
-    "printexception",
+    'printdebug', 'printinfo', 'printwarning', 'printerror', 'printexception',
 ]
 
 
 @hiddenusercommand
-@helparglist("message, ...")
+@helparglist('message, ...')
 @parallel_safe
 def printdebug(*msgs):
     """Print a debug message."""
-    session.log.debug(" ".join("%s" for _ in msgs), *msgs)
+    session.log.debug(' '.join('%s' for _ in msgs), *msgs)
 
 
 @usercommand
-@helparglist("message, ...")
+@helparglist('message, ...')
 @parallel_safe
 def printinfo(*msgs):
     """Print a message.
 
     This function is equivalent to the standard Python "print" statement.
     """
-    session.log.info(" ".join("%s" for _ in msgs), *msgs)
+    session.log.info(' '.join('%s' for _ in msgs), *msgs)
 
 
 @usercommand
-@helparglist("message, ...")
+@helparglist('message, ...')
 @parallel_safe
 def printwarning(*msgs):
     """Print a warning message.
@@ -67,11 +64,11 @@ def printwarning(*msgs):
 
     >>> printwarning('count rate < 1000 Hz')
     """
-    session.log.warning(" ".join("%s" for _ in msgs), *msgs)
+    session.log.warning(' '.join('%s' for _ in msgs), *msgs)
 
 
 @usercommand
-@helparglist("message, ...")
+@helparglist('message, ...')
 @parallel_safe
 def printerror(*msgs):
     """Print an error message.
@@ -83,12 +80,12 @@ def printerror(*msgs):
 
     >>> printerror('scan failed, repeating this run')
     """
-    session.log.error(" ".join("%s" for _ in msgs), *msgs)
+    session.log.error(' '.join('%s' for _ in msgs), *msgs)
 
 
 @hiddenusercommand
-@helparglist("message, ...")
+@helparglist('message, ...')
 @parallel_safe
 def printexception(*msgs):
     """Print an error message, and add info about the last exception."""
-    session.log.exception(" ".join("%s" for _ in msgs), *msgs)
+    session.log.exception(' '.join('%s' for _ in msgs), *msgs)

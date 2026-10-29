@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -30,14 +30,15 @@ from nicos_mlz.kws1.gui.cmdlets import MeasureTable as KWS1MeasureTable
 
 
 class MeasureTable(KWS1MeasureTable):
+
     def __init__(self, parent, client, options):
         KWS1MeasureTable.__init__(self, parent, client, options)
-        self.hvBox = QCheckBox("Shut down GE detector HV at the end", self)
+        self.hvBox = QCheckBox('Shut down GE detector HV at the end', self)
         self.hvBox.setChecked(True)
         self.extendedFrame.layout().addWidget(self.hvBox)
 
-    def generate(self, mode):
-        res = KWS1MeasureTable.generate(self, mode)
+    def generate(self):
+        res = KWS1MeasureTable.generate(self)
         if self.hvBox.isChecked():
             res += "\nmaw(gedet_HV, 'off')"
         return res

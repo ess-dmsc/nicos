@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -17,31 +17,32 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Module authors:
-#   Jens Krüger <jens.krüger@frm2.tum.de>
+#   Jens Krüger <jens.krueger@frm2.tum.de>
 #
 # *****************************************************************************
 
+import pytest
+
 from nicos.services.daemon.auth.ldap import ldapuri
-from test.utils import raises
 
 
 def test_ldapuri():
-    assert ldapuri("localhost") == "localhost"
-    assert ldapuri("ldap://localhost") == "ldap://localhost"
-    assert ldapuri("ldaps://localhost") == "ldaps://localhost"
+    assert ldapuri('localhost') == 'localhost'
+    assert ldapuri('ldap://localhost') == 'ldap://localhost'
+    assert ldapuri('ldaps://localhost') == 'ldaps://localhost'
 
-    assert ldapuri("example.host.my") == "example.host.my"
-    assert ldapuri("ldap://example.host.my") == "ldap://example.host.my"
-    assert ldapuri("ldaps://example.host.my") == "ldaps://example.host.my"
-    assert ldapuri("ldap://localhost:3389") == "ldap://localhost:3389"
-    assert ldapuri("ldaps://localhost:6636") == "ldaps://localhost:6636"
-    assert ldapuri("ldap://localhost:3389/") == "ldap://localhost:3389/"
-    assert ldapuri("ldaps://localhost:6636/") == "ldaps://localhost:6636/"
+    assert ldapuri('example.host.my') == 'example.host.my'
+    assert ldapuri('ldap://example.host.my') == 'ldap://example.host.my'
+    assert ldapuri('ldaps://example.host.my') == 'ldaps://example.host.my'
+    assert ldapuri('ldap://localhost:3389') == 'ldap://localhost:3389'
+    assert ldapuri('ldaps://localhost:6636') == 'ldaps://localhost:6636'
+    assert ldapuri('ldap://localhost:3389/') == 'ldap://localhost:3389/'
+    assert ldapuri('ldaps://localhost:6636/') == 'ldaps://localhost:6636/'
 
-    assert raises(ValueError, ldapuri, "lda://localhost")
-    assert raises(ValueError, ldapuri, "ldap//localhost")
-    assert raises(ValueError, ldapuri, "ldap:/localhost")
-    assert raises(ValueError, ldapuri, "ldap:localhost")
-    assert raises(ValueError, ldapuri, "ldap://loca lhost")
-    assert raises(ValueError, ldapuri, "ldap://localhost ")
-    assert raises(ValueError, ldapuri, " ldap://localhost ")
+    pytest.raises(ValueError, ldapuri, 'lda://localhost')
+    pytest.raises(ValueError, ldapuri, 'ldap//localhost')
+    pytest.raises(ValueError, ldapuri, 'ldap:/localhost')
+    pytest.raises(ValueError, ldapuri, 'ldap:localhost')
+    pytest.raises(ValueError, ldapuri, 'ldap://loca lhost')
+    pytest.raises(ValueError, ldapuri, 'ldap://localhost ')
+    pytest.raises(ValueError, ldapuri, ' ldap://localhost ')

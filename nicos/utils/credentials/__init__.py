@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -17,7 +17,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Module authors:
-#   Bjoern Pedersen <bjoern.pedersen@frm2.tum.de>
+#   Björn Pedersen <bjoern.pedersen@frm2.tum.de>
 #
 # *****************************************************************************
 """
@@ -27,10 +27,10 @@ Utility classes to access and store credentials
 
 
 class NicosKeyStore:
-    """Abstract base class for nicos key stores"""
+    """Abstract base class for nicos key stores."""
 
-    def getCredential(self, credid, domain="nicos"):
-        """return a stored credential
+    def getCredential(self, credid, domain='nicos'):
+        """Return a stored credential.
 
         *credid*  The id /username for which we want to get the credential
 
@@ -39,8 +39,8 @@ class NicosKeyStore:
 
         raise NotImplementedError
 
-    def setCredential(self, credid, passwd, domain="nicos"):
-        """set a credential in the store
+    def setCredential(self, credid, passwd, domain='nicos'):
+        """Set a credential in the store.
 
         *credid*  The id /username for which we want to set the credential
 
@@ -52,8 +52,8 @@ class NicosKeyStore:
 
         raise NotImplementedError
 
-    def delCredential(self, credid, domain="nicos"):
-        """delete a stored credential
+    def delCredential(self, credid, domain='nicos'):
+        """Delete a stored credential.
 
         *credid*  The id /username for which we want to get the credential
 

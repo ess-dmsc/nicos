@@ -1,7 +1,7 @@
 #  pylint: disable=unidiomatic-typecheck
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -89,68 +89,68 @@ class FTPTestHandler(FTPHandler):
 
 
 class MyTestFS(AbstractedFS):
+
     def open(self, filename, mode):
-        "Overwritten to use in memory files"
+        """Overwritten to use in memory files"""
         self.cmd_channel.ds.ofilename = filename
         self.cmd_channel.ds.omode = mode
-        if "b" in mode:
+        if 'b' in mode:
             self.cmd_channel.ds.iofile = NamedBytesIO(filename)
         else:
             self.cmd_channel.ds.iofile = NamedStringIO(filename)
         return self.cmd_channel.ds.iofile
 
     def chdir(self, path):
-        "Path changes are virtual"
-        if path == self.cmd_channel.ds.mkdirpath or path == "/":
+        """Path changes are virtual"""
+        if path in (self.cmd_channel.ds.mkdirpath, '/'):
             self.cmd_channel.ds.chdirpath = path
-        return "/"
+        return '/'
 
     def mkdir(self, path):
-        "Do not create dirs"
+        """Do not create dirs."""
         self.cmd_channel.ds.mkdirpath = path
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def ftpserver():
     """Provide a ftp server with virtual files"""
     handler = FTPTestHandler
     handler.abstracted_fs = MyTestFS
     authorizer = DummyAuthorizer()
     home = os.curdir
-    authorizer.add_user("user", "12345", home, perm="elrmwM")
+    authorizer.add_user('user', '12345', home, perm='elrmwM')
     handler.authorizer = authorizer
-    server = ThreadedFTPServer(("localhost", 12345), handler)
+    server = ThreadedFTPServer(('localhost', 12345), handler)
 
-    createThread("FTP", server.serve_forever)
+    createThread('FTP', server.serve_forever)
     yield handler
     server.close_all()
 
 
-TEST_CONTENT = "A test\n"
+TEST_CONTENT = 'A test\n'
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def upload(session):
     """Provide a file to use as upload"""
-    fd, t = tempfile.mkstemp(suffix=".txt")
+    fd, t = tempfile.mkstemp(suffix='.txt')
     os.write(fd, TEST_CONTENT.encode())
     yield t
     os.unlink(t)
 
 
-@pytest.mark.skipif(
-    ThreadedFTPServer is object, reason="pyftpdlib package not installed"
-)
+@pytest.mark.skipif(ThreadedFTPServer is object,
+                    reason='pyftpdlib package not installed')
 def test_ftp(session, ftpserver, upload):
-    ftp.FTP_SERVER = "localhost"
+    ftp.FTP_SERVER = 'localhost'
     ftp.FTP_PORT = 12345
-    ftp.FTP_USER = "user"
-    ftp.FTP_P = "12345"
+    ftp.FTP_USER = 'user'
+    ftp.FTP_P = '12345'
 
     ftp.ftpUpload(upload)
-    assert ds.used_username == "user"
+    assert ds.used_username == 'user'
     assert ds.ofilename
-    assert ds.omode == "wb"
+    assert ds.omode == 'wb'
     assert ds.iofile
     assert ds.iofile.finalcontent.decode() == TEST_CONTENT
     assert ds.mkdirpath

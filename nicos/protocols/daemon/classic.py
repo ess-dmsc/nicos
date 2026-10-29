@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,11 +28,8 @@ import json
 import pickle
 import struct
 
-from nicos.protocols.daemon import (
-    DAEMON_COMMANDS,
-    DAEMON_EVENTS,
-    Serializer as BaseSerializer,
-)
+from nicos.protocols.daemon import DAEMON_COMMANDS, DAEMON_EVENTS, \
+    Serializer as BaseSerializer
 
 # default port for the daemon
 
@@ -41,32 +38,33 @@ DEFAULT_PORT = 1301
 # protocol version, increment this whenever making changes to command
 # arguments or adding new commands
 
-PROTO_VERSION = 23
+PROTO_VERSION = 24
 
 # old versions with which the client is still compatible
 
 # 21 -> 22: added "done" event
 # 22 -> 23: added interval in history queries
+# 23 -> 24: added "promptdone" event
 COMPATIBLE_PROTO_VERSIONS = [23]
 
 # to encode payload lengths as network-order 32-bit unsigned int
-LENGTH = struct.Struct(">I")
+LENGTH = struct.Struct('>I')
 
 # command frame (client -> daemon)
 # frame format: ENQ + commandcode (3 bytes) + LENGTH + payload
-ENQ = b"\x05"
+ENQ = b'\x05'
 
 # one-byte response without length
 # frame format: ACK
-ACK = b"\x06"  # executed ok, no further information follows
+ACK = b'\x06'   # executed ok, no further information follows
 
 # error response with payload
 # frame format: NAK + LENGTH + payload
-NAK = b"\x15"  # error occurred, message follows
+NAK = b'\x15'   # error occurred, message follows
 
 # response with payload
 # frame format: STX + LENGTH + payload
-STX = b"\x03"  # executed ok, reply follows
+STX = b'\x03'   # executed ok, reply follows
 
 # also for events
 # frame format: STX + eventcode (2 bytes) + LENGTH + payload
@@ -76,7 +74,7 @@ READ_BUFSIZE = 4096
 
 # command and event code numbers
 
-_codefmt = struct.Struct(">H")
+_codefmt = struct.Struct('>H')
 
 command2code, code2command = {}, {}
 for _name, _number in DAEMON_COMMANDS.items():
@@ -92,7 +90,8 @@ for _name, (_number, _) in DAEMON_EVENTS.items():
 
 
 class ClassicSerializer(BaseSerializer):
-    name = "classic"
+
+    name = 'classic'
 
     # serializing
 
@@ -111,30 +110,31 @@ class ClassicSerializer(BaseSerializer):
     # deserializing
 
     def deserialize_cmd(self, data, cmdname=None):
-        return cmdname, pickle.loads(data, encoding="latin1")
+        return cmdname, pickle.loads(data, encoding='latin1')
 
     def deserialize_reply(self, data, success=None):
         assert success is not None
-        data = pickle.loads(data, encoding="latin1") if data else None
+        data = pickle.loads(data, encoding='latin1') if data else None
         return success, data
 
     def deserialize_event(self, data, evtname=None):
-        return evtname, pickle.loads(data, encoding="latin1")
+        return evtname, pickle.loads(data, encoding='latin1')
 
 
 class JsonSerializer(BaseSerializer):
-    name = "json"
+
+    name = 'json'
 
     def __init__(self):
         self.encoder = json.JSONEncoder(default=self._serialize_default)
         self.decoder = json.JSONDecoder(object_hook=self._object_hook)
 
     def _serialize_default(self, obj):
-        return {"__pickle__": pickle.dumps(obj, 2).decode("latin1")}
+        return {'__pickle__': pickle.dumps(obj, 2).decode('latin1')}
 
     def _object_hook(self, obj):
-        if "__pickle__" in obj:
-            return pickle.loads(obj["__pickle__"].encode("latin1"))
+        if '__pickle__' in obj:
+            return pickle.loads(obj['__pickle__'].encode('latin1'))
         return obj
 
     # serializing

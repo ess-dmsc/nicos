@@ -1,11 +1,15 @@
-description = "Sample environment alias for magnetic field"
+description = 'Sample environment alias for magnetic field'
 
-group = "lowlevel"
+group = 'lowlevel'
 
 devices = dict(
-    B=device("nicos.devices.generic.DeviceAlias"),
+    B = device('nicos.devices.generic.DeviceAlias'),
 )
 
-startupcode = """
+extended = dict(
+    representative = 'B',
+)
+
+startupcode = '''
 AddEnvironment(B)
-"""
+'''

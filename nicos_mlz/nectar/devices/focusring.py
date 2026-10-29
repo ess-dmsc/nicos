@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,17 +28,13 @@ from nicos.devices.generic import Axis
 
 
 class FocusRing(Axis):
+
     parameters = {
-        "lenses": Param(
-            "Defintion of userlimits for each of the lenses.",
-            type=dictof(str, limits),
-            settable=False,
-            mandatory=True,
-            userparam=False,
-        ),
-        "lens": Param(
-            "Currently used lens", type=str, userparam=True, settable=True, default=""
-        ),
+        'lenses': Param('Definition of userlimits for each of the lenses',
+                        type=dictof(str, limits), settable=False,
+                        mandatory=True, userparam=False),
+        'lens': Param('Currently used lens',
+                      type=str, userparam=True, settable=True, default=''),
     }
 
     def doPreinit(self, mode):
@@ -52,23 +48,22 @@ class FocusRing(Axis):
         and this position will be set to 'absmin'.
         """
         if self._hascoder:
-            self.log.error("This is an encoded axis, no need to reference")
+            self.log.error('This is an encoded axis, no need to reference')
             return
         motor = self._attached_motor
         _userlimits = motor.userlimits  # store user limits
         # The use of _setROParam suppresses output to inform users about
         # changing of the user limits
-        motor._setROParam("userlimits", motor.abslimits)  # open limits
+        motor._setROParam('userlimits', motor.abslimits)  # open limits
         try:
             motor.setPosition(motor.absmax)
             motor.maw(motor.absmin)
         finally:
-            motor._setROParam("userlimits", _userlimits)  # restore user limits
+            motor._setROParam('userlimits', _userlimits)  # restore user limits
 
     def doWriteLens(self, value):
         if value not in self.lenses:
-            raise ValueError(
-                "Lens is not defined. Possible lenses are: %s"
-                % ", ".join(["'%s'" % x for x in list(self.lenses.keys())])
-            )
+            raise ValueError('Lens is not defined. Possible lenses are: %s' %
+                             ', '.join(["'%s'" % x
+                                        for x in list(self.lenses.keys())]))
         self.userlimits = self.lenses[value]

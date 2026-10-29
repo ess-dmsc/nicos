@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,6 +31,7 @@ from nicos.core.constants import FINAL, INTERRUPTED, SIMULATION
 from nicos.core.errors import NicosError
 from nicos.core.params import Value
 from nicos.core.utils import waitForCompletion
+from nicos.protocols.daemon import BREAK_NOW
 
 
 def _wait_for_continuation(delay, only_pause=False):
@@ -44,31 +45,31 @@ def _wait_for_continuation(delay, only_pause=False):
         # pylint: disable=unpacking-non-sequence
         req, current_msg = session.countloop_request
         session.countloop_request = None
-        if only_pause and req != "pause":
+        if only_pause and req != 'pause':
             # for 'finish' requests, we don't want to finish *before* starting
             # the measurement, because then we don't have any results to return
-            session.log.info("request for early finish ignored, not counting")
+            session.log.info('request for early finish ignored, not counting')
             return True
         exp = session.experiment
-        if req == "finish":
-            session.log.warning("counting stopped: %s", current_msg)
+        if req == 'finish':
+            session.log.warning('counting stopped: %s', current_msg)
             return False
         else:
-            session.log.warning("counting paused: %s", current_msg)
+            session.log.warning('counting paused: %s', current_msg)
         # allow the daemon to pause here, if we were paused by it
-        session.breakpoint(3)
+        session.breakpoint(BREAK_NOW)
         # still check for other conditions
         while exp.pausecount:
             if exp.pausecount != current_msg:
                 current_msg = exp.pausecount
-                session.log.warning("counting paused: %s", current_msg)
+                session.log.warning('counting paused: %s', current_msg)
             session.delay(delay)
             # also allow the daemon to pause here
-            session.breakpoint(3)
+            session.breakpoint(BREAK_NOW)
             if session.countloop_request:
                 # completely new request? continue with outer loop
                 break
-    session.log.info("counting resumed")
+    session.log.info('counting resumed')
     return True
 
 
@@ -90,21 +91,16 @@ def acquire(point, preset, iscompletefunc=None):
     been fulfilled.
     """
     if iscompletefunc is None:  # do not influence count loop using callback
-
         def iscompletefunc():
             return False
-
     # put detectors in a set and discard them when completed
     detset = set(point.detectors)
-    delay = (
-        session.instrument and session.instrument.countloopdelay or 0.025
-        if session.mode != SIMULATION
-        else 0.0
-    )
+    delay = (session.instrument and session.instrument.countloopdelay or 0.025
+             if session.mode != SIMULATION else 0.0)
 
     dataman = session.experiment.data
 
-    session.beginActionScope("Counting")
+    session.beginActionScope('Counting')
     if session.countloop_request:
         _wait_for_continuation(delay, only_pause=True)
     for det in point.detectors:
@@ -138,7 +134,7 @@ def acquire(point, preset, iscompletefunc=None):
                     try:
                         res = det.readResults(quality)
                     except Exception:
-                        det.log.exception("error reading measurement data")
+                        det.log.exception('error reading measurement data')
                         res = None
                     dataman.putResults(quality, {det.name: res})
                 if quality == FINAL:
@@ -149,7 +145,8 @@ def acquire(point, preset, iscompletefunc=None):
             if session.countloop_request:
                 for det in detset:
                     if not det.pause():
-                        session.log.warning("detector %r could not be paused", det.name)
+                        session.log.warning(
+                            'detector %r could not be paused', det.name)
                 if not _wait_for_continuation(delay):
                     for det in detset:
                         # next iteration of loop will see det is finished
@@ -163,24 +160,20 @@ def acquire(point, preset, iscompletefunc=None):
             session.delay(delay)
     except BaseException as err:
         point.finished = currenttime()
-        if err.__class__.__name__ != "ControlStop":
-            session.log.warning("Exception during count, trying to save data", exc=True)
+        if err.__class__.__name__ != 'ControlStop':
+            session.log.warning('Exception during count, trying to save data',
+                                exc=True)
         for det in detset:
             try:
-                # XXX: in theory, stop() can return True or False to indicate
-                # whether saving makes sense.
-                #
-                # However, it might be better to leave that to the data sink
-                # handling the INTERRUPTED quality.
                 det.stop()
                 res = det.readResults(INTERRUPTED)
             except Exception:
-                det.log.exception("error reading measurement data")
+                det.log.exception('error reading measurement data')
                 res = None
             try:
                 dataman.putResults(INTERRUPTED, {det.name: res})
             except Exception:
-                det.log.exception("error saving measurement data")
+                det.log.exception('error saving measurement data')
         raise err
     finally:
         point.finished = currenttime()
@@ -201,23 +194,23 @@ def read_environment(envlist):
         try:
             val = dev.read(0)
         except Exception as err:
-            dev.log.warning("error reading for scan data", exc=err)
+            dev.log.warning('error reading for scan data', exc=err)
             val = [None] * len(dev.valueInfo())
         values[dev.name] = (currenttime(), val)
     session.experiment.data.putValues(values)
 
 
 def stop_acquire_thread():
-    """Stops an live() count if in progress."""
+    """Stops live() count if in progress."""
     if session._thd_acquire and session._thd_acquire.is_alive():
-        session.log.info("live() counting in progress, stopping detectors.")
+        session.log.info('live() counting in progress, stopping detectors.')
         for det in session.experiment.data._current.detectors:
-            session.log.debug("stop detector: %s", det)
+            session.log.debug('stop detector: %s', det)
             det.stop()
-        session.log.debug("joining acquire thread")
+        session.log.debug('joining acquire thread')
         session._thd_acquire.join()
         session._thd_acquire = None
-        session.log.debug("acquire thread terminated.")
+        session.log.debug('acquire thread terminated.')
 
 
 class DevStatistics:
@@ -237,23 +230,21 @@ class DevStatistics:
 
     @property
     def name(self):
-        return "%s:%s" % (self.devname, self.statname)
+        return '%s:%s' % (self.devname, self.statname)
 
     def retrieve(self, valuestats):
-        raise NotImplementedError(
-            "%s.retrieve() must be implemented" % self.__class__.__name__
-        )
+        raise NotImplementedError('%s.retrieve() must be implemented'
+                                  % self.__class__.__name__)
 
     def valueInfo(self):
-        raise NotImplementedError(
-            "%s.valueInfo() must be implemented" % self.__class__.__name__
-        )
+        raise NotImplementedError('%s.valueInfo() must be implemented'
+                                  % self.__class__.__name__)
 
 
 class Average(DevStatistics):
     """Collects the average of the device value."""
 
-    statname = "avg"
+    statname = 'avg'
 
     def retrieve(self, valuestats):
         if self.dev.name in valuestats:
@@ -261,13 +252,14 @@ class Average(DevStatistics):
         return [None]
 
     def valueInfo(self):
-        return (Value("%s:avg" % self.dev, unit=self.dev.unit, fmtstr=self.dev.fmtstr),)
+        return Value('%s:avg' % self.dev, unit=self.dev.unit,
+                     fmtstr=self.dev.fmtstr),
 
 
 class StdDev(DevStatistics):
     """Collects the standard deviation of the device value."""
 
-    statname = "stddev"
+    statname = 'stddev'
 
     def retrieve(self, valuestats):
         if self.dev.name in valuestats:
@@ -275,38 +267,37 @@ class StdDev(DevStatistics):
         return [None]
 
     def valueInfo(self):
-        return (
-            Value("%s:stddev" % self.dev, unit=self.dev.unit, fmtstr=self.dev.fmtstr),
-        )
+        return Value('%s:stddev' % self.dev, unit=self.dev.unit,
+                     fmtstr=self.dev.fmtstr),
 
 
 class MinMax(DevStatistics):
     """Collects the minimum and maximum of the device value."""
 
-    statname = "minmax"
+    statname = 'minmax'
 
     def retrieve(self, valuestats):
         if self.dev.name in valuestats:
-            return [valuestats[self.dev.name][2], valuestats[self.dev.name][3]]
+            return [valuestats[self.dev.name][2],
+                    valuestats[self.dev.name][3]]
         return [None, None]
 
     def valueInfo(self):
-        return (
-            Value("%s:min" % self.dev, unit=self.dev.unit, fmtstr=self.dev.fmtstr),
-            Value("%s:max" % self.dev, unit=self.dev.unit, fmtstr=self.dev.fmtstr),
-        )
+        return (Value('%s:min' % self.dev, unit=self.dev.unit,
+                      fmtstr=self.dev.fmtstr),
+                Value('%s:max' % self.dev, unit=self.dev.unit,
+                      fmtstr=self.dev.fmtstr))
 
 
 DevStatistics.subclasses = {
     Average.statname: Average,
-    MinMax.statname: MinMax,
+    MinMax.statname:  MinMax,
     StdDev.statname: StdDev,
 }
 
 
 class CountResult(list):
     """Represents the result from a count(), as returned to the script."""
-
     __display__ = None
 
     @classmethod
@@ -316,7 +307,7 @@ class CountResult(list):
         for det in point.detectors:
             res = point.results[det.name]
             if res is not None:
-                for info, val in zip(det.valueInfo(), res[0]):
-                    msg.append("%s = %s" % (info.name, info.fmtstr % val))
+                for (info, val) in zip(det.valueInfo(), res[0]):
+                    msg.append('%s = %s' % (info.name, info.fmtstr % val))
                     retval.append(val)
         return cls(retval), msg

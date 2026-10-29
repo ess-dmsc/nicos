@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -45,10 +45,10 @@ class SpheresMesydaqHandler(SingleFileSinkHandler):
     def writeData(self, fp, image):
         j = 0
         for i in range(len(image)):
-            fp.write("\n  %s\n" % i)
+            fp.write('\n  %s\n' % i)
             tube = image[i]
             for entry in tube:
-                fp.write("%s%s\n" % (str(j).ljust(5, " "), entry))
+                fp.write('%s%s\n' % (str(j).ljust(5, ' '), entry))
                 j += 1
 
     def putResults(self, quality, results):
@@ -58,15 +58,15 @@ class SpheresMesydaqHandler(SingleFileSinkHandler):
         return SingleFileSinkHandler.putResults(self, quality, results)
 
     def writeHeader(self, fp, metainfo, image):
-        header = ""
-        header += "# events = %d\n" % self.counts
-        header += "# timer = %dms\n" % (self.scanduration * 1000)
-        header += strftime("# date = %d.%m.%Y  %H:%M:%S\n", localtime())
+        header = ''
+        header += '# events = %d\n' % self.counts
+        header += '# timer = %dms\n' % (self.scanduration * 1000)
+        header += strftime('# date = %d.%m.%Y  %H:%M:%S\n', localtime())
 
         timer = self.detector._attached_timers[0]
 
-        header += "# histfile = %s\n" % timer.getLastListModeFile()
-        header += "# listfile = %s\n" % timer.getLastHistModeFile()
+        header += '# histfile = %s\n' % timer.getLastListModeFile()
+        header += '# listfile = %s\n' % timer.getLastHistModeFile()
 
         fp.write(header)
 
@@ -82,7 +82,7 @@ class SpheresMesydaqLiveViewSinkHandler(LiveViewSinkHandler):
     def __init__(self, sink, dataset, detector):
         LiveViewSinkHandler.__init__(self, sink, dataset, detector)
 
-    def extractData(self, result, quality):
+    def extractData(self,result, quality):
         return [numpy.concatenate(result[1][0])]
 
 

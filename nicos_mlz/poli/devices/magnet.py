@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,7 +23,8 @@
 
 """Special devices for magnets."""
 
-from nicos.core import Attach, ComputationError, Moveable, Param, listof, tupleof
+from nicos.core import Attach, ComputationError, Moveable, Param, listof, \
+    tupleof
 
 
 def to_range(x):
@@ -37,8 +38,8 @@ def to_range(x):
 
 def in_range(x, a1, a2):
     """Check if (modulo 360) x is in the range a1...a2. a1 must be < a2."""
-    a1 %= 360.0
-    a2 %= 360.0
+    a1 %= 360.
+    a2 %= 360.
     if a1 <= a2:  # "normal" range (not including 0)
         return a1 <= x <= a2
     # "jumping" range (around 0)
@@ -52,23 +53,18 @@ class MagnetSampleTheta(Moveable):
     """
 
     attached_devices = {
-        "sample_theta": Attach("Sample-only theta motor", Moveable),
-        "magnet_theta": Attach("Magnet-plus-sample motor", Moveable),
-        "two_theta": Attach("Scattering angle", Moveable),
+        'sample_theta': Attach('Sample-only theta motor', Moveable),
+        'magnet_theta': Attach('Magnet-plus-sample motor', Moveable),
+        'two_theta':    Attach('Scattering angle', Moveable),
     }
 
     parameters = {
-        "blocked": Param(
-            "Blocked angle range in the magnet. 0 is the " "incoming beam direction",
-            unit="deg",
-            type=listof(tupleof(float, float)),
-        ),
-        "windowstep": Param(
-            "Steps in which to move the magnet when looking " "for free windows",
-            unit="deg",
-            type=int,
-            default=5,
-        ),
+        'blocked':     Param('Blocked angle range in the magnet. 0 is the '
+                             'incoming beam direction', unit='deg',
+                             type=listof(tupleof(float, float))),
+        'windowstep':  Param('Steps in which to move the magnet when looking '
+                             'for free windows', unit='deg', type=int,
+                             default=5),
     }
 
     def _find_window(self, gamma, magnet):
@@ -76,7 +72,7 @@ class MagnetSampleTheta(Moveable):
         # to the current position of the magnet
         result = []
         for pos in range(0, 360, self.windowstep):
-            for a1, a2 in self.blocked:
+            for (a1, a2) in self.blocked:
                 # check for blocked incoming beam
                 if in_range(pos, -a2, -a1):
                     break
@@ -85,13 +81,11 @@ class MagnetSampleTheta(Moveable):
                     break
             else:  # no "break"
                 result.append(pos)
-        self.log.debug("gamma: %.3f, magnet: %.3f", gamma, magnet)
-        self.log.debug("new possible positions: %s", result)
+        self.log.debug('gamma: %.3f, magnet: %.3f', gamma, magnet)
+        self.log.debug('new possible positions: %s', result)
         if not result:
-            raise ComputationError(
-                self,
-                "no position found for magnet with " "incoming and outgoing beam free",
-            )
+            raise ComputationError(self, 'no position found for magnet with '
+                                   'incoming and outgoing beam free')
         return min(result, key=lambda pos: abs(pos - 0.1))
 
     def doStart(self, target):
@@ -107,7 +101,6 @@ class MagnetSampleTheta(Moveable):
         return [self._attached_sample_theta, self._attached_magnet_theta]
 
     def doRead(self, maxage=0):
-        angle = self._attached_magnet_theta.read(
-            maxage
-        ) + self._attached_sample_theta.read(maxage)
+        angle = self._attached_magnet_theta.read(maxage) + \
+            self._attached_sample_theta.read(maxage)
         return to_range(angle)

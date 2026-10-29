@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -33,12 +33,12 @@ class ItemTypes:
 
 def getNicosDir():
     # this file should be in nicostools/setupfiletool/utilities
-    return path.abspath(path.join(path.dirname(__file__), "..", "..", ".."))
+    return path.abspath(path.join(path.dirname(__file__), '..', '..', '..'))
 
 
 def getResDir():
-    return path.join(getNicosDir(), "nicostools", "setupfiletool", "res")
+    return path.join(getNicosDir(), 'nicostools', 'setupfiletool', 'res')
 
 
 def getClass(_class):
-    return str(_class).strip("<>").split()[-1].strip("'")
+    return str(_class).strip('<>').split()[-1].strip("'")

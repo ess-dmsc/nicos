@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,18 +28,8 @@ import time
 from tango import DevState
 
 from nicos import session
-from nicos.core import (
-    Attach,
-    Moveable,
-    NicosTimeoutError,
-    Override,
-    Param,
-    Readable,
-    dictof,
-    status,
-    tupleof,
-    usermethod,
-)
+from nicos.core import Attach, Moveable, NicosTimeoutError, Override, Param, \
+    Readable, dictof, status, tupleof, usermethod
 from nicos.devices.entangle import PowerSupply
 from nicos.devices.epics.pyepics import EpicsAnalogMoveable, EpicsReadable
 from nicos.devices.generic.sequence import BaseSequencer, SeqMethod, SeqSleep
@@ -56,11 +46,8 @@ class HVSwitcher(Switcher):
     hardware_access = True
 
     parameters = {
-        "pv_values": Param(
-            "PV values to set when starting the detector",
-            type=dictof(str, list),
-            mandatory=True,
-        ),
+        'pv_values': Param('PV values to set when starting the detector',
+                           type=dictof(str, list), mandatory=True),
     }
 
     def _mapReadValue(self, value):
@@ -80,7 +67,7 @@ class HVSwitcher(Switcher):
 
     def doStart(self, target):
         # on start, also set all configured parameters
-        if target == "on" and self.read() != "on":
+        if target == 'on' and self.read() != 'on':
             self.transferSettings()
         Switcher.doStart(self, target)
 
@@ -88,11 +75,10 @@ class HVSwitcher(Switcher):
     def transferSettings(self):
         """Transfer the setting to the EPICS system."""
         import epics
-
         for epicsid, pvs in self.pv_values.items():
             for pvname, pvvalue in pvs:
-                fullpvname = "%s:%s_W" % (epicsid, pvname)
-                self.log.debug("setting %s = %s" % (fullpvname, pvvalue))
+                fullpvname = '%s:%s_W' % (epicsid, pvname)
+                self.log.debug('setting %s = %s', fullpvname, pvvalue)
                 epics.caput(fullpvname, pvvalue)
         session.delay(2)
 
@@ -107,22 +93,21 @@ class MultiHV(BaseSequencer):
     """
 
     attached_devices = {
-        "ephvs": Attach("Individual 8-pack HV", Moveable, multiple=True),
+        'ephvs':   Attach('Individual 8-pack HV', Moveable, multiple=True),
     }
 
     parameters = {
-        "voltagestep": Param("Maximum voltage step ramping up", default=200),
-        "stepsettle": Param("Settle time between steps", default=2, unit="s"),
-        "finalsettle": Param("Final settle time", default=30, unit="s"),
+        'voltagestep': Param('Maximum voltage step ramping up', default=200),
+        'stepsettle':  Param('Settle time between steps', default=2, unit='s'),
+        'finalsettle': Param('Final settle time', default=30, unit='s'),
         # note: this should be <= the precision of the switcher above
-        "offlimit": Param(
-            "Limit under which HV is considered OFF", default=24, unit="V"
-        ),
-        "offtimeout": Param("Timeout waiting for rampdown", default=900),
+        'offlimit':    Param('Limit under which HV is considered OFF',
+                             default=24, unit='V'),
+        'offtimeout':  Param('Timeout waiting for rampdown', default=900),
     }
 
     parameter_overrides = {
-        "unit": Override(mandatory=False, default=""),
+        'unit':    Override(mandatory=False, default=''),
     }
 
     def doInit(self, mode):
@@ -135,25 +120,25 @@ class MultiHV(BaseSequencer):
         if all(v == 0 for v in target):
             # shut down without ramp via capacitors
             subseq = []
-            for i, dev in enumerate(self._attached_ephvs):
+            for (i, dev) in enumerate(self._attached_ephvs):
                 if current[i] <= 10:
                     continue
-                subseq.append(SeqMethod(dev, "start", 0))
+                subseq.append(SeqMethod(dev, 'start', 0))
             if subseq:
                 seq.append(subseq)
-                seq.append(SeqMethod(self, "_wait_for_shutdown"))
+                seq.append(SeqMethod(self, '_wait_for_shutdown'))
 
         else:
             while True:
                 subseq = []
-                for i, dev in enumerate(self._attached_ephvs):
+                for (i, dev) in enumerate(self._attached_ephvs):
                     if target[i] - 5 <= current[i] <= target[i] + 10:
                         continue
                     if target[i] > current[i]:
                         setval = min(current[i] + self.voltagestep, target[i])
                     elif target[i] < current[i]:
                         setval = max(current[i] - self.voltagestep, target[i])
-                    subseq.append(SeqMethod(dev, "start", setval))
+                    subseq.append(SeqMethod(dev, 'start', setval))
                     current[i] = setval
                 if not subseq:
                     break
@@ -173,9 +158,9 @@ class MultiHV(BaseSequencer):
                     break
             else:
                 return
-        raise NicosTimeoutError(self, "timeout waiting for HV to ramp down")
+        raise NicosTimeoutError(self, 'timeout waiting for HV to ramp down')
 
-    def doRead(self, maxage=None):
+    def doRead(self, maxage=0):
         return [d.read(0) for d in self._attached_ephvs]
 
 
@@ -197,29 +182,30 @@ class GEPowerSupply(PowerSupply):
 
 
 class HVEpicsAnalogMoveable(EpicsAnalogMoveable):
-    def doStatus(self, maxage=None):
+
+    def doStatus(self, maxage=0):
         # HV writepv intermittently goes into unknown state, ignore it
         code, text = EpicsAnalogMoveable.doStatus(self, maxage)
         if code == status.UNKNOWN:
-            code, text = status.OK, ""
+            code, text = status.OK, ''
         return code, text
 
 
 class HVEpicsArrayReadable(EpicsReadable):
     def doRead(self, maxage=0):
-        return self._get_pv("readpv")[:8].tolist()
+        return self._get_pv('readpv')[:8].tolist()
 
 
 class GEMaxTemperature(Readable):
     """Return the maximum of a number of 8-pack temperatures."""
 
     attached_devices = {
-        "epts": Attach("Individual 8-pack Temps", Readable, multiple=True),
+        'epts':   Attach('Individual 8-pack Temps', Readable, multiple=True),
     }
 
     def doStatus(self, maxage=0):
         # do not forward individual 8-pack status
-        return status.OK, ""
+        return status.OK, ''
 
     def doRead(self, maxage=0):
         maxtemp = 0

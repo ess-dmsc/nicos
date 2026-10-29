@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,13 +32,10 @@ from nicos_mlz.jcns.devices.motor import InvertableMotor
 
 
 class PollMotor(Motor):
+
     attached_devices = {
-        "polldevs": Attach(
-            "Devices polled during movement at same interval",
-            Readable,
-            multiple=True,
-            optional=True,
-        ),
+        'polldevs': Attach('Devices polled during movement at same interval',
+                           Readable, multiple=True, optional=True),
     }
 
     def _getWaiters(self):
@@ -55,7 +52,7 @@ class InvertablePollMotor(InvertableMotor, PollMotor):
 
     def doStart(self, target):
         if self.status(0)[0] == status.ERROR:
-            self.log.info("resetting before start...")
+            self.log.info('resetting before start...')
             self.doReset()
         InvertableMotor.doStart(self, target)
 

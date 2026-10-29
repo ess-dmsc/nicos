@@ -1,7 +1,7 @@
 #  pylint: disable=unidiomatic-typecheck
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -27,128 +27,101 @@
 
 from time import sleep
 
-import numpy as np
 import pytest
 
 from nicos.core.errors import CacheLockError, CommunicationError, LimitError
 from nicos.devices.cacheclient import CacheClient
 from nicos.utils import readonlydict, readonlylist
-from test.utils import cache_addr, raises
 
-session_setup = "cachetests"
+from test.utils import cache_addr
+
+session_setup = 'cachetests'
 
 
 class TestCache:
-    @pytest.mark.parametrize(
-        "value",
-        [
-            pytest.param(np.float64(1.5), id="numpy-scalar"),
-            pytest.param({"values": [np.float64(1.5)]}, id="numpy-nested"),
-        ],
-    )
-    def test_numpy_value_through_cache_server(self, session, value):
-        # Keep deliberately unreadable wire values outside the shared "nicos"
-        # prefix so other suite clients never receive this test's updates.
-        cc = CacheClient(
-            name="numpy_cache", prefix="numpy-regression", cache=cache_addr
-        )
-        try:
-            cc.put("testcache", "numpyvalue", value)
-            cc.flush()
-
-            # Read explicitly from the server, rather than the client's local copy.
-            received = cc.get_explicit("testcache", "numpyvalue", None)[2]
-            np.testing.assert_equal(received, value)
-        finally:
-            try:
-                # Failed round trips must not leave malformed entries in the server.
-                cc.delete("testcache", "numpyvalue")
-                cc.flush()
-            finally:
-                cc.shutdown()
 
     def test_float_literals(self, session):
         cc = session.cache
-        for fv in [float("+inf"), float("-inf"), float("nan")]:
-            cc.put("testcache", "fval", fv)
+        for fv in [float('+inf'), float('-inf'), float('nan')]:
+            cc.put('testcache', 'fval', fv)
             cc.flush()
-            fvc = cc.get_explicit("testcache", "fval")[2]
+            fvc = cc.get_explicit('testcache', 'fval')[2]
             # cannot compare fvc == fv, since nan is not equal to itself
             assert repr(fvc) == repr(fv)
 
     def test_write(self, session):
         cc = session.cache
-        testval = "test1"
-        key = "value"
-        cc.put("testcache", key, testval)
+        testval = 'test1'
+        key = 'value'
+        cc.put('testcache', key, testval)
         cc.flush()
-        cachedval_local = cc.get("testcache", key, None)
-        cachedval = cc.get_explicit("testcache", key, None)
+        cachedval_local = cc.get('testcache', key, None)
+        cachedval = cc.get_explicit('testcache', key, None)
 
         assert cachedval_local == testval
         assert cachedval[2] == testval
 
     def test_delete(self, session):
         cc = session.cache
-        testval = "test_del"
-        key = "delvalue"
-        cc.put("testcache", key, testval)
+        testval = 'test_del'
+        key = 'delvalue'
+        cc.put('testcache', key, testval)
         cc.flush()
-        assert cc.get_explicit("testcache", key, None)[2] == testval
+        assert cc.get_explicit('testcache', key, None)[2] == testval
 
-        cc.delete("testcache", key)
+        cc.delete('testcache', key)
         cc.flush()
-        assert cc.get_explicit("testcache", key, None)[2] is None
+        assert cc.get_explicit('testcache', key, None)[2] is None
 
     def test_rewrite(self, session):
         cc = session.cache
-        cc.setRewrite("testrewrite", "testcache")
-        testval = "test2"
-        key = "value"
-        cc.put("testcache", key, testval)
+        cc.setRewrite('testrewrite', 'testcache')
+        testval = 'test2'
+        key = 'value'
+        cc.put('testcache', key, testval)
         cc.flush()
-        cachedval1_local = cc.get("testcache", key, None)
-        cachedvalrw_local = cc.get("testrewrite", key, None)
-        cachedval1 = cc.get_explicit("testcache", key, None)
-        cachedval2 = cc.get_explicit("testrewrite", key, Ellipsis)
+        cachedval1_local = cc.get('testcache', key, None)
+        cachedvalrw_local = cc.get('testrewrite', key, None)
+        cachedval1 = cc.get_explicit('testcache', key, None)
+        cachedval2 = cc.get_explicit('testrewrite', key, Ellipsis)
         assert cachedval1_local == testval
         assert cachedvalrw_local == testval
         assert cachedval1[2] == testval
         assert cachedval2[2] == testval
 
-        cc.unsetRewrite("testrewrite")
-        testval = "test3"
-        key = "value"
-        testvalold = cc.get_explicit("testrewrite", key, Ellipsis)
-        cc.put("testcache", key, testval)
+        cc.unsetRewrite('testrewrite')
+        testval = 'test3'
+        key = 'value'
+        testvalold = cc.get_explicit('testrewrite', key, Ellipsis)
+        cc.put('testcache', key, testval)
         cc.flush()
-        cachedval1 = cc.get("testcache", key, None)
-        cachedval_rw = cc.get("testrewrite", key, None)
-        cachedval2 = cc.get_explicit("testrewrite", key, Ellipsis)
+        cachedval1 = cc.get('testcache', key, None)
+        cachedval_rw = cc.get('testrewrite', key, None)
+        cachedval2 = cc.get_explicit('testrewrite', key, Ellipsis)
         assert cachedval1 == testval
         assert cachedval2[2] == testvalold[2]
         assert cachedval2[2] != Ellipsis
-        assert cachedval_rw == "test2"  # still from test_02setRewrite
+        assert cachedval_rw == 'test2'  # still from test_02setRewrite
 
-    @pytest.mark.timeout(timeout=60, method="thread", func_only=True)
+    @pytest.mark.timeout(timeout=60, method='thread', func_only=True)
     def test_write_to_rewritten(self, session):
         cc = session.cache
-        cc.setRewrite("testrewrite2", "testcache")
-        testval1 = "testwrite1"
-        testval2 = "testwrite2"
-        testval3 = "testwrite3"
-        key = "value"
-        cc.put("testcache", key, testval1)
+        cc.setRewrite('testrewrite2', 'testcache')
+        testval1 = 'testwrite1'
+        testval2 = 'testwrite2'
+        testval3 = 'testwrite3'
+        key = 'value'
+        cc.put('testcache', key, testval1)
         cc.flush()
-        cachedval1 = cc.get_explicit("testcache", key, Ellipsis)
-        cc.put("testrewrite2", key, testval2)
+        cachedval1 = cc.get_explicit('testcache', key, Ellipsis)
+        cc.put('testrewrite2', key, testval2)
         cc.flush()
-        cachedval2 = cc.get_explicit("testrewrite2", key, Ellipsis)
-        cc.setRewrite("testcache", "testrewrite3")
-        cc.put("testrewrite3", key, testval3)
+        cachedval2 = cc.get_explicit('testrewrite2', key, Ellipsis)
+        cc.setRewrite('testcache', 'testrewrite3')
+        cc.put('testrewrite3', key, testval3)
         cc.flush()
-        cachedval5 = cc.get_explicit("testrewrite3", key, Ellipsis)
-        cachedval6 = cc.get_explicit("testcache", key, Ellipsis)
+        cachedval5 = cc.get_explicit('testrewrite3', key, Ellipsis)
+        cachedval6 = cc.get_explicit('testcache', key, Ellipsis)
 
         assert cachedval1[2] == testval1
         assert cachedval2[2] == testval2
@@ -157,18 +130,19 @@ class TestCache:
 
     def test_raw(self, session):
         cc = session.cache
-        cc.put_raw("some/strange/key", [1, 2])
+        cc.put_raw('some/strange/key', [1, 2])
         cc.flush()
-        assert cc.get_raw("some/strange/key") == [1, 2]
+        assert cc.get_raw('some/strange/key') == [1, 2]
 
     def test_lock(self, session):
         cc = session.cache
-        key = "lock"
-        ses_a, ses_b = "client1", "client2"
+        key = 'lock'
+        ses_a, ses_b = 'client1', 'client2'
         # need to access base class method since lock() is disabled in the
         # TestCacheClient to avoid implicit master locking
         CacheClient.lock(cc, key, 5, sessionid=ses_a)
-        assert raises(CacheLockError, CacheClient.lock, cc, key, 5, sessionid=ses_b)
+        pytest.raises(CacheLockError, CacheClient.lock, cc, key, 5,
+                      sessionid=ses_b)
         CacheClient.lock(cc, key, unlock=True, sessionid=ses_a)
         CacheClient.lock(cc, key, 0.01, sessionid=ses_a)
         sleep(0.1)
@@ -176,56 +150,56 @@ class TestCache:
 
     def test_readonly_objects(self, session):
         cc = session.cache
-        testval1 = readonlylist(("A", "B", "C"))
-        cc.put("testcache", "rolist", testval1)
+        testval1 = readonlylist(('A', 'B', 'C'))
+        cc.put('testcache', 'rolist', testval1)
         cc.flush()
-        rol1 = cc.get("testcache", "rolist")
-        rol = cc.get_explicit("testcache", "rolist", None)
+        rol1 = cc.get('testcache', 'rolist')
+        rol = cc.get_explicit('testcache', 'rolist', None)
         assert rol[2] is not None
         print(type(rol1), type(testval1))
-        assert type(rol1) is type(testval1)
-        assert type(rol[2]) is type(testval1)
+        assert type(rol1) == type(testval1)
+        assert type(rol[2]) == type(testval1)
 
-        testval2 = readonlydict((("A", "B"), ("C", "D")))
-        cc.put("testcache", "rodict", testval2)
+        testval2 = readonlydict((('A', 'B'), ('C', 'D')))
+        cc.put('testcache', 'rodict', testval2)
         cc.flush()
-        rod = cc.get_explicit("testcache", "rodict", None)
+        rod = cc.get_explicit('testcache', 'rodict', None)
         assert rod[2] is not None
         print(type(rod[2]), type(testval2))
-        assert type(rod[2]) is type(testval2)
+        assert type(rod[2]) == type(testval2)
 
-        testval3 = readonlylist((testval1, testval2, "C"))
-        cc.put("testcache", "rolist2", testval3)
+        testval3 = readonlylist((testval1, testval2, 'C'))
+        cc.put('testcache', 'rolist2', testval3)
         cc.flush()
-        rol = cc.get_explicit("testcache", "rolist2", None)
+        rol = cc.get_explicit('testcache', 'rolist2', None)
         assert rol[2] is not None
         print(type(rol[2]), type(testval3))
-        assert type(rol[2]) is type(testval3)
-        assert type(rol[2][0]) is type(testval1)
-        assert type(rol[2][1]) is type(testval2)
+        assert type(rol[2]) == type(testval3)
+        assert type(rol[2][0]) == type(testval1)
+        assert type(rol[2][1]) == type(testval2)
 
-        testval4 = readonlydict((("A", testval1), ("B", testval2), ("C", "D")))
-        cc.put("testcache", "rodict2", testval4)
+        testval4 = readonlydict((('A', testval1), ('B', testval2), ('C', 'D')))
+        cc.put('testcache', 'rodict2', testval4)
         cc.flush()
-        rod = cc.get_explicit("testcache", "rodict2", None)
+        rod = cc.get_explicit('testcache', 'rodict2', None)
         assert rod[2] is not None
         print(type(rod[2]), type(testval4))
-        assert type(rod[2]) is type(testval4)
-        assert type(rod[2]["A"]) is type(testval1)
-        assert type(rod[2]["B"]) is type(testval2)
+        assert type(rod[2]) == type(testval4)
+        assert type(rod[2]['A']) == type(testval1)
+        assert type(rod[2]['B']) == type(testval2)
 
     def test_cache_reader(self, session, log):
-        rd1 = session.getDevice("reader1")
+        rd1 = session.getDevice('reader1')
         cc = session.cache
-        cc2 = CacheClient(name="cache2", prefix="nicos", cache=cache_addr)
+        cc2 = CacheClient(name='cache2', prefix='nicos', cache=cache_addr)
         try:
-            testval = "testr1"
-            testval2 = "testr2"
-            key = "value"
+            testval = 'testr1'
+            testval2 = 'testr2'
+            key = 'value'
             sleep(0.1)
-            cc.clear("reader1")
+            cc.clear('reader1')
             cc.flush()
-            assert raises(CommunicationError, rd1.read)
+            pytest.raises(CommunicationError, rd1.read)
             cc2.put(rd1, key, None)
             cc2.flush()
             assert rd1.read() is None
@@ -241,51 +215,49 @@ class TestCache:
         finally:
             cc2.shutdown()
 
-        cc2 = CacheClient(name="cache2", prefix="nicos", cache=cache_addr)
+        cc2 = CacheClient(name='cache2', prefix='nicos', cache=cache_addr)
         try:
-            testval = "testr3"
-            key = "value"
-            cc.clear("reader1")
+            testval = 'testr3'
+            key = 'value'
+            cc.clear('reader1')
             cc.flush()
             cc2.put(rd1, key, testval, ttl=0.1)
             cc2.flush()
             # just make sure we put the value into the cache
             assert rd1.read() == testval
             sleep(0.71)  # sleep longer than ttl (0.1) + self.maxage (0.1) + 0.5
-            with log.assert_warns(
-                "value timed out in cache, this should be considered as an error!"
-            ):
+            with log.assert_warns('value timed out in cache, this should be '
+                                  'considered as an error!'):
                 rd1.read()
         finally:
             cc2.shutdown()
 
     def test_cache_writer(self, session, log):
         cc = session.cache
-        cc2 = CacheClient(name="cache2", prefix="nicos", cache=cache_addr)
+        cc2 = CacheClient(name='cache2', prefix='nicos', cache=cache_addr)
         try:
-            testval = "testw1"
-            testval2 = "testw2"
-            key = "value"
-            cc2.put("writer1", "value", None)
+            testval = 'testw1'
+            testval2 = 'testw2'
+            key = 'value'
+            cc2.put('writer1', 'value', None)
             cc2.flush()
-            wrt1 = session.getDevice("writer1")
+            wrt1 = session.getDevice('writer1')
             assert wrt1.read() is None
 
-            cc2.put("writer1", key, testval)
+            cc2.put('writer1', key, testval)
             cc2.flush()
             assert wrt1.read() == testval
             cc2.put(wrt1, key, testval2, ttl=0.1)
             cc2.flush()
             sleep(0.71)  # ttl+ wrt1.maxage
-            with log.assert_warns(
-                "value timed out in cache, this should be considered as an error!"
-            ):
+            with log.assert_warns('value timed out in cache, this should be '
+                                  'considered as an error!'):
                 wrt1.read()
             wrt1.move(10)
-            assert cc.get("writer1", "setpoint") == 10.0
+            assert cc.get('writer1', 'setpoint') == 10.0
             cc.flush()
-            cce = cc.get_explicit("writer1", "setpoint")
+            cce = cc.get_explicit('writer1', 'setpoint')
             assert cce[2] == 10.0
-            assert raises(LimitError, wrt1.move, 500)
+            pytest.raises(LimitError, wrt1.move, 500)
         finally:
             cc2.shutdown()

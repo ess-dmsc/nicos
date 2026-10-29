@@ -1,24 +1,44 @@
-description = "ZEA-2 counter card setup"
-group = "lowlevel"
+description = 'ZEA-2 counter card setup'
+group = 'lowlevel'
 
-tango_base = "tango://phys.j-nse.frm2:10000/j-nse/"
+tango_base = 'tango://phys.j-nse.frm2:10000/j-nse/'
 
 devices = dict(
-    timer=device(
-        "nicos_mlz.jcns.devices.fpga.FPGATimerChannel",
-        description="Counter card timer channel",
-        tangodevice=tango_base + "count/timer",
+    selector_cts = device('nicos.devices.entangle.CounterChannel',
+        description = 'Selector',
+        tangodevice = tango_base + 'count/sel',
+        type = 'monitor',
+        unit = 'cts',
     ),
-    mon0=device(
-        "nicos.devices.entangle.CounterChannel",
-        description="Monitor 0",
-        tangodevice=tango_base + "count/mon0",
-        type="monitor",
+    selector_freq = device('nicos.devices.entangle.Sensor',
+        description = 'Selector frequency according to counter card',
+        tangodevice = tango_base + 'count/sel_freq',
+        unit = 'Hz',
+        fmtstr = '%.0f',
+        visibility = (),
     ),
-    mon1=device(
-        "nicos.devices.entangle.CounterChannel",
-        description="Monitor 1",
-        tangodevice=tango_base + "count/mon1",
-        type="monitor",
+    anode_events = device('nicos.devices.entangle.CounterChannel',
+        description = 'Anode events',
+        tangodevice = tango_base + 'count/anodeevents',
+        type = 'monitor',
+    ),
+    monbgr = device('nicos.devices.entangle.CounterChannel',
+        description='Background monitor',
+        tangodevice=tango_base + 'count/monbgr',
+        type='monitor',
+    ),
+    mon1 = device('nicos.devices.entangle.CounterChannel',
+        description = 'Monitor',
+        tangodevice = tango_base + 'count/mon1',
+        type = 'monitor',
+    ),
+    mon1rate = device('nicos.devices.entangle.AnalogInput',
+        description = 'Instantaneous rate of monitor 1',
+        tangodevice = tango_base + 'count/mon1rate',
+        fmtstr = '%.1f',
+    ),
+    timer = device('nicos_mlz.jcns.devices.fpga.FPGATimerChannel',
+        description = 'Counter card timer channel',
+        tangodevice = tango_base + 'count/timer',
     ),
 )

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -42,21 +42,18 @@ class MultiDigitalOutput(Moveable):
     """Writes the same value to multiple digital outputs at once."""
 
     attached_devices = {
-        "outputs": Attach(
-            "A list of digital outputs to switch simultaneously",
-            DigitalOutput,
-            multiple=True,
-        ),
+        'outputs': Attach('A list of digital outputs to switch simultaneously',
+                          DigitalOutput, multiple=True),
     }
 
     valuetype = int
 
     def doStart(self, target):
-        for dev in self._adevs["outputs"]:
+        for dev in self._adevs['outputs']:
             dev.start(target)
 
     def doRead(self, maxage=0):
-        values = [dev.read(maxage) for dev in self._adevs["outputs"]]
+        values = [dev.read(maxage) for dev in self._adevs['outputs']]
         # if len(set(values)) != 1:
         #     devnames = [dev.name for dev in self._adevs['outputs']]
         #     raise NicosError(self,

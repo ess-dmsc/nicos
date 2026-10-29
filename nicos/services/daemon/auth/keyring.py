@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,10 +25,8 @@
 # *****************************************************************************
 
 from nicos.core import USER, Param, User, listof
-from nicos.services.daemon.auth import (
-    AuthenticationError,
-    Authenticator as BaseAuthenticator,
-)
+from nicos.services.daemon.auth import AuthenticationError, \
+    Authenticator as BaseAuthenticator
 from nicos.services.daemon.auth.params import UserLevelAuthEntry
 from nicos.utils.credentials.keystore import nicoskeystore
 
@@ -39,7 +37,7 @@ class Authenticator(BaseAuthenticator):
     Passwords are stored in an external keystore
 
     An empty password means that any password is accepted.
-    Password less entriesare restricted to 'at most' USER level.
+    Passwordless entries are restricted to 'at most' USER level.
 
     You can set passwords via:
 
@@ -47,7 +45,7 @@ class Authenticator(BaseAuthenticator):
 
        `nicos-keystore add nicos_user \<username\>`
 
-    b) the `keyring` tool (this may required additional dependencies to be
+    b) the `keyring` tool (this may require additional dependencies to be
        installed):
 
        `keyring -b keyrings.alt.file.EncryptedKeyring set nicos_user \<username\>`
@@ -56,34 +54,27 @@ class Authenticator(BaseAuthenticator):
     """
 
     parameters = {
-        "access": Param(
-            "List of (username, userlevel) tuples", type=listof(UserLevelAuthEntry)
-        ),
-        "userdomain": Param(
-            "Keystore domain for user/pw authentication",
-            type=str,
-            mandatory=False,
-            settable=False,
-            default="nicos_user",
-        ),
+        'access': Param('List of (username, userlevel) tuples',
+                        type=listof(UserLevelAuthEntry)),
+        'userdomain': Param('Keystore domain for user/pw authentication',
+                            type=str, mandatory=False, settable=False,
+                            default='nicos_user'),
     }
 
     def authenticate(self, username, password):
-        username = username.strip()
-        if not username:
-            raise AuthenticationError("No username, please identify yourself!")
         # check for exact match (also matches empty password if username
         # matches)
-        password_ks = nicoskeystore.getCredential(username, domain=self.userdomain)
+        password_ks = nicoskeystore.getCredential(username,
+                                                  domain=self.userdomain)
         if password_ks is None:
-            raise AuthenticationError("Invalid username or password!")
-        for user, level in self.access:
+            raise AuthenticationError('Invalid username or password!')
+        for (user, level) in self.access:
             if user == username:
                 if password_ks == password:
-                    if password == "" and level > USER:  # pylint: disable=compare-to-empty-string
+                    if password == '' and level > USER:  # pylint: disable=compare-to-empty-string
                         level = USER  # limit passwordless entries to USER
                     return User(username, level)
                 else:
-                    raise AuthenticationError("Invalid username or password!")
+                    raise AuthenticationError('Invalid username or password!')
         # do not give a hint whether username or password is wrong...
-        raise AuthenticationError("Invalid username or password!")
+        raise AuthenticationError('Invalid username or password!')

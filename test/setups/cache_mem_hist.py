@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,18 +23,16 @@
 
 from test.utils import alt_cache_addr
 
-name = "setup for cache stresstest with memory-history db"
+name = 'setup for cache stress test with memory-history db'
 
 devices = dict(
-    Server=device(
-        "nicos.services.cache.server.CacheServer",
-        server=alt_cache_addr,
-        db="DB3",
-        loglevel="debug",
+    Server = device('nicos.services.cache.server.CacheServer',
+        server = alt_cache_addr,
+        db = 'DB3',
+        loglevel = 'debug',
     ),
-    DB3=device(
-        "nicos.services.cache.server.MemoryCacheDatabaseWithHistory",
-        maxentries=50,
-        loglevel="debug",
+    DB3 = device('nicos.services.cache.database.MemoryCacheDatabaseWithHistory',
+        maxentries = 50,
+        loglevel = 'debug',
     ),
 )

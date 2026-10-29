@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -35,23 +35,23 @@ from os import path
 # files will be stored there for 30 days and automatically deleted.
 # the wise man keeps a local copy....
 #
-FTP_SERVER = "ftp.frm2.tum.de"
+FTP_SERVER = 'ftp.frm2.tum.de'
 FTP_PORT = 21210
-FTP_USER = "nicd"
-FTP_P = "".join(map(chr, [78, 103, 115, 65, 57, 84, 98, 67]))
+FTP_USER = 'nicd'
+FTP_P = ''.join(map(chr, [78, 103, 115, 65, 57, 84, 98, 67]))
 
 
 def ftpUpload(filename, logger=None):
-    """Uploads the given file to an user-accessible location
+    """Uploads the given file to a user-accessible location
 
-    returns a http download link for download purposes.
+    returns an HTTP download link for download purposes.
     """
     # we like to obscure the data at least a little bit.
     subdir = md5((filename + str(time.time())).encode()).hexdigest()
     basename = path.basename(filename)
 
     try:
-        with open(filename, "rb") as fp:
+        with open(filename, 'rb') as fp:
             ftp = FTP()
 
             ftp.connect(FTP_SERVER, FTP_PORT)
@@ -63,15 +63,14 @@ def ftpUpload(filename, logger=None):
                 pass
             ftp.cwd(subdir)
 
-            ftp.storbinary("STOR %s" % basename, fp)
+            ftp.storbinary('STOR %s' % basename, fp)
 
             ftp.quit()
             ftp.close()
     except Exception:
         if logger:
-            logger.error(
-                "Uploading ftp-file failed! Please check config and " "log files", exc=1
-            )
+            logger.error('Uploading ftp-file failed! Please check config and '
+                         'log files', exc=1)
         raise
 
-    return "http://ftp.frm2.tum.de/outgoing/mdata/%s/%s" % (subdir, basename)
+    return 'http://ftp.frm2.tum.de/outgoing/mdata/%s/%s' % (subdir, basename)

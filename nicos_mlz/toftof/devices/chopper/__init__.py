@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,17 +21,5 @@
 #
 # *****************************************************************************
 
-from nicos_mlz.toftof.devices.chopper.base import (
-    CRC,
-    BaseChopperController,
-    Ratio,
-    SlitType,
-    Speed,
-    SpeedReadout,
-    Wavelength,
-)
-from nicos_mlz.toftof.devices.chopper.real import Controller
-from nicos_mlz.toftof.devices.chopper.virtual import (
-    Controller as VirtualController,
-    Disc,
-)
+from nicos_mlz.toftof.devices.chopper.base import CRC, BaseChopperController, \
+    Ratio, SlitType, Speed, SpeedReadout, Wavelength

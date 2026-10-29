@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -41,24 +41,13 @@ class Switch(HasTimeout, NamedDigitalOutput):
     """
 
     parameters = {
-        "remote": Param(
-            "Device to enable the remote control",
-            type=tangodev,
-            mandatory=True,
-            preinit=True,
-        ),
-        "readback": Param(
-            "Device to read back the reached value",
-            type=tangodev,
-            mandatory=True,
-            preinit=True,
-        ),
-        "error": Param(
-            "Device to indicate an error during the move of the " "switch",
-            type=tangodev,
-            mandatory=True,
-            preinit=True,
-        ),
+        'remote': Param('Device to enable the remote control',
+                        type=tangodev, mandatory=True, preinit=True),
+        'readback': Param('Device to read back the reached value',
+                          type=tangodev, mandatory=True, preinit=True),
+        'error': Param('Device to indicate an error during the move of the '
+                       'switch',
+                       type=tangodev, mandatory=True, preinit=True),
     }
 
     def doInit(self, mode):
@@ -108,12 +97,12 @@ class Switch(HasTimeout, NamedDigitalOutput):
 
     def doStatus(self, maxage=0):
         if self._error.value == 0:
-            return status.OK, "idle"
-        return status.ERROR, "target not reached"
+            return status.OK, 'idle'
+        return status.ERROR, 'target not reached'
 
 
 class AttenuatorSwitch(Switch):
-    """The attentuator switch must write always a '1' to change the value."""
+    """The attenuator switch must write always a '1' to change the value."""
 
     def _writeValue(self, value):
         self._dev.value = 1

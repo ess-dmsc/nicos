@@ -1,18 +1,22 @@
-description = "Detector file savers"
-group = "lowlevel"
+description = 'Detector file savers'
+group = 'lowlevel'
 
 sysconfig = dict(
-    datasinks=["FITSFileSaver", "DiObSink"],
+    datasinks = ['FITSFileSaver', 'nxsink', 'DiObSink'],
 )
 
 devices = dict(
-    FITSFileSaver=device(
-        "nicos.devices.datasinks.FITSImageSink",
-        description="Saves image data in FITS format",
-        filenametemplate=["%(pointcounter)08d.fits"],
+    FITSFileSaver = device('nicos.devices.datasinks.FITSImageSink',
+        description = 'Saves image data in FITS format',
+        filenametemplate = ['%(pointcounter)08d.fits'],
     ),
-    DiObSink=device(
-        "nicos_mlz.devices.datasinks.DiObSink",
-        description="Updates di/ob links",
+    nxsink = device('nicos_mlz.nexus.NexusSink',
+        templateclass = 'nicos_mlz.nexus.templates.TomoTemplateProvider',
+        filenametemplate = ['%(scancounter)07d.nxs'],
+        settypes = {'scan', 'point'},  # 'subscan', },
+        filemode = 0o440,
+    ),
+    DiObSink = device('nicos_mlz.devices.datasinks.DiObSink',
+        description = 'Updates di/ob links',
     ),
 )

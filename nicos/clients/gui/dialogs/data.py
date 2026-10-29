@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -27,6 +27,7 @@ from nicos.guisupport.qt import QComboBox, QFileDialog, QLabel
 
 
 class DataExportDialog(QFileDialog):
+
     def __init__(self, viewplot, curvenames, *args):
         QFileDialog.__init__(self, viewplot, *args)
         self.setOption(self.Option.DontConfirmOverwrite, False)
@@ -34,20 +35,16 @@ class DataExportDialog(QFileDialog):
         self.setOption(self.Option.DontUseNativeDialog, True)
         self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         layout = self.layout()
-        layout.addWidget(QLabel("Curve:", self), 4, 0)
+        layout.addWidget(QLabel('Curve:', self), 4, 0)
         self.curveCombo = QComboBox(self)
         if len(curvenames) > 1:
-            self.curveCombo.addItem("all (in separate files)")
-            self.curveCombo.addItem("all (in one file, multiple data columns)")
+            self.curveCombo.addItem('all (in separate files)')
+            self.curveCombo.addItem('all (in one file, multiple data columns)')
         self.curveCombo.addItems(curvenames)
         layout.addWidget(self.curveCombo, 4, 1)
-        layout.addWidget(QLabel("Time format:", self), 5, 0)
+        layout.addWidget(QLabel('Time format:', self), 5, 0)
         self.formatCombo = QComboBox(self)
-        self.formatCombo.addItems(
-            [
-                "Seconds since first datapoint",
-                "UNIX timestamp",
-                "Text timestamp (YYYY-MM-dd.HH:MM:SS)",
-            ]
-        )
+        self.formatCombo.addItems(['Seconds since first datapoint',
+                                   'UNIX timestamp',
+                                   'Text timestamp (YYYY-MM-dd.HH:MM:SS)'])
         layout.addWidget(self.formatCombo, 5, 1)

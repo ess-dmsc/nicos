@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,29 +25,10 @@
 
 from nicos.clients.gui.panels.auxwindows import AuxiliarySubWindow, Panel
 from nicos.clients.gui.utils import SettingGroup, loadBasicWindowSettings
-from nicos.guisupport.qt import (
-    QApplication,
-    QByteArray,
-    QCursor,
-    QDrag,
-    QEvent,
-    QMainWindow,
-    QMimeData,
-    QMouseEvent,
-    QPixmap,
-    QPoint,
-    QPointF,
-    QSize,
-    QStyle,
-    QStyleOptionTab,
-    QStylePainter,
-    Qt,
-    QTabBar,
-    QTabWidget,
-    QWidget,
-    pyqtSignal,
-    pyqtSlot,
-)
+from nicos.guisupport.qt import QApplication, QByteArray, QCursor, QDrag, \
+    QEvent, QMainWindow, QMimeData, QMouseEvent, QPixmap, QPoint, QPointF, \
+    QSize, QStyle, QStyleOptionTab, QStylePainter, Qt, QTabBar, QTabWidget, \
+    QWidget, pyqtSignal, pyqtSlot
 
 
 def findTab(tab, w):
@@ -70,6 +51,7 @@ def findTabIndex(tabwidget, w):
 
 
 class TearOffTabBar(QTabBar):
+
     tabDetached = pyqtSignal(object, object)
     tabMoved = pyqtSignal(object, object)
 
@@ -93,30 +75,24 @@ class TearOffTabBar(QTabBar):
     def mouseMoveEvent(self, event):
         if not (event.buttons() & Qt.MouseButton.LeftButton):
             return
-        if (
-            not self._dragStartPos.isNull()
-            and self.tabAt(self._dragStartPos) != -1
-            and (event.pos() - self._dragStartPos).manhattanLength()
-            < QApplication.startDragDistance()
-        ):
+        if not self._dragStartPos.isNull() and \
+           self.tabAt(self._dragStartPos) != -1 and \
+           (event.pos() - self._dragStartPos).manhattanLength() \
+           < QApplication.startDragDistance():
             self._dragInitiated = True
-        if (
-            (event.buttons() == Qt.MouseButton.LeftButton)
-            and self._dragInitiated
-            and not self.geometry().contains(event.pos())
-        ):
-            finishMoveEvent = QMouseEvent(
-                QEvent.Type.MouseMove,
-                QPointF(event.pos()),
-                Qt.MouseButton.NoButton,
-                Qt.MouseButton.NoButton,
-                Qt.KeyboardModifier.NoModifier,
-            )
+        if (event.buttons() == Qt.MouseButton.LeftButton) \
+                and self._dragInitiated and \
+                not self.geometry().contains(event.pos()):
+            finishMoveEvent = QMouseEvent(QEvent.Type.MouseMove,
+                                          QPointF(event.pos()),
+                                          Qt.MouseButton.NoButton,
+                                          Qt.MouseButton.NoButton,
+                                          Qt.KeyboardModifier.NoModifier)
             QTabBar.mouseMoveEvent(self, finishMoveEvent)
 
             drag = QDrag(self)
             mimedata = QMimeData()
-            mimedata.setData("action", b"application/tab-detach")
+            mimedata.setData('action', b'application/tab-detach')
             drag.setMimeData(mimedata)
 
             pixmap = self.parentWidget().currentWidget().grab()
@@ -128,14 +104,14 @@ class TearOffTabBar(QTabBar):
             if dragged == Qt.DropAction.IgnoreAction:
                 # moved outside of tab widget
                 event.accept()
-                self.tabDetached.emit(self.tabAt(self._dragStartPos), QCursor.pos())
+                self.tabDetached.emit(self.tabAt(self._dragStartPos),
+                                      QCursor.pos())
             elif dragged == Qt.DropAction.MoveAction:
                 # moved inside of tab widget
                 if not self._dragDroppedPos.isNull():
                     event.accept()
-                    self.tabMoved.emit(
-                        self.tabAt(self._dragStartPos), self.tabAt(self._dragDroppedPos)
-                    )
+                    self.tabMoved.emit(self.tabAt(self._dragStartPos),
+                                       self.tabAt(self._dragDroppedPos))
                     self._dragDroppedPos = QPoint()
         else:
             QTabBar.mouseMoveEvent(self, event)
@@ -143,7 +119,8 @@ class TearOffTabBar(QTabBar):
     def dragEnterEvent(self, event):
         mimedata = event.mimeData()
         formats = mimedata.formats()
-        if "action" in formats and mimedata.data("action") == "application/tab-detach":
+        if 'action' in formats and \
+           mimedata.data('action') == 'application/tab-detach':
             event.acceptProposedAction()
         QTabBar.dragEnterEvent(self, event)
 
@@ -168,19 +145,14 @@ class LeftTabBar(TearOffTabBar):
             tabRect.moveLeft(10)
             painter.drawControl(QStyle.ControlElement.CE_TabBarTabShape, option)
             text = self.tabText(index)
-            painter.drawText(
-                tabRect,
-                Qt.AlignmentFlag.AlignVCenter
-                | Qt.TextFlag.TextDontClip
-                | Qt.TextFlag.TextShowMnemonic,
-                text,
-            )
+            painter.drawText(tabRect, Qt.AlignmentFlag.AlignVCenter |
+                             Qt.TextFlag.TextDontClip |
+                             Qt.TextFlag.TextShowMnemonic, text)
 
     def tabSizeHint(self, index):
         fm = self.fontMetrics()
-        tabSize = fm.boundingRect(self.tabText(index) or "Ag").size() + QSize(
-            *self.text_padding
-        )
+        tabSize = fm.boundingRect(
+            self.tabText(index) or 'Ag').size() + QSize(*self.text_padding)
         return tabSize
 
 
@@ -210,19 +182,15 @@ class TearOffTabWidget(QTabWidget):
             self.detached = detached
 
         def __repr__(self):
-            return "index %d, widget %r, title %s, visible %r, detached %r" % (
-                self.index,
-                self.widget,
-                self.title,
-                self.visible,
-                self.detached,
-            )
+            return 'index %d, widget %r, title %s, visible %r, detached %r' % (
+                self.index, self.widget, self.title, self.visible,
+                self.detached)
 
     def __init__(self, item, window, menuwindow, parent=None):
         QTabWidget.__init__(self, parent)
         self.menuwindow = menuwindow
-        if item.options.get("position", "top") == "left":
-            tabBar = LeftTabBar(self, item.options.get("textpadding", (20, 10)))
+        if item.options.get('position', 'top') == 'left':
+            tabBar = LeftTabBar(self, item.options.get('textpadding', (20, 10)))
             self.setTabBar(tabBar)
             self.setTabPosition(QTabWidget.TabPosition.West)
         else:
@@ -236,18 +204,15 @@ class TearOffTabWidget(QTabWidget):
         self.currentChanged[int].connect(self.tabChangedTab)
         self.tabIdx = {}
         # don't draw a frame around the tab contents
-        self.setStyleSheet(
-            "QTabWidget:tab:disabled{width:0;height:0;"
-            "margin:0;padding:0;border:none}"
-        )
+        self.setStyleSheet('QTabWidget:tab:disabled{width:0;height:0;'
+                           'margin:0;padding:0;border:none}')
         self.setDocumentMode(True)
         # default: only keep margin at the top (below the tabs)
-        margins = item.options.get("margins", (0, 6, 0, 0))
+        margins = item.options.get('margins', (0, 6, 0, 0))
         for entry in item.children:
             self.addPanel(
-                AuxiliarySubWindow(entry[1:], window, menuwindow, self, margins),
-                entry[0],
-            )
+                AuxiliarySubWindow(entry[1:], window, menuwindow, self,
+                                   margins), entry[0])
 
     def moveTab(self, fromInd, toInd):
         w = self.widget(fromInd)
@@ -278,9 +243,8 @@ class TearOffTabWidget(QTabWidget):
         for i in self.tabIdx.values():
             if i.widget == w:
                 return
-        self.tabIdx[index] = self.TabWidgetStorage(
-            index, self.widget(index), self.tabText(index)
-        )
+        self.tabIdx[index] = self.TabWidgetStorage(index, self.widget(index),
+                                                   self.tabText(index))
 
     def _setPanelToolbars(self, panel, visible):
         for tb in panel.getToolbars():
@@ -293,10 +257,11 @@ class TearOffTabWidget(QTabWidget):
     @pyqtSlot(QWidget, bool)
     def setWidgetVisibleSlot(self, widget, visible):
         w = self._findFirstWindow(widget)  # get widget which is related to tab
-        for i in self.tabIdx.values():  # search for it in the list of tabs
-            if i.widget == w:  # found
+        for i in self.tabIdx.values():     # search for it in the list of tabs
+            if i.widget == w:              # found
                 if isinstance(widget, Panel):
-                    if not visible or (visible and self.currentWidget() == widget):
+                    if not visible or (visible and self.currentWidget() ==
+                                       widget):
                         self._setPanelToolbars(widget, visible)
                         self._setPanelMenus(widget, visible)
                 if visible:
@@ -325,9 +290,8 @@ class TearOffTabWidget(QTabWidget):
         return panel
 
     def detachTab(self, index, point):
-        detachWindow = DetachedWindow(
-            self.tabText(index).replace("&", ""), self.parentWidget()
-        )
+        detachWindow = DetachedWindow(self.tabText(index).replace('&', ''),
+                                      self.parentWidget())
         w = self.widget(index)
         for i in self.tabIdx.values():
             if i.widget == w:
@@ -356,10 +320,10 @@ class TearOffTabWidget(QTabWidget):
 
     def _moveMenuTools(self, widget):
         for p in widget.panels:
-            if hasattr(p, "menuToolsActions"):
+            if hasattr(p, 'menuToolsActions'):
                 topLevelWindow = self.topLevelWidget(p)
 
-                if hasattr(topLevelWindow, "menuTools"):
+                if hasattr(topLevelWindow, 'menuTools'):
                     for action in p.menuToolsActions:
                         topLevelWindow.menuTools.removeAction(action)
 
@@ -392,10 +356,10 @@ class TearOffTabWidget(QTabWidget):
             panel.setWidgetVisible.connect(self.setWidgetVisibleSlot)
 
         for p in tearOffWidget.panels:
-            if hasattr(p, "menuToolsActions"):
+            if hasattr(p, 'menuToolsActions'):
                 topLevelWindow = self.topLevelWidget(self)
 
-                if hasattr(topLevelWindow, "menuTools"):
+                if hasattr(topLevelWindow, 'menuTools'):
                     for action in p.menuToolsActions:
                         topLevelWindow.menuTools.removeAction(action)
 
@@ -414,7 +378,8 @@ class TearOffTabWidget(QTabWidget):
         if newIndex == -1:
             newIndex = self.tabBar().count()
 
-        newIndex = self.insertTab(newIndex, tearOffWidget, detachWindow.windowTitle())
+        newIndex = self.insertTab(newIndex, tearOffWidget,
+                                  detachWindow.windowTitle())
         if newIndex != -1:
             self.setCurrentIndex(newIndex)
 
@@ -429,10 +394,10 @@ class TearOffTabWidget(QTabWidget):
         if self.previousTabIdx < self.count():
             if self.widget(self.previousTabIdx):
                 for p in self.widget(self.previousTabIdx).panels:
-                    if hasattr(p, "menuToolsActions"):
+                    if hasattr(p, 'menuToolsActions'):
                         topLevelWindow = self.topLevelWidget(p)
 
-                        if hasattr(topLevelWindow, "menuTools"):
+                        if hasattr(topLevelWindow, 'menuTools'):
                             for action in p.menuToolsActions:
                                 topLevelWindow.menuTools.removeAction(action)
 
@@ -440,18 +405,17 @@ class TearOffTabWidget(QTabWidget):
             for p in self.widget(index).panels:
                 p.getMenus()
 
-                if hasattr(p, "menuToolsActions"):
+                if hasattr(p, 'menuToolsActions'):
                     topLevelWindow = self.topLevelWidget(p)
 
-                    if hasattr(topLevelWindow, "menuTools"):
+                    if hasattr(topLevelWindow, 'menuTools'):
                         for action in p.menuToolsActions:
                             topLevelWindow.menuTools.addAction(action)
 
                 for toolbar in p.getToolbars():
-                    if hasattr(self.menuwindow, "toolBarWindows"):
+                    if hasattr(self.menuwindow, 'toolBarWindows'):
                         self.menuwindow.insertToolBar(
-                            self.menuwindow.toolBarWindows, toolbar
-                        )
+                            self.menuwindow.toolBarWindows, toolbar)
                     else:
                         self.menuwindow.addToolBar(toolbar)
                     toolbar.show()
@@ -464,7 +428,7 @@ class TearOffTabWidget(QTabWidget):
     def addPanel(self, widget, label):
         sgroup = SettingGroup(label)
         with sgroup as settings:
-            detached = settings.value("detached", False, bool)
+            detached = settings.value('detached', False, bool)
         index = len(self.tabIdx)
         self.tabIdx[index] = self.TabWidgetStorage(index, widget, label)
         if not detached:
@@ -475,7 +439,8 @@ class TearOffTabWidget(QTabWidget):
                 if i.widget == widget:
                     i.setDetached(None)
         else:
-            detachWindow = DetachedWindow(label.replace("&", ""), self.parentWidget())
+            detachWindow = DetachedWindow(label.replace('&', ''),
+                                          self.parentWidget())
             detachWindow.tabIdx = index
             detachWindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
             self.tabIdx[index].setDetached(detachWindow)
@@ -484,7 +449,8 @@ class TearOffTabWidget(QTabWidget):
             panel = self._getPanel(widget)
             if panel and not isinstance(panel, QTabWidget):
                 panel.setWidgetVisible.disconnect(self.setWidgetVisibleSlot)
-                panel.setWidgetVisible.connect(detachWindow.setWidgetVisibleSlot)
+                panel.setWidgetVisible.connect(
+                    detachWindow.setWidgetVisibleSlot)
             widget.setParent(detachWindow)
 
             self._moveMenuTools(widget)
@@ -493,7 +459,8 @@ class TearOffTabWidget(QTabWidget):
             detachWindow.setWidget(widget)
             detachWindow.destroyed.connect(detachWindow.deleteLater)
             with sgroup as settings:
-                detachWindow.restoreGeometry(settings.value("geometry", "", QByteArray))
+                detachWindow.restoreGeometry(settings.value('geometry', '',
+                                                            QByteArray))
             detachWindow.show()
 
     def topLevelWidget(self, w):
@@ -507,6 +474,7 @@ class TearOffTabWidget(QTabWidget):
 
 
 class DetachedWindow(QMainWindow):
+
     closed = pyqtSignal(object)
 
     def __init__(self, title, parent):
@@ -528,7 +496,7 @@ class DetachedWindow(QMainWindow):
 
     def closeEvent(self, event):
         with self.sgroup as settings:
-            settings.setValue("detached", False)
+            settings.setValue('detached', False)
         self.closed.emit(self)
         self.deleteLater()
 
@@ -542,9 +510,9 @@ class DetachedWindow(QMainWindow):
 
     def saveSettings(self, detached=True):
         with self.sgroup as settings:
-            settings.setValue("detached", detached)
-            settings.setValue("geometry", self.saveGeometry())
-            settings.setValue("windowstate", self.saveState())
+            settings.setValue('detached', detached)
+            settings.setValue('geometry', self.saveGeometry())
+            settings.setValue('windowstate', self.saveState())
 
 
 def firstWindow(w):

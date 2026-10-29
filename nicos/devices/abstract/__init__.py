@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,26 +23,10 @@
 
 """Definition of abstract base device classes."""
 
-from nicos.core import (
-    SLAVE,
-    ConfigurationError,
-    DeviceMixinBase,
-    HasLimits,
-    HasMapping,
-    HasOffset,
-    HasPrecision,
-    InvalidValueError,
-    ModeError,
-    Moveable,
-    Override,
-    Param,
-    PositionError,
-    ProgrammingError,
-    Readable,
-    oneof,
-    status,
-    usermethod,
-)
+from nicos.core import SLAVE, Attach, ConfigurationError, DeviceMixinBase, \
+    HasLimits, HasMapping, HasOffset, HasPrecision, InvalidValueError, \
+    ModeError, Moveable, Override, Param, PositionError, ProgrammingError, \
+    Readable, oneof, status, usermethod
 from nicos.utils import num_sort
 
 
@@ -61,7 +45,8 @@ class Coder(HasPrecision, Readable):
            This is called to actually set the new position in the hardware.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, "setting new position not possible in slave mode")
+            raise ModeError(self, 'setting new position not possible in '
+                            'slave mode')
         elif self._sim_intercept:
             self._sim_setValue(pos)
             return
@@ -70,7 +55,7 @@ class Coder(HasPrecision, Readable):
         self.read(0)
 
     def doSetPosition(self, pos):
-        raise NotImplementedError("implement doSetPosition for concrete coders")
+        raise NotImplementedError('implement doSetPosition for concrete coders')
 
 
 class Motor(HasLimits, Coder, Moveable):
@@ -81,7 +66,7 @@ class Motor(HasLimits, Coder, Moveable):
     """
 
     parameters = {
-        "speed": Param("The motor speed", unit="main/s", settable=True),
+        'speed': Param('The motor speed', unit='main/s', settable=True),
     }
 
 
@@ -89,66 +74,55 @@ class Axis(HasOffset, HasPrecision, HasLimits, Moveable):
     """Base class for all axes."""
 
     parameters = {
-        "dragerror": Param(
-            "Maximum deviation of motor and coder when read out "
-            "during a positioning step",
-            unit="main",
-            default=1,
-            settable=True,
-        ),
-        "maxtries": Param(
-            "Number of tries to reach the target", type=int, default=3, settable=True
-        ),
-        "loopdelay": Param(
-            "The sleep time when checking the movement",
-            unit="s",
-            default=0.3,
-            settable=True,
-        ),
-        "backlash": Param(
-            "The backlash for the axis: if positive/negative, "
-            "always approach from positive/negative values",
-            unit="main",
-            default=0,
-            settable=True,
-        ),
+        'dragerror': Param('Maximum deviation of motor and coder when read out '
+                           'during a positioning step', unit='main', default=1,
+                           settable=True),
+        'maxtries':  Param('Number of tries to reach the target', type=int,
+                           default=3, settable=True),
+        'loopdelay': Param('The sleep time when checking the movement',
+                           unit='s', default=0.3, settable=True),
+        'backlash':  Param('The backlash for the axis: if positive/negative, '
+                           'always approach from positive/negative values',
+                           unit='main', default=0, settable=True),
     }
 
     parameter_overrides = {
-        "unit": Override(mandatory=False, settable=True),
+        'unit': Override(mandatory=False, settable=True),
     }
 
 
 class CanReference(DeviceMixinBase):
-    """Mixin class for axis devices to provide a reference drive (homing) function.
+    """Mixin class for axis devices to provide a reference drive function.
 
     This reference drive will be used by the `reference` user command.
 
-    .. method:: doReference(*args)
+    .. automethod:: reference
 
-       This method is called by `home` to do the reference drive.  It
+    .. method:: doReference()
+
+       This method is called by `reference` to do the reference drive.  It
        should initiate a reference drive, wait for its completion and set the
        device position to the "reference position".  It can return the new
        current position after referencing, or None.
     """
 
     @usermethod
-    def reference(self, *args):
-        """Home the device, same as do a reference drive of the axis."""
+    def reference(self):
+        """Do a reference drive of the axis."""
         if self._mode == SLAVE:
-            raise ModeError(self, "homing not possible in slave mode")
+            raise ModeError(self, 'referencing not possible in slave mode')
         elif self._sim_intercept:
             return
-        elif hasattr(self, "fixed") and self.fixed:
-            self.log.error("device fixed, not homing: %s", self.fixed)
+        elif hasattr(self, 'fixed') and self.fixed:
+            self.log.error('device fixed, not referencing: %s', self.fixed)
             return
-        newpos = self.doReference(*args)
+        newpos = self.doReference()
         if newpos is None:
             newpos = self.read(0)
         return newpos
 
-    def doReference(self, *args):
-        raise NotImplementedError("implement doReference for concrete devices")
+    def doReference(self):
+        raise NotImplementedError('implement doReference for concrete devices')
 
 
 class TransformedReadable(Readable):
@@ -174,18 +148,16 @@ class TransformedReadable(Readable):
         This method is called with the value returned by :meth:`._readRaw()` and
         should map the raw value to the transformed value.
         """
-        raise ProgrammingError(
-            self, "Somebody please implement a proper _readMapValue method!"
-        )
+        raise ProgrammingError(self, 'Somebody please implement a proper '
+                               '_readMapValue method!')
 
     def _readRaw(self, maxage=0):
         """Read the unmapped/raw value from the device.
 
         Must be implemented in derived classes!
         """
-        raise ProgrammingError(
-            self, "Somebody please implement a proper _readRaw or doRead method!"
-        )
+        raise ProgrammingError(self, 'Somebody please implement a proper '
+                               '_readRaw or doRead method!')
 
 
 class TransformedMoveable(TransformedReadable, Moveable):
@@ -213,19 +185,42 @@ class TransformedMoveable(TransformedReadable, Moveable):
         This method is called to get a value to pass to :meth:`.startRaw()` and
         should map the target value to a raw value.
         """
-        raise ProgrammingError(
-            self, "Somebody please implement a proper _mapTargetValue method!"
-        )
+        raise ProgrammingError(self, 'Somebody please implement a proper '
+                               '_mapTargetValue method!')
 
     def _startRaw(self, target):
         """Initiate movement to the unmapped/raw value from the device.
 
         Must be implemented in derived classes!
         """
-        raise ProgrammingError(
-            self, "Somebody please implement a proper _startRaw or doStart method!"
-        )
+        raise ProgrammingError(self, 'Somebody please implement a proper '
+                               '_startRaw or doStart method!')
 
+
+class Magnet(HasLimits, TransformedMoveable):
+    """Base class for electromagnets."""
+
+    attached_devices = {
+        'currentsource': Attach('Powersupply driving the magnetic field',
+                                Moveable)
+    }
+
+    parameter_overrides = {
+        'unit': Override(mandatory=False, default='T'),
+        'abslimits': Override(mandatory=False, volatile=True),
+    }
+
+    hardware_access = False
+
+    def doReadAbslimits(self):
+        limits = self._attached_currentsource.abslimits
+        return self._mapReadValue(limits[0]), self._mapReadValue(limits[1])
+
+    def _readRaw(self, maxage=0):
+        return self._attached_currentsource.read(maxage)
+
+    def _startRaw(self, target):
+        self._attached_currentsource.start(target)
 
 # MappedReadable and MappedMoveable operate (via read/start) on a set of
 # predefined values which are mapped via the mapping parameter onto
@@ -253,10 +248,8 @@ class MappedReadable(HasMapping, TransformedReadable):
 
     def doInit(self, mode):
         if self.fallback in self.mapping:
-            raise ConfigurationError(
-                self,
-                "Value of fallback parameter is not allowed to be in the mapping!",
-            )
+            raise ConfigurationError(self, 'Value of fallback parameter is '
+                                     'not allowed to be in the mapping!')
         self._inverse_mapping = {}
         for k, v in self.mapping.items():
             self._inverse_mapping[v] = k
@@ -269,12 +262,9 @@ class MappedReadable(HasMapping, TransformedReadable):
         try:
             r = self.read(maxage)
             if r == self.fallback:
-                return (
-                    status.NOTREACHED,
-                    "not at configured position: %r, "
-                    "used dev at pos: %r" % (r, self._readRaw(maxage)),
-                )
-            return status.OK, "idle"
+                return status.NOTREACHED, 'not at configured position: %r, ' \
+                    'used dev at pos: %r' % (r, self._readRaw(maxage))
+            return status.OK, 'idle'
         except PositionError as e:
             return status.NOTREACHED, str(e)
 
@@ -292,7 +282,7 @@ class MappedReadable(HasMapping, TransformedReadable):
             if self.fallback is not None:
                 return self.fallback
         else:
-            raise PositionError(self, "unknown unmapped position %r" % value)
+            raise PositionError(self, 'unknown unmapped position %r' % value)
 
 
 class MappedMoveable(MappedReadable, TransformedMoveable):
@@ -313,7 +303,7 @@ class MappedMoveable(MappedReadable, TransformedMoveable):
     def doInit(self, mode):
         # be restrictive?
         if not self.relax_mapping:
-            self.valuetype = oneof(*sorted(self.mapping, key=num_sort))
+            self.valuetype = oneof(*self.mapping)
         MappedReadable.doInit(self, mode)
 
     def _mapTargetValue(self, target):
@@ -327,10 +317,8 @@ class MappedMoveable(MappedReadable, TransformedMoveable):
         if not self.relax_mapping:
             # be strict...
             if target not in self.mapping:
-                positions = ", ".join(repr(pos) for pos in self.mapping)
-                raise InvalidValueError(
-                    self,
-                    "%r is an invalid position for "
-                    "this device; valid positions are %s" % (target, positions),
-                )
+                positions = ', '.join(repr(pos) for pos in self.mapping)
+                raise InvalidValueError(self, '%r is an invalid position for '
+                                        'this device; valid positions are %s'
+                                        % (target, positions))
         return self.mapping.get(target, target)

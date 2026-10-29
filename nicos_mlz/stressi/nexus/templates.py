@@ -1,0 +1,204 @@
+# *****************************************************************************
+# NICOS, the Networked Instrument Control System of the MLZ
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Module authors:
+#   Jens Krüger <jens.krueger@frm2.tum.de>
+#
+# *****************************************************************************
+
+import re
+
+from nicos import session
+from nicos.nexus.elements import ConstDataset, DeviceDataset
+
+from nicos_mlz.nexus import Slit, grams, mass_density, mm
+# from nicos_mlz.nexus.structures import SollerCollimator
+from nicos_mlz.nexus.templates import PowderTemplateProvider
+from nicos_mlz.stressi.devices import PreciseManualSwitch
+
+
+def Gap(device):
+    """Return a slit structure."""
+    return {
+        'x_gap': DeviceDataset(f'{device}.width'),
+        # 'y_gap': DeviceDataset(f'{device}.height'),
+        'center:NXtransformations': {
+            'x': DeviceDataset(f'{device}.center'),
+            # 'y': DeviceDataset(f'{device}.centery'),
+        },
+    }
+
+
+class StressiTemplateProvider(PowderTemplateProvider):
+
+    def init(self, **kwargs):
+        PowderTemplateProvider.init(self, **kwargs)
+        self.xs = kwargs.get('xs', 'xt')
+        self.ys = kwargs.get('ys', 'yt')
+        self.zs = kwargs.get('zs', 'zt')
+        self.chis = kwargs.get('chis', 'chis')
+        self.phis = kwargs.get('phis', 'phis')
+        self.omgs = kwargs.get('omgs', 'omgs')
+        self.omgm = kwargs.get('omgm', 'omgm')
+        self.tthm = kwargs.get('tthm', 'tthm')
+
+    def updateInstrument(self):
+        PowderTemplateProvider.updateInstrument(self)
+        self._inst.update({
+            'mono:NXcrystal': {
+                'wavelength': DeviceDataset(self.wav),
+                'type': DeviceDataset(self.wav, 'crystal'),
+                'd_spacing': DeviceDataset(self.wav, 'd'),
+                'bragg_angle': DeviceDataset(self.omgm),
+                'polar_angle': DeviceDataset(self.tthm),
+                'reflection': ConstDataset(
+                    [int(x) for x in
+                     re.findall(r'-?\d', session.getDevice(self.wav).plane)],
+                    dtype='int32'),
+            },
+            'beam_intensity_profile:NXbeam': {
+                # 'beam_evaluation': ,
+                # 'primary_vertical_type': ,
+                # 'primary_vertical_full_width': ,
+                # 'primary_vertical_width': ,
+                # ...
+            },
+        })
+        if 'slits' in session.devices:
+            ename = 'sample_slit:NXslit'
+            self._inst.update({
+                ename: Slit('slits'),
+            })
+            self._inst[ename].update({
+                'distance': ConstDataset(200, 'float', units=mm),
+            })
+        if 'slitm' in session.devices:
+            ename = 'monochromator_slit:NXslit'
+            self._inst.update({
+                ename: Slit('slitm'),
+            })
+            self._inst[ename].update({
+                'distance': ConstDataset(100, 'float', units=mm),
+            })
+        if 'pss' in session.devices:
+            # Check, if the device is a collimator device. Maybe there is a
+            # better way, but ...
+            if isinstance(session.devices['pss']._attached_horizontal,
+                          PreciseManualSwitch):
+                self._inst.update({
+                    # 'primary_collimator:NXcollimator': SollerCollimator()
+                    'primary_collimator:NXcollimator': {}
+                })
+                self._inst['primary_collimator:NXcollimator'].update({
+                    'geometry:NXgeometry': {
+                        'shape:NXshape': {
+                            'shape': ConstDataset('nxbox', dtype='string'),
+                            'size': ConstDataset([1, 2, 3], dtype='float',
+                                                 units=mm),
+                        },
+                    },
+                })
+            ename = 'pss:NXslit'
+            self._inst.update({
+                ename: Slit('pss'),
+            })
+            self._inst[ename].update({
+                'distance': DeviceDataset('psx', units=mm),
+            })
+        if 'ssw' in session.devices:
+            # Check, if the device is a collimator device. Maybe there is a
+            # better way, but ...
+            if isinstance(session.devices['ssw']._attached_moveable,
+                          PreciseManualSwitch):
+                self._inst.update({
+                    # 'secondary_collimator:NXcollimator': SollerCollimator()
+                    'secondary_collimator:NXcollimator': {}
+                })
+                self._inst['secondary_collimator:NXcollimator'].update({
+                    'geometry:NXgeometry': {
+                        'shape:NXshape': {
+                            'shape': ConstDataset('nxcone', dtype='string'),
+                            'size': ConstDataset([1, ], dtype='float',
+                                                 units=mm),
+                        },
+                    },
+                })
+            ename = 'ssw:NXslit'
+            self._inst.update({
+                ename: Gap('ssw')
+            })
+            self._inst[ename].update({
+                'distance': DeviceDataset('yss', units=mm),
+            })
+
+    def updateDetector(self):
+        PowderTemplateProvider.updateDetector(self)
+        self._det.update({
+            'type': ConstDataset('He3 PSD', 'string'),
+            'layout': ConstDataset('area', 'string'),
+            'acquisition_mode': ConstDataset('histogrammed', 'string'),
+            'x_pixel_size': DeviceDataset(
+                self.detector, 'pixel_size[0]', 'float', 0.85, units=mm),
+            'y_pixel_size': DeviceDataset(
+                self.detector, 'pixel_size[1]', 'float', 0.85, units=mm),
+            # 'efficiency': ,
+            # 'wavelength': ,
+            # 'dead_time': ,
+            # 'count_time': ,
+            # 'image_key': DeviceDataset('image_key'),
+            # 'depends_on': ,
+        })
+
+    def updateSample(self):
+        PowderTemplateProvider.updateSample(self)
+        self._sample.update({
+            'type': ConstDataset('sample', 'string'),
+            'x:NXpositioner': {
+                'value': DeviceDataset(self.xs),
+            },
+            'y:NXpositioner': {
+                'value': DeviceDataset(self.ys),
+            },
+            'z:NXpositioner': {
+                'value': DeviceDataset(self.zs),
+            },
+            'chi:NXpositioner': {
+                'value': DeviceDataset(self.chis),
+            },
+            'phi:NXpositioner': {
+                'value': DeviceDataset(self.phis),
+            },
+            'omega:NXpositioner': {
+                'value': DeviceDataset(self.omgs),
+            },
+            'gauge_volume:NXparameters': {
+                # 'a': ,
+                # 'b': ,
+                # 'h': ,
+                # 'x': ,
+                # 'y': ,
+                # 'z': ,
+            },
+            'space_group': DeviceDataset('Sample', 'spacegroup'),
+            'mass': DeviceDataset('Sample', 'mass', dtype='float64',
+                                  units=grams),
+            'density': DeviceDataset('Sample', 'density', dtype='float64',
+                                     units=mass_density),
+            'unit_cell_abc': DeviceDataset('Sample', 'lattice'),
+            'unit_cell_alphabetagamma': DeviceDataset('Sample', 'angles'),
+        })

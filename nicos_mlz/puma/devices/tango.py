@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,7 +28,7 @@ from nicos.devices.entangle import CounterChannel
 class CycleCounter(CounterChannel):
     """Special counter channel.
 
-    This devices sets the number of cycles, or in other words it has to add a
+    This device sets the number of cycles, or in other words it has to add a
     1 to the monitor count to create a cycle as difference between to events.
     """
 

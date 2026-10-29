@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2017-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -17,7 +17,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Module authors:
-#   Bjoern Pedersen <bjoern.pedersen@frm2.tum.de>
+#   Björn Pedersen <bjoern.pedersen@frm2.tum.de>
 #   Christian Felder <c.felder@fz-juelich.de>
 #
 # *****************************************************************************
@@ -33,19 +33,20 @@ from nicos.devices.generic import Slit
 
 
 class SampleIllumination(Readable):
+
+
     parameters = {
-        "s1pos": Param(
-            "Slit 1 position relative to sample", mandatory=True, type=float
-        ),
-        "s2pos": Param(
-            "Slit 2 position relative to sample", mandatory=True, type=float
-        ),
-        "f0": Param("Footprint for n * pi, 0 <= n <= N", type=float, default=nan),
+        's1pos': Param('Slit 1 position relative to sample',
+                       mandatory=True, type=float),
+        's2pos': Param('Slit 2 position relative to sample',
+                       mandatory=True, type=float),
+        'f0':    Param('Footprint for n * pi, 0 <= n <= N',
+                       type=float, default=nan)
     }
     attached_devices = {
-        "s1": Attach("First slit", Slit),
-        "s2": Attach("Second slit", Slit),
-        "theta": Attach("Incidence angle", Readable),
+        's1':    Attach('First slit', Slit),
+        's2':    Attach('Second slit', Slit),
+        'theta': Attach('Incidence angle', Readable)
     }
 
     def doRead(self, maxage=0):

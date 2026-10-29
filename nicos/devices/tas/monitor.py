@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -27,8 +27,7 @@ from scipy.interpolate import interp1d
 
 from nicos.core import Attach, Param, Value, dictof
 from nicos.devices.generic import PostprocessPassiveChannel
-
-from nicos.devices.tas import Wavevector
+from nicos.devices.tas.spectro import Wavevector
 
 
 class OrderCorrectedMonitor(PostprocessPassiveChannel):
@@ -41,22 +40,19 @@ class OrderCorrectedMonitor(PostprocessPassiveChannel):
     hardware_access = False
 
     parameters = {
-        "mapping": Param(
-            "Interpolation mapping between ki and correction " "factor",
-            type=dictof(float, float),
-            mandatory=False,
-        ),
+        'mapping': Param('Interpolation mapping between ki and correction '
+                         'factor',
+                         type=dictof(float, float), mandatory=False),
     }
 
     attached_devices = {
-        "ki": Attach("Incoming wavevector (ki)", Wavevector),
+        'ki': Attach('Incoming wavevector (ki)', Wavevector),
     }
 
     def doInit(self, mode):
         # PostprocessPassiveChannel.doInit(self, mode)
-        self._interp = interp1d(
-            list(self.mapping.keys()), list(self.mapping.values()), kind="cubic"
-        )
+        self._interp = interp1d(list(self.mapping.keys()),
+                                list(self.mapping.values()), kind='cubic')
 
     def getReadResult(self, _arrays, results, _quality):
         factor = self._interp(self._attached_ki.read())
@@ -64,8 +60,7 @@ class OrderCorrectedMonitor(PostprocessPassiveChannel):
 
     def valueInfo(self):
         if len(self.readresult) > 1:
-            return tuple(
-                Value(name="%s[%d]" % (self.name, i + 1), type="monitor", fmtstr="%d")
-                for i in range(len(self.readresult))
-            )
-        return (Value(name=self.name, type="monitor", fmtstr="%d"),)
+            return tuple(Value(name='%s[%d]' % (self.name, i + 1),
+                               type='monitor', fmtstr='%d')
+                         for i in range(len(self.readresult)))
+        return (Value(name=self.name, type='monitor', fmtstr='%d'), )

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -34,70 +34,29 @@ import ast
 import numpy
 from tango import DevState
 
-from nicos.core import (
-    SIMULATION,
-    ArrayDesc,
-    CanDisable,
-    Device,
-    HasLimits,
-    HasPrecision,
-    HasTimeout,
-    Moveable,
-    NicosError,
-    Override,
-    Param,
-    Readable,
-    Value,
-    dictof,
-    intrange,
-    listof,
-    nonemptylistof,
-    oneof,
-    oneofdict,
-    status,
-    waitForCompletion,
-)
+from nicos import session
+from nicos.core import SIMULATION, AccessError, ArrayDesc, CanDisable, \
+    Device, HasLimits, HasPrecision, HasTimeout, Moveable, NicosError, \
+    Override, Param, Readable, Value, anytype, dictof, intrange, listof, \
+    nonemptylistof, oneof, oneofdict, status, waitForCompletion
 from nicos.core.constants import FINAL, INTERRUPTED, LIVE, SLAVE
 from nicos.core.mixins import HasOffset, HasWindowTimeout
-from nicos.devices.abstract import CanReference, Coder
-from nicos.devices.abstract import Motor as NicosMotor
-from nicos.devices.generic.detector import (
-    ActiveChannel,
-    CounterChannelMixin,
-    ImageChannelMixin,
-    PassiveChannel,
-    TimerChannelMixin,
-)
+from nicos.devices.abstract import CanReference, Coder, Motor as NicosMotor
+from nicos.devices.generic.detector import ActiveChannel, \
+    CounterChannelMixin, ImageChannelMixin, PassiveChannel, \
+    TimerChannelMixin
 from nicos.devices.tango import PyTangoDevice, PyTangoMixin
 from nicos.utils import squeeze
 
 # Only export Nicos devices for 'from nicos.device.entangle import *'
 __all__ = [
-    "AnalogInput",
-    "Sensor",
-    "AnalogOutput",
-    "Actuator",
-    "RampActuator",
-    "Motor",
-    "TemperatureController",
-    "PowerSupply",
-    "DigitalInput",
-    "NamedDigitalInput",
-    "PartialDigitalInput",
-    "DigitalOutput",
-    "NamedDigitalOutput",
-    "PartialDigitalOutput",
-    "StringIO",
-    "DetectorChannel",
-    "TimerChannel",
-    "CounterChannel",
-    "ImageChannel",
-    "TOFChannel",
-    "WindowTimeoutAO",
-    "VectorInput",
-    "VectorInputElement",
-    "VectorOutput",
-    "OnOffSwitch",
+    'AnalogInput', 'Sensor', 'AnalogOutput', 'Actuator', 'RampActuator',
+    'Motor', 'TemperatureController', 'PowerSupply', 'DigitalInput',
+    'NamedDigitalInput', 'PartialDigitalInput', 'DigitalOutput',
+    'NamedDigitalOutput', 'PartialDigitalOutput', 'StringIO', 'DetectorChannel',
+    'TimerChannel', 'CounterChannel', 'ImageChannel', 'TOFChannel',
+    'WindowTimeoutAO', 'VectorInput', 'VectorInputElement', 'VectorOutput',
+    'OnOffSwitch',
 ]
 
 
@@ -140,12 +99,12 @@ class AnalogOutput(PyTangoDevice, HasLimits, CanDisable, Moveable):
 
     valuetype = float
     parameter_overrides = {
-        "abslimits": Override(mandatory=False, volatile=True),
+        'abslimits': Override(mandatory=False, volatile=True),
     }
 
     def doReadAbslimits(self):
-        absmin = float(self._getProperty("absmin"))
-        absmax = float(self._getProperty("absmax"))
+        absmin = float(self._getProperty('absmin'))
+        absmax = float(self._getProperty('absmax'))
 
         return (absmin, absmax)
 
@@ -192,7 +151,7 @@ class Actuator(AnalogOutput, NicosMotor):
     """
 
     parameter_overrides = {
-        "speed": Override(volatile=True),
+        'speed': Override(volatile=True),
     }
 
     def doReadSpeed(self):
@@ -215,17 +174,15 @@ class Motor(CanReference, Actuator):
     """
 
     parameters = {
-        "refpos": Param("Reference position", type=float, unit="main"),
-        "accel": Param(
-            "Acceleration", type=float, settable=True, volatile=True, unit="main/s^2"
-        ),
-        "decel": Param(
-            "Deceleration", type=float, settable=True, volatile=True, unit="main/s^2"
-        ),
+        'refpos': Param('Reference position', type=float, unit='main'),
+        'accel':  Param('Acceleration', type=float, settable=True,
+                        volatile=True, unit='main/s^2'),
+        'decel':  Param('Deceleration', type=float, settable=True,
+                        volatile=True, unit='main/s^2'),
     }
 
     def doReadRefpos(self):
-        return float(self._getProperty("refpos"))
+        return float(self._getProperty('refpos'))
 
     def doReadAccel(self):
         return self._dev.accel
@@ -242,7 +199,7 @@ class Motor(CanReference, Actuator):
         return self._dev.decel
 
     def doReference(self):
-        self._setROParam("target", None)  # don't check target in wait() below
+        self._setROParam('target', None)  # don't check target in wait() below
         self._dev.Reference()
         self.wait()
 
@@ -254,9 +211,9 @@ class Motor(CanReference, Actuator):
             d = a
         if a <= 0:
             return s / v
-        if s > v**2 / a:  # do we reach nominal speed?
+        if s > v ** 2 / a:  # do we reach nominal speed?
             return s / v + 0.5 * (v / a + v / d)
-        return (a / d + 1) * (s / a) ** 0.5
+        return (a / d + 1) * (s / a)**0.5
 
 
 class MotorAxis(HasOffset, Motor):
@@ -287,13 +244,8 @@ class RampActuator(HasPrecision, AnalogOutput):
     """
 
     parameters = {
-        "ramp": Param(
-            "Ramp of the main value",
-            unit="main/min",
-            type=float,
-            settable=True,
-            volatile=True,
-        ),
+        'ramp': Param('Ramp of the main value', unit='main/min',
+                      type=float, settable=True, volatile=True),
     }
 
     def doReadRamp(self):
@@ -310,47 +262,26 @@ class TemperatureController(HasWindowTimeout, RampActuator):
     """
 
     parameters = {
-        "p": Param(
-            "Proportional control parameter",
-            type=float,
-            settable=True,
-            category="general",
-            chatty=True,
-            volatile=True,
-        ),
-        "i": Param(
-            "Integral control parameter",
-            type=float,
-            settable=True,
-            category="general",
-            chatty=True,
-            volatile=True,
-        ),
-        "d": Param(
-            "Derivative control parameter",
-            type=float,
-            settable=True,
-            category="general",
-            chatty=True,
-            volatile=True,
-        ),
-        "setpoint": Param(
-            "Current setpoint",
-            type=float,
-            settable=True,
-            category="general",
-            unit="main",
-            volatile=True,
-        ),
-        "heateroutput": Param(
-            "Heater output", type=float, category="general", volatile=True
-        ),
+        'p':            Param('Proportional control parameter', type=float,
+                              settable=True, category='general', chatty=True,
+                              volatile=True),
+        'i':            Param('Integral control parameter', type=float,
+                              settable=True, category='general', chatty=True,
+                              volatile=True),
+        'd':            Param('Derivative control parameter', type=float,
+                              settable=True, category='general', chatty=True,
+                              volatile=True),
+        'setpoint':     Param('Current setpoint', type=float,
+                              settable=True, category='general', unit='main',
+                              volatile=True),
+        'heateroutput': Param('Heater output', type=float, category='general',
+                              volatile=True),
     }
 
     parameter_overrides = {
         # We want this to be freely user-settable, and not produce a warning
         # on startup, so select a usually sensible default.
-        "precision": Override(mandatory=False, default=0.1),
+        'precision': Override(mandatory=False, default=0.1),
     }
 
     def doReadP(self):
@@ -375,23 +306,22 @@ class TemperatureController(HasWindowTimeout, RampActuator):
         return self._dev.setpoint
 
     def doWriteSetpoint(self, value):
-        raise NicosError(
-            self, "To change the setpoint, use move(%s, %s)" % (self, value)
-        )
+        raise NicosError(self, 'To change the setpoint, use move(%s, %s)' %
+                         (self, value))
 
     def doReadHeateroutput(self):
         return self._dev.heaterOutput
 
     def doPoll(self, n, maxage):
         if self.ramp:
-            self._pollParam("setpoint", 1)
+            self._pollParam('setpoint', 1)
         if n % 5 == 0:
-            self._pollParam("heateroutput", 5)
+            self._pollParam('heateroutput', 5)
         if n % 30 == 0:
-            self._pollParam("setpoint", 30)
-            self._pollParam("p")
-            self._pollParam("i")
-            self._pollParam("d")
+            self._pollParam('setpoint', 30)
+            self._pollParam('p')
+            self._pollParam('i')
+            self._pollParam('d')
 
 
 class PowerSupply(HasTimeout, RampActuator):
@@ -400,12 +330,10 @@ class PowerSupply(HasTimeout, RampActuator):
     """
 
     parameters = {
-        "voltage": Param(
-            "Actual voltage", unit="V", type=float, settable=False, volatile=True
-        ),
-        "current": Param(
-            "Actual current", unit="A", type=float, settable=False, volatile=True
-        ),
+        'voltage': Param('Actual voltage', unit='V',
+                         type=float, settable=False, volatile=True),
+        'current': Param('Actual current', unit='A',
+                         type=float, settable=False, volatile=True),
     }
 
     def doReadVoltage(self):
@@ -416,17 +344,17 @@ class PowerSupply(HasTimeout, RampActuator):
 
     def doPoll(self, n, maxage):
         if n % 5 == 0:
-            self._pollParam("voltage", 1)
-            self._pollParam("current", 1)
+            self._pollParam('voltage', 5)
+            self._pollParam('current', 5)
 
 
 def parse_mapping(mapping):
     """Parse the "mapping" property of digital devices."""
     reverse = {}
     forward = {}
-    mapping = ast.literal_eval(mapping or "[]")
+    mapping = ast.literal_eval(mapping or '[]')
     for entry in mapping:
-        parts = entry.split(":")
+        parts = entry.split(':')
         if len(parts) < 2:
             continue
         try:
@@ -435,7 +363,7 @@ def parse_mapping(mapping):
             continue
         label = parts[1].strip()
         reverse[val] = label
-        if len(parts) == 2 or "ro" not in parts[2]:
+        if len(parts) == 2 or 'ro' not in parts[2]:
             forward[label] = val
     return reverse, forward
 
@@ -448,7 +376,7 @@ class DigitalInput(PyTangoDevice, Readable):
     valuetype = int
 
     parameter_overrides = {
-        "unit": Override(default="", mandatory=False),
+        'unit': Override(default='', mandatory=False),
     }
 
     def doRead(self, maxage=0):
@@ -461,24 +389,22 @@ class NamedDigitalInput(DigitalInput):
     """
 
     parameters = {
-        "mapping": Param(
-            "A dictionary mapping state names to integers - "
-            "if not given, read the mapping from the Tango "
-            "device if possible",
-            type=dictof(str, int),
-            mandatory=False,
-        ),
+        'mapping': Param('A dictionary mapping state names to integers - '
+                         'if not given, read the mapping from the Tango '
+                         'device if possible',
+                         type=dictof(str, int), mandatory=False),
     }
 
     def doInit(self, mode):
-        if "mapping" in self._config:
+        if 'mapping' in self._config or mode == SIMULATION:
             self._reverse = {v: k for (k, v) in self.mapping.items()}
             return
         try:
-            self._reverse = parse_mapping(self._getProperty("mapping"))[0]
-            self._setROParam("mapping", {k: v for (v, k) in self._reverse.items()})
+            self._reverse = parse_mapping(self._getProperty('mapping'))[0]
+            self._setROParam('mapping',
+                             {k: v for (v, k) in self._reverse.items()})
         except Exception:
-            self.log.warning("could not parse value mapping from Tango", exc=1)
+            self.log.warning('could not parse value mapping from Tango', exc=1)
             self._reverse = {}
 
     def doRead(self, maxage=0):
@@ -493,8 +419,8 @@ class PartialDigitalInput(NamedDigitalInput):
     """
 
     parameters = {
-        "startbit": Param("Number of the first bit", type=int, default=0),
-        "bitwidth": Param("Number of bits", type=int, default=1),
+        'startbit': Param('Number of the first bit', type=int, default=0),
+        'bitwidth': Param('Number of bits', type=int, default=1),
     }
 
     def doInit(self, mode):
@@ -516,7 +442,7 @@ class DigitalOutput(PyTangoDevice, Moveable):
     valuetype = int
 
     parameter_overrides = {
-        "unit": Override(default="", mandatory=False),
+        'unit': Override(default='', mandatory=False),
     }
 
     def doRead(self, maxage=0):
@@ -532,17 +458,14 @@ class NamedDigitalOutput(DigitalOutput):
     """
 
     parameters = {
-        "mapping": Param(
-            "A dictionary mapping state names to integers - "
-            "if not given, read the mapping from the Tango "
-            "device if possible",
-            type=dictof(str, int),
-            mandatory=False,
-        ),
+        'mapping': Param('A dictionary mapping state names to integers - '
+                         'if not given, read the mapping from the Tango '
+                         'device if possible',
+                         type=dictof(str, int), mandatory=False),
     }
 
     def doInit(self, mode):
-        if "mapping" in self._config:
+        if 'mapping' in self._config or mode == SIMULATION:
             self._reverse = {v: k for (k, v) in self.mapping.items()}
             # oneofdict: allows both types of values (string/int), but
             # normalizes them into the string form
@@ -550,10 +473,11 @@ class NamedDigitalOutput(DigitalOutput):
             self._forward = self.mapping
             return
         try:
-            self._reverse, self._forward = parse_mapping(self._getProperty("mapping"))
-            self._setROParam("mapping", self._forward)
+            self._reverse, self._forward = \
+                parse_mapping(self._getProperty('mapping'))
+            self._setROParam('mapping', self._forward)
         except Exception:
-            self.log.warning("could not parse value mapping from Tango", exc=1)
+            self.log.warning('could not parse value mapping from Tango', exc=1)
             self._reverse = self._forward = {}
 
     def doUpdateMapping(self, mapping):
@@ -574,8 +498,8 @@ class PartialDigitalOutput(NamedDigitalOutput):
     """
 
     parameters = {
-        "startbit": Param("Number of the first bit", type=int, default=0),
-        "bitwidth": Param("Number of bits", type=int, default=1),
+        'startbit': Param('Number of the first bit', type=int, default=0),
+        'bitwidth': Param('Number of bits', type=int, default=1),
     }
 
     def doInit(self, mode):
@@ -591,16 +515,15 @@ class PartialDigitalOutput(NamedDigitalOutput):
     def doStart(self, target):
         value = self.mapping.get(target, target)
         curvalue = self._dev.value
-        newvalue = (curvalue & ~(self._mask << self.startbit)) | (
-            value << self.startbit
-        )
+        newvalue = (curvalue & ~(self._mask << self.startbit)) | \
+                   (value << self.startbit)
         self._dev.value = self.valuetype(newvalue)
 
     def doIsAllowed(self, target):
         value = self.mapping.get(target, target)
         if value < 0 or value > self._mask:
-            return False, "%d outside range [0,%d]" % (value, self._mask)
-        return True, ""
+            return False, '%d outside range [0,%d]' % (value, self._mask)
+        return True, ''
 
 
 class StringIO(PyTangoMixin, Device):
@@ -610,11 +533,13 @@ class StringIO(PyTangoMixin, Device):
     """
 
     parameters = {
-        "bustimeout": Param(
-            "Communication timeout", type=float, settable=True, unit="s"
-        ),
-        "endofline": Param("End of line", type=str, settable=True),
-        "startofline": Param("Start of line", type=str, settable=True),
+        'bustimeout':  Param('Communication timeout', type=float,
+                             settable=True, unit='s'),
+        'endofline':   Param('End of line', type=str, settable=True),
+        'startofline': Param('Start of line', type=str, settable=True),
+        'requires':    Param('Access requirements for sending commands',
+                             type=dictof(str, anytype), default={},
+                             userparam=False),
     }
 
     def doReadBustimeout(self):
@@ -636,33 +561,50 @@ class StringIO(PyTangoMixin, Device):
         self._dev.startOfLine = value
 
     def communicate(self, value):
+        self._checkAccess('communicate')
         return self._dev.Communicate(value)
 
     def flush(self):
+        self._checkAccess('flush')
         self._dev.Flush()
 
     def read(self, value):
         return self._dev.Read(value)
 
     def write(self, value):
+        self._checkAccess('write')
         return self._dev.Write(value)
 
     def readLine(self):
         return self._dev.ReadLine()
 
     def writeLine(self, value):
+        self._checkAccess('write line')
         return self._dev.WriteLine(value)
 
     def multiCommunicate(self, value):
+        self._checkAccess('multi communicate')
         return self._dev.MultiCommunicate(value)
 
     @property
     def availablechars(self):
+        if self._sim_intercept:
+            return 0
         return self._dev.availableChars
 
     @property
     def availablelines(self):
+        if self._sim_intercept:
+            return 0
         return self._dev.availableLines
+
+    def _checkAccess(self, message):
+        if self.requires:
+            try:
+                session.checkAccess(self.requires)
+            except AccessError as err:
+                raise AccessError(
+                    self, f'cannot {message}: {err}') from None
 
 
 class DetectorChannel(PyTangoDevice, ActiveChannel):
@@ -714,7 +656,7 @@ class TimerChannel(TimerChannelMixin, DetectorChannel):
     """
 
     parameter_overrides = {
-        "preselection": Override(type=float),
+        'preselection': Override(type=float),
     }
 
     def doRead(self, maxage=0):
@@ -725,7 +667,6 @@ class CounterChannel(CounterChannelMixin, DetectorChannel):
     """
     Detector channel to count events.
     """
-
     def doRead(self, maxage=0):
         return self._dev.value
 
@@ -737,41 +678,16 @@ class ImageChannel(ImageChannelMixin, DetectorChannel):
     """
 
     parameters = {
-        "size": Param(
-            "Full detector size",
-            type=nonemptylistof(int),
-            settable=False,
-            mandatory=False,
-            volatile=True,
-        ),
-        "roioffset": Param(
-            "ROI offset",
-            type=nonemptylistof(int),
-            mandatory=False,
-            volatile=True,
-            settable=True,
-        ),
-        "roisize": Param(
-            "ROI size",
-            type=nonemptylistof(int),
-            mandatory=False,
-            volatile=True,
-            settable=True,
-        ),
-        "binning": Param(
-            "Binning",
-            type=nonemptylistof(int),
-            mandatory=False,
-            volatile=True,
-            settable=True,
-        ),
-        "zeropoint": Param(
-            "Zero point",
-            type=nonemptylistof(int),
-            settable=False,
-            mandatory=False,
-            volatile=True,
-        ),
+        'size':      Param('Full detector size', type=nonemptylistof(int),
+                           settable=False, mandatory=False, volatile=True),
+        'roioffset': Param('ROI offset', type=nonemptylistof(int),
+                           mandatory=False, volatile=True, settable=True),
+        'roisize':   Param('ROI size', type=nonemptylistof(int),
+                           mandatory=False, volatile=True, settable=True),
+        'binning':   Param('Binning', type=nonemptylistof(int),
+                           mandatory=False, volatile=True, settable=True),
+        'zeropoint': Param('Zero point', type=nonemptylistof(int),
+                           settable=False, mandatory=False, volatile=True),
     }
 
     def doInit(self, mode):
@@ -779,7 +695,7 @@ class ImageChannel(ImageChannelMixin, DetectorChannel):
             shape = self._shape
         else:
             shape = (256, 256)  # select some arbitrary shape
-        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype="<u4")
+        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype='<u4')
         if mode != SLAVE:
             self.readArray(LIVE)  # update readresult at startup
 
@@ -815,17 +731,14 @@ class ImageChannel(ImageChannelMixin, DetectorChannel):
         # on quality FINAL wait for entangle ImageChannel finishing readout
         if quality in (FINAL, INTERRUPTED):
             waitForCompletion(self)
-        self.arraydesc = ArrayDesc(self.name, shape=self._shape, dtype="<u4")
+        self.arraydesc = ArrayDesc(self.name, shape=self._shape, dtype='<u4')
         narray = self._dev.value.reshape(self.arraydesc.shape)
         self.readresult = [narray.sum()]
         return narray
 
     def valueInfo(self):
-        return (
-            Value(
-                name=self.name, type="counter", fmtstr="%d", errors="sqrt", unit="cts"
-            ),
-        )
+        return Value(name=self.name, type='counter', fmtstr='%d',
+                     errors='sqrt', unit='cts'),
 
 
 class TOFChannel(ImageChannel):
@@ -834,29 +747,14 @@ class TOFChannel(ImageChannel):
     """
 
     parameters = {
-        "delay": Param(
-            "Delay from start pulse to first time channel",
-            type=int,
-            settable=True,
-            unit="ns",
-            mandatory=False,
-            volatile=True,
-        ),
-        "timechannels": Param(
-            "Number of time channels",
-            settable=True,
-            type=int,
-            mandatory=False,
-            volatile=True,
-        ),
-        "timeinterval": Param(
-            "Time for each time channel",
-            type=int,
-            settable=True,
-            unit="ns",
-            mandatory=False,
-            volatile=True,
-        ),
+        'delay':        Param('Delay from start pulse to first time channel',
+                              type=int, settable=True, unit='ns',
+                              mandatory=False, volatile=True),
+        'timechannels': Param('Number of time channels', settable=True,
+                              type=int, mandatory=False, volatile=True),
+        'timeinterval': Param('Time for each time channel', type=int,
+                              settable=True, unit='ns', mandatory=False,
+                              volatile=True),
     }
 
     def doReadTimechannels(self):
@@ -883,13 +781,9 @@ class ReadableChannel(PyTangoDevice, PassiveChannel):
     readable value into the scan plot."""
 
     parameters = {
-        "valuenames": Param(
-            "Name(s) of provided value(s)",
-            type=listof(str),
-            settable=True,
-            mandatory=False,
-            default=[],
-        ),
+        'valuenames': Param('Name(s) of provided value(s)',
+                            type=listof(str), settable=True, mandatory=False,
+                            default=[]),
     }
 
     def doRead(self, maxage=0):
@@ -898,16 +792,15 @@ class ReadableChannel(PyTangoDevice, PassiveChannel):
 
     def valueInfo(self):
         names = self.valuenames if self.valuenames else [self.name]
-        return tuple(
-            Value(entry, unit=self.unit, fmtstr=self.fmtstr) for entry in names
-        )
+        return tuple(Value(entry, unit=self.unit, fmtstr=self.fmtstr)
+                     for entry in names)
 
 
 class OnOffSwitch(PyTangoDevice, Moveable):
     """The OnOffSwitch is a generic devices that is capable of switching
     the desired Tango device on or off via the On()/Off commands."""
 
-    valuetype = oneof("on", "off")
+    valuetype = oneof('on', 'off')
 
     tango_status_mapping = PyTangoDevice.tango_status_mapping.copy()
     tango_status_mapping[DevState.OFF] = status.OK
@@ -915,15 +808,15 @@ class OnOffSwitch(PyTangoDevice, Moveable):
     tango_status_mapping[DevState.MOVING] = status.OK
 
     def doReadUnit(self):
-        return ""
+        return ''
 
     def doRead(self, maxage=0):
         if self._dev.State() == DevState.OFF:
-            return "off"
-        return "on"
+            return 'off'
+        return 'on'
 
     def doStart(self, target):
-        if target == "on":
+        if target == 'on':
             self._dev.On()
         else:
             self._dev.Off()
@@ -938,13 +831,25 @@ class VectorInput(AnalogInput):
         return list(self._dev.value)
 
 
+class SpectrumInput(VectorInput):
+
+    parameters = {
+        'xticks': Param(
+            'X axis values for corresponding value data',
+            type=listof(float), unit='', category='general',
+        ),
+    }
+
+    def doReadXticks(self):
+        return list(self._dev.xTicks)
+
+
 class VectorInputElement(AnalogInput):
     """Returns a single component of a VectorInput."""
 
     parameters = {
-        "index": Param(
-            "The index of the component to return", type=int, mandatory=True
-        ),
+        'index': Param('The index of the component to return', type=int,
+                       mandatory=True),
     }
 
     def doRead(self, maxage=0):
@@ -953,7 +858,6 @@ class VectorInputElement(AnalogInput):
 
 class VectorOutput(PyTangoDevice, Moveable):
     """Returns and sets all components of a VectorOutput as a list."""
-
     # NOTE: does not inherit from AnalogOutput because we don't want HasLimits
 
     valuetype = listof(float)

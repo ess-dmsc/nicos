@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,7 +23,8 @@
 
 """Generic device class for "moving" a parameter of another device."""
 
-from nicos.core import Attach, Device, Moveable, Override, Param, Readable, status
+from nicos.core import Attach, Device, Moveable, Override, Param, Readable, \
+    status
 
 
 class ReadonlyParamDevice(Readable):
@@ -34,25 +35,20 @@ class ReadonlyParamDevice(Readable):
     hardware_access = False
 
     attached_devices = {
-        "device": Attach("The device to control the selected parameter", Device),
+        'device':  Attach('The device to control the selected parameter',
+                          Device),
     }
 
     parameters = {
-        "parameter": Param(
-            "The name of the parameter to use", type=str, mandatory=True
-        ),
-        "copy_status": Param(
-            "Derive status from the master device",
-            type=bool,
-            mandatory=False,
-            settable=True,
-            chatty=True,
-            default=False,
-        ),
+        'parameter': Param('The name of the parameter to use', type=str,
+                           mandatory=True),
+        'copy_status': Param('Derive status from the master device', type=bool,
+                             mandatory=False, settable=True, chatty=True,
+                             default=False),
     }
 
     parameter_overrides = {
-        "unit": Override(mandatory=False),
+        'unit':      Override(mandatory=False),
     }
 
     def _getWaiters(self):
@@ -66,13 +62,14 @@ class ReadonlyParamDevice(Readable):
     def doStatus(self, maxage=0):
         if self.copy_status:
             return self._attached_device.status(maxage)
-        return status.OK, ""
+        return status.OK, ''
 
     def doReadUnit(self):
-        devunit = getattr(self._attached_device, "unit", "")
-        parunit = self._attached_device._getParamConfig(self.parameter).unit or ""
+        devunit = getattr(self._attached_device, 'unit', '')
+        parunit = self._attached_device._getParamConfig(
+            self.parameter).unit or ''
         if devunit:
-            parunit = parunit.replace("main", devunit)
+            parunit = parunit.replace('main', devunit)
         return parunit
 
 
@@ -83,7 +80,8 @@ class ParamDevice(ReadonlyParamDevice, Moveable):
     """
 
     def doInit(self, mode):
-        self.valuetype = self._attached_device._getParamConfig(self.parameter).type
+        self.valuetype = self._attached_device._getParamConfig(
+            self.parameter).type
 
     def doStart(self, target):
         setattr(self._attached_device, self.parameter, target)

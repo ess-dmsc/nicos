@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -35,6 +35,6 @@ class TemperatureController(BaseController):
 
     def doTime(self, old_value, target):
         if old_value is None or target is None or old_value == target:
-            return 0.0
+            return 0.
         ramp = 3.5  # see docstring
         return abs(target - old_value) * (60 / ramp) + self.window

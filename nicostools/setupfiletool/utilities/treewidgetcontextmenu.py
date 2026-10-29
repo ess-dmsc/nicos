@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -27,6 +27,7 @@ from nicos.guisupport.qt import QTreeWidget
 
 
 class TreeWidgetContextMenu(QTreeWidget):
+
     def __init__(self, parent=None):
         QTreeWidget.__init__(self, parent)
 
@@ -51,7 +52,8 @@ class TreeWidgetContextMenu(QTreeWidget):
                 itemrect = self.visualItemRect(item)
                 portrect = self.viewport().rect()
                 if not portrect.contains(itemrect.topLeft()):
-                    self.scrollToItem(item, QTreeWidget.PositionAtCenter)
+                    self.scrollToItem(
+                        item, QTreeWidget.PositionAtCenter)
                     itemrect = self.visualItemRect(item)
                 itemrect.setLeft(portrect.left())
                 itemrect.setWidth(portrect.width())

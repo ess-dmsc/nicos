@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -38,18 +38,19 @@ class StackedAxis(HasLimits, HasPrecision, Moveable):
     """
 
     attached_devices = {
-        "bottom": Attach("bottom axis", Moveable),
-        "top": Attach("top axis", Moveable),
+        'bottom': Attach('bottom axis', Moveable),
+        'top': Attach('top axis', Moveable),
     }
 
     parameter_overrides = {
-        "abslimits": Override(mandatory=False, volatile=True),
-        "unit": Override(default="deg", mandatory=False),
+        'abslimits': Override(mandatory=False, volatile=True),
+        'unit': Override(default='deg', mandatory=False),
     }
 
     def doRead(self, maxage=0):
-        self.log.debug("doRead: %s", maxage)
-        return self._attached_bottom.read(maxage) + self._attached_top.read(maxage)
+        self.log.debug('doRead: %s', maxage)
+        return self._attached_bottom.read(maxage) + \
+            self._attached_top.read(maxage)
 
     def doStart(self, target):
         targets = self._calc_targets(target)
@@ -60,18 +61,19 @@ class StackedAxis(HasLimits, HasPrecision, Moveable):
 
     def doIsAllowed(self, target):
         targets = self._calc_targets(target)
-        for dev, t in zip([self._attached_bottom, self._attached_top], targets):
+        for dev, t in zip([self._attached_bottom, self._attached_top],
+                          targets):
             allowed = dev.isAllowed(t)
             if not allowed[0]:
                 return allowed
-        return True, ""
+        return True, ''
 
     def _calc_targets(self, target):
         """Calculate individual target positions from the sum target.
 
         Due to the limited range of movement of each individual axis the
         targets must be calculated for each axis.  Since the top axis is
-        cheaper in time it will preferred in use and even the longer way
+        cheaper in time it will be preferred in use and even the longer way
         if moving both.
         """
         targets = (0, 0)
@@ -91,7 +93,5 @@ class StackedAxis(HasLimits, HasPrecision, Moveable):
         return targets
 
     def doReadAbslimits(self):
-        return [
-            sum(x)
-            for x in zip(self._attached_bottom.abslimits, self._attached_top.abslimits)
-        ]
+        return [sum(x) for x in zip(self._attached_bottom.abslimits,
+                                    self._attached_top.abslimits)]

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -26,20 +26,11 @@
 
 from time import time as currenttime
 
-from nicos.core import (
-    CacheError,
-    CommunicationError,
-    HasLimits,
-    HasWindowTimeout,
-    Moveable,
-    Override,
-    Param,
-    Readable,
-    status,
-)
+from nicos.core import CacheError, CommunicationError, HasLimits, \
+    HasWindowTimeout, Moveable, Override, Param, Readable, status
 
-CACHE_NOSTATUS_STRING = "no status found in cache"
-CACHE_NOVALUE_STRING = "no value found in cache"
+CACHE_NOSTATUS_STRING = 'no status found in cache'
+CACHE_NOVALUE_STRING = 'no value found in cache'
 
 
 class CacheReader(Readable):
@@ -78,7 +69,7 @@ class CacheReader(Readable):
     def doRead(self, maxage=0):
         if self._cache:
             try:
-                time, ttl, val = self._cache.get_explicit(self, "value", ...)
+                time, ttl, val = self._cache.get_explicit(self, 'value', ...)
             except CacheError:
                 raise CommunicationError(self, CACHE_NOVALUE_STRING) from None
             if val is ...:
@@ -86,17 +77,15 @@ class CacheReader(Readable):
             if time and ttl and time + ttl < currenttime():
                 # Note: this will only be reached if self.maxage is expired
                 # as well
-                self.log.warning(
-                    "value timed out in cache, this should be "
-                    "considered as an error!"
-                )
+                self.log.warning('value timed out in cache, this should be '
+                                 'considered as an error!')
             return val
-        raise CommunicationError(self, "no cache found")
+        raise CommunicationError(self, 'no cache found')
 
     def doStatus(self, maxage=0):
         if self._cache:
             try:
-                val = self._cache.get_explicit(self, "status")[2]
+                val = self._cache.get_explicit(self, 'status')[2]
             except CacheError:
                 val = None
             if val is not None:
@@ -117,16 +106,14 @@ class CacheWriter(HasWindowTimeout, HasLimits, CacheReader, Moveable):
     """
 
     parameters = {
-        "setkey": Param(
-            "Subkey to use to set the device value", type=str, default="setpoint"
-        ),
-        "loopdelay": Param(
-            "Sleep time when waiting", unit="s", default=1.0, settable=True
-        ),
+        'setkey':    Param('Subkey to use to set the device value',
+                           type=str, default='setpoint'),
+        'loopdelay': Param('Sleep time when waiting',
+                           unit='s', default=1.0, settable=True),
     }
 
     parameter_overrides = {
-        "timeout": Override(default=900),
+        'timeout': Override(default=900),
     }
 
     def doStart(self, target):

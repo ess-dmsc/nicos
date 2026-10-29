@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2018-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -52,7 +52,7 @@ class RateImageChannel(ImageChannel):
     """
 
     attached_devices = {
-        "timer": Attach("The timer channel", Measurable),
+        'timer': Attach('The timer channel', Measurable),
     }
 
     def doInit(self, mode):
@@ -68,18 +68,10 @@ class RateImageChannel(ImageChannel):
         return narray
 
     def valueInfo(self):
-        return (
-            Value(
-                name=self.name + " (total)",
-                type="counter",
-                fmtstr="%d",
-                errors="sqrt",
-                unit="cts",
-            ),
-            Value(
-                name=self.name + " (rate)", type="monitor", fmtstr="%.1f", unit="cps"
-            ),
-        )
+        return (Value(name=self.name + ' (total)', type='counter', fmtstr='%d',
+                      errors='sqrt', unit='cts'),
+                Value(name=self.name + ' (rate)', type='monitor',
+                      fmtstr='%.1f', unit='cps'),)
 
 
 class NDPRateImageChannel(RateImageChannel):

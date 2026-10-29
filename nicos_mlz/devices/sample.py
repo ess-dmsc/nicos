@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -30,28 +30,29 @@ from nicos.devices.sample import Sample as NicosSample
 from nicos.devices.tas import TASSample as NicosTASSample
 
 
-class MLZSampleMixin(DeviceMixinBase):
-    """Special mixin with MLZ-specific sample ID from the sample tracker."""
+class HasSampleId(DeviceMixinBase):
+    """Special mixin with MLZ-specific sample ID from the sample tracker. """
 
     parameters = {
-        "sampleid": Param(
-            "Sample ID from the sample tracker",
-            type=none_or(int),
-            settable=True,
-            category="sample",
-        ),
+        'sampleid': Param('Sample ID from the sample tracker',
+                          type=none_or(int), settable=True,
+                          category='sample'),
+        'formula': Param('Chemical formula',
+                         type=str, settable=True, category='sample'),
     }
 
     def clear(self):
-        """Clear sample tracker information."""
+        """Clear sample tracker information and formula."""
         self.sampleid = None
+        self.formula = ''
 
     def _applyParams(self, number, parameters):
         """Apply sample tracker id."""
-        self.sampleid = parameters.get("id")
+        self.sampleid = parameters.get('id')
+        self.formula = parameters.get('formula', '')
 
 
-class Sample(MLZSampleMixin, NicosSample):
+class Sample(HasSampleId, NicosSample):
     """A special device to represent a sample.
 
     This has the MLZ-specific sample ID from the sample tracker.
@@ -60,15 +61,15 @@ class Sample(MLZSampleMixin, NicosSample):
     def clear(self):
         """Clear experiment-specific information."""
         NicosSample.clear(self)
-        MLZSampleMixin.clear(self)
+        HasSampleId.clear(self)
 
     def _applyParams(self, number, parameters):
         """Apply sample parameters."""
         NicosSample._applyParams(self, number, parameters)
-        MLZSampleMixin._applyParams(self, number, parameters)
+        HasSampleId._applyParams(self, number, parameters)
 
 
-class TASSample(MLZSampleMixin, NicosTASSample):
+class TASSample(HasSampleId, NicosTASSample):
     """A special device to represent a TAS sample.
 
     This has the MLZ-specific sample ID from the sample tracker.
@@ -77,9 +78,9 @@ class TASSample(MLZSampleMixin, NicosTASSample):
     def clear(self):
         """Clear experiment-specific information."""
         NicosTASSample.clear(self)
-        MLZSampleMixin.clear(self)
+        HasSampleId.clear(self)
 
     def _applyParams(self, number, parameters):
         """Apply sample parameters."""
         NicosTASSample._applyParams(self, number, parameters)
-        MLZSampleMixin._applyParams(self, number, parameters)
+        HasSampleId._applyParams(self, number, parameters)

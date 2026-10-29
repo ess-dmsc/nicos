@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -39,7 +39,7 @@ import numpy as np
 
 from nicos.devices.sxtal.xtal import symmetry
 
-CellParam = namedtuple("CellParam", ["a", "b", "c", "alpha", "beta", "gamma"])
+CellParam = namedtuple('CellParam', ['a', 'b', 'c', 'alpha', 'beta', 'gamma'])
 
 
 def vecangle(v1, v2):
@@ -64,22 +64,16 @@ def recCell(a, b=None, c=None, alpha=90.0, beta=90.0, gamma=90.0):
         cell = a
     else:
         cell = fillCellParam(a, b, c, alpha, beta, gamma)
-    alphas = np.arccos(
-        (np.cos(cell.beta) * np.cos(cell.gamma) - np.cos(cell.alpha))
-        / (np.sin(cell.beta) * np.sin(cell.gamma))
-    )
-    betas = np.arccos(
-        (np.cos(cell.alpha) * np.cos(cell.gamma) - np.cos(cell.beta))
-        / (np.sin(cell.alpha) * np.sin(cell.gamma))
-    )
-    gammas = np.arccos(
-        (np.cos(cell.alpha) * np.cos(cell.beta) - np.cos(cell.gamma))
-        / (np.sin(cell.alpha) * np.sin(cell.beta))
-    )
-    aas = 1.0 / (cell.a * np.sin(cell.beta) * np.sin(gammas))  # codespell:ignore
-    bs = 1.0 / (cell.b * np.sin(cell.alpha) * np.sin(gammas))
-    cs = 1.0 / (cell.c * np.sin(cell.alpha) * np.sin(betas))
-    return CellParam(aas, bs, cs, alphas, betas, gammas)  # codespell:ignore
+    alphas = np.arccos((np.cos(cell.beta) * np.cos(cell.gamma) - np.cos(cell.alpha)) /
+                       (np.sin(cell.beta) * np.sin(cell.gamma)))
+    betas = np.arccos((np.cos(cell.alpha) * np.cos(cell.gamma) - np.cos(cell.beta)) /
+                      (np.sin(cell.alpha) * np.sin(cell.gamma)))
+    gammas = np.arccos((np.cos(cell.alpha) * np.cos(cell.beta) - np.cos(cell.gamma)) /
+                       (np.sin(cell.alpha) * np.sin(cell.beta)))
+    aas = 1. / (cell.a * np.sin(cell.beta) * np.sin(gammas))
+    bs = 1. / (cell.b * np.sin(cell.alpha) * np.sin(gammas))
+    cs = 1. / (cell.c * np.sin(cell.alpha) * np.sin(betas))
+    return CellParam(aas, bs, cs, alphas, betas, gammas)
 
 
 def matrixfromcell(a, b=None, c=None, alpha=90.0, beta=90.0, gamma=90.0):
@@ -88,7 +82,7 @@ def matrixfromcell(a, b=None, c=None, alpha=90.0, beta=90.0, gamma=90.0):
     else:
         cell = fillCellParam(a, b, c, alpha, beta, gamma)
     rc = recCell(cell)
-    mat = np.zeros((3, 3), "d")
+    mat = np.zeros((3, 3), 'd')
     mat[0, 0] = rc.a * np.sin(rc.beta) * np.sin(cell.gamma)
     mat[1, 0] = -rc.a * np.sin(rc.beta) * np.cos(cell.gamma)
     mat[2, 0] = rc.a * np.cos(rc.beta)
@@ -98,16 +92,16 @@ def matrixfromcell(a, b=None, c=None, alpha=90.0, beta=90.0, gamma=90.0):
     return mat
 
 
-def matfromrcell(
-    astar, bstar=None, cstar=None, alphastar=None, betastar=None, gammastar=None
-):
-    """Make standard-orientation reciprocal cell matrix from reciprocal cell."""
+def matfromrcell(astar, bstar=None, cstar=None, alphastar=None, betastar=None,
+                 gammastar=None):
+    """Make standard-orientation reciprocal cell matrix from reciprocal cell.
+    """
     if isinstance(astar, CellParam):
         cell = astar
     else:
         cell = fillCellParam(astar, bstar, cstar, alphastar, betastar, gammastar)
     dcell = recCell(cell)
-    mat = np.zeros((3, 3), "d")
+    mat = np.zeros((3, 3), 'd')
     mat[0, 0] = cell.a * np.sin(cell.beta) * np.sin(dcell.gamma)
     mat[1, 0] = -cell.a * np.sin(cell.beta) * np.cos(dcell.gamma)
     mat[2, 0] = cell.a * np.cos(cell.beta)
@@ -144,43 +138,34 @@ def SXTalCellType(val=None):
     elif isinstance(val, tuple) and len(val) <= 3:
         cellarr = np.asarray(val[0])
         if cellarr.shape == (3, 3):
-            bravais = val[1] if len(val) > 1 else "P"
-            laue = val[2] if len(val) > 2 else "1"
+            bravais = val[1] if len(val) > 1 else 'P'
+            laue = val[2] if len(val) > 2 else '1'
             return SXTalCell(cellarr.T, bravais, laue)
     elif isinstance(val, (list, tuple)) and len(val) >= 6:
-        bravais = val[6] if len(val) > 6 else "P"
-        laue = val[7] if len(val) > 7 else "1"
-        return SXTalCell.fromabc(
-            a=val[0],
-            b=val[1],
-            c=val[2],
-            alpha=val[3],
-            beta=val[4],
-            gamma=val[5],
-            bravais=bravais,
-            laue=laue,
-        )
-    raise ValueError("wrong cell specification")
+        bravais = val[6] if len(val) > 6 else 'P'
+        laue = val[7] if len(val) > 7 else '1'
+        return SXTalCell.fromabc(a=val[0], b=val[1], c=val[2],
+                                 alpha=val[3], beta=val[4], gamma=val[5],
+                                 bravais=bravais, laue=laue)
+    raise ValueError('wrong cell specification')
 
 
 class SXTalCell:
+
     @classmethod
-    def fromabc(
-        cls, a, b=None, c=None, alpha=90.0, beta=90.0, gamma=90.0, bravais="P", laue="1"
-    ):
+    def fromabc(cls, a, b=None, c=None, alpha=90.0, beta=90.0, gamma=90.0,
+                bravais='P', laue='1'):
         _mat, lpi = matfromrcell(a, b, c, alpha, beta, gamma)
         return cls(np.transpose(lpi), bravais, laue)
 
-    def __init__(self, matrix, bravais="P", laue="1"):
+    def __init__(self, matrix, bravais='P', laue='1'):
         self.rmat = np.array(matrix)
         self.bravais = symmetry.Bravais(bravais)
         self.laue = symmetry.Laue(laue)
 
     def __str__(self):
-        return (
-            "Cell: a=%.4f b=%.4f c=%.4f alpha=%.3fdeg beta=%.3fdeg "
-            "gamma=%.3fdeg" % self.cellparams()
-        )
+        return ('Cell: a=%.4f b=%.4f c=%.4f alpha=%.3fdeg beta=%.3fdeg '
+                'gamma=%.3fdeg' % self.cellparams())
 
     def directmatrix(self):
         return np.linalg.inv(self.rmat)
@@ -199,7 +184,7 @@ class SXTalCell:
             gamma = np.rad2deg(np.arccos(np.sum(a * b)))
             return CellParam(length[0], length[1], length[2], alpha, beta, gamma)
         else:
-            raise RuntimeError("Zero axis length")
+            raise RuntimeError('Zero axis length')
 
     def hkl(self, c):
         """Calculate the HKL indices for the given C vector."""
@@ -232,7 +217,7 @@ class SXTalCell:
 
         """
         if s0 is None:
-            raise RuntimeError("Cannot calculate Shkl without knowing hardware")
+            raise RuntimeError('Cannot calculate Shkl without knowing hardware')
         return np.dot(self.CMatrix(p), reflections) + self.s0
 
     def DirectVector(self, indices):
@@ -250,25 +235,14 @@ class SXTalCell:
             theta for the reflection
         """
         if wavelength is None:
-            raise RuntimeError(
-                "Cannot calculate theta without knowing " "hardware or wavelength"
-            )
+            raise RuntimeError('Cannot calculate theta without knowing '
+                               'hardware or wavelength')
         invd = np.linalg.norm(self.CVector(hkl))
         sintheta = invd * wavelength / 2.0
         return np.rad2deg(np.arcsin(sintheta))
 
-    def dataset(
-        self,
-        invdmin,
-        invdmax,
-        uhmin=-512,
-        uhmax=512,
-        ukmin=-512,
-        ukmax=512,
-        ulmin=-512,
-        ulmax=512,
-        uniq=False,
-    ):
+    def dataset(self, invdmin, invdmax, uhmin=-512, uhmax=512, ukmin=-512,
+                ukmax=512, ulmin=-512, ulmax=512, uniq=False):
         """Calculate a set of reflections for the given bravais lattice.
 
         parameters:
@@ -313,7 +287,7 @@ class SXTalCell:
         for curh in range(minh, maxh + 1):
             chkl = curh * ahkl
             usedd = curh * stepused
-            leftd = np.sqrt(max(0, invdmax**2 - usedd**2))
+            leftd = np.sqrt(max(0, invdmax ** 2 - usedd ** 2))
             lmink = max(int(np.ceil(chkl[1] - b * leftd / cbb)), mink)
             lmaxk = min(int(np.floor(chkl[1] + b * leftd / cbb)), maxk)
             lminl = max(int(np.ceil(chkl[2] - c * leftd / ccc)), minl)
@@ -322,10 +296,10 @@ class SXTalCell:
             numl = lmaxl - lminl + 1
             numzone = numk * numl
             if numzone > 0:
-                h = np.ones(numzone, dtype="i4") * curh
-                k = np.repeat(range(lmink, lmaxk + 1), np.ones(numk, dtype="i4") * numl)
+                h = np.ones(numzone, dtype='i4') * curh
+                k = np.repeat(range(lmink, lmaxk + 1), np.ones(numk, dtype='i4') * numl)
                 if lminl == lmaxl == 0:
-                    l = np.zeros([numzone], dtype="i4")
+                    l = np.zeros([numzone], dtype='i4')
                 else:
                     l = np.resize(range(lminl, lmaxl + 1), [numzone])
                 zone = np.dstack((h, k, l))[0]
@@ -349,16 +323,16 @@ class SXTalCell:
 
 def _test():
     cell1 = SXTalCell([[0.2, 0.0, 0], [0, 0.2, 0], [0, 0, 0.2]])
-    assert cell1.cellparams() == (5.0, 5.0, 5.0, 90.0, 90.0, 90.0)
+    assert cell1.cellparams() == (5., 5., 5., 90., 90., 90.)
     cv = cell1.CVector((1, 2, 3))
     assert np.allclose(cv, (0.2, 0.4, 0.6))
     hkl = cell1.hkl(cv)
     assert np.allclose(hkl, (1, 2, 3))
     hkl = cell1.hkl((0.4, -0.6, 0.2))
     assert np.allclose(hkl, (2, -3, 1))
-    assert cell1.Theta((1, 0, 0), 1.0) == np.rad2deg(np.arcsin(1 / 10.0))
-    cell2 = SXTalCell.fromabc(5.0, c=10.0, gamma=120.0)
-    assert np.allclose(cell2.cellparams(), (5.0, 5.0, 10.0, 90.0, 90.0, 120.0))
+    assert cell1.Theta((1, 0, 0), 1.0) == np.rad2deg(np.arcsin(1 / 10.))
+    cell2 = SXTalCell.fromabc(5., c=10., gamma=120.)
+    assert np.allclose(cell2.cellparams(), (5., 5., 10., 90., 90., 120.))
 
     v = [0.7757636541238411, 0.10320040939423603, 0.826801026407413]
     a = vecangle(v, v)

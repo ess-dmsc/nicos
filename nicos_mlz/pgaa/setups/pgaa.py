@@ -1,35 +1,30 @@
-description = "PGAA setup with sample changer"
+description = 'PGAA setup with sample changer'
 
-group = "basic"
+group = 'basic'
 
-sysconfig = dict(datasinks=["mcasink", "chnsink", "csvsink", "livesink"])
+sysconfig = dict(
+    datasinks = ['mcasink', 'chnsink', 'csvsink', 'livesink']
+)
 
 includes = [
-    "system",
-    "reactor",
-    "nl4b",
-    "pressure",
-    "samplechanger",
-    "pilz",
-    "detector",
-    "collimation",
+    'system',
+    'reactor',
+    'nl4b',
+    'pressure',
+    'samplechanger',
+    'pilz',
+    'detector',
+    'collimation',
 ]
 
 devices = dict(
-    mcasink=device(
-        "nicos_mlz.pgaa.datasinks.MCASink",
-        settypes={"point"},
-        detectors=["_60p", "LEGe"],
+    mcasink = device('nicos_mlz.pgaa.datasinks.MCASink',
+        detectors = ['_60p', 'LEGe'],
     ),
-    chnsink=device(
-        "nicos_mlz.pgaa.datasinks.CHNSink",
-        settypes={"point"},
-        detectors=["_60p", "LEGe"],
+    chnsink = device('nicos_mlz.pgaa.datasinks.CHNSink',
+        detectors = ['_60p', 'LEGe'],
     ),
-    csvsink=device(
-        "nicos_mlz.pgaa.datasinks.CSVDataSink",
-        settypes={"point"},
-    ),
+    csvsink = device('nicos_mlz.pgaa.datasinks.CSVDataSink'),
 )
 
 startupcode = """

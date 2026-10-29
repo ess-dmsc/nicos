@@ -1,29 +1,27 @@
-description = "Monochromator device setup"
+description = 'Monochromator device setup'
 
-group = "lowlevel"
+group = 'lowlevel'
 
 # servername = 'VMESPODI'
 
 # nameservice = 'spodisrv.spodi.frm2.tum.de'
 
-tango_base = "tango://motorbox02.spodi.frm2.tum.de:10000/box/"
+tango_base = 'tango://motorbox02.spodi.frm2.tum.de:10000/box/'
 
 devices = dict(
     # ;Monochromator
-    omgm=device(
-        "nicos.devices.entangle.Motor",
-        description="OMGM",
-        tangodevice=tango_base + "omgm/motor",
-        fmtstr="%.3f",
-        unit="deg",
-        userlimits=(-10, 10),
+    omgm = device('nicos.devices.entangle.Motor',
+        description = 'OMGM',
+        tangodevice = tango_base + 'omgm/motor',
+        fmtstr = '%.3f',
+        unit = 'deg',
+        userlimits = (-10, 10),
     ),
-    tthm=device(
-        "nicos.devices.generic.ManualSwitch",
-        description="TTHM",
-        fmtstr="%.3f",
-        unit="deg",
-        states=(155.0,),
+    tthm = device('nicos.devices.generic.ManualSwitch',
+        description = 'TTHM',
+        fmtstr = '%.3f',
+        unit = 'deg',
+        states = (155.,),
     ),
     # chim = device('nicos.devices.vendor.caress.EKFMotor',
     #     description = 'CHIM',

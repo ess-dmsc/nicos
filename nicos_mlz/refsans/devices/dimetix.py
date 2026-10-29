@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,27 +28,24 @@ from nicos.core.params import floatrange, intrange
 
 
 class DimetixLaser(CanDisable, HasOffset, Readable):
+
     attached_devices = {
-        "signal": Attach("signal strength device", Readable),
-        "value": Attach("value device", Readable),
+        'signal': Attach('signal strength device', Readable),
+        'value': Attach('value device', Readable),
     }
 
     parameter_overrides = {
-        "unit": Override(volatile=True, mandatory=False),
+        'unit': Override(volatile=True, mandatory=False),
     }
 
     parameters = {
-        "signallimit": Param(
-            "minimal signal strength for valid reading",
-            type=floatrange(0.0),
-            default=8000,
-        ),
-        "invalidvalue": Param(
-            "value to indicate invalid value",
-            type=intrange(-2000, -2000),
-            default=-2000,
-        ),
+        'signallimit': Param('minimal signal strength for valid reading',
+                             type=floatrange(0.), default=8000),
+        'invalidvalue': Param('value to indicate invalid value',
+                              type=intrange(-2000, -2000), default=-2000),
     }
+
+    hardware_access = False
 
     def doRead(self, maxage=0):
         if self._attached_signal.read(maxage) < self.signallimit:

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -26,17 +26,18 @@ from nicos.core import Attach, Moveable, Override, oneof
 
 
 class BeamFocus(Moveable):
+
     attached_devices = {
-        "ellipse": Attach("output signal for ellipse", Moveable),
-        "collimator": Attach("output signal for collimator", Moveable),
+        'ellipse': Attach('output signal for ellipse', Moveable),
+        'collimator': Attach('output signal for collimator', Moveable),
     }
 
     parameter_overrides = {
-        "unit": Override(mandatory=False, default=""),
-        "fmtstr": Override(default="%s"),
+        'unit': Override(mandatory=False, default=''),
+        'fmtstr': Override(default='%s'),
     }
 
-    valuetype = oneof("Ell", "Col")
+    valuetype = oneof('Ell', 'Col')
 
     hardware_access = False
 
@@ -53,23 +54,24 @@ class BeamFocus(Moveable):
     def doStart(self, target):
         if not self.isAtTarget(target=target):
             devs = [self._attached_ellipse, self._attached_collimator]
-            pos = [1, 0] if target == "Ell" else [0, 1]
+            pos = [1, 0] if target == 'Ell' else [0, 1]
             for d, p in zip(devs, pos):
                 d.maw(p)
             self._hw_wait()
 
-    def isAtTarget(self, pos=None, target=None):
+    # TODO: Check if this method can be removed or replace by 'doIsAtTarget'
+    def isAtTarget(self, pos=None, target=None, maxage=0):
         if target is None:
             target = self.target
         if pos is None:
-            pos = self.doRead(0)
+            pos = self.doRead(maxage)
         return pos == target
 
     def doRead(self, maxage=0):
         ell = self._attached_ellipse.read(maxage)
         col = self._attached_collimator.read(maxage)
         if [ell, col] == [0, 1]:
-            return "Col"
-        elif [ell, col] == [1, 0]:
-            return "Ell"
+            return 'Col'
+        if [ell, col] == [1, 0]:
+            return 'Ell'
         return None

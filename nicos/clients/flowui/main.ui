@@ -53,7 +53,7 @@
      <x>0</x>
      <y>0</y>
      <width>889</width>
-     <height>24</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuWindows">
@@ -72,6 +72,11 @@
     <addaction name="separator"/>
     <addaction name="actionAbout"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>&amp;Tools</string>
+    </property>
+   </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>&amp;Application</string>
@@ -88,6 +93,7 @@
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuWindows"/>
+   <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="toolBarMain">
@@ -157,7 +163,6 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionUser"/>
-   <addaction name="actionEmergencyStop"/>
   </widget>
   <action name="actionConnect">
    <property name="checkable">
@@ -279,18 +284,6 @@
    </property>
    <property name="toolTip">
     <string>Settings</string>
-   </property>
-  </action>
-  <action name="actionEmergencyStop">
-   <property name="icon">
-    <iconset resource="../../../resources/nicos-gui.qrc">
-     <normaloff>:/emergency</normaloff>:/emergency</iconset>
-   </property>
-   <property name="text">
-    <string> &amp;emergencyStop</string>
-   </property>
-   <property name="toolTip">
-    <string>Immediate stop</string>
    </property>
   </action>
  </widget>

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,21 +28,20 @@ from nicos.core.params import Attach, Override
 from nicos.devices.datasinks.file import FileSink
 from nicos.devices.vendor.qmesydaq import Image
 
-from nicos_mlz.devices.qmesydaqsinks import ListmodeSinkHandler
+from nicos_mlz.devices.datasinks.qmesydaq import ListmodeSinkHandler
 
 
 class ListmodeSink(FileSink):
     """Writer for the list mode files via QMesyDAQ itself."""
 
     attached_devices = {
-        "image": Attach("Image device to set the file name", Image),
+        'image': Attach('Image device to set the file name', Image),
     }
 
     parameter_overrides = {
-        "settypes": Override(default=[POINT]),
-        "filenametemplate": Override(
-            mandatory=False, userparam=False, default=["D%(pointcounter)07d.mdat"]
-        ),
+        'settypes': Override(default=[POINT]),
+        'filenametemplate': Override(mandatory=False, userparam=False,
+                                     default=['D%(pointcounter)07d.mdat']),
     }
 
     handlerclass = ListmodeSinkHandler

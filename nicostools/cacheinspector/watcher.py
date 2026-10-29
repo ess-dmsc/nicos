@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,9 +29,8 @@ from nicos.guisupport.qt import QMainWindow, QWidgetItem, uic
 class WatcherWindow(QMainWindow):
     def __init__(self, parent=None):
         QMainWindow.__init__(self, parent)
-        uic.loadUi(
-            path.join(path.dirname(path.abspath(__file__)), "ui", "watcher.ui"), self
-        )
+        uic.loadUi(path.join(path.dirname(path.abspath(__file__)), 'ui',
+                             'watcher.ui'), self)
         self.buttonClear.clicked.connect(self.clear)
 
     def addWidgetKey(self, widget):
@@ -42,7 +41,7 @@ class WatcherWindow(QMainWindow):
     def clear(self):
         """Remove all watched items."""
         layout = self.scrollContents.layout()
-        for i in range(layout.count() - 1, -1, -1):
+        for i in range(layout.count()-1, -1, -1):
             item = layout.takeAt(i)
             if isinstance(item, QWidgetItem):
                 item.widget().deleteLater()

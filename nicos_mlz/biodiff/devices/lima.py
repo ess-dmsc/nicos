@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2018-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,7 +28,7 @@ from nicos.devices.vendor.lima.andor2 import Andor2LimaCCD as BaseAndor2LimaCCD
 
 
 class PyDs_PythonError(CommunicationError):
-    """Error occured in lima library, e.g. no frame(s) available."""
+    """Error occurred in lima library, e.g. no frame(s) available."""
 
 
 # TODO: Remove code duplication and fix MRO issues when inheriting
@@ -51,14 +51,11 @@ class Andor2LimaCCD(BaseAndor2LimaCCD):
         return narray
 
     def valueInfo(self):
-        return (
-            Value(
-                name=self.name, type="counter", fmtstr="%d", errors="sqrt", unit="cts"
-            ),
-        )
+        return Value(name=self.name, type='counter', fmtstr='%d',
+                     errors='sqrt', unit='cts'),
 
     def _com_raise(self, err, info):
         reason = self._tango_exc_reason(err)
-        if reason == "PyDs_PythonError":
+        if reason == 'PyDs_PythonError':
             raise PyDs_PythonError(self, self._tango_exc_desc(err))
         BaseAndor2LimaCCD._com_raise(self, err, info)

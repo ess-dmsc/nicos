@@ -1,0 +1,45 @@
+description = 'Detector 1 HV devices'
+
+group = 'lowlevel'
+
+tango_base = 'tango://firepodhw:10000/firepod/det1/'
+
+devices = dict(
+    det1_anode = device('nicos.devices.entangle.PowerSupply',
+        description = 'Anode HV of detector 1',
+        tangodevice = tango_base + 'anode',
+        precision = 5,
+        fmtstr = '%.0f',
+        requires = {'level': 'admin'},
+        visibility = {'namespace', 'metadata'},
+    ),
+    det1_anode_current = device('nicos.devices.generic.ReadonlyParamDevice',
+        description = 'Anode HV current of detector 1',
+        device = 'det1_anode',
+        parameter = 'current',
+        fmtstr = '%.1e',
+        visibility = {'namespace', 'metadata'},
+    ),
+    det1_drift = device('nicos.devices.entangle.PowerSupply',
+        description = 'Drift HV of detector 1',
+        tangodevice = tango_base + 'drift',
+        precision = 5,
+        fmtstr = '%.0f',
+        requires = {'level': 'admin'},
+        visibility = {'namespace', 'metadata'},
+    ),
+    det1_drift_current = device('nicos.devices.generic.ReadonlyParamDevice',
+        description = 'Drift HV current of detector 1',
+        device = 'det1_drift',
+        parameter = 'current',
+        fmtstr = '%.1e',
+        visibility = {'namespace', 'metadata'},
+    ),
+    det1_hv = device('nicos_mlz.firepod.devices.detectorhv.DetectorHVChannelSwitch',
+        description = 'HV switch of detector 1',
+        drift = 'det1_drift',
+        anode = 'det1_anode',
+        mapping = {'off': (0, 0), 'on': (-1000, 2760)},
+        visibility = {'namespace', 'metadata'},
+    ),
+)

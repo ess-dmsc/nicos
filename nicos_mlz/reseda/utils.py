@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -17,7 +17,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Module authors:
-#   Jens Krüger <jens.krüger@frm2.tum.de>
+#   Jens Krüger <jens.krueger@frm2.tum.de>
 #
 # *****************************************************************************
 """Utilities for RESEDA instrument."""
@@ -32,9 +32,9 @@ from nicos.utils.fitting import PredefinedFit
 class MiezeFit(PredefinedFit):
     """Fits with a sine with given frequency including offset."""
 
-    names = ["mieze"]
-    fit_title = "mieze fit"
-    fit_params = ["avg", "contrast", "phase", "freq"]
+    names = ['mieze']
+    fit_title = 'mieze fit'
+    fit_params = ['avg', 'contrast', 'phase', 'freq']
     fit_p_descr = fit_params
 
     timechannels = 16
@@ -64,8 +64,8 @@ class MiezeFit(PredefinedFit):
         res.label_y = min(res.curve_x)
         res.contrast = abs(res.contrast)
         res.label_contents = [
-            ("Average", res.avg, res.davg),
-            ("Contrast", res.contrast, res.dcontrast),
-            ("Phase", res.phase, res.dphase),
-            ("Frequency", res.freq, res.dfreq),
+            ('Average', res.avg, res.davg),
+            ('Contrast', res.contrast, res.dcontrast),
+            ('Phase', res.phase, res.dphase),
+            ('Frequency', res.freq, res.dfreq),
         ]

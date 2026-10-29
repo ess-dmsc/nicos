@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -39,33 +39,28 @@ class DLSSync(PyTangoDevice, Measurable):
     """
 
     parameters = {
-        "duration": Param(
-            "Duration of one DLS measurement",
-            type=float,
-            unit="s",
-            default=300,
-            settable=True,
-        ),
+        'duration': Param('Duration of one DLS measurement', type=float,
+                          unit='s', default=300, settable=True),
     }
 
     _meastime = 0
 
     def doSetPreset(self, **preset):
-        self._meastime = preset.get("t")
+        self._meastime = preset.get('t')
         self._lastpreset = preset
 
     def doStart(self):
         try:
             sampletemp = 0
-            if "Ts" in session.devices:
-                tdev = session.getDevice("Ts")
+            if 'Ts' in session.devices:
+                tdev = session.getDevice('Ts')
                 if tdev.alias:
                     sampletemp = tdev.read() or 0
-            sampleno = session.getDevice("Sample").samplenumber
+            sampleno = session.getDevice('Sample').samplenumber
             counters = session.experiment.data.getCounters()
-            dlsstring = "%s,%d,%d,%d,%f,%d,%d" % (
+            dlsstring = '%s,%d,%d,%d,%f,%d,%d' % (
                 session.experiment.proposal,
-                counters.get("pointcounter", 0),
+                counters.get('pointcounter', 0),
                 sampleno or 0,
                 time.time(),
                 sampletemp,
@@ -75,7 +70,7 @@ class DLSSync(PyTangoDevice, Measurable):
             self._dev.WriteLine(dlsstring)
         except Exception:
             # make this non-fatal
-            self.log.warning("could not send DLS sync string", exc=1)
+            self.log.warning('could not send DLS sync string', exc=1)
 
     def valueInfo(self):
         # no usable values returned

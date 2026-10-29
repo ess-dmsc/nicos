@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,11 +24,6 @@
 """NICOS test suite."""
 
 from nicos.core.device import Device
-from nicos.utils.stubs import generate_stubs
-
-# generate stubs for TACO/Tango modules to be able to import anything needed
-# in the custom tests
-generate_stubs()
 
 # make some functional tests using wait loops faster by reducing loop delays
 Device._base_loop_delay = 0.002

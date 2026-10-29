@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,6 +31,7 @@ from .base import IPCModBusRS232
 
 
 class IPCModBusTango(PyTangoMixin, IPCModBusRS232):
+
     def doInit(self, mode):
         IPCModBusRS232.doInit(self, mode)
         if mode != SIMULATION:
@@ -38,4 +39,4 @@ class IPCModBusTango(PyTangoMixin, IPCModBusRS232):
 
     def _transmit(self, request, retlen, last_try=False):
         reply = self._dev.BinaryCommunicate([retlen] + [ord(x) for x in request])
-        return "".join(map(chr, reply))
+        return ''.join(map(chr, reply))

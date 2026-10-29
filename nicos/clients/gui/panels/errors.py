@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -22,7 +22,6 @@
 # *****************************************************************************
 
 """NICOS GUI error and warning window."""
-
 import os
 from logging import WARNING
 
@@ -39,16 +38,15 @@ class ErrorPanel(Panel):
     In comparison to the ConsolePanel it only displays messages with the
     WARNING and ERROR loglevel.
     """
-
-    ui = os.path.join("panels", "errpanel.ui")
-    panelName = "Error window"
+    ui = os.path.join('panels', 'errpanel.ui')
+    panelName = 'Error window'
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         loadUi(self, self.ui)
         self.outView.setFullTimestamps(True)
 
-        self.buttonBox.addButton("Clear", QDialogButtonBox.ButtonRole.ResetRole)
+        self.buttonBox.addButton('Clear', QDialogButtonBox.ButtonRole.ResetRole)
 
         if client.isconnected:
             self.on_client_connected()
@@ -61,7 +59,7 @@ class ErrorPanel(Panel):
         setBackgroundColor(self.outView, back)
 
     def on_client_connected(self):
-        messages = self.client.ask("getmessages", "10000", default=[])
+        messages = self.client.ask('getmessages', '10000', default=[])
         self.outView.clear()
         self.outView.addMessages([msg for msg in messages if msg[2] >= WARNING])
         self.outView.scrollToBottom()
@@ -72,13 +70,13 @@ class ErrorPanel(Panel):
 
     def on_client_experiment(self, data):
         (_, proptype) = data
-        if proptype == "user":
+        if proptype == 'user':
             # only clear output when switching TO a user experiment
             self.outView.clear()
 
     def on_outView_anchorClicked(self, url):
         """Called when the user clicks a link in the out view."""
-        if url.scheme() == "trace":
+        if url.scheme() == 'trace':
             TracebackDialog(self, self.outView, url.path()).show()
 
     def on_buttonBox_clicked(self, button):

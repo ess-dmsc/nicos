@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -40,7 +40,7 @@ class NicosProxy:
         return getattr(self._obj, name)
 
     def __setattr__(self, name, value):
-        if name == "_obj":
+        if name == '_obj':
             self.__dict__[name] = value
         elif self._obj:
             return setattr(self._obj, name, value)
@@ -51,17 +51,19 @@ class NicosProxy:
 
 # Auxiliary getter function.
 def getter(attrib):
-    return lambda self, *args, **kwargs: getattr(self._obj, attrib)(*args, **kwargs)
+    return lambda self, *args, **kwargs: \
+        getattr(self._obj, attrib)(*args, **kwargs)
 
 
 def ProxyFactory(obj, names, proxyclass=NicosProxy):
     """Factory function for Proxies that can delegate magic names."""
     # Build class.
-    cls = type("%sNicosProxy" % obj.__class__.__name__, (proxyclass,), {})
+    cls = type('%sNicosProxy' % obj.__class__.__name__,
+               (proxyclass,), {})
     # Add magic names.
     for name in names:
         # Filter magic names.
-        if name.startswith("__") and name.endswith("__"):
+        if name.startswith('__') and name.endswith('__'):
             if hasattr(obj.__class__, name):
                 # Set attribute.
                 setattr(cls, name, getter(name))

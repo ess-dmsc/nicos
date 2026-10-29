@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -51,28 +51,16 @@ class FileSink(DataSink):
     """Base class for sinks that save data into files."""
 
     parameters = {
-        "subdir": Param(
-            "Filetype specific subdirectory name",
-            type=subdir,
-            mandatory=False,
-            default="",
-        ),
-        "filenametemplate": Param(
-            "List of templates for data file names "
-            "(will be hardlinked), can contain "
-            "subdirectories",
-            ext_desc=TEMPLATE_DESC,
-            type=listof(str),
-            default=["%(pointcounter)08d.dat"],
-            settable=False,
-            prefercache=False,
-        ),
-        "filemode": Param(
-            "File access rights after closing the file, "
-            "if set to 'none' (default) the OS defaults "
-            "will be used",
-            type=none_or(
-                intrange(0o000, 0o777),
-            ),
-        ),
+        'subdir':           Param('Filetype specific subdirectory name',
+                                  type=subdir, mandatory=False, default=''),
+        'filenametemplate': Param('List of templates for data file names '
+                                  '(will be hard-linked), can contain '
+                                  'subdirectories',
+                                  ext_desc=TEMPLATE_DESC, type=listof(str),
+                                  default=['%(pointcounter)08d.dat'],
+                                  settable=False, prefercache=False),
+        'filemode':         Param('File access rights after closing the file, '
+                                  "if set to 'none' (default) the OS defaults "
+                                  'will be used',
+                                  type=none_or(intrange(0o000, 0o777),)),
     }

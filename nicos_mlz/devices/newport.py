@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -38,20 +38,14 @@ class HexapodMaster(PyTangoDevice, CanReference, Readable):
     """
 
     parameters = {
-        "speed": Param(
-            "Master speed",
-            type=float,
-            settable=True,
-            userparam=True,
-            volatile=True,
-        ),
-        "accel": Param(
-            "Master acceleration",
-            type=float,
-            settable=True,
-            userparam=True,
-            volatile=True,
-        ),
+        'speed': Param('Master speed',
+                       type=float, settable=True, userparam=True,
+                       volatile=True,
+                       ),
+        'accel': Param('Master acceleration',
+                       type=float, settable=True, userparam=True,
+                       volatile=True,
+                       ),
     }
 
     def doReadSpeed(self):
@@ -67,14 +61,15 @@ class HexapodMaster(PyTangoDevice, CanReference, Readable):
         self._dev.accel = value
         self._dev.decel = value
 
-    def doReference(self, *args):
+    def doReference(self):
         self._dev.Reference()
+        self.wait()
 
     def doReset(self):
         self._dev.Reset()
 
     def doRead(self, maxage=0):
-        return ""
+        return ''
 
 
 class HexapodAxis(MotorAxis):
@@ -84,13 +79,10 @@ class HexapodAxis(MotorAxis):
     """
 
     parameters = {
-        "coordsystem": Param(
-            "Hexapod coordinate offset",
-            type=float,
-            settable=True,
-            userparam=True,
-            volatile=True,
-        ),
+        'coordsystem': Param('Hexapod coordinate offset',
+                             type=float, settable=True, userparam=True,
+                             volatile=True,
+                             ),
     }
 
     def doReadCoordsystem(self):

@@ -1,5 +1,16 @@
-nicos/chopper2/pos=1
 nicos/chopper2_pos/target=1
 nicos/chopper2_pos/value=1
 nicos/table_z_motor/vmax=1
 nicos/b3h3_frame/value='110mm'
+nicos/safetysystem/value=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+nicos/julabo_flow/value=1
+nicos/all/value=10
+nicos/cache/value=1
+nicos/nok_refa1/value=1
+nicos/nok_refa2/value=1
+nicos/nok_refb2/value=1
+nicos/nok_refc1/value=1
+nicos/nok_refc2/value=1
+nicos/sc2/userlimits=(-150, 130)
+nicos/chopper/value={'D': 11000, 'wlmin': 5, 'wlmax': 10, 'gap': 50, 'chopper2_pos': 1, 'manner': 'normal'}
+nicos/det_yoke/unit='mm'

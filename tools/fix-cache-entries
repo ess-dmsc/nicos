@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -136,7 +136,7 @@ class CClient:
         self._socket = s
 
     def _comm(self, request):
-        # always put a end-of-list marker
+        # always put an end-of-list marker
         self._socket.sendall((request + '\n###?\n').encode())
         data = ''
         reloop = False

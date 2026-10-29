@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,7 +21,10 @@
 #
 # *****************************************************************************
 
-from nicos.devices.vendor.lima.andor2 import Andor2LimaCCD, Andor2TemperatureController
-from nicos.devices.vendor.lima.andor3 import Andor3LimaCCD, Andor3TemperatureController
+from nicos.devices.vendor.lima.andor2 import Andor2LimaCCD, \
+    Andor2TemperatureController
+from nicos.devices.vendor.lima.andor3 import Andor3LimaCCD, \
+    Andor3TemperatureController
+from nicos.devices.vendor.lima.eiger import EigerLimaCCD
 from nicos.devices.vendor.lima.generic import GenericLimaCCD, LimaCCDTimer
 from nicos.devices.vendor.lima.zwo import ZwoTC

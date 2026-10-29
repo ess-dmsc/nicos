@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2018-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -27,11 +27,12 @@ from nicos.guisupport.livewidget import LiveWidget1D
 
 
 class FullScreen1DWidget(LiveWidget1D):
+
     client = None
 
     def __init__(self, parent, **kwargs):
         LiveWidget1D.__init__(self, parent, **kwargs)
-        self.plot.viewport = [0.05, 0.98, 0.1, 0.98]
+        self.plot.viewport = [0.05, .98, 0.1, .98]
         self.gr.update()
         self._zoomed = False
 
@@ -44,9 +45,10 @@ class FullScreen1DWidget(LiveWidget1D):
             LiveWidget1D._adjustYAxisRange(self)
 
     def unzoom(self):
-        labels = self._labels["x"]
-        self._axesrange["x"] = labels[0], labels[-1]
-        self._axesrange["y"] = (0.1 if self._logscale else 0, max(1, self.getYMax()))
+        labels = self._labels['x']
+        self._axesrange['x'] = labels[0], labels[-1]
+        self._axesrange['y'] = (0.1 if self._logscale else 0,
+                                max(1, self.getYMax()))
         self._zoomed = False
         LiveWidget1D.unzoom(self)
 
@@ -54,15 +56,15 @@ class FullScreen1DWidget(LiveWidget1D):
         LiveWidget1D.zoom(self, master, dpercent, p0)
         if self.plot == master:
             self._zoomed = True
-            self._axesrange["x"] = self.axes.getWindow()[:2]
-            self._axesrange["y"] = self.axes.getWindow()[2:]
+            self._axesrange['x'] = self.axes.getWindow()[:2]
+            self._axesrange['y'] = self.axes.getWindow()[2:]
 
     def select(self, master, p0, p1):
         LiveWidget1D.select(self, master, p0, p1)
         if self.plot == master:
             self._zoomed = True
-            self._axesrange["x"] = self.axes.getWindow()[:2]
-            self._axesrange["y"] = self.axes.getWindow()[2:]
+            self._axesrange['x'] = self.axes.getWindow()[:2]
+            self._axesrange['y'] = self.axes.getWindow()[2:]
 
     def getYMax(self):
         minupperedge = 1
@@ -73,9 +75,10 @@ class FullScreen1DWidget(LiveWidget1D):
 
 
 class LiveDataPanel(BaseLiveDataPanel):
+
     def __init__(self, parent, client, options):
-        if "xscale" not in options:
-            options["xscale"] = "decimal"
+        if 'xscale' not in options:
+            options['xscale'] = 'decimal'
         BaseLiveDataPanel.__init__(self, parent, client, options)
 
     def initLiveWidget(self, widgetcls):

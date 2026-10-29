@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -30,11 +30,11 @@ from .cacheclient import Entry
 
 
 class EntryEditDialog(QDialog):
+
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
-        uic.loadUi(
-            path.join(path.dirname(path.abspath(__file__)), "ui", "entryedit.ui"), self
-        )
+        uic.loadUi(path.join(path.dirname(path.abspath(__file__)), 'ui',
+                             'entryedit.ui'), self)
         self.setupEvents()
 
     def setupEvents(self):
@@ -45,32 +45,23 @@ class EntryEditDialog(QDialog):
         try:
             cache_load(self.valueValue.text())
         except ValueError:
-            if (
-                QMessageBox.question(
-                    self,
-                    "Really?",
-                    "The value you entered for key %s "
-                    "does not conform to the serialization format used by NICOS"
-                    " and therefore cannot be used by NICOS cache clients.\n\n"
-                    "Really set this value?" % self.valueKey.text(),
-                )
-                == QMessageBox.StandardButton.No
-            ):
+            if QMessageBox.question(
+                    self, 'Really?', 'The value you entered for key %s '
+                    'does not conform to the serialization format used by NICOS'
+                    ' and therefore cannot be used by NICOS cache clients.\n\n'
+                    'Really set this value?' % self.valueKey.text()
+            ) == QMessageBox.StandardButton.No:
                 return
         self.accept()
 
     def fillEntry(self, entry):
         self.valueKey.setText(entry.key)
         self.valueValue.setText(entry.value)
-        self.valueTTL.setText(str(entry.ttl or ""))
+        self.valueTTL.setText(str(entry.ttl or ''))
         self.valueTime.setText(entry.convertTime())
 
     def getEntry(self):
-        entry = Entry(
-            self.valueKey.text(),
-            self.valueValue.text(),
-            Entry.parseTime(self.valueTime.text()),
-            float(self.valueTTL.text() or "0") or None,
-            False,
-        )
+        entry = Entry(self.valueKey.text(), self.valueValue.text(),
+                      Entry.parseTime(self.valueTime.text()),
+                      float(self.valueTTL.text() or '0') or None, False)
         return entry

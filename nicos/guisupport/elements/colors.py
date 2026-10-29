@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,12 +25,12 @@ from nicos.core import status
 from nicos.guisupport.qt import QColor, Qt
 
 statuscolor = {
-    status.BUSY: QColor("yellow"),
-    status.ERROR: QColor("#FF3333"),
-    status.WARN: QColor("#FF9900"),
-    status.NOTREACHED: QColor("#FF3333"),
-    status.DISABLED: QColor("white"),
+    status.BUSY: QColor('yellow'),
+    status.ERROR: QColor('#FF3333'),
+    status.WARN: QColor('#FF9900'),
+    status.NOTREACHED: QColor('#FF3333'),
+    status.DISABLED: QColor('white'),
     status.OK: Qt.GlobalColor.transparent,  # make it completely transparent
 }
 
-__all__ = ["statuscolor"]
+__all__ = ['statuscolor']

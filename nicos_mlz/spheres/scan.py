@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,70 +32,41 @@ from nicos.core import SIMULATION
 from nicos.core.scan import StopScan, SweepScan
 
 from nicos_mlz.spheres.devices.doppler import INELASTIC
-from nicos_mlz.spheres.utils import (
-    canStartSisScan,
-    getSisDetector,
-    getSisImageDevice,
-    parseDuration,
-)
+from nicos_mlz.spheres.utils import canStartSisScan, getSisDetector, \
+    getSisImageDevice, parseDuration
 
-VALIDTARGETS = ["eta", "acq"]
+VALIDTARGETS = ['eta', 'acq']
 
 
 class VariableTimeScan(SweepScan):
-    def __init__(
-        self,
-        devices,
-        startend,
-        firstmoves=None,
-        multistep=None,
-        detlist=None,
-        envlist=None,
-        preset=None,
-        scaninfo=None,
-        subscan=False,
-        xindex=None,
-        totaltime=None,
-        target=VALIDTARGETS[0],
-    ):
-        SweepScan.__init__(
-            self,
-            devices,
-            startend,
-            -1,
-            firstmoves,
-            multistep,
-            detlist,
-            envlist,
-            preset,
-            scaninfo,
-            subscan,
-            xindex,
-        )
+    def __init__(self, devices, startend, firstmoves=None,
+                 multistep=None, detlist=None, envlist=None, preset=None,
+                 scaninfo=None, scanuserinfo=None, subscan=False, xindex=None, totaltime=None,
+                 target=VALIDTARGETS[0]):
+        SweepScan.__init__(self, devices, startend, -1, firstmoves,
+                           multistep, detlist, envlist, preset, scaninfo,
+                           scanuserinfo, subscan, xindex)
 
         self.eta = time() + totaltime
         self.remainingTime = totaltime
-        if target in ["eta", "acq"]:
+        if target in ['eta', 'acq']:
             self.target = target
         else:
-            session.log.warning(
-                '"%s", is not a valid target, must be one of ' '%r, defaulting to "%s"',
-                target,
-                VALIDTARGETS,
-                VALIDTARGETS[0],
-            )
+            session.log.warning('"%s", is not a valid target, must be one of '
+                                '%r, defaulting to "%s"', target,  VALIDTARGETS,
+                                VALIDTARGETS[0])
             self.target = VALIDTARGETS[0]
 
     def increaseTime(self, value):
         self.remainingTime += value
-        if self.target == "acq":
+        if self.target == 'acq':
             self.eta = time() + self.remainingTime - self.getElapsedTime()
         else:
             self.eta += value
 
     def decreaseTime(self, value):
         self.remainingTime -= value
-        if self.target == "acq":
+        if self.target == 'acq':
             self.eta = time() + self.remainingTime - self.getElapsedTime()
         else:
             self.eta -= value
@@ -107,7 +78,7 @@ class VariableTimeScan(SweepScan):
 
     def acquireCompleted(self):
         if self.eta <= time():
-            if self.target == "acq":
+            if self.target == 'acq':
                 elapsed = self.getElapsedTime()
                 if elapsed < self.remainingTime:
                     # push eta a bit further
@@ -137,46 +108,34 @@ class VariableTimeScan(SweepScan):
 @usercommand
 def atscan(time, *args, **kwargs):
     """A timescan that has an adjustable running time."""
-    time = parseDuration(time, "atscan")
+    time = parseDuration(time, 'atscan')
 
-    scanstr = _infostr("vartimescan", (time,) + args, kwargs)
-    target = kwargs.pop("target", "eta")
+    scaninfo = _infostr('vartimescan', (time,) + args, kwargs)
+    target = kwargs.pop('target', 'eta')
 
-    preset, scaninfo, detlist, envlist, move, multistep = _handleScanArgs(
-        args, kwargs, scanstr
-    )
+    preset, scanuserinfo, detlist, envlist, move, multistep = \
+        _handleScanArgs(args, kwargs)
 
-    scan = VariableTimeScan(
-        [],
-        [],
-        move,
-        multistep,
-        detlist,
-        envlist,
-        preset,
-        scaninfo,
-        totaltime=time,
-        target=target,
-    )
+    scan = VariableTimeScan([], [], move, multistep, detlist, envlist,
+                            preset, scaninfo, scanuserinfo, totaltime=time, target=target)
     scan.run()
 
 
 @parallel_safe
 @usercommand
 def extendScan(time):
-    time = parseDuration(time, "extendScan")
+    time = parseDuration(time, 'extendScan')
     try:
         current = session._currentscan
     except AttributeError:
         current = None
 
     if not current:
-        session.log.warning("No scan running.")
+        session.log.warning('No scan running.')
         return
     elif not isinstance(current, VariableTimeScan):
-        session.log.warning(
-            "Current scan is not a VariableTimeScan and cannot " "be extended."
-        )
+        session.log.warning('Current scan is not a VariableTimeScan and cannot '
+                            'be extended.')
     else:
         current.increaseTime(time)
 
@@ -184,18 +143,17 @@ def extendScan(time):
 @parallel_safe
 @usercommand
 def shortenScan(time):
-    time = parseDuration(time, "shortenScan")
+    time = parseDuration(time, 'shortenScan')
     try:
         current = session._currentscan
     except AttributeError:
-        session.log.warning("No scan running.")
+        session.log.warning('No scan running.')
 
     if not current:
-        session.log.warning("No scan running.")
+        session.log.warning('No scan running.')
     elif not isinstance(current, VariableTimeScan):
-        session.log.warning(
-            "Current scan is not a VariableTimeScan and cannot " "be shortened."
-        )
+        session.log.warning('Current scan is not a VariableTimeScan and cannot '
+                            'be shortened.')
     else:
         current.decreaseTime(time)
 
@@ -214,15 +172,15 @@ def startinelasticscan(time, interval, incremental):
 
     canStartSisScan(INELASTIC)
 
-    time = parseDuration(time, "inelastic time")
-    interval = parseDuration(interval, "inelastic interval")
+    time = parseDuration(time, 'inelastic time')
+    interval = parseDuration(interval, 'inelastic interval')
 
     if not interval:
         interval = image.inelasticinterval
         if interval == 0:
             interval = 1200
     else:
-        interval = parseDuration(interval, "inelastic interval")
+        interval = parseDuration(interval, 'inelastic interval')
         image.inelasticinterval = interval
 
     image.incremental = incremental
@@ -274,7 +232,7 @@ def acquireInelasticTime(time, interval=1200):
 def save():
     """Trigger an intermediate save.
     The file will be overwritten every time this is triggered
-    within one datapoint and when the set countduration for
+    within one datapoint and when the set count duration for
     this file is reached."""
 
     getSisDetector().saveIntermediate()
@@ -293,17 +251,14 @@ def showDetectorSettings():
     mode = image.measuremode
 
     if mode == INELASTIC:
-        print(
-            "SIS detector is measuring inelastic.",
-            "Counttime per file: %s"
-            % parseDuration(image.inelasticinterval, "detector settings"),
-        )
+        print('SIS detector is measuring inelastic.',
+              'Counttime per file: %s'
+              % parseDuration(image.inelasticinterval, 'detector settings'))
     else:
         params = image.elasticparams
-        print(
-            "The SIS detector is measuring elastic.",
-            "Lines per file: %d" % params[0],
-            "Counttime per line: %s" % parseDuration(params[1], "detector settings"),
-            "Counttime per file: %s"
-            % parseDuration(params[0] * params[1], "detector settings"),
-        )
+        print('The SIS detector is measuring elastic.',
+              'Lines per file: %d' % params[0],
+              'Counttime per line: %s' % parseDuration(params[1],
+                                                       'detector settings'),
+              'Counttime per file: %s' % parseDuration(params[0]*params[1],
+                                                       'detector settings'))

@@ -1,16 +1,19 @@
-description = "setup for the NICOS collector service"
-group = "special"
+description = 'setup for the NICOS collector service'
+group = 'special'
 
 devices = dict(
-    GlobalCache=device(
-        "nicos.services.collector.CacheForwarder",
-        cache="localhost",
-        prefix="nicos/kws2",
-        keyfilters=["selector.*", "cooling.*"],
+    GlobalCache = device('nicos.services.collector.CacheForwarder',
+        cache = 'localhost',
+        prefix = 'nicos/kws2',
+        keyfilters = ['selector.*', 'cooling.*'],
     ),
-    Collector=device(
-        "nicos.services.collector.Collector",
-        cache="phys.kws2.frm2",
-        forwarders=["GlobalCache"],
+    InfluxDB = device('nicos.services.collector.CacheForwarder',
+        cache = 'localhost:14871',
+        prefix = 'nicos/kws2',
+        keyfilters = ['selector.*', 'cooling.*'],
+    ),
+    Collector = device('nicos.services.collector.Collector',
+        cache = 'phys.kws2.frm2',
+        forwarders = ['GlobalCache', 'InfluxDB'],
     ),
 )

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,10 +32,10 @@ from nicos.guisupport.widget import NicosWidget
 class SqueezedLabel(QLabel, NicosWidget):
     """A label that elides text to fit its width."""
 
-    designer_description = "A label that elides text to fit its width"
+    designer_description = 'A label that elides text to fit its width'
 
     def __init__(self, parent, designMode=False, **kwds):
-        self._fulltext = ""
+        self._fulltext = ''
         QLabel.__init__(self, parent, **kwds)
         NicosWidget.__init__(self)
         self._squeeze()
@@ -60,17 +60,16 @@ class SqueezedLabel(QLabel, NicosWidget):
         labelwidth = self.size().width()
         squeezed = False
         new_lines = []
-        for line in text.split("\n"):
+        for line in text.split('\n'):
             if fm.horizontalAdvance(line) > labelwidth:
                 squeezed = True
-                new_lines.append(
-                    fm.elidedText(line, Qt.TextElideMode.ElideRight, labelwidth)
-                )
+                new_lines.append(fm.elidedText(line, Qt.TextElideMode.ElideRight,
+                                               labelwidth))
             else:
                 new_lines.append(line)
         if squeezed:
-            QLabel.setText(self, "\n".join(new_lines))
+            QLabel.setText(self, '\n'.join(new_lines))
             self.setToolTip(self._fulltext)
         else:
             QLabel.setText(self, self._fulltext)
-            self.setToolTip("")
+            self.setToolTip('')

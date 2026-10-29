@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,25 +24,26 @@
 Support code for any encoder with analog signal, like poti laser distance etc
 """
 
-from nicos.core import Readable, status
-from nicos.core.params import Attach, Param
+from nicos.core import status
+from nicos.core.params import Override, Param, oneof
+from nicos.devices.generic.analog import CalculatedReadable
 
 
-class Accuracy(Readable):
-    attached_devices = {
-        "motor": Attach("moving motor", Readable),
-        "analog": Attach("analog encoder maybe poti", Readable),
-    }
+class Accuracy(CalculatedReadable):
 
     parameters = {
-        "absolute": Param(
-            "Value is absolute or signed.", type=bool, settable=True, default=True
-        ),
+        'absolute': Param('Value is absolute or signed',
+                          type=bool, settable=False, default=True),
+    }
+
+    parameter_overrides = {
+        'op': Override(type=oneof('sub', '-'), settable=False, default='sub',
+                       mandatory=False),
     }
 
     def doRead(self, maxage=0):
-        dif = self._attached_analog.read(maxage) - self._attached_motor.read(maxage)
+        dif = -CalculatedReadable.doRead(self, maxage)
         return abs(dif) if self.absolute else dif
 
     def doStatus(self, maxage=0):
-        return status.OK, ""
+        return status.OK, ''

@@ -1,15 +1,18 @@
-description = "Detector file savers"
+description = 'Detector file savers'
 
-group = "lowlevel"
+group = 'lowlevel'
 
 sysconfig = dict(
-    datasinks=["HDF5FileSaver"],
+    datasinks = ['HDF5FileSaver', 'nxsink'],
 )
 
 devices = dict(
-    HDF5FileSaver=device(
-        "nicos_mlz.reseda.datasinks.HDF5Sink",
-        description="Saves scalar and image data for scans in a defined structure into HDF5 files.",
-        detectors=["X"],  # effectively disabled, to re-enable: set to ['']
+    HDF5FileSaver = device('nicos_mlz.reseda.datasinks.HDF5Sink',
+        description = 'Saves scalar and image data for scans in a defined structure into HDF5 files.',
+        detectors = ['X'],  # effectively disabled, to re-enable: set to []
+    ),
+    nxsink = device('nicos_mlz.nexus.NexusSink',
+        templateclass = 'nicos_mlz.reseda.nexus.templates.ResedaTemplateProvider',
+        filenametemplate = ['%(scancounter)07d.nxs'],
     ),
 )

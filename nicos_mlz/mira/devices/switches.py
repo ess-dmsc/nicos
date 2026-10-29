@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,16 +23,8 @@
 
 """Class for MIRA beam elements."""
 
-from nicos.core import (
-    Attach,
-    HasTimeout,
-    Moveable,
-    Override,
-    Readable,
-    multiReset,
-    oneof,
-    status,
-)
+from nicos.core import Attach, HasTimeout, Moveable, Override, Readable, \
+    multiReset, oneof, status
 
 
 class BeamElement(HasTimeout, Moveable):
@@ -41,26 +33,26 @@ class BeamElement(HasTimeout, Moveable):
     the shutter via digital output (tied into Pilz security system).
     """
 
-    valuetype = oneof("in", "out")
+    valuetype = oneof('in', 'out')
 
     attached_devices = {
-        "valve": Attach("in/out pressure valve", Moveable),
-        "switch_in": Attach('limit switch for "in" position', Readable),
-        "switch_out": Attach('limit switch for "out" position', Readable),
+        'valve':      Attach('in/out pressure valve', Moveable),
+        'switch_in':  Attach('limit switch for "in" position', Readable),
+        'switch_out': Attach('limit switch for "out" position', Readable),
     }
 
     parameter_overrides = {
-        "timeout": Override(default=10),
-        "unit": Override(mandatory=False, default=""),
+        'timeout':    Override(default=10),
+        'unit':       Override(mandatory=False, default=''),
     }
 
     def doStatus(self, maxage=0):
         is_in = self._attached_switch_in.read(maxage)
         is_out = self._attached_switch_out.read(maxage)
         valvepos = self._attached_valve.read(maxage)
-        if (is_in and valvepos == "in") or (is_out and valvepos == "out"):
-            return status.OK, "idle"
-        return status.BUSY, "moving"
+        if (is_in and valvepos == 'in') or (is_out and valvepos == 'out'):
+            return status.OK, 'idle'
+        return status.BUSY, 'moving'
 
     def doRead(self, maxage=0):
         return self._attached_valve.read(maxage)

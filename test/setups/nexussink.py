@@ -1,22 +1,15 @@
-name = "nexussink setup"
+name='nexussink setup'
 
-includes = ["stdsystem", "scanning", "detector"]
+includes = ['stdsystem', 'scanning', 'detector']
 
-sinklist = [
-    "nexussink",
-]
+sinklist = ['nexussink',]
 
-sysconfig = dict(
-    datasinks=sinklist,
-)
+sysconfig = dict(datasinks = sinklist,)
 
 devices = dict(
-    nexussink=device(
-        "nicos.nexus.NexusSink",
-        description="Sink for NeXus file writer",
-        filenametemplate=[
-            "test%(year)sn%(scancounter)06d.hdf",
-        ],
-        templateclass="test.nexus.TestTemplateProvider.TestTemplateProvider",
+    nexussink=device('nicos.nexus.NexusSink',
+        description='Sink for NeXus file writer',
+        filenametemplate=['test%(year)sn%(scancounter)06d.hdf',],
+        templateclass='test.nexus.TestTemplateProvider.TestTemplateProvider',
     ),
 )

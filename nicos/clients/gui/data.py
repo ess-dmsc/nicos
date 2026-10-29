@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,7 +29,8 @@ from itertools import chain
 
 import numpy as np
 
-from nicos.guisupport.qt import QApplication, QObject, QProgressDialog, pyqtSignal
+from nicos.guisupport.qt import QApplication, QObject, QProgressDialog, \
+    pyqtSignal
 from nicos.utils.fitting import FitResult
 
 
@@ -56,8 +57,8 @@ class DataProxy:
 
 
 class Curve:
-    description = ""
-    source = ""  # source dataset if curves from different sets are combined
+    description = ''
+    source = ''  # source dataset if curves from different sets are combined
     yindex = -1
     dyindex = -1
     disabled = False
@@ -74,7 +75,7 @@ class Curve:
     @property
     def full_description(self):
         if self.source:
-            return "%s [%s]" % (self.description, self.source)
+            return '%s [%s]' % (self.description, self.source)
         return self.description
 
     def copy(self):
@@ -86,7 +87,7 @@ class Curve:
 
 def name_unit(name, unit):
     if unit:
-        return "%s (%s)" % (name, unit)
+        return '%s (%s)' % (name, unit)
     return name
 
 
@@ -94,7 +95,7 @@ def try_index(seq, index):
     try:
         return seq[index]
     except IndexError:
-        return 0.0
+        return 0.
 
 
 class DataHandler(QObject):
@@ -119,20 +120,19 @@ class DataHandler(QObject):
 
     def on_client_connected(self):
         # retrieve datasets and put them into the scans window
-        pd = QProgressDialog(labelText="Transferring datasets, please wait...")
+        pd = QProgressDialog(labelText='Transferring datasets, please wait...')
         pd.setRange(0, 1)
         pd.setCancelButton(None)
         pd.show()
         QApplication.processEvents()
-        datasets = self.client.ask("getdataset", "*", default=[])
+        datasets = self.client.ask('getdataset', '*', default=[])
         self.bulk_adding = True
-        for dataset in datasets or []:
+        for dataset in (datasets or []):
             try:
                 self.on_client_dataset(dataset)
             except Exception:
                 from nicos.clients.gui.main import log
-
-                log.error("Error adding dataset", exc=1)
+                log.error('Error adding dataset', exc=1)
         self.bulk_adding = False
         pd.setValue(1)
         pd.close()
@@ -145,17 +145,18 @@ class DataHandler(QObject):
         # add some custom attributes of the dataset
         dataset.invisible = False
         dataset.name = str(dataset.counter)
-        dataset.default_xname = name_unit(
-            dataset.xnames[dataset.xindex], dataset.xunits[dataset.xindex]
-        )
+        if not dataset.xnames or not dataset.xunits:
+            dataset.default_xname = ''
+        else:
+            dataset.default_xname = name_unit(dataset.xnames[dataset.xindex],
+                                              dataset.xunits[dataset.xindex])
         dataset.curves = self._init_curves(dataset)
         for xvalues, yvalues in zip(dataset.xresults, dataset.yresults):
             try:
                 self._update_curves(dataset, xvalues, yvalues)
             except Exception:
                 from nicos.clients.gui.main import log
-
-                log.error("Error adding datapoint", exc=1)
+                log.error('Error adding datapoint', exc=1)
         self.datasetAdded.emit(dataset)
 
     def add_existing_dataset(self, dataset, origins=()):
@@ -181,21 +182,13 @@ class DataHandler(QObject):
 
     def on_client_datacurve(self, data):
         if not self.currentset:
-            raise DataError("No current set, trying to add a curve")
+            raise DataError('No current set, trying to add a curve')
         if len(data) == 3:
             # for compatibility with older daemons
             title, dx, dy = data
-            res = FitResult(
-                _failed=False,
-                _message="",
-                _title=title,
-                curve_x=dx,
-                curve_y=dy,
-                chi2=0,
-                label_x=0,
-                label_y=0,
-                label_contents=[],
-            )
+            res = FitResult(_failed=False, _message='', _title=title,
+                            curve_x=dx, curve_y=dy, chi2=0,
+                            label_x=0, label_y=0, label_contents=[])
         else:
             res = data[0]
         self.fitAdded.emit(self.currentset, res)
@@ -210,52 +203,52 @@ class DataHandler(QObject):
         curves = []
         normindices = []
         dataset.datanorm = {}
-        xnameunits = ["point #"] + [
-            name_unit(name, unit) for name, unit in zip(dataset.xnames, dataset.xunits)
-        ]
+        xnameunits = ['point #'] + [name_unit(name, unit) for name, unit
+                                    in zip(dataset.xnames, dataset.xunits)]
         dataset.datax = {key: [] for key in xnameunits}
 
         for i, (name, info) in enumerate(zip(dataset.xnames, dataset.xvalueinfo)):
-            if info.type != "other":
+            if info.type != 'other':
                 continue
             curve = Curve()
             curve.datax = dataset.datax
             curve.datanorm = dataset.datanorm
-            curve.default_xname = name_unit(
-                dataset.xnames[dataset.xindex], dataset.xunits[dataset.xindex]
-            )
+            curve.default_xname = name_unit(dataset.xnames[dataset.xindex],
+                                            dataset.xunits[dataset.xindex])
             if info.unit:
-                curve.description = "%s (%s)" % (name, info.unit)
+                curve.description = '%s (%s)' % (name, info.unit)
             else:
                 curve.description = name
-            curve.yindex = -i - 1
+            curve.yindex = -i-1
             curve.dyindex = -1
             curve.hidden = True
             curves.append(curve)
 
         for i, (name, info) in enumerate(zip(dataset.ynames, dataset.yvalueinfo)):
-            if info.type in ("info", "error", "filename"):
+            if info.type in ('info', 'error', 'filename'):
                 continue
             curve = Curve()
             # share data for X and normalization
             curve.datax = dataset.datax
             curve.datanorm = dataset.datanorm
-            curve.default_xname = name_unit(
-                dataset.xnames[dataset.xindex], dataset.xunits[dataset.xindex]
-            )
-            if info.unit not in ("", "cts"):
-                curve.description = "%s (%s)" % (name, info.unit)
+            if not dataset.xnames or not dataset.xunits:
+                curve.default_xname = ''
+            else:
+                curve.default_xname = name_unit(dataset.xnames[dataset.xindex],
+                                                dataset.xunits[dataset.xindex])
+            if info.unit not in ('', 'cts'):
+                curve.description = '%s (%s)' % (name, info.unit)
             else:
                 curve.description = name
             curve.yindex = i
-            if info.type in ("time", "monitor"):
+            if info.type in ('time', 'monitor'):
                 normindices.append((i, name))
                 curve.disabled = True
-            elif info.type == "calc":
+            elif info.type == 'calc':
                 curve.function = True
-            if info.errors == "sqrt":
+            if info.errors == 'sqrt':
                 curve.dyindex = -2
-            elif info.errors == "next":
+            elif info.errors == 'next':
                 curve.dyindex = i + 1
             curves.append(curve)
         dataset.xnameunits = xnameunits
@@ -265,7 +258,7 @@ class DataHandler(QObject):
 
     def _update_curves(self, currentset, xvalues, yvalues):
         done = set()
-        currentset.datax["point #"].append(len(currentset.datax["point #"]) + 1)
+        currentset.datax['point #'].append(len(currentset.datax['point #']) + 1)
         for key, val in zip(currentset.xnameunits[1:], xvalues):
             # avoid adding values twice
             if key not in done:
@@ -275,7 +268,7 @@ class DataHandler(QObject):
             currentset.datanorm[name].append(try_index(yvalues, index))
         for curve in currentset.curves:
             if curve.yindex < 0:
-                curve.datay.append(try_index(xvalues, -curve.yindex - 1))
+                curve.datay.append(try_index(xvalues, -curve.yindex-1))
                 curve.datady.append(0)
             else:
                 curve.datay.append(try_index(yvalues, curve.yindex))

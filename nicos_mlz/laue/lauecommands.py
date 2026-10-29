@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,7 +24,6 @@
 """
 LAUE specific commands
 """
-
 import numpy as np
 
 from nicos import session
@@ -41,10 +40,10 @@ def calcEsmeraldaRots(xrot, yrot, zrot):
     """
 
     try:
-        laue = session.getDevice("kappagon")
+        laue = session.getDevice('kappagon')
         cpos = laue.read().With(phi=0)
-    except Exception:  # enables standalone testing
-        cpos = PositionFactory("k", phi=0, kappa=0, omega=0, theta=0)
+    except Exception:   # enables standalone testing
+        cpos = PositionFactory('k', phi=0, kappa=0, omega=0, theta=0)
     ma = cpos.asG().matrix
     # note: internal coordinate system is different from Esmeralda:
     #  X_E = Y_int

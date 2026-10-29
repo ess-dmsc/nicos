@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,30 +25,30 @@
 """NICOS core constants."""
 
 # session modes
-MASTER = "master"
-SLAVE = "slave"
-SIMULATION = "simulation"
-MAINTENANCE = "maintenance"
+MASTER = 'master'
+SLAVE = 'slave'
+SIMULATION = 'simulation'
+MAINTENANCE = 'maintenance'
 
 # session types
-MAIN = "main"
-POLLER = "poller"
+MAIN = 'main'
+POLLER = 'poller'
 
 # data qualities
-LIVE = "live"
-INTERMEDIATE = "intermediate"
-FINAL = "final"
-INTERRUPTED = "interrupted"
+LIVE = 'live'
+INTERMEDIATE = 'intermediate'
+FINAL = 'final'
+INTERRUPTED = 'interrupted'
 
 # data sink types
-UNKNOWN = "unknown"
-SCAN = "scan"
-SUBSCAN = "subscan"
-POINT = "point"
-BLOCK = "block"
+UNKNOWN = 'unknown'
+SCAN = 'scan'
+SUBSCAN = 'subscan'
+POINT = 'point'
+BLOCK = 'block'
 
 # data display
-NOT_AVAILABLE = "n/a"
+NOT_AVAILABLE = 'n/a'
 
 # live data
-FILE = "file"
+FILE = 'file'

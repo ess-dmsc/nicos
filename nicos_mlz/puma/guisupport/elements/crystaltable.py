@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,7 +28,7 @@ from nicos.guisupport.qt import QPointF
 
 
 class CrystalTable(Crystal):
-    """Class to display the multi detector crystal table including crystal."""
+    """Class to display the multidetector crystal table including crystal."""
 
     _halowidth = 6
 

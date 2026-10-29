@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -27,11 +27,11 @@ from nicos.devices.generic.slit import Slit
 
 
 class BeamLimiter(Slit):
-    """Normal 4 blade slit with option to use it as a beam stop.
+    """Normal 4 blade slit with option to use it as a beamstop.
 
-    The beam stop function is used by setting the openings to negative values,
+    The beamstop function is used by setting the openings to negative values,
     to achieve the maximum overlap of all 4 blades.
     """
 
     def _isAllowedSlitOpening(self, positions):
-        return True, ""
+        return True, ''

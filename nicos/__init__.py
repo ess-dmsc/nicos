@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -34,22 +34,18 @@ import numpy
 from nicos.configmod import config
 
 # Determine our version(s).
-import importlib.metadata  # isort:skip
+from nicos._vendor.gitversion import get_git_version, get_nicos_version  # isort:skip
+__version__ = nicos_version = get_nicos_version()
 
-try:
-    __version__ = nicos_version = importlib.metadata.version(__name__)
-except importlib.metadata.PackageNotFoundError:
-    from nicos._vendor.gitversion import get_git_version, get_nicos_version
-
-    __version__ = nicos_version = get_nicos_version()
-except Exception:
-    __version__ = nicos_version = "0.0.0"  # Fallback for development mode
+# Check for Python version 3.9+.
+if sys.version_info[:2] < (3, 9):
+    raise ImportError('NICOS requires Python 3.9 or higher')
 
 
 # Create the nicos session object here to allow the import of submodules.
 # The real class is set later.
 class Session:
-    log = getLogger("Nicos early logger")
+    log = getLogger('Nicos early logger')
 
 
 session = Session()
@@ -58,12 +54,12 @@ session = Session()
 def get_custom_version():
     try:
         return get_git_version(cwd=config.setup_package_path)
-    except (NameError, RuntimeError):
+    except RuntimeError:
         return None
 
 
 # Use legacy print behavior, two things are relevant here:
 # - keep space in front of positive numbers where the negative sign would be
 # - don't add the numpy type information, Numpy 2 default is "np.float64(0.0)"
-np_legacy_print_option = "1.13"
+np_legacy_print_option = '1.13'
 numpy.set_printoptions(legacy=np_legacy_print_option)

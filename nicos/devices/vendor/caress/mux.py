@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,14 +29,11 @@ from nicos.devices.vendor.caress.core import CARESSDevice
 
 
 class MUX(CARESSDevice, Device):
+
     parameters = {
-        "initsleep": Param(
-            "sleep time after initialize",
-            type=floatrange(0),
-            default=10,
-            settable=False,
-            userparam=False,
-        ),
+        'initsleep': Param('sleep time after initialize',
+                           type=floatrange(0), default=10, settable=False,
+                           userparam=False),
     }
 
     def doInit(self, mode):

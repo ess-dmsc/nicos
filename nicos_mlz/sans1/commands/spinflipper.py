@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -27,12 +27,10 @@ from nicos import session
 from nicos.commands import helparglist, hiddenusercommand
 from nicos.commands.scan import scan
 from nicos.core import UsageError
-from nicos.core.spm import Num, spmsyntax
 
 
 @hiddenusercommand
-@helparglist("counting_time, flipper_value")
-@spmsyntax(Num, Num)
+@helparglist('counting_time, flipper_value')
 def polcount(time, value=30):
     """
     Performs a count for preset time [s] with spin up and spin down.
@@ -41,7 +39,6 @@ def polcount(time, value=30):
         time = float(time)
         value = float(value)
     except ValueError:
-        raise UsageError(
-            "both counting time and flipper value " "should be numbers!"
-        ) from None
-    scan(session.getDevice("P_spinflipper"), [value, 0], time=time)
+        raise UsageError('both counting time and flipper value '
+                         'should be numbers!') from None
+    scan(session.getDevice('P_spinflipper'), [value, 0], time=time)

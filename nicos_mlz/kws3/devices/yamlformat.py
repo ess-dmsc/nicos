@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,15 +29,17 @@ from nicos_mlz.kws1.devices import yamlformat
 
 
 class YAMLFileSinkHandler(yamlformat.YAMLFileSinkHandler):
+
     def _set_detector_resolution(self, det1):
-        det_img = session.getDevice("det_img")
-        if det_img.alias == "det_img_vhrd":
-            det1["pixel_width"] = 0.2
-            det1["pixel_height"] = 0.2
+        det_img = session.getDevice('det_img')
+        if det_img.alias == 'det_img_vhrd':
+            det1['pixel_width'] = 0.2
+            det1['pixel_height'] = 0.2
         else:
-            det1["pixel_width"] = 0.5
-            det1["pixel_height"] = 0.5
+            det1['pixel_width'] = 0.5
+            det1['pixel_height'] = 0.5
 
 
 class YAMLFileSink(yamlformat.YAMLFileSink):
+
     handlerclass = YAMLFileSinkHandler

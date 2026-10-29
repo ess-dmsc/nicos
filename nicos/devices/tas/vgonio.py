@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,13 +24,10 @@
 """Virtual goniometers that sit along the orientation reflexes, at an angle
 to the real goniometers."""
 
-from numpy import arcsin, cos, pi, sin
+from numpy import arcsin, cos, degrees, radians, sin
 
 from nicos.core import Attach, Moveable, Param, oneof
 from nicos.devices.tas.cell import Cell
-
-D2R = pi / 180
-R2D = 180 / pi
 
 # The calculations here come from the equation
 #
@@ -56,43 +53,49 @@ class VirtualGonio(Moveable):
     """
 
     attached_devices = {
-        "gx": Attach("Real x axis gonio", Moveable),
-        "gy": Attach("Real y axis gonio", Moveable),
-        "cell": Attach("TAS sample cell object", Cell),
+        'gx': Attach('Real x-axis gonio', Moveable),
+        'gy': Attach('Real y-axis gonio', Moveable),
+        'cell': Attach('TAS sample cell object', Cell),
     }
 
     parameters = {
-        "axis": Param(
-            "Virtual axis for this gonio (along orient1 " "or orient2)",
-            type=oneof(1, 2),
-        ),
+        'axis': Param('Virtual axis for this gonio (along orient1 '
+                      'or orient2)', type=oneof(1, 2)),
     }
 
     def _transform(self, x1, y1, psi):
         """Transform angles (in radians) ax and ay by a Z rotation by psi."""
-        x2 = arcsin(cos(x1) * sin(y1) * sin(psi) + cos(psi) * sin(x1))
-        tmp = cos(x1) * sin(y1) * cos(psi) - sin(psi) * sin(x1)
+        x2 = arcsin(cos(x1)*sin(y1)*sin(psi) + cos(psi)*sin(x1))
+        tmp = cos(x1)*sin(y1)*cos(psi) - sin(psi)*sin(x1)
         return x2, arcsin(tmp / cos(x2))
 
+    @property
+    def gx(self):
+        return self._attached_gx
+
+    @property
+    def gy(self):
+        return self._attached_gy
+
     def _calcVirtual(self, maxage=0):
-        gx = self._attached_gx.read(maxage) * D2R
-        gy = self._attached_gy.read(maxage) * D2R
-        psi0 = self._attached_cell.psi0 * D2R
+        gx = radians(self.gx() if self.gx.target is None else self.gx.target)
+        gy = radians(self.gy() if self.gy.target is None else self.gy.target)
+        psi0 = radians(self._attached_cell.psi0)
         vx, vy = self._transform(gx, gy, psi0)
-        return vx * R2D, vy * R2D
+        return float(degrees(vx)), float(degrees(vy))
 
     def _calcReal(self, target):
-        target *= D2R
-        gx = self._attached_gx.target * D2R
-        gy = self._attached_gy.target * D2R
-        psi0 = self._attached_cell.psi0 * D2R
+        target = radians(target)
+        gx = radians(self.gx() if self.gx.target is None else self.gx.target)
+        gy = radians(self.gy() if self.gy.target is None else self.gy.target)
+        psi0 = radians(self._attached_cell.psi0)
         # get current virtual angles
         vx, vy = self._transform(gx, gy, psi0)
         # substitute the one we want to drive
         vx, vy = (target, vy) if self.axis == 1 else (vx, target)
         # transform back to real (note the -psi0)
         gx, gy = self._transform(vx, vy, -psi0)
-        return gx * R2D, gy * R2D
+        return float(degrees(gx)), float(degrees(gy))
 
     def _getWaiters(self):
         return [self._attached_gx, self._attached_gy]
@@ -106,12 +109,12 @@ class VirtualGonio(Moveable):
         ok, msg = self._attached_gx.isAllowed(gx)
         # pylint: disable=bad-string-format-type
         if not ok:
-            return False, "real X gonio cannot move to %.3f: %s" % (gx, msg)
+            return False, 'real X gonio cannot move to %.3f: %s' % (gx, msg)
         ok, msg = self._attached_gy.isAllowed(gy)
         if not ok:
-            return False, "real Y gonio cannot move to %.3f: %s" % (gy, msg)
+            return False, 'real Y gonio cannot move to %.3f: %s' % (gy, msg)
         # pylint: enable=bad-string-format-type
-        return True, ""
+        return True, ''
 
     def doStart(self, target):
         gx, gy = self._calcReal(target)

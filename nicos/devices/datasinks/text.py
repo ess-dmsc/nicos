@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -26,54 +26,53 @@ from gzip import GzipFile as StdGzipFile
 import numpy
 
 from nicos.core.data.sink import GzipFile
-from nicos.devices.datasinks.image import (
-    ImageFileReader,
-    ImageSink,
-    MultipleFileSinkHandler,
-)
+from nicos.devices.datasinks.image import ImageFileReader, ImageSink, \
+    MultipleFileSinkHandler
 from nicos.utils import File
 
 
 class NPImageSinkHandler(MultipleFileSinkHandler):
     """Numpy text format filesaver using `numpy.savetxt`"""
 
-    filetype = "txt"
+    filetype = 'txt'
 
     def writeData(self, fp, image):
-        numpy.savetxt(fp, numpy.asarray(image), fmt="%u")
+        numpy.savetxt(fp, numpy.asarray(image), fmt='%u')
 
 
 class NPFileSink(ImageSink):
+    """Numpy text format filesink using `numpy.savetxt`"""
     handlerclass = NPImageSinkHandler
 
 
 class NPImageFileReader(ImageFileReader):
-    filetypes = [("txt", "Numpy Text Format (*.txt)")]
+    filetypes = [('txt', 'Numpy Text Format (*.txt)')]
 
     @classmethod
     def fromfile(cls, filename):
         """Reads numpy array from .txt file."""
-        return numpy.loadtxt(File(filename, "r"))
+        return numpy.loadtxt(File(filename, 'r'))
 
 
 class NPGZImageSinkHandler(NPImageSinkHandler):
     """Compressed Numpy text format filesaver using `numpy.savetxt`"""
 
-    filetype = "npgz"
+    filetype = 'npgz'
     fileclass = GzipFile
 
     def writeData(self, fp, image):
-        numpy.savetxt(fp, numpy.asarray(image), fmt="%u")
+        numpy.savetxt(fp, numpy.asarray(image), fmt='%u')
 
 
 class NPGZFileSink(ImageSink):
+    """Compressed Numpy text format filesink using `numpy.savetxt`"""
     handlerclass = NPGZImageSinkHandler
 
 
 class NPGZImageFileReader(ImageFileReader):
-    filetypes = [("npgz", "Compressed Numpy Text Format (*.gz)")]
+    filetypes = [('npgz', 'Compressed Numpy Text Format (*.gz)')]
 
     @classmethod
     def fromfile(cls, filename):
         """Reads numpy array from .gz file."""
-        return numpy.loadtxt(StdGzipFile(filename, "r"))
+        return numpy.loadtxt(StdGzipFile(filename, 'r'))

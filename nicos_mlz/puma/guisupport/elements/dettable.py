@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -20,22 +20,16 @@
 #   Jens Krüger <jens.krueger@frm2.tum.de>
 #
 # *****************************************************************************
-"""Classes to display the PUMA multi detector devices."""
+"""Classes to display the PUMA multidetector devices."""
 
 from nicos.guisupport.elements import Detector
 from nicos.guisupport.elements.halo import Halo
-from nicos.guisupport.qt import (
-    QColor,
-    QGraphicsPathItem,
-    QPainterPath,
-    QPen,
-    QPointF,
-    QPolygonF,
-)
+from nicos.guisupport.qt import QColor, QGraphicsPathItem, QPainterPath, \
+    QPen, QPointF, QPolygonF
 
 
 class DetectorTable(Detector):
-    """Class to display the detector inside the multi detector housing."""
+    """Class to display the detector inside the multidetector housing."""
 
     _halowidth = 6
 
@@ -45,20 +39,18 @@ class DetectorTable(Detector):
 
 
 class DetectorGuide(QGraphicsPathItem):
+
     def __init__(self, parent=None, scene=None):
         QGraphicsPathItem.__init__(self, parent)
         self.setPath(self.shape())
         if not parent and scene:
             scene.addItem(self)
-        self.setPen(QPen(QColor("darkblue")))
+        self.setPen(QPen(QColor('darkblue')))
 
     def shape(self):
         path = QPainterPath()
         y0, y1, _l = 12, 2, 250
-        path.addPolygon(
-            QPolygonF(
-                [QPointF(0, -y0), QPointF(0, y0), QPointF(_l, y0), QPointF(_l, -y1)]
-            )
-        )
+        path.addPolygon(QPolygonF([QPointF(0, -y0), QPointF(0, y0),
+                                   QPointF(_l, y0), QPointF(_l, -y1)]))
         path.closeSubpath()
         return path

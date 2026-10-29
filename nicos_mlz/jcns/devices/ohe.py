@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,21 +32,17 @@ class HexapodSpecial(PyTangoMixin, Device):
     """Ohe Hexapod Device for Workspace Configuration."""
 
     parameters = {
-        "workspaces": Param(
-            "Hexapod workspaces list containing tuples of "
-            "(id, [xn, xp, yn, yp, zn, zp, rzn, rzp, ryn, ryp, "
-            "rxn, rxp, tx, ty, tz, rz, ry, rx])",
-            type=listof(tupleof(int, listof(float))),
-            mandatory=True,
-            settable=False,
-        )
+        'workspaces': Param('Hexapod workspaces list containing tuples of '
+                            '(id, [xn, xp, yn, yp, zn, zp, rzn, rzp, ryn, ryp, '
+                            'rxn, rxp, tx, ty, tz, rz, ry, rx])',
+                            type=listof(tupleof(int, listof(float))),
+                            mandatory=True, settable=False)
     }
 
     def doInit(self, mode):
         if any(idx < 10 or idx > 19 for idx, _ in self.workspaces):
-            raise ConfigurationError(
-                "Workspace ids muste be in 10..19 " "(Jülich workspace range)"
-            )
+            raise ConfigurationError('Workspace ids must be in 10..19 '
+                                     '(Jülich workspace range)')
         if mode != SIMULATION:
             workspaces = self._dev.workspaces  # Tango get workspaces
             for wsid, ws in self.workspaces:

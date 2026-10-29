@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -35,10 +35,9 @@ class ImageSink(FileSink):
     """Base class for sinks that save arrays to "image" files."""
 
     parameter_overrides = {
-        "subdir": Override(
-            description="Filetype specific subdirectory name " "for the image files"
-        ),
-        "settypes": Override(default=[POINT]),
+        'subdir': Override(description='Filetype specific subdirectory name '
+                           'for the image files'),
+        'settypes': Override(default=[POINT])
     }
 
     def isActiveForArray(self, arraydesc):
@@ -62,7 +61,7 @@ class SingleFileSinkHandler(DataSinkHandler):
     """
 
     # this is the filetype as transferred to live-view
-    filetype = "raw"
+    filetype = 'raw'
 
     # set this to True to create the datafile as latest as possible
     defer_file_creation = False
@@ -81,23 +80,20 @@ class SingleFileSinkHandler(DataSinkHandler):
     def _processArrayInfo(self, arrayinfo):
         # determine which index of the detector value is our data array
         # XXX support more than one array
-        arrayinfo = self.detector.arrayInfo()
-        if len(arrayinfo) > 1:
-            self.log.warning("image sink only supports one array per detector")
+        if len(arrayinfo) != 1:
+            self.log.warning('image sink only supports one array per detector')
         self._arraydesc = arrayinfo[0]
 
     def _createFile(self, **kwargs):
         if self._file is None:
             self.manager.assignCounter(self.dataset)
-            self._file = self.manager.createDataFile(
-                self.dataset,
-                self.sink.filenametemplate,
-                self.sink.subdir,
-                fileclass=self.fileclass,
-                filemode=self.sink.filemode,
-                logger=self.sink.log,
-                **kwargs,
-            )
+            self._file = self.manager.createDataFile(self.dataset,
+                                                     self.sink.filenametemplate,
+                                                     self.sink.subdir,
+                                                     fileclass=self.fileclass,
+                                                     filemode=self.sink.filemode,
+                                                     logger=self.sink.log,
+                                                     **kwargs)
         return self._file
 
     def prepare(self):
@@ -123,14 +119,14 @@ class SingleFileSinkHandler(DataSinkHandler):
             self.writeHeader(self._file, self.dataset.metainfo, image)
         self.writeData(self._file, image)
         syncFile(self._file)
-        session.notifyDataFile(
-            self.filetype, self.dataset.uid, self.detector.name, self._file.filepath
-        )
+        session.notifyDataFile(self.filetype, self.dataset.uid,
+                               self.detector.name, self._file.filepath)
 
     def putResults(self, quality, results):
         if quality == LIVE:
             return
-        if self.accept_final_images_only and quality not in (FINAL, INTERRUPTED):
+        if self.accept_final_images_only and \
+           quality not in (FINAL, INTERRUPTED):
             return
         if self.detector.name in results:
             result = results[self.detector.name]
@@ -162,7 +158,7 @@ class MultipleFileSinkHandler(SingleFileSinkHandler):
         self._files = []
 
     def _processArrayInfo(self, arrayinfo):
-        self._arrayinfo = self.detector.arrayInfo()
+        self._arrayinfo = arrayinfo
 
     def _putResult(self, quality, result):
         if result[1][0] is None:
@@ -174,19 +170,19 @@ class MultipleFileSinkHandler(SingleFileSinkHandler):
             self.writeHeader(fp, self.dataset.metainfo, image)
             self.writeData(fp, image)
             syncFile(fp)
-        session.notifyDataFile(
-            self.filetype,
-            self.dataset.uid,
-            self.detector.name,
-            [fp.filepath for fp in self._files],
-        )
+        session.notifyDataFile(self.filetype, self.dataset.uid,
+                               self.detector.name,
+                               [fp.filepath for fp in self._files])
 
     def _createFile(self, **kwargs):
         if self._file is None:
             kwds = dict(kwargs)
             for i in range(len(self._arrayinfo)):
-                kwds["additionalinfo"] = {"arraynumber": i + 1}
-                self._files.append(SingleFileSinkHandler._createFile(self, **kwds))
+                kwds['additionalinfo'] = {
+                    'arraynumber': i + 1
+                }
+                self._files.append(
+                    SingleFileSinkHandler._createFile(self, **kwds))
                 self._file = None
         if self._files:
             self._file = self._files[0]
@@ -232,4 +228,4 @@ class ImageFileReader(metaclass=ReaderMeta):
 
         Can raise an error in case the file is unreadable.
         """
-        raise NotImplementedError("implement classmethod fromfile")
+        raise NotImplementedError('implement classmethod fromfile')

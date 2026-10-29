@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,48 +28,19 @@ from os import path
 
 from nicos.core.status import BUSY
 from nicos.guisupport.led import ClickableOutputLed
-from nicos.guisupport.qt import (
-    QAbstractButton,
-    QAbstractSpinBox,
-    QCheckBox,
-    QComboBox,
-    QCursor,
-    QDateTime,
-    QDateTimeEdit,
-    QDoubleValidator,
-    QHBoxLayout,
-    QIntValidator,
-    QLabel,
-    QLCDNumber,
-    QLineEdit,
-    QPainter,
-    QPixmap,
-    QSlider,
-    QSpinBox,
-    QStackedWidget,
-    Qt,
-    QToolTip,
-    QWidget,
-    pyqtSignal,
-    pyqtSlot,
-)
+from nicos.guisupport.qt import QAbstractButton, QCheckBox, QComboBox, \
+    QCursor, QDoubleValidator, QHBoxLayout, QIntValidator, QLabel, \
+    QLCDNumber, QLineEdit, QLocale, QPainter, QPixmap, QSlider, QSpinBox, \
+    QStackedWidget, Qt, QToolTip, QWidget, pyqtSignal, pyqtSlot
 from nicos.guisupport.widget import NicosListener, NicosWidget
 
 widgetpath = path.dirname(__file__)
 
 
 class Led(ClickableOutputLed):
-    def __init__(
-        self,
-        dev,
-        active,
-        inactive,
-        client,
-        parent=None,
-        designMode=False,
-        colorActive="red",
-        colorInactive="green",
-    ):
+
+    def __init__(self, dev, active, inactive, client, parent=None,
+                 designMode=False, colorActive='red', colorInactive='green'):
         ClickableOutputLed.__init__(self, parent, designMode=designMode)
         self.dev = dev
 
@@ -94,11 +65,11 @@ class Led(ClickableOutputLed):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             if self.current == self._stateActive:
-                self._client.tell(
-                    "exec", "%s.move(%r)" % (self.dev, self._stateInactive)
-                )
+                self._client.tell('exec', '%s.move(%r)' %
+                                  (self.dev, self._stateInactive))
             else:
-                self._client.tell("exec", "%s.move(%r)" % (self.dev, self._stateActive))
+                self._client.tell('exec', '%s.move(%r)' %
+                                  (self.dev, self._stateActive))
 
             event.accept()
         else:
@@ -110,13 +81,8 @@ class CustomLED(ClickableOutputLed):
 
     valueChanged = pyqtSignal(int)
 
-    def __init__(
-        self,
-        container,
-        state_names=("in", "out"),
-        state_colors=("blue", "yellow"),
-        initState=None,
-    ):
+    def __init__(self, container, state_names=('in', 'out'),
+                 state_colors=('blue', 'yellow'), initState=None):
         ClickableOutputLed.__init__(self, parent=container)
         self.stateActive = state_names[0]
         self.stateInactive = state_names[1]
@@ -126,11 +92,8 @@ class CustomLED(ClickableOutputLed):
         self.set_ledcolor()
 
     def set_ledcolor(self):
-        self.ledColor = (
-            self._colorActive
-            if self.current == self._stateActive
-            else self._colorInactive
-        )
+        self.ledColor = self._colorActive \
+            if self.current == self._stateActive else self._colorInactive
 
     def setValue(self, val):
         self.current = val
@@ -142,15 +105,14 @@ class CustomLED(ClickableOutputLed):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.setValue(
-                self._stateInactive
-                if self.current == self._stateActive
-                else self._stateActive
-            )
+                self._stateInactive if self.current == self._stateActive
+                else self._stateActive)
             self.valueChanged[int].emit(self.current)
             event.accept()
 
 
 class PicButton(QAbstractButton):
+
     def __init__(self, pixmap1, pixmap2, parent=None):
         QAbstractButton.__init__(self, parent)
         self.pixmap1 = pixmap1.scaledToWidth(50)
@@ -161,9 +123,8 @@ class PicButton(QAbstractButton):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.drawPixmap(
-            event.rect(), self.pixmap1 if self.isChecked() else self.pixmap2
-        )
+        painter.drawPixmap(event.rect(),
+                           self.pixmap1 if self.isChecked() else self.pixmap2)
         event.accept()
 
     def sizeHint(self):
@@ -171,13 +132,14 @@ class PicButton(QAbstractButton):
 
 
 class CustomCombo(QComboBox):
+
     valueChanged = pyqtSignal(int)
 
     def __init__(self, container=None, box_data=None, init_state=None):
         QComboBox.__init__(self, parent=container)
         self.current = init_state
         for item in box_data:
-            self.addItem("%s" % item)
+            self.addItem('%s' % item)
         self.setCurrentIndex(self.current)
         self.currentIndexChanged[int].connect(self.index_changed)
 
@@ -195,7 +157,7 @@ class CustomCombo(QComboBox):
 
     def setValue(self, val):
         self.current = val
-        self.setCurrentIndex(self.findText("%s" % val))
+        self.setCurrentIndex(self.findText('%s' % val))
         self.setEnabled(True)
 
     def value(self):
@@ -203,17 +165,21 @@ class CustomCombo(QComboBox):
 
 
 class TimeEditWidget(QWidget):
-    units = ("s", "m", "h", "d")
+    units = ('s', 'm', 'h', 'd')
 
     returnPressed = pyqtSignal()
 
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
         self.setLayout(QHBoxLayout())
-        self.layout().setContentsMargins(0.1, 0.1, 0.1, 0.1)
+        self.layout().setContentsMargins(1, 1, 1, 1)
         self.layout().setSpacing(1)
         self.val = QLineEdit()
-        self.val.setValidator(QDoubleValidator(0, 1000000, 2))
+        validator = QDoubleValidator()
+        validator.setLocale(QLocale('C'))  # Needed for the '.' in input
+        validator.setBottom(0)
+        validator.setDecimals(2)
+        self.val.setValidator(validator)
         self.layout().addWidget(self.val)
         self.unit = QComboBox()
         self.unit.insertItems(0, self.units)
@@ -227,15 +193,16 @@ class TimeEditWidget(QWidget):
         val = float(self.val.text())
         current_unit_index = self.unit.currentIndex()
         if current_unit_index == 1:  # minutes
-            val *= 60.0
+            val *= 60.
         elif current_unit_index == 2:  # hours
-            val *= 3600.0
+            val *= 3600.
         elif current_unit_index == 3:  # days
-            val *= 86400.0
+            val *= 86400.
+        self.currentUnit = current_unit_index
         return int(val)
 
     def setValue(self, val):
-        fmt = "%%.%df" % self.val.validator().decimals()
+        fmt = '%%.%df' % self.val.validator().decimals()
         self.val.setText(fmt % float(val))
         self.unit.setCurrentIndex(0)
         self.currentUnit = 0
@@ -251,16 +218,16 @@ class TimeEditWidget(QWidget):
             start = unit_index_next
             end = unit_index_current
         val = float(self.val.text())
-        factor = 1.0
+        factor = 1.
         for i in range(start, end):
-            if self.units[i + 1] == "d":
-                factor *= 24.0
+            if self.units[i + 1] == 'd':
+                factor *= 24.
             else:
-                factor *= 60.0
+                factor *= 60.
         if unit_index_next - unit_index_current > 0:
-            factor = 1.0 / factor
+            factor = 1. / factor
         next_value = val * factor
-        self.val.setText("%s" % next_value)
+        self.val.setText('%s' % next_value)
         self.currentUnit = idx
 
     def on_returnPressed(self):
@@ -268,42 +235,35 @@ class TimeEditWidget(QWidget):
 
 
 class ValueData(QStackedWidget):
+
     valueChanged = pyqtSignal([int], [float])
 
     def __init__(self, parent=None, init_widget_info=None, initState=None):
         QStackedWidget.__init__(self, parent)
-        self.trueLive = TimeEditWidget(self)
-        self.trueLive.setValue(1.0)
+        self.timeWidget = TimeEditWidget(self)
+        self.timeWidget.setValue(1.0)
 
-        self.clockTime = QDateTimeEdit(QDateTime.currentDateTime(), self)
         self.counts = QSpinBox(self)
-
-        self.widget_types = {
-            "LiveTime": self.trueLive,
-            "TrueTime": self.trueLive,
-            "ClockTime": self.clockTime,
-            "counts": self.counts,
-        }
-
-        self.counts.setRange(0, 1000000000)
+        self.counts.setRange(0, 2**31 - 1)
         self.counts.setSingleStep(50000)
 
-        # config QDateTime:
-        self.clockTime.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.widget_types = {
+            'LiveTime': self.timeWidget,
+            'TrueTime': self.timeWidget,
+            'counts': self.counts,
+        }
 
         # add widgets to Stack
-        self.addWidget(self.trueLive)
-        self.addWidget(self.clockTime)
+        self.addWidget(self.timeWidget)
         self.addWidget(self.counts)
 
-        # Init given current widget with data (time.. etc)
+        # Init given current widget with data (time, etc.)
         self.setCurrentWidget(self.widget_types[init_widget_info])
 
         self.setValue(initState)
 
-        self.trueLive.returnPressed.connect(self.on_returnPressed)
-        self.clockTime.editingFinished.connect(self.on_dt_changed)
-        self.counts.valueChanged[str].connect(self.on_cts_changed)
+        self.timeWidget.returnPressed.connect(self.on_returnPressed)
+        self.counts.valueChanged[int].connect(self.on_cts_changed)
         self.setMinimumWidth(90)
 
     def setWidget(self, widget_desc):
@@ -320,11 +280,7 @@ class ValueData(QStackedWidget):
     def setValue(self, new_data):
         w = self.currentWidget()
         if isinstance(w, TimeEditWidget):
-            w.setValue(new_data)
-        elif isinstance(w, QDateTimeEdit):
-            dt = QDateTime()
-            dt.setMSecsSinceEpoch(float(new_data) * 1000)
-            w.setDateTime(dt)
+            w.setValue(float(new_data))
         elif isinstance(w, QSpinBox):
             w.setValue(int(new_data))
         self.current = new_data
@@ -336,18 +292,12 @@ class ValueData(QStackedWidget):
             w = self.currentWidget()
         if isinstance(w, TimeEditWidget):
             return float(w.value())
-        elif isinstance(w, QDateTimeEdit):
-            return float(w.dateTime().toMSecsSinceEpoch() / 1000.0)
-        elif isinstance(w, QSpinBox):
+        if isinstance(w, QSpinBox):
             return w.value()
 
     def on_returnPressed(self):
-        value = self.trueLive.value()
+        value = self.timeWidget.value()
         self.valueChanged[float].emit(value)
-
-    def on_dt_changed(self):
-        stamp = self.clockTime.dateTime().toMSecsSinceEpoch() / 1000.0
-        self.valueChanged[float].emit(stamp)
 
     def on_cts_changed(self):
         cts = self.counts.value()
@@ -355,9 +305,9 @@ class ValueData(QStackedWidget):
 
 
 class CellItem(QWidget):
-    standard_value = ""
+    standard_value = ''
 
-    cellChanged = pyqtSignal("QWidget")
+    cellChanged = pyqtSignal('QWidget')
 
     def __init__(self, controller, parent=None, state=None):
         QWidget.__init__(self, parent)
@@ -372,7 +322,7 @@ class CellItem(QWidget):
 
         # setting up layout:
         layout = QHBoxLayout()
-        layout.setContentsMargins(0.1, 0.1, 0.1, 0.1)
+        layout.setContentsMargins(1, 1, 1, 1)
         layout.setSpacing(1)
         self.setLayout(layout)
 
@@ -386,17 +336,17 @@ class CellItem(QWidget):
         pass
 
     def is_enabled(self):
-        return max(w.isEnabled() for w in self.widgets)
+        return max(w.isEnabled() for w in self.widgets) if self.widgets else False
 
     def set_layout(self):
         for w in self.widgets:
             self.layout().addWidget(w)
 
     def setValue(self, val):
-        self.label.setText("%s" % val)
+        raise NotImplementedError("A subclass has to implement 'setValue'")
 
     def value(self):
-        return self.label.text()
+        return
 
     def disable(self):
         for w in self.widgets:
@@ -411,20 +361,18 @@ class CellItem(QWidget):
 
 
 class AttCell(CellItem):
-    Attenuators = OrderedDict(
-        [
-            (1.6, ("in", "in", "in")),
-            (2.7, ("in", "out", "in")),
-            (3.5, ("out", "in", "in")),
-            (5.9, ("out", "out", "in")),
-            (7.5, ("in", "in", "out")),
-            (16.0, ("in", "out", "out")),
-            (47.0, ("out", "in", "out")),
-            (100.0, ("out", "out", "out")),
-        ]
-    )
+    Attenuators = OrderedDict([
+        (1.6, ('in', 'in', 'in')),
+        (2.7, ('in', 'out', 'in')),
+        (3.5, ('out', 'in', 'in')),
+        (5.9, ('out', 'out', 'in')),
+        (7.5, ('in', 'in', 'out')),
+        (16., ('in', 'out', 'out')),
+        (47., ('out', 'in', 'out')),
+        (100., ('out', 'out', 'out')),
+    ])
 
-    standard_value = 100.0
+    standard_value = 100.
 
     def __init__(self, controller, parent=None, state=None):
         # AttCell can have two different view options:
@@ -434,16 +382,13 @@ class AttCell(CellItem):
 
         self.state = float(self.state)
         self.cb = CustomCombo(
-            None,
-            box_data=list(AttCell.Attenuators.keys()),
-            init_state=list(AttCell.Attenuators).index(self.state),
-        )
+            None, box_data=list(AttCell.Attenuators.keys()),
+            init_state=list(AttCell.Attenuators).index(self.state))
         self.widgets.append(self.cb)
         self.cled = []
         for i in range(3):
-            self.cled.append(
-                CustomLED(None, initState=AttCell.Attenuators[self.state][i])
-            )
+            self.cled.append(CustomLED(
+                None, initState=AttCell.Attenuators[self.state][i]))
             self.widgets.append(self.cled[i])
             self.cled[i].hide()
             self.cled[i].valueChanged[int].connect(self.on_led_changed)
@@ -486,13 +431,13 @@ class AttCell(CellItem):
 
 
 class PosCell(CellItem):
+
     standard_value = 4
 
     def __init__(self, controller, parent=None, state=None):
         CellItem.__init__(self, controller, parent, state)
-        self.cb = CustomCombo(
-            self, box_data=range(1, 16 + 1), init_state=int(state) - 1
-        )
+        self.cb = CustomCombo(self, box_data=range(1, 16 + 1),
+                              init_state=int(state) - 1)
         self.widgets.append(self.cb)
         self.set_layout()
         self.setMaximumWidth(45)
@@ -511,17 +456,14 @@ class PosCell(CellItem):
 
 
 class BeamCell(CellItem):
-    standard_value = "open"
+    standard_value = 'open'
 
     def __init__(self, controller, parent=None, state=None):
         CellItem.__init__(self, controller, parent, state)
 
-        self.led = CustomLED(
-            self,
-            state_names=("open", "closed"),
-            state_colors=("red", "green"),
-            initState=self.state,
-        )
+        self.led = CustomLED(self, state_names=('open', 'closed'),
+                             state_colors=('red', 'green'),
+                             initState=self.state)
         self.widgets.append(self.led)
         self.set_layout()
         self.led.valueChanged[int].connect(self.on_led_changed)
@@ -539,9 +481,9 @@ class BeamCell(CellItem):
 
 class ValueCell(CellItem):
     standard_value = 1
-    units = ("s", "m", "h", "d")
+    units = ('s', 'm', 'h', 'd')
 
-    def __init__(self, controller, parent, state=None):
+    def __init__(self, controller, parent=None, state=None):
         CellItem.__init__(self, controller, parent, state)
         condition = CondCell.standard_value
         self.vd = ValueData(self, condition, self.state)
@@ -570,15 +512,16 @@ class ValueCell(CellItem):
 
 
 class CondCell(CellItem):
-    standard_value = "TrueTime"
-    conds = ("LiveTime", "TrueTime", "ClockTime", "counts")
+    standard_value = 'TrueTime'
+    conds = ('LiveTime', 'TrueTime', 'counts')
 
     condChanged = pyqtSignal(str)
 
     def __init__(self, controller, parent=None, state=None):
         CellItem.__init__(self, controller, parent, state)
         index = int(self.conds.index(self.state))
-        self.cc = CustomCombo(container=self, box_data=self.conds, init_state=index)
+        self.cc = CustomCombo(container=self, box_data=self.conds,
+                              init_state=index)
         self.cc.valueChanged[int].connect(self.on_cb_changed)
         self.widgets.append(self.cc)
         self.set_layout()
@@ -600,50 +543,39 @@ class CondCell(CellItem):
 
 
 class StatusCell(CellItem):
+
     def __init__(self, controller, parent=None, state=None):
         CellItem.__init__(self, controller, parent, state)
-        self.label = QLabel("%s" % self.state)
+        self.label = QLabel('%s' % self.state)
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.widgets.append(self.label)
         self.set_layout()
         self.setMinimumWidth(20)
 
+    def setValue(self, val):
+        self.label.setText('%s' % val)
+
+    def value(self):
+        return self.label.text()
+
 
 class StartCell(CellItem):
+
     standard_value = [int(time.time()), 0]
 
     def __init__(self, controller, parent=None, state=None):
         CellItem.__init__(self, controller, parent, state)
-        if not state:
+        if state is None:
             state = self.standard_value
-        # widgets = QStackedWidget(self)
-
-        self.date_widget = QDateTimeEdit(self)
-        self.date_widget.setButtonSymbols(QAbstractSpinBox.NoButtons)
-
-        # widgets.addWidget(self.date_widget)
-        # self.delay_widget = QLabel('after %s seconds' %self.state[1])
-        # widgets.addWidget(self.delay_widget)
-        self.widgets.append(self.date_widget)
-        # if self.state[0] > 0:
-        #     self.widgets[0].setCurrentWidget(self.date_widget)
-        # else:
-        #     self.widgets[0].setCurrentWidget(self.delay_widget)
-
-        self.date_widget.editingFinished.connect(self.on_dt_changed)
         self.set_layout()
         self.setValue(state)
 
     def setValue(self, val):
         self.state[0] = int(float(val[0]))
         self.state[1] = int(float(val[1]))
-        dt = QDateTime()
-        dt.setMSecsSinceEpoch(self.state[0] * 1000)
-        self.date_widget.setDateTime(dt)
 
     def value(self):
-        dt = int(self.date_widget.dateTime().toMSecsSinceEpoch() / 1000.0)
-        return "[%s,%s]" % (dt, self.state[1])
+        return '[%s,%s]' % (int(time.time()), self.state[1])
 
     # def mousePressEvent(self, e):
     #    if e.button() == Qt.MouseButton.RightButton:
@@ -657,11 +589,9 @@ class StartCell(CellItem):
     #    else:
     #        CellItem.mousePressEvent(self, e)
 
-    def on_dt_changed(self):
-        self.cellChanged.emit(self)
-
 
 class NameCommentCell(CellItem):
+
     def __init__(self, controller, parent=None, state=None):
         CellItem.__init__(self, controller, parent, state)
         self.le = QLineEdit(self.state)
@@ -694,12 +624,12 @@ class NameCommentCell(CellItem):
 
 
 class ElColCell(CellItem):
-    standard_value = "Col"
+    standard_value = 'Col'
 
     def __init__(self, controller, parent=None, state=None):
         CellItem.__init__(self, controller, parent, state)
-        pixmap1 = QPixmap(path.join(widgetpath, "focus.png"))
-        pixmap2 = QPixmap(path.join(widgetpath, "collimator.png"))
+        pixmap1 = QPixmap(path.join(widgetpath, 'focus.png'))
+        pixmap2 = QPixmap(path.join(widgetpath, 'collimator.png'))
         self.picbtn = PicButton(pixmap1, pixmap2, parent=self)
         self.widgets.append(self.picbtn)
         self.set_layout()
@@ -707,24 +637,24 @@ class ElColCell(CellItem):
         self.setValue(state)
 
     def setValue(self, val):
-        self.picbtn.setChecked(val == "Ell")
+        self.picbtn.setChecked(val == 'Ell')
         self.picbtn.update()
 
     def value(self):
-        return "Ell" if self.picbtn.isChecked() else "Col"
+        return 'Ell' if self.picbtn.isChecked() else 'Col'
 
     def on_clicked(self, val):
         self.cellChanged.emit(self)
 
 
 class DetectorCell(CellItem):
-    standard_value = ["_60p", "LEGe"]
+    standard_value = ['_60p', 'LEGe']
 
     def __init__(self, controller, parent=None, state=None):
         CellItem.__init__(self, controller, parent, state)
-        self.cb_60p = QCheckBox("60%", parent=self)
+        self.cb_60p = QCheckBox('60%', parent=self)
         self.widgets.append(self.cb_60p)
-        self.cb_leg = QCheckBox("LEGe", parent=self)
+        self.cb_leg = QCheckBox('LEGe', parent=self)
         self.widgets.append(self.cb_leg)
 
         self.set_layout()
@@ -735,15 +665,15 @@ class DetectorCell(CellItem):
         self.cb_60p.stateChanged.connect(self.on_statechanged)
 
     def setValue(self, val):
-        self.cb_60p.setChecked("_60p" in val)
-        self.cb_leg.setChecked("LEGe" in val)
+        self.cb_60p.setChecked('_60p' in val)
+        self.cb_leg.setChecked('LEGe' in val)
 
     def value(self):
         s = []
         if self.cb_60p.isChecked():
-            s.append("_60p")
+            s.append('_60p')
         if self.cb_leg.isChecked():
-            s.append("LEGe")
+            s.append('LEGe')
         return s
 
     def on_statechanged(self, state):
@@ -751,6 +681,7 @@ class DetectorCell(CellItem):
 
 
 class FileNum(NicosListener, QLineEdit):
+
     def __init__(self, client, parent=None):
         QLineEdit.__init__(self, parent)
         self.setReadOnly(True)
@@ -759,23 +690,25 @@ class FileNum(NicosListener, QLineEdit):
         self.setSource(self._client)
 
     def registerKeys(self):
-        self.registerKey("csvsink/filecount")
+        self.registerKey('csvsink/filecount')
 
     def on_keyChange(self, key, value, time, expired):
-        self.setText("%s" % value)
+        self.setText('%s' % value)
 
     def mouseDoubleClickEvent(self, e):
         self.setReadOnly(False)
 
     def keyPressEvent(self, e):
         if e.key() in [Qt.Key.Key_Return, Qt.Key.Key_Enter]:
-            self._client.tell("exec", "csvsink.filecount = %s" % int(self.text()))
+            self._client.tell('exec',
+                              'csvsink.filecount = %s' % int(self.text()))
             self.setReadOnly(True)
         else:
             QLineEdit.keyPressEvent(self, e)
 
 
 class VacuumView(NicosListener, QLineEdit):
+
     def __init__(self, client, parent=None):
         QLineEdit.__init__(self, parent)
         self.setReadOnly(True)
@@ -783,13 +716,14 @@ class VacuumView(NicosListener, QLineEdit):
         self.setSource(client)
 
     def registerKeys(self):
-        self.registerDevice("chamber_pressure")
+        self.registerDevice('chamber_pressure')
 
     def on_devValueChange(self, dev, value, strvalue, unitvalue, expired):
-        self.setText("%s" % unitvalue)
+        self.setText('%s' % unitvalue)
 
 
 class MotorValue(NicosWidget, QLCDNumber):
+
     def __init__(self, client, parent=None):
         QLCDNumber.__init__(self, parent)
         NicosWidget.__init__(self)
@@ -797,13 +731,14 @@ class MotorValue(NicosWidget, QLCDNumber):
         self.setClient(client)
 
     def registerKeys(self):
-        self.registerDevice("samplemotor")
+        self.registerDevice('samplemotor')
 
     def on_devValueChange(self, dev, value, strvalue, unitvalue, expired):
         self.display(round(float(strvalue)))
 
 
 class DevSlider(NicosWidget, QSlider):
+
     def __init__(self, client, dev, valmin, valmax, step=1, parent=None):
         QSlider.__init__(self, parent)
         self.setMinimum(valmin)
@@ -822,8 +757,8 @@ class DevSlider(NicosWidget, QSlider):
         QToolTip.showText(QCursor.pos(), str(pos), self)
 
     def on_slider_release(self):
-        pos = "%s" % self.sliderPosition()
-        self._client.tell("exec", "%s.move(%s)" % (self._dev, pos))
+        pos = '%s' % self.sliderPosition()
+        self._client.tell('exec', '%s.move(%s)' % (self._dev, pos))
 
     def registerKeys(self):
         self.registerDevice(self._dev)
@@ -836,9 +771,10 @@ class DevSlider(NicosWidget, QSlider):
 
 
 class PushSlider(DevSlider):
+
     strmap = {
-        "up": 1,
-        "down": 0,
+        'up': 1,
+        'down': 0,
     }
 
     def __init__(self, client, dev, parent=None):
@@ -847,10 +783,10 @@ class PushSlider(DevSlider):
 
     def on_slider_changed(self, pos):
         if pos == 0:
-            pos = "down"
+            pos = 'down'
         elif pos == 1:
-            pos = "up"
-        self._client.tell("exec", "%s.move(%r)" % (self._dev, pos))
+            pos = 'up'
+        self._client.tell('exec', '%s.move(%r)' % (self._dev, pos))
 
     # device value == 1 means 'down' 0 means 'up'. needs to be inverted here
     def on_devValueChange(self, dev, value, strvalue, unitvalue, expired):
@@ -862,16 +798,17 @@ class PushSlider(DevSlider):
 
 
 class ElCol(NicosWidget, QAbstractButton):
+
     def __init__(self, client, parent=None):
         QAbstractButton.__init__(self, parent)
         self.flag = False
-        self.pixmap = QPixmap(path.join(widgetpath, "focus.png"))
-        self.pixmap2 = QPixmap(path.join(widgetpath, "collimator.png"))
+        self.pixmap = QPixmap(path.join(widgetpath, 'focus.png'))
+        self.pixmap2 = QPixmap(path.join(widgetpath, 'collimator.png'))
 
         NicosWidget.__init__(self)
         self.setClient(client)
-        self.current = self._client.getDeviceValue("ellcol")
-        self.currmap = self.pixmap if self.current == "Ell" else self.pixmap2
+        self.current = self._client.getDeviceValue('ellcol')
+        self.currmap = self.pixmap if self.current == 'Ell' else self.pixmap2
         self.repaint()
         self.clicked.connect(self.on_clicked)
 
@@ -882,14 +819,14 @@ class ElCol(NicosWidget, QAbstractButton):
             painter.drawPixmap(event.rect(), self.currmap)
             self.rect = event.rect()
         else:
-            pixmap = self.pixmap if self.current == "Ell" else self.pixmap2
+            pixmap = self.pixmap if self.current == 'Ell' else self.pixmap2
             painter.drawPixmap(event.rect(), pixmap)
             self.rect = event.rect()
             self.currmap = pixmap
             self.flag = False
 
     def registerKeys(self):
-        self.registerDevice("ellcol")
+        self.registerDevice('ellcol')
 
     def on_devValueChange(self, dev, value, strvalue, unitvalue, expired):
         self.current = value
@@ -906,5 +843,5 @@ class ElCol(NicosWidget, QAbstractButton):
         pass
 
     def on_clicked(self):
-        data = "Ell" if self.current == "Col" else "Col"
-        self._client.tell("exec", "ellcol.move('%s')" % data)
+        data = 'Ell' if self.current == 'Col' else 'Col'
+        self._client.tell('exec', "ellcol.move('%s')" % data)

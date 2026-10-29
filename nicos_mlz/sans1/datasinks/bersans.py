@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,17 +32,14 @@ import numpy as np
 from nicos import session
 from nicos.core import Override
 from nicos.core.utils import DeviceValueDict
-from nicos.devices.datasinks.image import (
-    ImageFileReader,
-    ImageSink,
-    SingleFileSinkHandler,
-)
+from nicos.devices.datasinks.image import ImageFileReader, ImageSink, \
+    SingleFileSinkHandler
 from nicos.utils import toAscii
 
 # not a good solution: BerSANS keys are fixed, but devicenames
 # (and their existence) is instrument specific...
 #
-# Since this used only on SANS1 it will be used like this for the time beeing ...
+# Since this used only on SANS1 it will be used like this for the time being ...
 BERSANSHEADER = """
 %%File
 FileName=%(fileName)s
@@ -65,18 +62,18 @@ Command=%(Command)s
 SampleName=%(Sample.samplename)s
 Environment=%(Environment)s
 Position=%(SampleChanger)s
-Omega=%(st1_omg)s
-omega-2b=%(st1_omg)s
-Phi=%(st1_phi)s
-phi-2b=%(st1_phi)s
-Chi=%(st1_chi)s
-chi-2b=%(st1_chi)s
-BTableX=%(st1_x)s
-x-2b=%(st1_x)s
-BTableY=%(st1_y)s
-y-2b=%(st1_y)s
-BTableZ=%(st1_z)s
-z-2b=%(st1_z)s
+Omega=%(st_omg)s
+omega-2b=%(st_omg)s
+Phi=%(st_phi)s
+phi-2b=%(st_phi)s
+Chi=%(st_chi)s
+chi-2b=%(st_chi)s
+BTableX=%(st_x)s
+x-2b=%(st_x)s
+BTableY=%(st_y)s
+y-2b=%(st_y)s
+BTableZ=%(st_z)s
+z-2b=%(st_z)s
 TTableX=%(st2_x)s
 x-2a=%(st2_x)s
 TTableY=%(st2_y)s
@@ -183,7 +180,7 @@ det_z-1a=%(det1_z)s
 SD=%(SD)s
 SX=%(det1_x)s
 SY=0
-SR=%(det1_omega)s
+SR=%(det1_omg)s
 DetHAngle=0.000000
 Beamstop=%(bs1_shape)s
 BeamstopX=%(bs1_xax)s
@@ -259,21 +256,19 @@ tisane_fg_multi=%(tisane_fg_multi.strings)s
 
 
 class BerSANSImageSinkHandler(SingleFileSinkHandler):
-    filetype = "bersans"
+
+    filetype = 'bersans'
     defer_file_creation = True
 
     def writeHeader(self, fp, metainfo, image):
         shape = image.shape
 
         try:
-            SD = "%.4f" % (
-                (session.getDevice("det1_z").read() - session.getDevice("st1_x").read())
-                / 1000
-            )
+            SD = '%.4f' % ((session.getDevice('det1_z').read() -
+                           session.getDevice('st_x').read()) / 1000)
         except Exception:
-            self.log.warning(
-                "can't determine SD (detector distance), " "using 0 instead", exc=1
-            )
+            self.log.warning("can't determine SD (detector distance), "
+                             "using 0 instead", exc=1)
             SD = 0
 
         finished = currenttime()
@@ -283,115 +278,109 @@ class BerSANSImageSinkHandler(SingleFileSinkHandler):
         Moni2 = 0
         Time = 0
         try:
-            Moni1 = float(session.getDevice("det1_mon1").read()[0])
-            Moni2 = float(session.getDevice("det1_mon2").read()[0])
-            Time = float(session.getDevice("det1_timer").read()[0])
+            Moni1 = float(session.getDevice('det1_mon1').read()[0])
+            Moni2 = float(session.getDevice('det1_mon2').read()[0])
+            Time = float(session.getDevice('det1_timer').read()[0])
         except Exception:
-            self.log.warning(
-                "can't determine all monitors, " "using 0.0 instead", exc=1
-            )
+            self.log.warning("can't determine all monitors, "
+                             "using 0.0 instead", exc=1)
 
         try:
-            Histfile = metainfo["det1_image", "histogramfile"][1]
+            Histfile = metainfo['det1_image', 'histogramfile'][1]
         except Exception:
-            Histfile = ""
+            Histfile = ''
 
         try:
-            Listfile = metainfo["det1_image", "listmodefile"][1].split("'")[1]
+            Listfile = metainfo['det1_image', 'listmodefile'][1].split("'")[1]
         except Exception:
-            Listfile = ""
+            Listfile = ''
 
         try:
-            Setupfile = metainfo["det1_image", "configfile"][1]
+            Setupfile = metainfo['det1_image', 'configfile'][1]
         except Exception:
-            Setupfile = "setup"
+            Setupfile = 'setup'
 
         try:
-            LookUpTable = metainfo["det1_image", "calibrationfile"][1]
+            LookUpTable = metainfo['det1_image', 'calibrationfile'][1]
         except Exception:
-            LookUpTable = "lookup"
+            LookUpTable = 'lookup'
 
-        time_format = "%I:%M:%S %p"
-        date_format = "%m/%d/%Y"
+        time_format = '%I:%M:%S %p'
+        date_format = '%m/%d/%Y'
 
         metadata = DeviceValueDict(
-            fileName=os.path.basename(self._file.filepath),
-            fileDate=strftime(date_format, localtime(self.dataset.started)),
-            fileTime=strftime(time_format, localtime(self.dataset.started)),
-            FromDate=strftime(date_format, localtime(self.dataset.started)),
-            FromTime=strftime(time_format, localtime(self.dataset.started)),
-            ToDate=strftime(date_format, localtime(finished)),
-            ToTime=strftime(time_format, localtime(finished)),
-            DataSize=shape[0] * shape[1],
-            DataSizeX=shape[1],
-            DataSizeY=shape[0],
-            Environment="_".join(session.explicit_setups),
-            SD=SD,
-            Sum="%d" % Sum,
-            Moni1="%d" % Moni1,
-            Moni2="%d" % Moni2,
-            Sum_Time="%.6f" % (Sum / Time) if Time else "Inf",
-            Sum_Moni1="%.6f" % (Sum / Moni1) if Moni1 else "Inf",
-            Sum_Moni2="%.6f" % (Sum / Moni2) if Moni2 else "Inf",
-            Histfile=Histfile,
-            Listfile=Listfile,
-            Setupfile=Setupfile,
-            LookUpTable=LookUpTable,
-            Command=self.dataset.info,
+            fileName = os.path.basename(self._file.filepath),
+            fileDate = strftime(date_format, localtime(self.dataset.started)),
+            fileTime = strftime(time_format, localtime(self.dataset.started)),
+            FromDate = strftime(date_format, localtime(self.dataset.started)),
+            FromTime = strftime(time_format, localtime(self.dataset.started)),
+            ToDate = strftime(date_format, localtime(finished)),
+            ToTime = strftime(time_format, localtime(finished)),
+            DataSize = shape[0]*shape[1],
+            DataSizeX = shape[1],
+            DataSizeY = shape[0],
+            Environment = '_'.join(session.explicit_setups),
+            SD = SD,
+            Sum = '%d' % Sum,
+            Moni1 = '%d' % Moni1,
+            Moni2 = '%d' % Moni2,
+            Sum_Time = '%.6f' % (Sum / Time) if Time else 'Inf',
+            Sum_Moni1 = '%.6f' % (Sum / Moni1) if Moni1 else 'Inf',
+            Sum_Moni2 = '%.6f' % (Sum / Moni2) if Moni2 else 'Inf',
+            Histfile = Histfile,
+            Listfile = Listfile,
+            Setupfile = Setupfile,
+            LookUpTable = LookUpTable,
+            # XXX: clarify w/ instrument scientists
+            Command = self.dataset.combinedinfo,
         )
 
         nicosheader = []
 
         # no way to map nicos-categories to BerSANS sections :(
         # also ignore some keys :(
-        ignore = ("det1_lastlistfile", "det1_lasthistfile")
-        for (dev, param), (
-            value,
-            strvalue,
-            _unit,
-            _category,
-        ) in self.dataset.metainfo.items():
-            devname_key = "%s_%s" % (dev, param)
+        ignore = ('det1_lastlistfile', 'det1_lasthistfile')
+        for (dev, param), info in \
+                self.dataset.metainfo.items():
+            devname_key = '%s_%s' % (dev, param)
             if devname_key in ignore:
                 continue
-            metadata[devname_key] = value
-            nicosheader.append("%s=%s" % (devname_key, strvalue))
+            metadata[devname_key] = info.value
+            nicosheader.append('%s=%s' % (devname_key, info.strvalue))
 
-        nicosheader = "\n".join(sorted(map(toAscii, nicosheader))).encode()
-        self.log.debug("nicosheader starts with: %40s", nicosheader)
+        nicosheader = '\n'.join(sorted(map(toAscii, nicosheader))).encode()
+        self.log.debug('nicosheader starts with: %40s', nicosheader)
 
         # write Header
         header = BERSANSHEADER
-        if "tisane" in session.explicit_setups:
+        if 'tisane' in session.explicit_setups:
             header += TISANEHEADER
-        for line in header.split("\n"):
-            self.log.debug("testing header line: %r", line)
-            self.log.debug(line % metadata)
+        for line in header.split('\n'):
+            self.log.debug('testing header line: %r', line)
+            self.log.debug('%s', line % metadata)
             fp.write((line % metadata).encode())
-            fp.write(b"\n")
+            fp.write(b'\n')
 
         # also append nicos header
-        fp.write(nicosheader.replace(b"\\n", b"\n"))  # why needed?
-        fp.write(b"\n\n%Counts\n")
+        fp.write(nicosheader.replace(b'\\n', b'\n'))  # why needed?
+        fp.write(b'\n\n%Counts\n')
         fp.flush()
 
     def writeData(self, fp, image):
         # write Data (one line per y)
         for y in range(image.shape[0]):
             line = image[y]
-            line.tofile(fp, sep=",", format="%d")
-            fp.write(b"\n")
+            line.tofile(fp, sep=',', format='%d')
+            fp.write(b'\n')
         fp.flush()
 
 
 class BerSANSImageSink(ImageSink):
+
     parameter_overrides = {
-        "filenametemplate": Override(
-            mandatory=False,
-            settable=False,
-            userparam=False,
-            default=["D%(pointcounter)07d.001"],
-        ),
+        'filenametemplate': Override(mandatory=False, settable=False,
+                                     userparam=False,
+                                     default=['D%(pointcounter)07d.001']),
     }
 
     handlerclass = BerSANSImageSinkHandler
@@ -401,21 +390,22 @@ class BerSANSImageSink(ImageSink):
 
 
 class BerSANSImageFileReader(ImageFileReader):
+
     filetypes = [
-        ("bersans", "BerSANS File (*.001)"),
+        ('bersans', 'BerSANS File (*.001)'),
     ]
 
     @classmethod
     def fromfile(cls, filename):
         cts_found = False
         linenr = 0
-        data = np.zeros(shape=(128, 128), dtype="int16")
-        with open(filename, "r", encoding="utf-8") as f:
+        data = np.zeros(shape=(128, 128), dtype='int16')
+        with open(filename, 'r', encoding='utf-8') as f:
             for line in f:
-                if line.startswith("%Counts"):
+                if line.startswith('%Counts'):
                     cts_found = True
                     continue
                 elif cts_found:
-                    data[linenr] = [int(s) for s in re.findall(r"\d+", line)]
+                    data[linenr] = [int(s) for s in re.findall(r'\d+', line)]
                     linenr += 1
         return data

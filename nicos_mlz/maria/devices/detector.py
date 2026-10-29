@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,18 +29,15 @@ from nicos_mlz.jcns.devices.shutter import CLOSED, OPEN
 
 
 class MariaDetector(Detector):
+
     attached_devices = {
-        "shutter": Attach("Shutter to open before exposure", Moveable),
+        'shutter': Attach('Shutter to open before exposure', Moveable),
     }
 
     parameters = {
-        "ctrl_shutter": Param(
-            "Open shutter automatically before " "exposure?",
-            type=bool,
-            settable=True,
-            mandatory=False,
-            default=True,
-        ),
+        'ctrl_shutter': Param('Open shutter automatically before '
+                              'exposure?', type=bool, settable=True,
+                              mandatory=False, default=True),
     }
 
     def doStart(self):
@@ -52,12 +49,11 @@ class MariaDetector(Detector):
     def doFinish(self):
         Detector.doFinish(self)
         if self.ctrl_shutter and self._attached_shutter.read() == CLOSED:
-            raise InvalidValueError(
-                self, "shutter not open after exposure, " "check safety system"
-            )
+            raise InvalidValueError(self, 'shutter not open after exposure, '
+                                    'check safety system')
 
     def _getWaiters(self):
         adevs = dict(self._adevs)
         if not self.ctrl_shutter:
-            adevs.pop("shutter")
+            adevs.pop('shutter')
         return adevs

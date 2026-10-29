@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,18 +32,13 @@ class ReadOnlyPowerSupply(AnalogInput):
     """
 
     parameters = {
-        "voltage": Param(
-            "Actual voltage", unit="V", type=float, settable=False, volatile=True
-        ),
-        "current": Param(
-            "Actual current", unit="A", type=float, settable=False, volatile=True
-        ),
-        "setpoint": Param(
-            "Setpoint for value (voltage or current) on "
-            "initialization depending on mode",
-            type=float,
-            settable=False,
-        ),
+        'voltage': Param('Actual voltage', unit='V',
+                         type=float, settable=False, volatile=True),
+        'current': Param('Actual current', unit='A',
+                         type=float, settable=False, volatile=True),
+        'setpoint': Param('Setpoint for value (voltage or current) on '
+                          'initialization depending on mode',
+                          type=float, settable=False)
     }
 
     def doInit(self, mode):
@@ -58,5 +53,5 @@ class ReadOnlyPowerSupply(AnalogInput):
 
     def doPoll(self, n, maxage):
         if n % 5 == 0:
-            self._pollParam("voltage", 1)
-            self._pollParam("current", 1)
+            self._pollParam('voltage', 5)
+            self._pollParam('current', 5)

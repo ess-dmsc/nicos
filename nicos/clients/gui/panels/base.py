@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,30 +28,20 @@ from time import time as currenttime
 
 from nicos.clients.gui.config import panel
 from nicos.clients.gui.utils import DlgUtils, SettingGroup
-from nicos.guisupport.qt import (
-    QDialog,
-    QHBoxLayout,
-    QObject,
-    QPainter,
-    QPalette,
-    QStyle,
-    QStyleOption,
-    QWidget,
-    pyqtSignal,
-)
+from nicos.guisupport.qt import QDialog, QHBoxLayout, QObject, QPainter, \
+    QPalette, QStyle, QStyleOption, QWidget, pyqtSignal
 from nicos.utils import checkSetupSpec
 from nicos.utils.loggers import NicosLogger
 
 
 class SetupDepWindowMixin:
     def __init__(self, client):
-        if "session/mastersetup" not in client._reg_keys:
+        if 'session/mastersetup' not in client._reg_keys:
             return
-        values = client.ask(
-            "getcachekeys", "session/mastersetup", quiet=True, default=[]
-        )
+        values = client.ask('getcachekeys', 'session/mastersetup',
+                            quiet=True, default=[])
         for key, value in values:
-            if key == "session/mastersetup":
+            if key == 'session/mastersetup':
                 currtime = currenttime()
                 for widget in client._reg_keys[key]:
                     if widget():
@@ -61,19 +51,17 @@ class SetupDepWindowMixin:
 class PanelDialog(SetupDepWindowMixin, QDialog):
     def __init__(self, parent, client, panelcfg, title, **options):
         from nicos.clients.gui.panels.utils import createWindowItem
-
         QDialog.__init__(self, parent)
         self.panels = []
         self.mainwindow = parent.mainwindow
-        self.log = NicosLogger("PanelDialog")
+        self.log = NicosLogger('PanelDialog')
         self.log.parent = self.mainwindow.log
         self.client = client
         self.user_color = self.palette().color(QPalette.ColorRole.Base)
         self.user_font = self.font()
         if isinstance(panelcfg, type) and issubclass(panelcfg, Panel):
-            panelcfg = panel(
-                "%s.%s" % (panelcfg.__module__, panelcfg.__name__), **options
-            )
+            panelcfg = panel('%s.%s' % (panelcfg.__module__,
+                                        panelcfg.__name__), **options)
         elif isinstance(panelcfg, str):
             panelcfg = panel(panelcfg, **options)
         hbox = QHBoxLayout()
@@ -84,7 +72,7 @@ class PanelDialog(SetupDepWindowMixin, QDialog):
         self.setLayout(hbox)
         self.setWindowTitle(title)
         SetupDepWindowMixin.__init__(self, self.client)
-        self.setProperty("type", "PanelDialog")
+        self.setProperty('type', 'PanelDialog')
 
     def addPanel(self, panel, always=True):
         if always or panel not in self.panels:
@@ -95,34 +83,33 @@ class SetupDepPanelMixin(QObject):
     """Mixin to handle setup-dependent visibility.
 
     Note: You must explicitly add the following class attribute in all
-    classes using this mixin (A PyQt resctriction, see
+    classes using this mixin (A PyQt restriction, see
     https://riverbankcomputing.com/pipermail/pyqt/2013-September/033199.html):
 
     `setWidgetVisible = SetupDepPanelMixin.setWidgetVisible`
     """
-
     setupSpec = ()
-    setWidgetVisible = pyqtSignal(QWidget, bool, name="setWidgetVisible")
+    setWidgetVisible = pyqtSignal(QWidget, bool, name='setWidgetVisible')
 
     def __init__(self, client, options):  # pylint: disable=super-init-not-called
-        setups = options.get("setups", "")
+        setups = options.get('setups', '')
         self.setSetups(setups)
-        client.register(self, "session/mastersetup")
+        client.register(self, 'session/mastersetup')
 
     def setSetups(self, setupSpec):
         self.setupSpec = setupSpec
-        self.log.debug("setups are: %r", self.setupSpec)
-        checkSetupSpec(self.setupSpec, "", log=self.log)
+        self.log.debug('setups are: %r', self.setupSpec)
+        checkSetupSpec(self.setupSpec, '', log=self.log)
 
     def on_keyChange(self, key, value, time, expired):
-        if key == "session/mastersetup" and self.setupSpec:
-            if hasattr(self, "setWidgetVisible"):
+        if key == 'session/mastersetup' and self.setupSpec:
+            if hasattr(self, 'setWidgetVisible'):
                 enabled = checkSetupSpec(self.setupSpec, value, log=self.log)
                 self.setWidgetVisible.emit(self, enabled)
 
 
 class Panel(DlgUtils, QWidget, SetupDepPanelMixin):
-    panelName = ""
+    panelName = ''
 
     setWidgetVisible = SetupDepPanelMixin.setWidgetVisible
 
@@ -139,8 +126,8 @@ class Panel(DlgUtils, QWidget, SetupDepPanelMixin):
         self.sgroup = SettingGroup(self.panelName)
         with self.sgroup as settings:
             self.loadSettings(settings)
-        self.setProperty("type", "Panel")
-        self.setProperty("panel", self.__class__.__name__)
+        self.setProperty('type', 'Panel')
+        self.setProperty('panel', self.__class__.__name__)
 
     def closeWindow(self):
         """Try to close the window containing this panel.
@@ -149,9 +136,8 @@ class Panel(DlgUtils, QWidget, SetupDepPanelMixin):
         """
         from nicos.clients.gui.panels.auxwindows import AuxiliaryWindow
         from nicos.clients.gui.panels.tabwidget import DetachedWindow
-
         obj = self
-        while hasattr(obj, "parent"):
+        while hasattr(obj, 'parent'):
             obj = obj.parent()
             if isinstance(obj, (DetachedWindow, AuxiliaryWindow, PanelDialog)):
                 obj.close()
@@ -202,6 +188,5 @@ class Panel(DlgUtils, QWidget, SetupDepPanelMixin):
         opt = QStyleOption()
         opt.initFrom(self)
         painter = QPainter(self)
-        self.style().drawPrimitive(
-            QStyle.PrimitiveElement.PE_Widget, opt, painter, self
-        )
+        self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt,
+                                   painter, self)

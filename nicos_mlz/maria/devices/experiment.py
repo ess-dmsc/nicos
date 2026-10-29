@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -41,15 +41,15 @@ class Experiment(_Experiment):
             _Experiment.newSample(self, parameters)
             return
 
-        self.sampledir = safeName(parameters["name"])
+        self.sampledir = safeName(parameters['name'])
         _Experiment.newSample(self, parameters)
-        self.log.debug("changed samplepath to: %s" % self.samplepath)
+        self.log.debug('changed samplepath to: %s', self.samplepath)
         # expand/copy templates
-        if self.getProposalType(self.proposal) != "service" and self.templates:
+        if self.getProposalType(self.proposal) != 'service' and self.templates:
             params = dict(parameters) if parameters else {}
             params.update(self.propinfo)
             self.handleTemplates(self.proposal, params)
 
     @property
     def elogpath(self):
-        return path.join(self.proposalpath, "logbook")
+        return path.join(self.proposalpath, 'logbook')

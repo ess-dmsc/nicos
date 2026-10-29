@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -38,15 +38,14 @@ config.apply()
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         QMainWindow.__init__(self, parent)
-        uic.loadUi(
-            path.join(path.dirname(path.abspath(__file__)), "ui", "mainwindow.ui"), self
-        )
+        uic.loadUi(path.join(path.dirname(path.abspath(__file__)),
+                             'ui', 'mainwindow.ui'), self)
 
-        self.className = ""  # name of the devices class in auth tuple
-        self.group = ""  # name of the group defined in the setup file
-        self.description = ""  # name of the description in the setup file
-        self.authDict = {}  # dictionary containing info in auth tuple
-        self.users = {}  # dict to store users while working
+        self.className = ''     # name of the devices class in auth tuple
+        self.group = ''         # name of the group defined in the setup file
+        self.description = ''   # name of the description in the setup file
+        self.authDict = {}      # dictionary containing info in auth tuple
+        self.users = {}         # dict to store users while working
 
         self.actionLoad.triggered.connect(self.loadFile)
         self.actionSave.triggered.connect(self.save)
@@ -70,22 +69,19 @@ class MainWindow(QMainWindow):
 
         # Initialize a logger required by setups.readSetup()
         self.log = logging.getLogger()
-        self.setuppath = path.join(
-            path.abspath("."),
-            "nicos_mlz",
-            config.instrument,
-            "setups",
-            "special",
-            "daemon.py",
-        )
+        self.setuppath = path.join(path.abspath('.'), 'nicos_mlz',
+                                   config.instrument, 'setups', 'special',
+                                   'daemon.py')
         self.setup = None
         self.readSetupFile(self.setuppath)
 
     def loadFile(self):
         # allows a user to specify the setup file to be parsed
         setupFile = QFileDialog.getOpenFileName(
-            self, "Open Python script", path.expanduser("."), "Python Files (*.py)"
-        )[0]
+            self,
+            'Open Python script',
+            path.expanduser('.'),
+            'Python Files (*.py)')[0]
 
         if setupFile:
             self.readSetupFile(setupFile)
@@ -99,7 +95,8 @@ class MainWindow(QMainWindow):
         self.setup = DaemonSetup(str(pathToFile))
 
         for userTuple in self.setup.getPasswordEntries():
-            self.users[userTuple[0]] = User(userTuple[0], userTuple[1], userTuple[2])
+            self.users[userTuple[0]] = User(userTuple[0], userTuple[1],
+                                            userTuple[2])
 
         for key in self.users:
             self.userList.addItem(key)  # put users in gui (list widget)
@@ -125,9 +122,8 @@ class MainWindow(QMainWindow):
             self.userWidget.setVisible(False)
             self.infoWidget.setVisible(True)
             self.pushButtonDeleteUser.setEnabled(False)
-            self.comboBoxHashing.setCurrentIndex(
-                self.comboBoxHashing.findText(self.setup.getHashing())
-            )
+            self.comboBoxHashing.setCurrentIndex(self.comboBoxHashing.findText(
+                self.setup.getHashing()))
             return
 
         if not self.userWidget.isVisible():  # if previous selection was no user
@@ -139,18 +135,16 @@ class MainWindow(QMainWindow):
         self.lineEditUserName.setText(currentUser.userName)
         if currentUser.password:
             # to show 'there is a password, it's not empty'
-            self.lineEditPassword.setText("abcdefg")
+            self.lineEditPassword.setText('abcdefg')
         else:
             self.lineEditPassword.clear()
-        self.comboBoxUserLevel.setCurrentIndex(
-            self.comboBoxUserLevel.findText(currentUser.userLevel)
-        )
+        self.comboBoxUserLevel.setCurrentIndex(self.comboBoxUserLevel.findText(
+            currentUser.userLevel))
 
     def reloadConfig(self):
         self.pushButtonDeleteUser.setEnabled(False)
-        self.comboBoxHashing.setCurrentIndex(
-            self.comboBoxHashing.findText(self.setup.getHashing())
-        )
+        self.comboBoxHashing.setCurrentIndex(self.comboBoxHashing.findText(
+            self.setup.getHashing()))
 
     def deleteUser(self):
         user = str(self.userList.currentItem().text())
@@ -162,19 +156,17 @@ class MainWindow(QMainWindow):
         if dlg.exec():
             username = str(dlg.lineEditUserName.text())
             if dlg.lineEditPassword.text().isEmpty():
-                password = ""
+                password = ''
             else:
                 noHashPassword = str(dlg.lineEditPassword.text())
-                if config.instrument != "demo":
-                    if self.setup.getHashing() == "sha1":
+                if config.instrument != 'demo':
+                    if self.setup.getHashing() == 'sha1':
                         password = str(hashlib.sha1(noHashPassword).hexdigest())
                     else:  # elif self.getHashing() == 'md5':
                         password = str(hashlib.md5(noHashPassword).hexdigest())
                 else:
-                    password = "hashlib.%s(b%r).hexdigest()" % (
-                        self.setup.getHashing(),
-                        str(noHashPassword),
-                    )
+                    password = 'hashlib.%s(b%r).hexdigest()' % (
+                        self.setup.getHashing(), str(noHashPassword))
             userlevel = str(dlg.comboBoxUserLevel.currentText())
             newUser = User(username, password, userlevel)
             self.users[username] = newUser
@@ -182,16 +174,12 @@ class MainWindow(QMainWindow):
 
     def hashingMsgbox(self):
         msgBox = QMessageBox()
-        msgBox.setText(
-            "Changing the hashing requires you to enter all" "passwords again."
-        )
-        msgBox.setInformativeText(
-            "Do you still want to change the hashing?\n"
-            "WARNING: THIS WILL CLEAR ALL PASSWORDS."
-        )
-        msgBox.setStandardButtons(
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
-        )
+        msgBox.setText('Changing the hashing requires you to enter all'
+                       'passwords again.')
+        msgBox.setInformativeText('Do you still want to change the hashing?\n'
+                                  'WARNING: THIS WILL CLEAR ALL PASSWORDS.')
+        msgBox.setStandardButtons(QMessageBox.StandardButton.Ok |
+                                  QMessageBox.StandardButton.Cancel)
         msgBox.setDefaultButton(QMessageBox.StandardButton.Cancel)
         return msgBox.exec() == QMessageBox.StandardButton.Ok
 
@@ -206,8 +194,7 @@ class MainWindow(QMainWindow):
                 self.removeAllPasswords()
             else:
                 self.comboBoxHashing.setCurrentIndex(
-                    self.comboBoxHashing.findText(self.setup.getHashing())
-                )
+                    self.comboBoxHashing.findText(self.setup.getHashing()))
 
     def setUserData(self):
         # method called when clicking save button in user widget.
@@ -225,15 +212,16 @@ class MainWindow(QMainWindow):
         self.users[newUserName] = self.users.pop(oldUserName)
         self.users[newUserName].userName = newUserName
         if self.lineEditPassword.text().isEmpty():
-            password = ""
+            password = ''
         else:
             noHashPassword = str(self.lineEditPassword.text())
-            if self.setup.getHashing() == "sha1":
+            if self.setup.getHashing() == 'sha1':
                 password = str(hashlib.sha1(noHashPassword).hexdigest())
             else:  # elif self.setup.getHashing() == 'md5':
                 password = str(hashlib.md5(noHashPassword).hexdigest())
         self.users[newUserName].password = password
-        self.users[newUserName].userLevel = str(self.comboBoxUserLevel.currentText())
+        self.users[newUserName].userLevel = str(self.comboBoxUserLevel.
+                                                currentText())
 
         # update GUI
         self.userList.currentItem().setText(newUserName)
@@ -254,7 +242,7 @@ class MainWindow(QMainWindow):
         # called when hashing changes: It's necessary to enter all passwords
         # again, so they can be hashed in the new way.
         for _, value in self.users.items():
-            value.password = ""
+            value.password = ''
 
     def toggleDebug(self):
         if self.actionShowDebug.isChecked():
@@ -274,8 +262,10 @@ class MainWindow(QMainWindow):
     def saveAs(self):
         # open a file to save into, create empty output string
         filepath = QFileDialog.getSaveFileName(
-            self, "Save as...", path.expanduser("."), "Python script (*.py)"
-        )[0]
+            self,
+            'Save as...',
+            path.expanduser('.'),
+            'Python script (*.py)')[0]
         if str(filepath):
             self._save(filepath)
 

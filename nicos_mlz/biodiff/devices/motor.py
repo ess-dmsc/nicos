@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -38,40 +38,34 @@ class MicrostepMotor(BaseSequencer, NicosMotor):
     attached Moveable device.
     """
 
-    STATUS_TIME = 0.3  # waitForCompletion 300 ms
-    CODE_TIME = 0.05  # additional code execution time in polling routine
+    STATUS_TIME = .3  # waitForCompletion 300 ms
+    CODE_TIME = .05   # additional code execution time in polling routine
 
     attached_devices = {
-        "motor": Attach("Motor device which will be moved.", Moveable),
+        'motor': Attach('Motor device which will be moved.', Moveable),
     }
 
     parameters = {
-        "microstep": Param(
-            "Software/Pseudo micro step size",
-            type=float,
-            settable=True,
-            mandatory=False,
-            default=0.01,
-        ),
-        "maxtime": Param(
-            "Maximum time for one micro step in seconds",
-            type=float,
-            settable=True,
-            mandatory=False,
-            default=0.8,
-        ),
-        "maxspeed": Param("Maximum speed", type=float, settable=False, mandatory=False),
+        'microstep': Param('Software/Pseudo micro step size',
+                           type=float, settable=True, mandatory=False,
+                           default=0.01),
+        'maxtime': Param('Maximum time for one micro step in seconds',
+                         type=float, settable=True, mandatory=False,
+                         default=0.8),
+        'maxspeed': Param('Maximum speed',
+                          type=float, settable=False, mandatory=False),
     }
 
-    parameter_overrides = {"abslimits": Override(mandatory=False)}
+    parameter_overrides = {
+        'abslimits': Override(mandatory=False)
+    }
 
     def doInit(self, mode):
-        self._setROParam("maxspeed", self.microstep / self.maxmovetime)
+        self._setROParam('maxspeed', self.microstep / self.maxmovetime)
         self._delay = self.maxtime
         if self.speed < 1e-8:
-            self.log.warning(
-                "speed has not been set, setting maximum " "speed %.4f", self.maxspeed
-            )
+            self.log.warning('speed has not been set, setting maximum '
+                             'speed %.4f', self.maxspeed)
             self.speed = self.maxspeed
 
     @property
@@ -107,32 +101,28 @@ class MicrostepMotor(BaseSequencer, NicosMotor):
 
     def doWriteSpeed(self, value):
         delay = self.microstep / value
-        self.log.debug(
-            """
+        self.log.debug("""
    delay: %.4f
 maxspeed: %.4f
- maxtime: %.4f""",
-            delay,
-            self.maxspeed,
-            self.maxtime,
-        )
+ maxtime: %.4f""", delay, self.maxspeed, self.maxtime)
         if value < self.maxspeed or math.fabs(self.maxspeed - value) < 1e-5:
             self._delay = delay
         else:
-            raise LimitError(
-                self, "speed too high, maximum speed is %.4f" % self.maxspeed
-            )
+            raise LimitError(self, 'speed too high, maximum speed is %.4f'
+                             % self.maxspeed)
 
     def doWriteMaxtime(self, value):
-        self._setROParam("maxspeed", self.microstep / self._maxmovetime(value))
+        self._setROParam('maxspeed', self.microstep / self._maxmovetime(value))
         if self.speed > self.maxspeed:
-            self.log.warning("speed too high, setting speed to %.4f", self.maxspeed)
+            self.log.warning('speed too high, setting speed to %.4f',
+                             self.maxspeed)
             self.speed = self.maxspeed
 
     def doWriteMicrostep(self, value):
-        self._setROParam("maxspeed", value / self.maxmovetime)
+        self._setROParam('maxspeed', value / self.maxmovetime)
         if self.speed > self.maxspeed:
-            self.log.warning("speed too high, setting speed to %.4f", self.maxspeed)
+            self.log.warning('speed too high, setting speed to %.4f',
+                             self.maxspeed)
             self.speed = self.maxspeed
 
     def doRead(self, maxage=0):
@@ -143,13 +133,12 @@ maxspeed: %.4f
         s = self.microstep if (target - pos) >= 0 else -self.microstep
         n = int((target - pos) / s)
         # handle floating point overflows
-        # check whether or not one last microstep fits into movement to target.
-        if math.fabs((pos + (n + 1) * s) - target) < math.fabs(self.microstep / 10):
+        # check whether one last microstep fits into movement to target.
+        if (math.fabs((pos + (n + 1) * s) - target)
+           < math.fabs(self.microstep / 10)):
             n += 1
-        res = [
-            (SeqDev(self._attached_motor, pos + i * s), SeqSleep(self._delay))
-            for i in range(1, n)
-        ]
+        res = [(SeqDev(self._attached_motor, pos + i * s),
+                SeqSleep(self._delay)) for i in range(1, n)]
         res.append((SeqDev(self._attached_motor, target), SeqSleep(self._delay)))
         return res
 
@@ -157,7 +146,7 @@ maxspeed: %.4f
         t = time.time()
         BaseSequencer._sequence(self, sequence)
         t = time.time() - t
-        self.log.info("Movement finished, time elapsed %.4f.", t)
+        self.log.info('Movement finished, time elapsed %.4f.', t)
 
     def doStop(self):
         if not self._seq_is_running():
@@ -169,11 +158,12 @@ maxspeed: %.4f
 
 
 class S7InterlockMotor(TangoMotor):
-    def doStatus(self, maxage=None):
+
+    def doStatus(self, maxage=0):
         code, msg = TangoMotor.doStatus(self, maxage)
         if code == status.ERROR:
             statebits = self._dev.StateBits
             if statebits & (0x4 | 0x8):  # both limit switch bits set
                 code = status.OK
-                msg = "Interlocked, " + msg
+                msg = 'Interlocked, ' + msg
         return code, msg

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,11 +28,9 @@ from nicos.devices.datasinks.fits import FITSImageSink
 from nicos.devices.datasinks.image import ImageSink
 from nicos.devices.datasinks.livepng import PNGLiveFileSink
 from nicos.devices.datasinks.nexusfilereader import NexusFileReader
-from nicos.devices.datasinks.raw import (
-    RawImageSink,
-    SingleRawImageSink,
-    SingleTextImageSink,
-)
+from nicos.devices.datasinks.raw import RawImageSink, SingleRawImageSink, \
+    SingleTextImageSink
 from nicos.devices.datasinks.scan import AsciiScanfileSink, ConsoleScanSink
-from nicos.devices.datasinks.special import DaemonSink, LiveViewSink, SerializedSink
+from nicos.devices.datasinks.special import DaemonSink, LiveViewSink, \
+    SerializedSink
 from nicos.devices.datasinks.tiff import TIFFImageSink

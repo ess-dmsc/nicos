@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -40,7 +40,7 @@ def matvec(m, v):
 
 
 def vectorangle(v1, v2):
-    """Determining the angle between two 3D vectors (or arrays of vectors)."""
+    """Determine the angle between two 3D vectors (or arrays of vectors)."""
     c = np.dot(v1, v2) / np.linalg.norm(v1) / np.linalg.norm(v2)
     return np.arccos(np.clip(c, -1, 1))
 
@@ -54,45 +54,45 @@ def directionangle(v1, v2):
         return np.pi - d
 
 
-def Xrot(a, typecode="d"):
-    """Construct a rotation matrix rotating 'a' around the X axis"""
+def Xrot(a, typecode='d'):
+    """Construct a rotation matrix rotating 'a' around the X-axis"""
     sa = np.sin(a)
     ca = np.cos(a)
     return np.array([[1.0, 0, 0], [0, ca, sa], [0, -sa, ca]], typecode)
 
 
-def Yrot(a, typecode="d"):
-    """Construct a rotation matrix rotating 'a' around the Y axis"""
+def Yrot(a, typecode='d'):
+    """Construct a rotation matrix rotating 'a' around the Y-axis"""
     sa = np.sin(a)
     ca = np.cos(a)
     return np.array([[ca, 0, -sa], [0, 1.0, 0], [sa, 0, ca]], typecode)
 
 
-def Zrot(a, typecode="d"):
-    """Construct a rotation matrix rotating 'a' around the Z axis"""
+def Zrot(a, typecode='d'):
+    """Construct a rotation matrix rotating 'a' around the Z-axis"""
     sa = np.sin(a)
     ca = np.cos(a)
     return np.array([[ca, sa, 0], [-sa, ca, 0], [0, 0, 1.0]], typecode)
 
 
-def Vrot(v, a, typecode="d"):
+def Vrot(v, a, typecode='d'):
     """
-    Create a rotation matrix corresponding to the rotation around a general
-    axis by a specified angle.
+     Create a rotation matrix corresponding to the rotation around a general
+     axis by a specified angle.
 
-    R = dd^T + cos(a) (I - dd^T) + sin(a) skew(d)
+     R = dd^T + cos(a) (I - dd^T) + sin(a) skew(d)
 
-    Parameters:
+     Parameters:
 
-        angle : float a
-        direction : array d
-    """
+         angle : float a
+         direction : array d
+     """
     v /= np.linalg.norm(v)
     eye = np.eye(3, dtype=np.float64)
     ddt = np.outer(v, v)
-    skew = np.array(
-        [[0, v[2], -v[1]], [-v[2], 0, v[0]], [v[1], -v[0], 0]], dtype=np.float64
-    )
+    skew = np.array([[0, v[2], -v[1]],
+                     [-v[2], 0, v[0]],
+                     [v[1], -v[0], 0]], dtype=np.float64)
 
     mtx = ddt + np.cos(a) * (eye - ddt) + np.sin(a) * skew
     return mtx
@@ -138,9 +138,10 @@ def absdif(p0, p1):
         ang = np.pi
     else:
         ang = np.arccos(0.5 * trace - 0.5)
-    return np.sqrt((p0.theta - p1.theta) ** 2 + ang**2)
+    return np.sqrt((p0.theta - p1.theta) ** 2 + ang ** 2)
 
 
-def equal(p0, p1, crit=1.0e-4):
-    """Are the two positions identical?"""
+def equal(p0, p1, crit=1.e-4):
+    """Are the two positions identical?
+    """
     return absdif(p0, p1) < crit

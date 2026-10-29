@@ -1,12 +1,16 @@
-description = "Sample environment aliases for temperature control"
+description = 'Sample environment aliases for temperature control'
 
-group = "lowlevel"
+group = 'lowlevel'
 
 devices = dict(
-    T=device("nicos.devices.generic.DeviceAlias"),
-    Ts=device("nicos.devices.generic.DeviceAlias"),
+    T = device('nicos.devices.generic.DeviceAlias'),
+    Ts = device('nicos.devices.generic.DeviceAlias'),
 )
 
-startupcode = """
+extended = dict(
+    representative = 'T',
+)
+
+startupcode = '''
 AddEnvironment(Ts, T)
-"""
+'''

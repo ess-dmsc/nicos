@@ -1,8 +1,9 @@
-description = "Hightemperature setup for SPHERES"
+description = "High temperature setup for SPHERES"
 
-group = "basic"
+group = 'basic'
 
-includes = ["spheres", "cct6"]
+includes = ['spheres',
+            'cct6']
 
 startupcode = """
 cct6_c_temperature.samplestick = 'ht'\n

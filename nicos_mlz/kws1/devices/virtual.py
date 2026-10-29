@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -33,18 +33,18 @@ class Standin(HasPrecision, ManualMove):
     """
 
     parameter_overrides = {
-        "abslimits": Override(mandatory=False),
-        "unit": Override(mandatory=False),
+        'abslimits': Override(mandatory=False),
+        'unit':      Override(mandatory=False),
     }
 
     def doStatus(self, maxage=0):
-        return status.WARN, "virtual"
+        return status.WARN, 'virtual'
 
 
 class NonvirtualStandin(HasPrecision, ManualMove):
     parameter_overrides = {
-        "abslimits": Override(mandatory=False),
-        "unit": Override(mandatory=False),
+        'abslimits': Override(mandatory=False),
+        'unit':      Override(mandatory=False),
     }
 
 
@@ -55,4 +55,4 @@ class StandinSwitch(ManualSwitch):
         sc, _ = ManualSwitch.doStatus(self, maxage)
         if sc == status.OK:
             sc = status.WARN
-        return sc, "virtual"
+        return sc, 'virtual'

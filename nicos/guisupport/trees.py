@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,13 +21,15 @@
 #
 # *****************************************************************************
 
-"""Tree widget for displaying devices/params."""
+"""Tree widget for displaying devices/params.
+"""
 
 from nicos.guisupport.qt import QTreeWidget, QTreeWidgetItem
 from nicos.guisupport.widget import NicosWidget, PropDef
 
 
 class BaseDeviceParamTree(QTreeWidget):
+
     def __init__(self, parent, designMode=False, **kwds):
         QTreeWidget.__init__(self, parent, **kwds)
         self._showparams = True
@@ -56,8 +58,10 @@ class BaseDeviceParamTree(QTreeWidget):
         devname = item.text(0)
         if self._showparams:
             paraminfo = self.client.getDeviceParamInfo(devname)
-            for param, value in sorted(self.client.getDeviceParams(devname).items()):
-                if not self.param_predicate(param, value, paraminfo.get(param)):
+            for param, value in sorted(
+                    self.client.getDeviceParams(devname).items()):
+                if not self.param_predicate(param, value,
+                                            paraminfo.get(param)):
                     continue
                 subitem = QTreeWidgetItem([param])
                 if not self.item_callback(subitem, item):
@@ -67,23 +71,23 @@ class BaseDeviceParamTree(QTreeWidget):
     def _reinit(self):
         self.clear()
         for devname in self.client.getDeviceList(
-            only_explicit=self.only_explicit, special_clause=self.device_clause
-        ):
+                only_explicit=self.only_explicit,
+                special_clause=self.device_clause):
             item = QTreeWidgetItem([devname])
             # allow expanding interactively, even if we haven't populated
             # the parameter children yet
             item.setChildIndicatorPolicy(
-                QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator
-            )
+                QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
             if not self.item_callback(item):
                 continue
             self.addTopLevelItem(item)
 
 
 class DeviceParamTree(NicosWidget, BaseDeviceParamTree):
-    designer_description = "Displays devices and their parameters"
 
-    showparams = PropDef("showparams", bool, True, "Show parameters as subitems")
+    designer_description = 'Displays devices and their parameters'
+
+    showparams = PropDef('showparams', bool, True, 'Show parameters as subitems')
 
     def __init__(self, parent, designMode=False, **kwds):
         BaseDeviceParamTree.__init__(self, parent, **kwds)
@@ -94,6 +98,6 @@ class DeviceParamTree(NicosWidget, BaseDeviceParamTree):
         BaseDeviceParamTree.setClient(self, client)
 
     def propertyUpdated(self, pname, value):
-        if pname == "showparams":
+        if pname == 'showparams':
             self._showparams = value
         NicosWidget.propertyUpdated(self, pname, value)

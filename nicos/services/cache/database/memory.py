@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -74,9 +74,8 @@ class MemoryCacheDatabaseWithHistory(MemoryCacheDatabase):
     """
 
     parameters = {
-        "maxentries": Param(
-            "Maximum history length", type=intrange(0, 100), default=10, settable=False
-        ),
+        'maxentries': Param('Maximum history length',
+                            type=intrange(0, 100), default=10, settable=False),
     }
 
     def updateEntries(self, categories, subkey, no_store, entry):
@@ -107,5 +106,8 @@ class MemoryCacheDatabaseWithHistory(MemoryCacheDatabase):
                     inrange = True
                 elif not inrange and entry.value and entry.time < fromtime:
                     last_before = entry
+            # return at least the last value before empty range
+            if not inrange and last_before is not None:
+                yield last_before
         except Exception:
-            self.log.exception("error reading store for history query")
+            self.log.exception('error reading store for history query')

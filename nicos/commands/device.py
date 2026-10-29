@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -18,6 +18,7 @@
 #
 # Module authors:
 #   Georg Brandl <g.brandl@fz-juelich.de>
+#   Matt Clarke <matt.clarke@ess.eu>
 #
 # *****************************************************************************
 
@@ -29,81 +30,37 @@ import sys
 import time
 
 from nicos import __version__ as nicos_revision, nicos_version, session
-from nicos.commands import helparglist, hiddenusercommand, parallel_safe, usercommand
+from nicos.commands import helparglist, hiddenusercommand, parallel_safe, \
+    usercommand
 from nicos.commands.basic import sleep
-from nicos.core import (
-    INFO_CATEGORIES,
-    SIMULATION,
-    AccessError,
-    CanDisable,
-    Device,
-    DeviceMixinBase,
-    HasLimits,
-    HasOffset,
-    Measurable,
-    Moveable,
-    NicosTimeoutError,
-    Readable,
-    UsageError,
-    Waitable,
-    formatStatus,
-    multiWait,
-)
+from nicos.core import INFO_CATEGORIES, SIMULATION, AccessError, CanDisable, \
+    Device, DeviceAlias, DeviceMixinBase, HasLimits, HasOffset, Measurable, \
+    Moveable, NicosTimeoutError, Readable, UsageError, Waitable, formatStatus, \
+    multiWait
 from nicos.core.errors import NicosError
-from nicos.core.spm import AnyDev, Bare, Dev, DevParam, Multi, String, spmsyntax
 from nicos.core.status import BUSY, OK
 from nicos.devices.abstract import CanReference, MappedMoveable
-from nicos.utils import (
-    createThread,
-    number_types,
-    parseDateString,
-    printTable,
-    tupelize,
-)
+from nicos.protocols.daemon import BREAK_AFTER_STEP
+from nicos.utils import createThread, number_types, parseDateString, \
+    printTable, tupelize
 from nicos.utils.timer import Timer
 
 __all__ = [
-    "move",
-    "drive",
-    "maw",
-    "switch",
-    "wait",
-    "read",
-    "status",
-    "stop",
-    "reset",
-    "set",
-    "get",
-    "getall",
-    "setall",
-    "info",
-    "fix",
-    "release",
-    "unfix",
-    "adjust",
-    "version",
-    "history",
-    "home",
-    "limits",
-    "resetlimits",
-    "reference",
-    "ListParams",
-    "ListMethods",
-    "ListDevices",
-    "waitfor",
-    "enable",
-    "disable",
-    "rmove",
-    "rmaw",
+    'move', 'drive', 'maw', 'switch', 'wait', 'read', 'status', 'stop',
+    'reset', 'set', 'get', 'getall', 'setall', 'info', 'fix', 'release',
+    'unfix', 'adjust', 'version', 'history', 'limits', 'resetlimits',
+    'reference', 'ListParams', 'ListMethods', 'ListDevices', 'waitfor',
+    'waitfor_stable', 'enable', 'disable', 'rmove', 'rmaw',
 ]
 
 
 def _devposlist(dev_pos_list, cls):
     if not dev_pos_list:
-        raise UsageError("at least one device and position must be given")
+        raise UsageError('at least one device and position must be given')
     if len(dev_pos_list) % 2 != 0:
-        raise UsageError("a position must be given for every device")
-    return [(session.getDevice(dev, cls), pos) for (dev, pos) in tupelize(dev_pos_list)]
+        raise UsageError('a position must be given for every device')
+    return [(session.getDevice(dev, cls), pos) for (dev, pos) in
+            tupelize(dev_pos_list)]
 
 
 def _basemove(dev_pos_list, waithook=None, poshook=None):
@@ -128,13 +85,13 @@ def _basemove(dev_pos_list, waithook=None, poshook=None):
             errors.append((dev, sys.exc_info()))
 
     if errors:
-        for dev, exc_info in errors[:-1]:
+        for (dev, exc_info) in errors[:-1]:
             dev.log.error(exc_info=exc_info)
         raise errors[-1][1][1]
 
     devs = []
-    for dev, pos in movelist:
-        dev.log.info("moving to %s", dev.format(pos, unit=True))
+    for (dev, pos) in movelist:
+        dev.log.info('moving to %s', dev.format(pos, unit=True))
         dev._start_unchecked(pos)
         devs.append(dev)
     if waithook:
@@ -145,33 +102,39 @@ def _wait_hook(devs):
     """Default wait hook"""
     values = multiWait(devs)
     for dev in devs:
-        dev.log.info("at %20s %s", dev.format(values[dev]), dev.unit)
+        dev.log.info('at %20s %s', dev.format(values[dev]), dev.unit)
 
 
 def _rmove_poshook(dev, delta):
     """Pos hook for relative motions"""
     if dev.doStatus(0)[0] == BUSY:
-        raise UsageError("Device %r is busy" % dev)
+        raise UsageError('Device %r is busy' % dev)
     if isinstance(dev, MappedMoveable):
-        raise UsageError("Relative motion on mapped device %s is undefined" % dev)
+        raise UsageError('Relative motion on mapped device %s is undefined' %
+                         dev)
     curpos = dev.read(0)
     # if the target is reached (within precision), use it as the base for
     # the relative movement to avoid accumulating small errors
-    curpos = dev.target if dev.isAtTarget(curpos) else curpos
+    curpos = dev.target if dev.target is not None and dev.isAtTarget(curpos) else curpos
     if isinstance(curpos, str):
-        raise UsageError("Device %s cannot be used with relative movement" % dev)
+        raise UsageError('Device %s cannot be used with relative movement' %
+                         dev)
     try:
+        dev.valuetype(delta)
+    except (ValueError, TypeError) as e:
+        raise UsageError('Device %s: wrong delta type: %r (%s)' %
+                         (dev, delta, e)) from e
+    try:
+        if isinstance(delta, (list, tuple)):
+            return dev.valuetype(list(sum(x) for x in zip(curpos, delta)))
         return curpos + delta
-    except Exception:
-        raise UsageError(
-            "Device %s cannot be used with relative movement or "
-            "wrong delta type %r" % (dev, delta)
-        ) from None
+    except Exception as e:
+        raise UsageError('Device %s cannot be used with relative movement or '
+                         'wrong delta type %r (%s)' % (dev, delta, e)) from e
 
 
 @usercommand
-@helparglist("dev1, pos1, ...")
-@spmsyntax(Multi(Dev(Moveable), Bare))
+@helparglist('dev1, pos1, ...')
 @parallel_safe
 def move(*dev_pos_list):
     """Start moving one or more devices to a new position.
@@ -207,8 +170,7 @@ def move(*dev_pos_list):
 
 
 @usercommand
-@helparglist("dev, pos, ...")
-@spmsyntax(Multi(Dev(Moveable), Bare))
+@helparglist('dev, pos, ...')
 def rmove(*dev_pos_list):
     """Move one or more devices by a relative amount.
 
@@ -229,8 +191,7 @@ def rmove(*dev_pos_list):
 
 
 @hiddenusercommand
-@helparglist("dev, pos, ...")
-@spmsyntax(Multi(Dev(Moveable), Bare))
+@helparglist('dev, pos, ...')
 @parallel_safe
 def drive(*dev_pos_list):
     """Move one or more devices to a new position.  Same as `move()`."""
@@ -238,8 +199,7 @@ def drive(*dev_pos_list):
 
 
 @usercommand
-@helparglist("dev, pos, ...")
-@spmsyntax(Multi(Dev(Moveable), Bare))
+@helparglist('dev, pos, ...')
 def maw(*dev_pos_list):
     """Move one or more devices to a new position and wait for them.
 
@@ -270,8 +230,7 @@ def maw(*dev_pos_list):
 
 
 @usercommand
-@helparglist("dev, delta, ...")
-@spmsyntax(Multi(Dev(Moveable), Bare))
+@helparglist('dev, delta, ...')
 def rmaw(*dev_pos_list):
     """Move one or more devices by relative amounts and wait for them.
 
@@ -296,8 +255,7 @@ def rmaw(*dev_pos_list):
 
 
 @hiddenusercommand
-@helparglist("dev, pos, ...")
-@spmsyntax(Multi(Dev(Moveable), Bare))
+@helparglist('dev, pos, ...')
 def switch(*dev_pos_list):
     """Move one or more devices to a new position and wait until motion
     of all devices is completed.  Same as `maw()`."""
@@ -305,8 +263,7 @@ def switch(*dev_pos_list):
 
 
 @usercommand
-@helparglist("dev, ...")
-@spmsyntax(Multi(Dev(Waitable)))
+@helparglist('dev, ...')
 def wait(*devlist):
     """Wait until motion/action of one or more devices is complete.
 
@@ -345,29 +302,26 @@ def wait(*devlist):
         `wait()` and `sleep()` commands.
     """
     if not devlist:
-        devlist = [
-            session.devices[devname]
-            for devname in session.explicit_devices
-            if isinstance(session.devices[devname], Waitable)
-        ]
+        devlist = [session.devices[devname]
+                   for devname in session.explicit_devices
+                   if isinstance(session.devices[devname], Waitable)]
     for dev in devlist:
         if isinstance(dev, number_types):
             sleep(dev)
             continue
         dev = session.getDevice(dev, Waitable)
-        dev.log.info("waiting for device")
+        dev.log.info('waiting for device')
         try:
             value = dev.wait()
         except Exception:
-            dev.log.exception("error waiting for device")
+            dev.log.exception('error waiting for device')
             continue
         if value is not None:
-            dev.log.info("at %20s %s", dev.format(value), dev.unit)
+            dev.log.info('at %20s %s', dev.format(value), dev.unit)
 
 
 @usercommand
-@helparglist("dev, condition, [timeout]")
-@spmsyntax(Dev(Readable), Bare, Bare, Bare)
+@helparglist('dev, condition, [timeout]')
 def waitfor(dev, condition, timeout=86400):
     """Wait for a device until a condition is fulfilled.
 
@@ -411,39 +365,107 @@ def waitfor(dev, condition, timeout=86400):
        the value of the device.
     """
     dev = session.getDevice(dev, Readable)
-    full_condition = "_v %s" % condition
+    full_condition = '_v %s' % condition
 
     try:
         ast.parse(full_condition)
     except Exception:
-        raise UsageError("Could not parse condition %r" % condition) from None
+        raise UsageError('Could not parse condition %r' % condition) from None
 
     if session.mode == SIMULATION:
         return
+    cond_fulfilled = False
 
     def check(tmr):
-        session.breakpoint(2)  # allow break and continue here
-        waitfor.cond_fulfilled = eval(full_condition, {}, {"_v": dev.read(0)})
-        if waitfor.cond_fulfilled:
-            session.log.info("Waiting for '%s %s' finished.", dev, condition)
+        nonlocal cond_fulfilled
+
+        session.breakpoint(BREAK_AFTER_STEP)  # allow break and continue here
+        cond_fulfilled = eval(full_condition, {}, {'_v': dev.read(0)})
+        if cond_fulfilled:
+            session.log.info("Waiting for '%s %s' finished", dev, condition)
             tmr.stop()
 
-    waitfor.cond_fulfilled = False
+    session.beginActionScope('Waiting until %s %s' % (dev, condition))
     try:
-        session.beginActionScope("Waiting until %s %s" % (dev, condition))
         tmr = Timer(timeout if timeout else 86400)  # max wait time 1 day
         tmr.wait(dev._base_loop_delay * 3, check)
     finally:
-        if not waitfor.cond_fulfilled:
-            raise NicosTimeoutError(
-                dev, "Waiting for '%s %s' timed out." % (dev, condition)
-            )
+        if not cond_fulfilled:
+            raise NicosTimeoutError(dev, "Waiting for '%s %s' timed out" %
+                                    (dev, condition))
         session.endActionScope()
 
 
 @usercommand
-@helparglist("[dev, ...]")
-@spmsyntax(Multi(Dev(Readable)))
+@helparglist('device, target, accuracy, time_stable, [timeout]')
+def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
+    """Wait for the device to be within a certain range of the target value
+    for a defined continuous number of seconds.
+
+    If the device takes too long to stabilise then the action will timeout.
+
+    Example:
+
+    >>> waitfor_stable(dev1, 10, 1, 30, 600)
+
+    will wait until the device position is between 9 and 11 for a continuous
+    period of 30 seconds, but will exit after 10 minutes if
+    stability is not reached.
+
+    .. note::
+
+       The default timeout is an hour (3600 s).
+    """
+    if session.mode == SIMULATION:
+        session.clock.tick(time_stable)
+        return
+
+    dev = session.getDevice(device)
+    if time_stable >= timeout:
+        raise UsageError('The timeout has to be greater than the stable time')
+
+    in_range_tmr = Timer()
+    in_range_tmr.stop()  # Timer starts automatically
+    cond = f"'{dev} is stable at {target} (+/-{accuracy}) for {time_stable} s'"
+    cond_fulfilled = False
+
+    def check(tmr, target, accuracy, time_stable):
+        nonlocal cond_fulfilled
+
+        session.breakpoint(BREAK_AFTER_STEP)  # allow break and continue here
+
+        if abs(target - dev.read(0)) <= accuracy:
+            if not in_range_tmr.is_running():
+                in_range_tmr.start(time_stable)
+                session.log.info('%s is within range, waiting %s seconds for '
+                                 'it to stabilise', device, time_stable)
+        else:
+            if in_range_tmr.is_running():
+                session.log.info('%s is no longer in range', device)
+            in_range_tmr.stop()
+
+        cond_fulfilled = bool(
+            in_range_tmr.is_running() and
+            in_range_tmr.remaining_time() <= dev._base_loop_delay)
+
+        if cond_fulfilled:
+            session.log.info('Waiting for %s finished', cond)
+            in_range_tmr.stop()
+            tmr.stop()
+
+    session.beginActionScope(f'Waiting until {cond}')
+    try:
+        # max wait time 1 hour if not set
+        tmr = Timer(timeout if timeout else 3600)
+        tmr.wait(dev._base_loop_delay, check, (target, accuracy, time_stable))
+    finally:
+        if not cond_fulfilled:
+            raise NicosTimeoutError(dev, f'Waiting for {cond} timed out.')
+        session.endActionScope()
+
+
+@usercommand
+@helparglist('[dev, ...]')
 @parallel_safe
 def read(*devlist):
     """Read the position (or value) of one or more devices.
@@ -457,43 +479,35 @@ def read(*devlist):
     >>> read(T, B)    # read the T and B devices
     """
     if not devlist:
-        devlist = [
-            session.devices[devname]
-            for devname in session.explicit_devices
-            if isinstance(session.devices[devname], Readable)
-        ]
+        devlist = [session.devices[devname]
+                   for devname in session.explicit_devices
+                   if isinstance(session.devices[devname], Readable)]
         devlist.sort(key=lambda dev: dev.name.lower())
     for dev in devlist:
         try:
             dev = session.getDevice(dev, Readable)
         except UsageError as err:
-            err.args = (err.args[0] + ", try info(%s)" % dev,)
+            err.args = (err.args[0] + ', try info(%s)' % dev,)
             raise
         try:
             value = dev.read()
         except Exception:
-            dev.log.exception("error reading device")
+            dev.log.exception('error reading device')
             continue
         unit = dev.unit
         if isinstance(dev, Moveable):
             target = dev.target
             if target is not None and dev.format(target) != dev.format(value):
-                dev.log.info(
-                    "at %20s %-5s  (target: %20s %s)",
-                    dev.format(value),
-                    unit,
-                    dev.format(target),
-                    unit,
-                )
+                dev.log.info('at %20s %-5s  (target: %20s %s)',
+                             dev.format(value), unit, dev.format(target), unit)
             else:
-                dev.log.info("at %20s %-5s", dev.format(value), unit)
+                dev.log.info('at %20s %-5s', dev.format(value), unit)
         else:
-            dev.log.info("at %20s %-5s", dev.format(value), unit)
+            dev.log.info('at %20s %-5s', dev.format(value), unit)
 
 
 @usercommand
-@helparglist("[dev, ...]")
-@spmsyntax(Multi(Dev(Readable)))
+@helparglist('[dev, ...]')
 @parallel_safe
 def status(*devlist):
     """Read the status of one or more devices.
@@ -507,76 +521,132 @@ def status(*devlist):
     >>> status(T, B)    # status of the T and B devices
     """
     if not devlist:
-        devlist = [
-            session.devices[devname]
-            for devname in session.explicit_devices
-            if isinstance(session.devices[devname], Readable)
-        ]
+        devlist = [session.devices[devname]
+                   for devname in session.explicit_devices
+                   if isinstance(session.devices[devname], Readable)]
         devlist.sort(key=lambda dev: dev.name.lower())
     for dev in devlist:
         dev = session.getDevice(dev, Readable)
         try:
             status = dev.status()
         except Exception:
-            dev.log.exception("error reading status")
+            dev.log.exception('error reading status')
         else:
             if status[0] in (OK, BUSY):
-                dev.log.info("status is %s", formatStatus(status))
+                dev.log.info('status is %s', formatStatus(status))
             else:
-                dev.log.warning("status is %s", formatStatus(status))
+                dev.log.warning('status is %s', formatStatus(status))
 
 
 @usercommand
-@helparglist("[dev, ...]")
-@spmsyntax(Multi(Dev((Moveable, Measurable))))
+@helparglist('[dev, ...]')
 @parallel_safe
 def stop(*devlist):
-    """Stop one or more devices.
+    """Stop one or more or all moving devices.
 
     If no device is given, stop all stoppable devices in parallel.
+
+    .. attention::
+
+        Stopping device(s) via this function does **not** cancel any queued
+        commands or stop a running script.
+
+        The next queued command or line in a script will be immediately
+        executed and the stopped device(s) will be started again if the next
+        commands in the queue require this.
+
+        To stop both, all devices and empty the queue, use the the `/stop`
+        command or Ctrl+C on the NICOS console client or select the `Stop right
+        now` button in the script control menu of the GUI.
 
     Examples:
 
     >>> stop(phi)       # stop the phi device
     >>> stop(phi, psi)  # stop the phi and psi devices
     >>> stop()          # stop all devices
+
+    .. note::
+
+       A device can be configured to ignore the `stop()` call (stop all
+       devices) by setting the
+       `~nicos.core.device.Moveable.ignore_general_stop` device parameter to
+       ``True``.
+
+       However, if the device is stopped explicitly via `stop(dev)`, it will
+       still stop.
     """
-    stop_all = False
-    if not devlist:
-        stop_all = True
-        devlist = [
-            session.devices[devname]
-            for devname in session.explicit_devices
-            if isinstance(session.devices[devname], (Moveable, Measurable))
-        ]
-    finished = []
 
     def stopdev(dev):
         try:
             dev.stop()
-            if not stop_all:
-                dev.log.info("stopped")
+            if not stop_all or dev in stoplist:
+                dev.log.info('stopped')
         except AccessError:
             # do not warn about devices we cannot access if they were not
             # explicitly selected
             pass
         except Exception:
-            dev.log.warning("error while stopping", exc=1)
+            dev.log.warning('error while stopping', exc=1)
         finally:
             finished.append(dev)
 
+    stop_all = not devlist
+
+    if stop_all:
+        devlist = [session.devices[devname]
+                   for devname in session.explicit_devices
+                   if isinstance(session.devices[devname],
+                                 (Moveable, Measurable))]
+        stoplist = {dev for dev in devlist
+                    if session.cache.get_explicit(dev, 'status',
+                                                  (None,))[2][0] == BUSY}
+        skipset = {dev for dev in stoplist
+                   if isinstance(dev, Moveable) and dev.ignore_general_stop}
+        devlist = [dev for dev in stoplist if dev not in skipset]
+    else:
+        stoplist = ()
+        skipset = ()
+
+    finished = []
     for dev in devlist:
         dev = session.getDevice(dev)
-        createThread("device stopper %s" % dev, stopdev, (dev,))
+        createThread('device stopper %s' % dev, stopdev, (dev,))
     while len(finished) != len(devlist):
         session.delay(Device._base_loop_delay)
     if stop_all:
-        session.log.info("all devices stopped")
+        if skipset:
+            # TODO: it would be nice to let here a popup window appear
+            # in the GUI, where the skipped devices are shown and with
+            # buttons to stop the skipped devices individually
+            aliases = {}
+            for dev in list(skipset):
+                if isinstance(dev, DeviceAlias):
+                    aliases.setdefault(dev.alias, []).append(dev.name)
+                    skipset.discard(dev)
+
+            session.log.warning('all devices stopped, except:')
+            session.log.warning(' ')
+            stopargs = []
+            for dev in skipset:
+                if dev.name in aliases:
+                    name = f"{dev.name} ({', '.join(aliases[dev.name])})"
+                    stopargs.append(aliases[dev.name][0])
+                else:
+                    name = dev.name
+                    stopargs.append(name)
+                session.log.warning('%s is still moving from %s to %s %s',
+                                 name, dev.format(dev.read(0)),
+                                 dev.format(dev.target), dev.unit)
+            session.log.warning(' ')
+            session.log.warning('these devices are configured to ignore "stop all"')
+            session.log.warning('if you really want to stop them, '
+                             'you may use stop(%s)', ', '.join(stopargs))
+        else:
+            session.log.info('all devices stopped')
 
 
 @usercommand
-@helparglist("[dev, ...]")
-@spmsyntax(Multi(Dev(Measurable)))
+@helparglist('[dev, ...]')
 @parallel_safe
 def finish(*devlist):
     """Finish data acquisition for one or more detectors.
@@ -588,26 +658,22 @@ def finish(*devlist):
     >>> finish()
     """
     if not devlist:
-        devlist = [
-            session.devices[devname]
-            for devname in session.explicit_devices
-            if isinstance(session.devices[devname], Measurable)
-        ]
+        devlist = [session.devices[devname]
+                   for devname in session.explicit_devices
+                   if isinstance(session.devices[devname], Measurable)]
     for dev in devlist:
         dev.finish()
-        dev.log.info("finished")
+        dev.log.info('finished')
 
 
 @usercommand
-@helparglist("dev, ...")
-@spmsyntax(Multi(Dev(Readable)))
+@helparglist('dev, ...')
 @parallel_safe
 def reset(*devlist):
     """Reset the given device(s).
 
     This can restore communication with the device, re-set a positioning fault
-    or make a reference drive (only for devices where this cannot lead to
-    crashes, such as slits).
+    or try other forms of reinitialization without moving the device.
 
     Examples:
 
@@ -617,11 +683,10 @@ def reset(*devlist):
     for dev in devlist:
         dev = session.getDevice(dev, Readable)
         status = dev.reset()
-        dev.log.info("reset done, status is now %s", formatStatus(status))
+        dev.log.info('reset done, status is now %s', formatStatus(status))
 
 
 @usercommand
-@spmsyntax(AnyDev, DevParam, Bare)
 @parallel_safe
 def set(dev, parameter, value):  # pylint: disable=redefined-builtin
     """Set a parameter of the device to a new value.
@@ -636,19 +701,17 @@ def set(dev, parameter, value):  # pylint: disable=redefined-builtin
     try:
         paramconfig = dev._getParamConfig(parameter)
     except KeyError:
-        dev.log.error("device has no parameter %r", parameter)
+        dev.log.error('device has no parameter %r', parameter)
         return
     prevalue = getattr(dev, parameter)
     setattr(dev, parameter, value)
     # if yes, we already got a message
     if not paramconfig.chatty:
-        dev.log.info(
-            "%s set to %r (was %r)", parameter, getattr(dev, parameter), prevalue
-        )
+        dev.log.info('%s set to %r (was %r)',
+                     parameter, getattr(dev, parameter), prevalue)
 
 
 @usercommand
-@spmsyntax(AnyDev, DevParam)
 @parallel_safe
 def get(dev, parameter):
     """Print the value of a parameter of the device.
@@ -663,12 +726,11 @@ def get(dev, parameter):
     """
     dev = session.getDevice(dev)
     value = getattr(dev, parameter)
-    dev.log.info("parameter %s is %s", parameter, value)
+    dev.log.info('parameter %s is %s', parameter, value)
 
 
 @usercommand
-@helparglist("parameter, ...")
-@spmsyntax(Multi(String))
+@helparglist('parameter, ...')
 @parallel_safe
 def getall(*names):
     """List the given parameters for all existing devices that have them.
@@ -680,7 +742,8 @@ def getall(*names):
     lists the offset for all devices with an "offset" parameter.
     """
     items = []
-    for name, dev in sorted(session.devices.items(), key=lambda nd: nd[0].lower()):  # codespell:ignore
+    for name, dev in sorted(session.devices.items(),
+                            key=lambda nd: nd[0].lower()):
         pvalues = []
         for param in names:
             if param in dev.parameters:
@@ -689,11 +752,10 @@ def getall(*names):
                 pvalues.append(None)
         if any(v is not None for v in pvalues):
             items.append([name] + list(map(str, pvalues)))
-    printTable(("device",) + names, items, session.log.info)
+    printTable(('device',) + names, items, session.log.info)
 
 
 @usercommand
-@spmsyntax(String, Bare)
 @parallel_safe
 def setall(param, value):
     """Set the given parameter to the given value for all devices that have it.
@@ -711,14 +773,13 @@ def setall(param, value):
         try:
             setattr(dev, param, value)
         except Exception:
-            dev.log.error("could not set %s", param, exc=1)
+            dev.log.error('could not set %s', param, exc=1)
         else:
-            dev.log.info("%s set to %r (was %r)", param, value, prevalue)
+            dev.log.info('%s set to %r (was %r)', param, value, prevalue)
 
 
 @usercommand
-@helparglist("[dev, ...]")
-@spmsyntax(Multi(AnyDev))
+@helparglist('[dev, ...]')
 @parallel_safe
 def info(*devlist):
     """Print general information of the given device or all devices.
@@ -732,27 +793,27 @@ def info(*devlist):
     >>> info(Sample)     # show information relevant to the Sample object
     """
     if not devlist:
-        devlist = [session.devices[devname] for devname in session.explicit_devices]
+        devlist = [session.devices[devname]
+                   for devname in session.explicit_devices]
     bycategory = {}
     for dev in devlist:
-        for key, _value, strvalue, unit, category in dev.info():
-            bycategory.setdefault(category, []).append(
-                (str(dev), key + ":", strvalue + " " + unit)
-            )
+        for key, info in dev.info():
+            bycategory.setdefault(info.category, []).append(
+                (str(dev), key + ':', info.strvalue + ' ' + info.unit))
     for catname, catinfo in INFO_CATEGORIES:
         if catname not in bycategory:
             continue
         session.log.info(catinfo)
-        session.log.info("=" * len(catinfo))
-        printTable(None, sorted(bycategory[catname]), session.log.info, minlen=8)
+        session.log.info('=' * len(catinfo))
+        printTable(None, sorted(bycategory[catname]), session.log.info,
+                   minlen=8)
         session.log.info()
 
 
 @usercommand
-@helparglist("dev[, reason]")
-@spmsyntax(Dev(Moveable), reason=String)
+@helparglist('dev[, reason]')
 @parallel_safe
-def fix(dev, reason=""):
+def fix(dev, reason=''):
     """Fix a device, i.e. prevent movement until `release()` is called.
 
     You can give a reason that is displayed when movement is attempted.
@@ -761,15 +822,14 @@ def fix(dev, reason=""):
     >>> fix(phi, 'will drive into the wall')
     """
     if isinstance(reason, Device):
-        raise UsageError("only one device can be given to fix()")
+        raise UsageError('only one device can be given to fix()')
     dev = session.getDevice(dev, Moveable)
     if dev.fix(reason):
-        dev.log.info(reason and "now fixed: " + reason or "now fixed")
+        dev.log.info(reason and 'now fixed: ' + reason or 'now fixed')
 
 
 @usercommand
-@helparglist("dev, ...")
-@spmsyntax(Multi(Dev(Moveable)))
+@helparglist('dev, ...')
 @parallel_safe
 def release(*devlist):
     """Release one or more devices, i.e. undo the effect of `fix()`.
@@ -779,16 +839,15 @@ def release(*devlist):
     >>> release(phi)
     """
     if not devlist:
-        raise UsageError("at least one device argument is required")
+        raise UsageError('at least one device argument is required')
     for dev in devlist:
         dev = session.getDevice(dev, Moveable)
         if dev.release():
-            dev.log.info("released")
+            dev.log.info('released')
 
 
 @hiddenusercommand
-@helparglist("dev, ...")
-@spmsyntax(Multi(Dev(Moveable)))
+@helparglist('dev, ...')
 @parallel_safe
 def unfix(*devlist):
     """Same as `release()`."""
@@ -796,8 +855,7 @@ def unfix(*devlist):
 
 
 @usercommand
-@helparglist("dev, ...")
-@spmsyntax(Multi(Dev(CanDisable)))
+@helparglist('dev, ...')
 @parallel_safe
 def disable(*devlist):
     """Disable one or more devices.
@@ -812,12 +870,11 @@ def disable(*devlist):
     for dev in devlist:
         dev = session.getDevice(dev, CanDisable)
         dev.disable()
-        dev.log.info("now disabled")
+        dev.log.info('now disabled')
 
 
 @usercommand
-@helparglist("dev, ...")
-@spmsyntax(Multi(Dev(CanDisable)))
+@helparglist('dev, ...')
 @parallel_safe
 def enable(*devlist):
     """Enable one or more devices.
@@ -832,12 +889,11 @@ def enable(*devlist):
     for dev in devlist:
         dev = session.getDevice(dev, CanDisable)
         dev.enable()
-        dev.log.info("now enabled")
+        dev.log.info('now enabled')
 
 
 @usercommand
-@helparglist("dev, value[, newvalue]")
-@spmsyntax(Dev(HasOffset), Bare)
+@helparglist('dev, value[, newvalue]')
 @parallel_safe
 def adjust(dev, value, newvalue=None):
     """Adjust the offset of the device.
@@ -861,16 +917,12 @@ def adjust(dev, value, newvalue=None):
     if newvalue is None:
         value, newvalue = dev.read(0), value
     dev.doAdjust(value, newvalue)
-    dev.log.info(
-        "adjusted to %s, new offset is %.3f",
-        dev.format(newvalue, unit=True),
-        dev.offset,
-    )
+    dev.log.info('adjusted to %s, new offset is %.3f',
+                 dev.format(newvalue, unit=True), dev.offset)
 
 
 @usercommand
-@helparglist("dev, ...")
-@spmsyntax(Multi(AnyDev))
+@helparglist('dev, ...')
 @parallel_safe
 def version(*devlist):
     """List version info of the device(s).
@@ -881,17 +933,18 @@ def version(*devlist):
         for dev in devlist:
             dev = session.getDevice(dev, Device)
             versions = dev.version()
-            dev.log.info("relevant versions for this device:")
-            printTable(("module/component", "version"), versions, session.log.info)
+            dev.log.info('relevant versions for this device:')
+            printTable(('module/component', 'version'), versions,
+                       session.log.info)
     else:
-        session.log.info("NICOS version: %s (rev %s)", nicos_version, nicos_revision)
+        session.log.info('NICOS version: %s (rev %s)', nicos_version,
+                         nicos_revision)
 
 
 @usercommand
-@helparglist("dev[, key][, fromtime][, totime][, interval]")
-@spmsyntax(AnyDev, String)
+@helparglist('dev[, key][, fromtime][, totime][, interval]')
 @parallel_safe
-def history(dev, key="value", fromtime=None, totime=None, interval=None):
+def history(dev, key='value', fromtime=None, totime=None, interval=None):
     """Print history of a device parameter.
 
     The optional argument *key* selects a parameter of the device.  "value" is
@@ -935,8 +988,8 @@ def history(dev, key="value", fromtime=None, totime=None, interval=None):
     if isinstance(key, number_types):
         totime = fromtime
         fromtime = key
-        key = "value"
-    if key not in ("value", "status") and fromtime is None:
+        key = 'value'
+    if key not in ('value', 'status') and fromtime is None:
         fromtime = -24
     # Device.history() accepts number of hours only when negative (anything
     # > 10000 is taken to be a Unix timestamp)
@@ -945,18 +998,18 @@ def history(dev, key="value", fromtime=None, totime=None, interval=None):
     if isinstance(totime, number_types) and 0 < totime < 10000:
         totime = -totime
     # history() already accepts strings as fromtime and totime arguments
-    hist = session.getDevice(dev, Device).history(key, fromtime, totime, interval)
+    hist = session.getDevice(dev, Device).history(key, fromtime, totime,
+                                                  interval)
     entries = []
     ltime = time.localtime
     ftime = time.strftime
     for t, v in hist:
-        entries.append((ftime("%Y-%m-%d %H:%M:%S", ltime(t)), repr(v)))
-    printTable(("timestamp", "value"), entries, session.log.info)
+        entries.append((ftime('%Y-%m-%d %H:%M:%S', ltime(t)), repr(v)))
+    printTable(('timestamp', 'value'), entries, session.log.info)
 
 
 @usercommand
-@helparglist("[dev, ...]")
-@spmsyntax(Multi(Dev(HasLimits)))
+@helparglist('[dev, ...]')
 @parallel_safe
 def limits(*devlist):
     """Print the limits of the device(s), or all devices if none are given.
@@ -980,60 +1033,42 @@ def limits(*devlist):
     >>> resetlimits(phi)
     """
     if not devlist:
-        devlist = [
-            session.devices[dev]
-            for dev in session.explicit_devices
-            if isinstance(session.devices[dev], HasLimits)
-        ]
+        devlist = [session.devices[dev] for dev in session.explicit_devices
+                   if isinstance(session.devices[dev], HasLimits)]
     for dev in devlist:
         try:
             dev = session.getDevice(dev, HasLimits)
         except UsageError:
-            dev.log.warning("device has no limits")
+            dev.log.warning('device has no limits')
             continue
-        dev.log.info("limits for this device:")
+        dev.log.info('limits for this device:')
         if isinstance(dev, HasOffset):
             session.log.info(
-                "       absolute limits (physical): %8s --- %8s %s",
-                dev.format(dev.absmin),
-                dev.format(dev.absmax),
-                dev.unit,
-            )
+                '       absolute limits (physical): %8s --- %8s %s',
+                dev.format(dev.absmin), dev.format(dev.absmax),
+                dev.unit)
             session.log.info(
-                "   user limits (including offset): %8s --- %8s %s",
-                dev.format(dev.usermin),
-                dev.format(dev.usermax),
-                dev.unit,
-            )
+                '   user limits (including offset): %8s --- %8s %s',
+                dev.format(dev.usermin), dev.format(dev.usermax),
+                dev.unit)
             session.log.info(
-                "                current offset: %8s %s",
-                dev.format(dev.offset),
-                dev.unit,
-            )
+                '                current offset: %8s %s',
+                dev.format(dev.offset), dev.unit)
             session.log.info(
-                "        => user limits (physical): %8s --- %8s %s",
+                '        => user limits (physical): %8s --- %8s %s',
                 dev.format(dev.usermin + dev.offset),
-                dev.format(dev.usermax + dev.offset),
-                dev.unit,
-            )
+                dev.format(dev.usermax + dev.offset), dev.unit)
         else:
-            session.log.info(
-                "   absolute limits: %8s --- %8s %s",
-                dev.format(dev.absmin),
-                dev.format(dev.absmax),
-                dev.unit,
-            )
-            session.log.info(
-                "       user limits: %8s --- %8s %s",
-                dev.format(dev.usermin),
-                dev.format(dev.usermax),
-                dev.unit,
-            )
+            session.log.info('   absolute limits: %8s --- %8s %s',
+                             dev.format(dev.absmin), dev.format(dev.absmax),
+                             dev.unit)
+            session.log.info('       user limits: %8s --- %8s %s',
+                             dev.format(dev.usermin), dev.format(dev.usermax),
+                             dev.unit)
 
 
 @usercommand
-@helparglist("dev, ...")
-@spmsyntax(Multi(Dev(HasLimits)))
+@helparglist('dev, ...')
 @parallel_safe
 def resetlimits(*devlist):
     """Reset the user limits for the device(s) to the allowed maximum range.
@@ -1049,16 +1084,14 @@ def resetlimits(*devlist):
     given in terms of the "physical" value.
     """
     if not devlist:
-        devlist = [
-            session.devices[devname]
-            for devname in session.explicit_devices
-            if isinstance(session.devices[devname], HasLimits)
-        ]
+        devlist = [session.devices[devname]
+                   for devname in session.explicit_devices
+                   if isinstance(session.devices[devname], HasLimits)]
     for dev in devlist:
         try:
             dev = session.getDevice(dev, HasLimits)
         except UsageError:
-            dev.log.warning("device has no limits")
+            dev.log.warning('device has no limits')
             continue
         alim = dev.abslimits
         if isinstance(dev, HasOffset):
@@ -1067,25 +1100,20 @@ def resetlimits(*devlist):
             newlim = alim
         if dev.userlimits != newlim:
             dev.userlimits = newlim
-            dev.log.info(
-                "limits reset to absolute limits, new range: " "%8s --- %8s %s",
-                dev.format(dev.userlimits[0]),
-                dev.format(dev.userlimits[1]),
-                dev.unit,
-            )
+            dev.log.info('limits reset to absolute limits, new range: '
+                         '%8s --- %8s %s',
+                         dev.format(dev.userlimits[0]),
+                         dev.format(dev.userlimits[1]), dev.unit)
         else:
-            dev.log.info(
-                "limits kept at: " "%8s --- %8s %s",
-                dev.format(dev.userlimits[0]),
-                dev.format(dev.userlimits[1]),
-                dev.unit,
-            )
+            dev.log.info('limits kept at: '
+                         '%8s --- %8s %s',
+                         dev.format(dev.userlimits[0]),
+                         dev.format(dev.userlimits[1]), dev.unit)
 
 
 @usercommand
-@spmsyntax(Dev(CanReference))
-def reference(dev, *args):
-    """Do a reference drive (homing) of the device, if possible.
+def reference(dev):
+    """Do a reference drive of the device, if possible.
 
     How the reference drive is done depends on the device settings.
     Example:
@@ -1095,23 +1123,14 @@ def reference(dev, *args):
     try:
         dev = session.getDevice(dev, CanReference)
     except UsageError:
-        session.log.error("%s has no homing function", dev)
+        session.log.error('%s has no reference function', dev)
         return
-    newpos = dev.reference(*args)
-    dev.log.info("homing complete, position is now %s", dev.format(newpos, unit=True))
+    newpos = dev.reference()
+    dev.log.info('reference drive complete, position is now %s',
+                 dev.format(newpos, unit=True))
 
 
 @usercommand
-@spmsyntax(Dev(CanReference))
-def home(dev, *args):
-    """Home the device if possible. This is equal to performing a reference drive of
-    the device.
-    """
-    reference(dev, *args)
-
-
-@usercommand
-@spmsyntax(AnyDev)
 @parallel_safe
 def ListParams(dev):
     """List all parameters of the device.
@@ -1121,50 +1140,39 @@ def ListParams(dev):
     >>> ListParams(phi)
     """
     dev = session.getDevice(dev, Device)
-    dev.log.info("Device parameters:")
+    dev.log.info('Device parameters:')
     items = []
-    aliasdev = getattr(dev, "alias", None)
+    aliasdev = getattr(dev, 'alias', None)
     if aliasdev is not None:
         aliasdev = session.getDevice(aliasdev, Device)
-        items.append(
-            (
-                dev.name + ".alias",
-                "-> " + aliasdev.name,
-                "",
-                "yes",
-                "string",
-                "Aliased device, parameters of that device follow",
-            )
-        )
+        items.append((dev.name + '.alias',
+                      '-> ' + aliasdev.name, '', 'yes', 'string',
+                      'Aliased device, parameters of that device follow'))
         dev = aliasdev
-    devunit = getattr(dev, "unit", "")
+    devunit = getattr(dev, 'unit', '')
     for name, info in sorted(dev.parameters.items()):
         if not info.userparam:
             continue
         try:
             value = getattr(dev, name)
         except Exception:
-            value = "<could not get value>"
-        unit = (info.unit or "").replace("main", devunit)
+            value = '<could not get value>'
+        unit = (info.unit or '').replace('main', devunit)
         vstr = repr(value)
         if len(vstr) > 40:
-            vstr = vstr[:37] + "..."
-        settable = info.settable and "yes" or "no"
-        name = dev.name + "." + name
+            vstr = vstr[:37] + '...'
+        settable = info.settable and 'yes' or 'no'
+        name = dev.name + '.' + name
         if isinstance(info.type, type):
             ptype = info.type.__name__
         else:
-            ptype = info.type.__doc__ or "?"
+            ptype = info.type.__doc__ or '?'
         items.append((name, vstr, unit, settable, ptype, info.description))
-    printTable(
-        ("name", "value", "unit", "r/w?", "value type", "description"),
-        items,
-        session.log.info,
-    )
+    printTable(('name', 'value', 'unit', 'r/w?', 'value type', 'description'),
+               items, session.log.info)
 
 
 @usercommand
-@spmsyntax(AnyDev)
 @parallel_safe
 def ListMethods(dev):
     """List user-callable methods for the device.
@@ -1183,18 +1191,17 @@ def ListMethods(dev):
         listed.add(cls)
         for name, (args, doc, mcls, is_user) in sorted(cls.methods.items()):
             if cls is mcls and is_user:
-                items.append((dev.name + "." + name + args, cls.__name__, doc))
+                items.append((dev.name + '.' + name + args, cls.__name__, doc))
         for base in cls.__bases__:
             if issubclass(base, (Device, DeviceMixinBase)):
                 _list(base)
-
     _list(dev.__class__)
-    dev.log.info("Device methods:")
-    printTable(("method", "from class", "description"), items, session.log.info)
+    dev.log.info('Device methods:')
+    printTable(('method', 'from class', 'description'), items,
+               session.log.info)
 
 
 @usercommand
-@spmsyntax()
 @parallel_safe
 def ListDevices():
     """List all currently created devices.
@@ -1203,9 +1210,9 @@ def ListDevices():
 
     >>> ListDevices()
     """
-    session.log.info("All created devices:")
+    session.log.info('All created devices:')
     items = []
     for devname in sorted(session.explicit_devices, key=lambda d: d.lower()):
         dev = session.devices[devname]
         items.append((dev.name, dev.__class__.__name__, dev.description))
-    printTable(("name", "type", "description"), items, session.log.info)
+    printTable(('name', 'type', 'description'), items, session.log.info)

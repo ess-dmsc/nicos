@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,45 +21,41 @@
 #
 # *****************************************************************************
 
-name = "test_axis setup"
+name = 'test_axis setup'
 
-includes = ["stdsystem"]
+includes = ['stdsystem']
 
 devices = dict(
-    dm1=device(
-        "nicos.devices.generic.VirtualMotor",
-        unit="mm",
-        curvalue=0,
-        abslimits=(-100, 100),
-        userlimits=(-50, 50),
+    dm1 = device('nicos.devices.generic.VirtualMotor',
+        unit = 'mm',
+        curvalue = 0,
+        abslimits = (-100, 100),
+        userlimits = (-50, 50),
     ),
-    dmalias=device(
-        "nicos.devices.generic.DeviceAlias",
-        alias="dm1",
+    dmalias = device('nicos.devices.generic.DeviceAlias',
+        alias = 'dm1',
     ),
-    dax=device(
-        "nicos.devices.generic.Axis",
-        motor="dm1",
-        coder=None,
-        obs=[],
-        precision=0,
-        loopdelay=0.02,
-        loglevel="debug",
+    dax = device('nicos.devices.generic.Axis',
+        motor = 'dm1',
+        coder = None,
+        obs = [],
+        precision = 0,
+        loopdelay = 0.02,
+        loglevel = 'debug',
     ),
-    dm2=device(
-        "nicos.devices.generic.VirtualMotor",
-        unit="mm",
-        curvalue=0,
-        abslimits=(-100, 100),
+    dm2 = device('nicos.devices.generic.VirtualMotor',
+        unit = 'mm',
+        curvalue = 0,
+        abslimits = (-100, 100),
     ),
 )
 
 help_topics = dict(
-    nicos_demo="""
+    nicos_demo = '''
 This entry examples description of something very specific to nicos_demo.
 Since it is actually what is currently loaded.
-""",
-    RST="""
+''',
+    RST = '''
 #. List entry **1**.
-""",
+''',
 )

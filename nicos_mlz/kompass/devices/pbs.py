@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,6 +23,7 @@
 
 """Special device for kompass primary beamstop"""
 
+
 from nicos.core import Attach, Moveable, Param, anytype, limits, tupleof
 from nicos.devices.generic.sequence import BaseSequencer, SeqDev
 
@@ -31,21 +32,17 @@ class SttWithPBS(BaseSequencer, Moveable):
     valuetype = float
 
     attached_devices = {
-        "pbs": Attach("primary beamstop", Moveable),
-        "stt": Attach("axis of stt", Moveable),
+        'pbs': Attach('primary beamstop', Moveable),
+        'stt': Attach('axis of stt', Moveable),
     }
 
     parameters = {
         # XXX: rename (too much similarity to user/abslimits)
-        "limits": Param(
-            "Range with a lowered pbs", type=limits, settable=False, default=(-21, 21)
-        ),
-        "pbs_values": Param(
-            "Values for the pbs for down, up",
-            type=tupleof(anytype, anytype),
-            settable=False,
-            default=("down", "up"),
-        ),
+        'limits':     Param('Range with a lowered pbs', type=limits,
+                            settable=False, default=(-21, 21)),
+        'pbs_values': Param('Values for the pbs for down, up',
+                            type=tupleof(anytype, anytype),
+                            settable=False, default=('down', 'up')),
     }
 
     def doRead(self, maxage=0):

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,17 +25,8 @@
 
 from time import sleep, time as currenttime
 
-from nicos.core import (
-    MASTER,
-    Attach,
-    HasTimeout,
-    Moveable,
-    Override,
-    Param,
-    Readable,
-    oneof,
-    status,
-)
+from nicos.core import MASTER, Attach, HasTimeout, Moveable, Override, Param, \
+    Readable, oneof, status
 from nicos.devices.entangle import AnalogInput
 
 
@@ -46,26 +37,26 @@ class FPLCTrigger(HasTimeout, Moveable):
     Used as a sample environment device in kwscount().
     """
 
-    valuetype = oneof("triggered", "waiting")
+    valuetype = oneof('triggered', 'waiting')
 
     hardware_access = True
 
     attached_devices = {
-        "output": Attach("start output to FPLC", Moveable),
-        "input": Attach("trigger input from FPLC", Readable),
+        'output': Attach('start output to FPLC', Moveable),
+        'input':  Attach('trigger input from FPLC', Readable),
     }
 
     parameters = {
-        "started": Param("Time when device was started", internal=True, settable=True),
-        "triggered": Param(
-            "Time when input was triggered after a start", internal=True, settable=True
-        ),
+        'started':   Param('Time when device was started',
+                           internal=True, settable=True),
+        'triggered': Param('Time when input was triggered after a start',
+                           internal=True, settable=True),
     }
 
     parameter_overrides = {
-        "fmtstr": Override(default="%s"),
-        "timeout": Override(default=120),
-        "unit": Override(mandatory=False, default=""),
+        'fmtstr':    Override(default='%s'),
+        'timeout':   Override(default=120),
+        'unit':      Override(mandatory=False, default=''),
     }
 
     def doInit(self, mode):
@@ -73,7 +64,7 @@ class FPLCTrigger(HasTimeout, Moveable):
             self.triggered = self.started = 0
 
     def doStart(self, target):
-        if target == "triggered":
+        if target == 'triggered':
             self._attached_output.start(1)
             sleep(0.1)
             self._attached_output.start(0)
@@ -84,30 +75,30 @@ class FPLCTrigger(HasTimeout, Moveable):
             if self.mode == MASTER and self._attached_input.read(maxage):
                 self.started = 0
                 self.triggered = currenttime()
-                return status.OK, "triggered"
+                return status.OK, 'triggered'
             else:
-                return status.BUSY, "waiting"
+                return status.BUSY, 'waiting'
         elif self.triggered:
             if self.mode == MASTER and currenttime() > self.triggered + 5:
                 self.triggered = 0
-            return status.OK, "triggered"
-        return status.OK, ""
+            return status.OK, 'triggered'
+        return status.OK, ''
 
     def doRead(self, maxage=0):
         if self.started:
-            return "waiting"
-        return "triggered"
+            return 'waiting'
+        return 'triggered'
 
 
 class FPLCRate(AnalogInput):
-    """Forward the current detector countrate to the FPLC."""
+    """Forward the current detector count rate to the FPLC."""
 
     attached_devices = {
-        "rate": Attach("device to read countrate", Readable),
+        'rate':   Attach('device to read count rate', Readable),
     }
 
     def doStatus(self, maxage=0):
-        return status.OK, ""
+        return status.OK, ''
 
     def doRead(self, maxage=0):
         rate = self._attached_rate.read(maxage)[1]

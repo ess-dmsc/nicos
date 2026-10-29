@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,28 +31,24 @@ from uuid import uuid1
 
 import pytest
 
-from nicos import session
 from nicos.configmod import readToml
 from nicos.core.sessions.simulation import SimulationSupervisor
 from nicos.core.utils import system_user
-from test.utils import module_root
 
-# Keep this test focused on ESS-owned facilities for now.
-# MLZ/SINQ scripts are maintained in their package-specific test suites.
-FACILITY_BLACKLIST = {"nicos_demo", "nicos_mlz", "nicos_sinq"}
-TESTSCRIPT_DOC = "doc/source/howtos/testscripts.rst"
+from test.utils import module_root
 
 session_setup = None
 
 
 class Request:
+
     def __init__(self, uuid, code):
         self.user = None
         self.text = code
-        self.reqid = "%s" % uuid
+        self.reqid = '%s' % uuid
 
     def serialize(self):
-        return {"reqid": self.reqid, "user": "", "text": self.text}
+        return {'reqid': self.reqid, 'user': '', 'text': self.text}
 
     # Simstate/ETA support, unneeded
 
@@ -73,7 +69,7 @@ class Emitter:
     def __init__(self, uuid, script):
         self.request = Request(uuid, script)
         self.messages = []
-        self.errored = False
+        self.error_record = None
         self.result = None
         self._controller = None
 
@@ -81,14 +77,13 @@ class Emitter:
         return self.request
 
     def emit_event(self, evtype, msg):
-        if evtype == "simmessage":
-            if msg[2] >= ERROR:
-                self.errored = True
-                session.log.info("%s", msg[4])
-            record = LogRecord(msg[0], msg[2], msg[5], 0, msg[3].rstrip(), (), None)
-            session.testhandler.emit(record)
+        if evtype == 'simmessage':
+            record = LogRecord(msg[0], msg[2], msg[5], 0, msg[3].rstrip(),
+                               (), None)
+            if msg[2] >= ERROR and not self.error_record:
+                self.error_record = record
             self.messages.append(msg)
-        elif evtype == "simresult":
+        elif evtype == 'simresult':
             assert msg[2] == self.request.reqid
             self.result = msg
 
@@ -97,106 +92,89 @@ custom_subdirs = {}
 
 
 def find_scripts():
-    """Yield ``(facility, instrument, script)`` tuples for ``testscripts``.
-
-    Directive syntax is documented in ``doc/source/howtos/testscripts.rst``.
-    """
-    for custom_dir in [
-        d
-        for d in Path(module_root).glob("nicos_*")
-        if d.is_dir() and d.name not in FACILITY_BLACKLIST
-    ]:
+    for custom_dir in [d for d in Path(module_root).glob('nicos_*')
+                       if d.is_dir() and d.name != 'nicos_demo']:
         facility = custom_dir.name
-        for testdir in Path(custom_dir).rglob("testscripts"):
+        for testdir in Path(custom_dir).rglob('testscripts'):
             if not testdir.is_dir():
                 continue
-            nicosconf = testdir.parent.joinpath("nicos.conf")
+            nicosconf = testdir.parent.joinpath('nicos.conf')
             idx = testdir.parts.index(facility) + 1
-            instr = ".".join(testdir.parts[idx:-1])
-            full_instr = f"{facility}.{instr}"
+            instr = '.'.join(testdir.parts[idx:-1])
+            full_instr = f'{facility}.{instr}'
             custom_subdirs[full_instr] = []
             cfg = readToml(nicosconf)
-            subdirs = cfg.get("nicos", {}).get("setup_subdirs")
+            subdirs = cfg.get('nicos', {}).get('setup_subdirs')
             if subdirs is not None:
                 custom_subdirs[full_instr] = subdirs
             for testscript in sorted(testdir.iterdir()):
                 # For now, only the "basic" scripts are run.
-                if testscript.suffix == ".py":
+                if testscript.suffix == '.py':
                     yield pytest.param(
-                        facility,
-                        instr,
-                        testscript,
-                        id=f"{facility}-{instr}-{testscript.stem}",
-                    )
+                        facility, instr, testscript,
+                        id=f'{facility}-{instr}-{testscript.stem}')
 
 
-# Discover scripts dynamically so new testscripts are automatically covered.
-@pytest.mark.parametrize("facility, instr, script", find_scripts())
+@pytest.mark.parametrize(('facility', 'instr', 'script'), find_scripts())
 def test_dryrun(session, facility, instr, script):
-    setups = ["system"]
+
+    setups = ['system']
     setupcode = []
     code = []
     needs_modules = []
     timing_condition = None
-    subdirs = custom_subdirs[f"{facility}.{instr}"]
+    subdirs = custom_subdirs[f'{facility}.{instr}']
     custom_dir = Path(module_root).joinpath(facility)
-    fullpath = custom_dir.joinpath(instr, "testscripts", script)
-    cachepath = custom_dir.joinpath(instr, "testscripts", "cache")
+    fullpath = custom_dir.joinpath(*instr.split('.'), 'testscripts', script)
+    cachepath = custom_dir.joinpath(*instr.split('.'), 'testscripts', 'cache')
 
-    with fullpath.open(encoding="utf-8") as fp:
+    with fullpath.open(encoding='utf-8') as fp:
         for line in fp:
-            if line.startswith("# test:"):
+            if line.startswith('# test:'):
                 parts = line.split(None, 4)
                 if len(parts) < 4:  # -> # test: name = value...
-                    if parts[2] == "skip":
-                        pytest.skip("test should be skipped")
+                    if parts[2] == 'skip':
+                        pytest.skip('test should be skipped')
                     continue
-                if parts[2] == "subdirs":
-                    subdirs.extend(v.strip() for v in parts[4].split(","))
-                elif parts[2] == "setups":
-                    setups.extend(v.strip() for v in parts[4].split(","))
-                elif parts[2] == "setupcode":
-                    setupcode.insert(0, parts[4] + "\n")
-                elif parts[2] == "needs":
-                    needs_modules.extend(v.strip() for v in parts[4].split(","))
-                elif parts[2] == "timing":
+                if parts[2] == 'subdirs':
+                    subdirs.extend(v.strip() for v in parts[4].split(','))
+                elif parts[2] == 'setups':
+                    setups.extend(v.strip() for v in parts[4].split(','))
+                elif parts[2] == 'setupcode':
+                    setupcode.append(parts[4] + '\n')
+                elif parts[2] == 'needs':
+                    needs_modules.extend(v.strip() for v in parts[4].split(','))
+                elif parts[2] == 'timing':
                     timing_condition = parts[4].strip()
                 else:
-                    assert False, "invalid test directive in file: %r (see %s)" % (
-                        line,
-                        TESTSCRIPT_DOC,
-                    )
+                    pytest.fail('invalid test directive in file: %r' % line)
             code.append(line)
     code[0:0] = setupcode
-    code = "".join(code)
+    code = ''.join(code)
 
     for modname in needs_modules:
         try:
-            if modname.find(">=") > 0:
-                modname, minversion = modname.split(">=")
+            if modname.find('>=') > 0:
+                modname, minversion = modname.split('>=')
                 pytest.importorskip(modname, minversion=minversion)
             else:
                 __import__(modname)
         except Exception:
-            pytest.skip("required module %r is not available" % modname)
+            pytest.skip('required module %r is not available' % modname)
 
-    setup_subdirs = ",".join("%s" % Path(custom_dir).joinpath(sbd) for sbd in subdirs)
+    setup_subdirs = ','.join('%s' % Path(custom_dir).joinpath(sbd)
+                             for sbd in subdirs)
     uuid = uuid1()
     emitter = Emitter(uuid, code)
-    supervisor = SimulationSupervisor(
-        None,
-        str(uuid),
-        code,
-        setups,
-        system_user,
-        emitter,
-        [setup_subdirs, cachepath],
-        quiet=False,
-    )
+    supervisor = SimulationSupervisor(None, str(uuid), code, setups,
+                                      system_user, emitter,
+                                      [setup_subdirs, cachepath], quiet=False)
     supervisor.start()
     supervisor.join()
-    assert emitter.result is not None
-    assert not emitter.errored
+    if emitter.error_record:
+        session.log.handle(emitter.error_record)
+        # for safety, but logging the ERROR should have failed already
+        pytest.fail(f'error during dry run: {emitter.error_record}')
     if timing_condition:
         time_estimation, _devices, _script = emitter.result
-        assert eval("x " + timing_condition, {"x": time_estimation})
+        assert eval('x ' + timing_condition, {'x': time_estimation})

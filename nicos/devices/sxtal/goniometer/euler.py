@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,7 +23,7 @@
 """
 Euler
 
-class for storing clockwise eulerian angles
+class for storing clockwise Eulerian angles
 
 """
 
@@ -35,22 +35,20 @@ from nicos.devices.sxtal.goniometer.posutils import Xrot, Zrot, normalangle
 
 
 class Euler(PositionBase):
-    ptype = "e"
+    ptype = 'e'
     theta_clockwise = 1
     phi_clockwise = 1
     omega_clockwise = 1
 
-    def __init__(
-        self,
-        p=None,
-        theta=None,
-        ttheta=None,
-        omega=None,
-        chi=None,
-        phi=None,
-        _rad=False,
-    ):
-        """Constructor. Part of Position subclass protocol."""
+    def __init__(self,
+                 p=None,
+                 theta=None, ttheta=None,
+                 omega=None,
+                 chi=None,
+                 phi=None,
+                 _rad=False):
+        """ Constructor. Part of Position subclass protocol.
+        """
         PositionBase.__init__(self)
         if p:
             self.theta = p.theta
@@ -59,14 +57,15 @@ class Euler(PositionBase):
             self.phi = p.phi
         else:
             if ttheta is not None:
-                theta = ttheta / 2.0
+                theta = ttheta / 2.
             self.theta = self._r2d(theta, _rad)
             self.omega = self._r2d(omega, _rad)
             self.chi = self._r2d(chi, _rad)
             self.phi = self._r2d(phi, _rad)
 
     def asB(self, _wavelength=None):
-        """Conversion. Part of Position subclass protocol."""
+        """ Conversion. Part of Position subclass protocol.
+        """
         sineps = np.sin(self.omega - self.theta)
         coseps = np.cos(self.omega - self.theta)
         if coseps < 0:
@@ -80,7 +79,7 @@ class Euler(PositionBase):
         else:
             signth = 1.0
         sinchib = coseps * sinchi
-        coschib = signcb * np.sqrt(coschi**2 + (sinchi * sineps) ** 2)
+        coschib = signcb * np.sqrt(coschi ** 2 + (sinchi * sineps) ** 2)
         chib = np.arctan2(sinchib, coschib)
         if sineps == 0 and coschi == 0:
             phib = 0
@@ -93,29 +92,29 @@ class Euler(PositionBase):
             sinpsi = sinchi * sineps
             cospsi = signth * coschi
         psi = np.arctan2(sinpsi, cospsi)
-        return PositionFactory(
-            ptype="br",
-            theta=self.theta,
-            phi=normalangle(phib),
-            chi=normalangle(chib),
-            psi=normalangle(psi),
-        )
+        return PositionFactory(ptype='br',
+                               theta=self.theta,
+                               phi=normalangle(phib),
+                               chi=normalangle(chib),
+                               psi=normalangle(psi))
 
     def asC(self, wavelength=None):
-        """Conversion. Part of Position subclass protocol."""
+        """ Conversion. Part of Position subclass protocol.
+        """
         return self.asB().asC(wavelength)
 
     def asK(self, _wavelength=None):
-        """Conversion. Part of Position subclass protocol."""
-        if not hasattr(self, "alpha"):
+        """ Conversion. Part of Position subclass protocol.
+        """
+        if not hasattr(self, 'alpha'):
             self.alpha = np.deg2rad(60)  # TODO: get from experiment?
             self.kappamax = np.deg2rad(180)
 
         si = np.sin(0.5 * self.chi)
-        co = np.sin(self.alpha) ** 2 - si**2
+        co = np.sin(self.alpha) ** 2 - si ** 2
         con3 = np.cos(self.kappamax / 2.0) ** 2 * np.sin(self.alpha) ** 2
         if con3 > co:
-            self.log.warning("Chi can not be reached on this hardware")
+            self.log.warning('Chi can not be reached on this hardware')
             kappa = np.deg2rad(180.0)
             omega = np.deg2rad(90.0)
             # raise error("Chi high")
@@ -131,33 +130,35 @@ class Euler(PositionBase):
             omega = np.arctan2(si, co)
         phi = self.phi - omega
         omega = -omega + self.omega
-        return PositionFactory(
-            ptype="kr",
-            theta=self.theta,
-            omega=normalangle(omega),
-            kappa=normalangle(kappa),
-            phi=normalangle(phi),
-        )
+        return PositionFactory(ptype='kr',
+                               theta=self.theta,
+                               omega=normalangle(omega),
+                               kappa=normalangle(kappa),
+                               phi=normalangle(phi))
 
     def asL(self, wavelength=None):
-        """Conversion. Part of Position subclass protocol."""
+        """ Conversion. Part of Position subclass protocol.
+        """
         return self.asC().asL(wavelength)
 
     def asE(self, _wavelength=None):
-        """Conversion. Part of Position subclass protocol."""
+        """ Conversion. Part of Position subclass protocol.
+        """
         return self.With()
 
     def asG(self, _wavelength=None):
-        """Conversion. Part of Position subclass protocol."""
+        """ Conversion. Part of Position subclass protocol.
+        """
         # print >> sys.stderr, self
         return PositionFactory(
-            ptype="gr",
+            ptype='gr',
             theta=self.theta,
-            matrix=np.dot(Zrot(self.omega), np.dot(Xrot(self.chi), Zrot(self.phi))),
-        )
+            matrix=np.dot(Zrot(self.omega),
+                          np.dot(Xrot(self.chi), Zrot(self.phi))))
 
     def asN(self, _wavelength=None):
-        """Conversion. Part of Position subclass protocol."""
+        """ Conversion. Part of Position subclass protocol.
+        """
         if self.phi is not None:
             ph = normalangle(self.phi - np.deg2rad(90))
         else:
@@ -170,44 +171,46 @@ class Euler(PositionBase):
             th = -self.theta
         else:
             th = None
-        return PositionFactory(ptype="nr", theta=th, chi=self.chi, phi=ph, omega=om)
+        return PositionFactory(ptype='nr',
+                               theta=th,
+                               chi=self.chi,
+                               phi=ph,
+                               omega=om)
 
     def With(self, **kw):
-        """Make clone of this position with some angle(s) changed."""
-        if not kw.get("_rad", False):
-            for var in ("theta", "phi", "chi", "omega"):
+        """ Make clone of this position with some angle(s) changed.
+        """
+        if not kw.get('_rad', False):
+            for var in ('theta', 'phi', 'chi', 'omega'):
                 if kw.get(var, None) is not None:
                     kw[var] = np.deg2rad(kw[var])
-        return PositionFactory(
-            ptype="er",
-            theta=kw.get("theta", self.theta),
-            omega=kw.get("omega", self.omega),
-            chi=kw.get("chi", self.chi),
-            phi=kw.get("phi", self.phi),
-        )
+        return PositionFactory(ptype='er',
+                               theta=kw.get('theta', self.theta),
+                               omega=kw.get('omega', self.omega),
+                               chi=kw.get('chi', self.chi),
+                               phi=kw.get('phi', self.phi))
 
     def towards(self, other, fraction):
         if not other.ptype == self.ptype:
-            raise NicosError("cannot interpolate between different typed positions")
+            raise NicosError('cannot interpolate between different typed positions')
         f0 = 1.0 - fraction
         f1 = fraction
-        return self.With(
-            theta=self.theta * f0 + other.theta * f1,
-            omega=self.omega * f0 + other.omega * f1,
-            chi=self.chi * f0 + other.chi * f1,
-            phi=self.phi * f0 + other.phi * f1,
-        )
+        return self.With(theta=self.theta * f0 + other.theta * f1,
+                         omega=self.omega * f0 + other.omega * f1,
+                         chi=self.chi * f0 + other.chi * f1,
+                         phi=self.phi * f0 + other.phi * f1)
 
     def __repr__(self):
-        """Representation. Part of Position subclass protocol."""
-        s = "[Eulerian angles:"
+        """ Representation. Part of Position subclass protocol.
+        """
+        s = '[Eulerian angles:'
         if self.theta is not None:
-            s = s + " theta=%8.3f" % (np.rad2deg(self.theta))
+            s = s + ' theta=%8.3f' % (np.rad2deg(self.theta))
         if self.phi is not None:
-            s = s + " phi=%8.3f" % (np.rad2deg(self.phi))
+            s = s + ' phi=%8.3f' % (np.rad2deg(self.phi))
         if self.omega is not None:
-            s = s + " omega=%8.3f" % (np.rad2deg(self.omega))
+            s = s + ' omega=%8.3f' % (np.rad2deg(self.omega))
         if self.chi is not None:
-            s = s + " chi=%8.3f" % (np.rad2deg(self.chi))
-        s = s + "]"
+            s = s + ' chi=%8.3f' % (np.rad2deg(self.chi))
+        s = s + ']'
         return s

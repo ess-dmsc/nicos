@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,18 +24,12 @@
 
 from nicos.core import status
 from nicos.guisupport.elements import statuscolor
-from nicos.guisupport.qt import (
-    QBrush,
-    QGraphicsPathItem,
-    QPainterPath,
-    QPen,
-    QPointF,
-    QRectF,
-    QTransform,
-)
+from nicos.guisupport.qt import QBrush, QGraphicsPathItem, QPainterPath, \
+    QPen, QPointF, QRectF, QTransform
 
 
 class Tube(QGraphicsPathItem):
+
     _halo = None
 
     def __init__(self, parent=None, scene=None):
@@ -74,6 +68,7 @@ class Tube(QGraphicsPathItem):
 
 
 class TubeHalo(QGraphicsPathItem):
+
     def __init__(self, width=10, parent=None, scene=None):
         QGraphicsPathItem.__init__(self, parent)
         self._width = width

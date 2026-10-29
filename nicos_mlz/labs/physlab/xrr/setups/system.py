@@ -1,60 +1,64 @@
-description = "system setup"
+description = 'system setup'
 
-group = "lowlevel"
+group = 'lowlevel'
 
 sysconfig = dict(
-    cache="localhost",
-    instrument="xrr",
-    experiment="Exp",
-    datasinks=["conssink", "filesink", "daemonsink", "livesink"],
-    notifiers=[],  # ['email'],
+    cache = 'localhost',
+    instrument = 'xrr',
+    experiment = 'Exp',
+    datasinks = [
+        'conssink',
+        'filesink',
+        'daemonsink',
+        'livesink',
+        'rabbitsink',
+    ],
+    notifiers = [],  # ['email'],
 )
 
-modules = ["nicos.commands.standard"]
+modules = ['nicos.commands.standard']
 
 includes = [
-    "notifiers",
+    'notifiers',
 ]
 
 devices = dict(
-    xrr=device(
-        "nicos.devices.instrument.Instrument",
-        description="X-ray reflectormeter",
-        instrument="XRR",
-        responsible="Bastian Veltel <bastian.veltel@frm2.tum.de>",
-        website="https://mlz-garching.de/physics-lab",
-        operators=["MLZ"],
-        facility="mlz",
+    xrr = device('nicos.devices.instrument.Instrument',
+        description = 'X-ray reflectometer',
+        instrument = 'XRR',
+        responsible = 'Bastian Veltel <bastian.veltel@frm2.tum.de>',
+        website = 'https://mlz-garching.de/physics-lab',
+        operators = ['MLZ'],
+        facility = 'mlz',
     ),
-    Sample=device(
-        "nicos.devices.sample.Sample",
-        description="The currently used sample",
+    Sample = device('nicos.devices.sample.Sample',
+        description = 'The currently used sample',
     ),
-    # Configure dataroot here (usually /data).
-    Exp=device(
-        "nicos.devices.experiment.Experiment",
-        description="experiment object",
-        dataroot="/data",
-        sendmail=True,
-        sample="Sample",
+    Exp = device('nicos_mlz.labs.physlab.devices.experiment.Experiment',
+        description = 'experiment object',
+        dataroot = '/data',
+        sendmail = True,
+        sample = 'Sample',
+        propprefix = '',
     ),
-    filesink=device("nicos.devices.datasinks.AsciiScanfileSink"),
-    conssink=device("nicos.devices.datasinks.ConsoleScanSink"),
-    daemonsink=device("nicos.devices.datasinks.DaemonSink"),
-    livesink=device("nicos_mlz.labs.physlab.xrr.datasinks.LiveViewSink"),
-    Space=device(
-        "nicos.devices.generic.FreeSpace",
-        description="The amount of free space for storing data",
-        path="/data",
-        warnlimits=(5.0, None),
-        minfree=5,
+    filesink = device('nicos.devices.datasinks.AsciiScanfileSink'),
+    conssink = device('nicos.devices.datasinks.ConsoleScanSink'),
+    daemonsink = device('nicos.devices.datasinks.DaemonSink'),
+    livesink = device('nicos_mlz.labs.physlab.datasinks.LiveViewSink'),
+    rabbitsink = device('nicos_mlz.devices.datasinks.rabbitmq.RabbitSink',
+        rabbit_url = 'amqp://localhost',
     ),
-    LogSpace=device(
-        "nicos.devices.generic.FreeSpace",
-        description="Space on log drive",
-        path="/control/log",
-        warnlimits=(0.5, None),
-        minfree=0.5,
-        visibility=(),
+    Space = device('nicos.devices.generic.FreeSpace',
+        description = 'The amount of free space for storing data',
+        path = '/data',
+        warnlimits = (5., None),
+        minfree = 5,
+    ),
+    LogSpace = device('nicos.devices.generic.FreeSpace',
+        description = 'Space on log drive',
+        path = '/control/log',
+        warnlimits = (.5, None),
+        minfree = 0.5,
+        visibility = (),
     ),
 )

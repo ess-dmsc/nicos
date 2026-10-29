@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,31 +21,10 @@
 #
 # *****************************************************************************
 
-from nicos.core.params import Param, tupleof
-from nicos.devices.vendor.qmesydaq.tango import ImageChannel as BaseImageChannel
-
-
-class ImageChannel(BaseImageChannel):
-    parameters = {
-        "pixel_size": Param(
-            "Size of a single pixel (in mm)",
-            type=tupleof(float, float),
-            volatile=False,
-            settable=False,
-            default=(0.85, 0.85),
-            unit="mm",
-            category="instrument",
-        ),
-        "pixel_count": Param(
-            "Number of detector pixels",
-            type=int,
-            volatile=True,
-            settable=False,
-            category="instrument",
-        ),
-    }
-
-    def doReadPixel_Count(self):
-        if self.arraydesc:
-            return self.arraydesc.shape[0]
-        return self._dev.detectorSize[0]
+from nicos_mlz.stressi.devices.mixins import Formula, TransformMove, \
+    TransformRead
+from nicos_mlz.stressi.devices.sample import Sample
+from nicos_mlz.stressi.devices.slits import OffCenteredTwoAxisSlit, \
+    PreciseManualSwitch, SingleAxisGap
+from nicos_mlz.stressi.devices.wavelength import TransformedMoveable, \
+    Wavelength

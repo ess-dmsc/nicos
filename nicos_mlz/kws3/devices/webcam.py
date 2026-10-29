@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,13 +31,13 @@ from nicos.devices.datasinks.image import SingleFileSinkHandler
 
 
 class WebcamSinkHandler(SingleFileSinkHandler):
-    filetype = "jpg"
+    filetype = 'jpg'
 
     def _processArrayInfo(self, _):
         pass
 
     def _createFile(self, **kwargs):
-        kwargs["nomeasdata"] = True
+        kwargs['nomeasdata'] = True
         return SingleFileSinkHandler._createFile(self, **kwargs)
 
     def begin(self):
@@ -46,7 +46,7 @@ class WebcamSinkHandler(SingleFileSinkHandler):
             resp.raise_for_status()
             self._file.write(resp.content)
         except Exception as e:
-            self.log.warning("could not get webcam image: %s", e)
+            self.log.warning('could not get webcam image: %s', e)
 
     def putResults(self, quality, results):
         pass
@@ -59,10 +59,12 @@ class WebcamSink(FileSink):
     """Copies a snapshot of a webcam to the data directory."""
 
     parameters = {
-        "url": Param("URL of the image", type=str, mandatory=True),
+        'url': Param('URL of the image', type=str, mandatory=True),
     }
 
-    parameter_overrides = {"settypes": Override(default=[POINT])}
+    parameter_overrides = {
+        'settypes': Override(default=[POINT])
+    }
 
     handlerclass = WebcamSinkHandler
 

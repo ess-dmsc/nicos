@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,41 +29,36 @@ from nicos.utils import createSubprocess
 def txtplot(x, y, xlab, ylab, xterm_mode=False):
     """Plot data with gnuplot's dumb ASCII terminal."""
     if not x.size:
-        raise ValueError("Empty plot")
+        raise ValueError('Empty plot')
     if len(x) != len(y):
-        raise ValueError("Unequal lengths of X and Y values")
+        raise ValueError('Unequal lengths of X and Y values')
 
     try:
-        gnuplot = createSubprocess(
-            ["gnuplot", "--persist"],
-            shell=False,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+        gnuplot = createSubprocess(['gnuplot', '--persist'], shell=False,
+                                   stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
 
         if xterm_mode:
-            cmd = ["set term xterm"]
+            cmd = ['set term xterm']
         else:
-            cmd = ["set term dumb"]
+            cmd = ['set term dumb']
         cmd.append('set xlabel "' + xlab + '"')
         cmd.append('set ylabel "' + ylab + '"')
         cmd.append('plot "-" with points notitle')
         for xy in zip(x, y):
-            cmd.append("%s %s" % xy)
-        cmd.append("e\n")
+            cmd.append('%s %s' % xy)
+        cmd.append('e\n')
 
-        cmd = "\n".join(cmd).encode()
+        cmd = '\n'.join(cmd).encode()
         out = gnuplot.communicate(cmd)[0]
         lines = [line for line in out.decode().splitlines() if line]
         if xterm_mode:
-            lines += [
-                "Plotting in xterm Tektronix window.",
-                "\x1b_If you can only see a lot of incomprehensible "
-                "text, use xterm instead of your current terminal "
-                "emulator.\x1b\\",
-            ]
+            lines += ['Plotting in xterm Tektronix window.',
+                      '\x1b_If you can only see a lot of incomprehensible '
+                      'text, use xterm instead of your current terminal '
+                      'emulator.\x1b\\']
         return lines
 
     except OSError:
-        raise RuntimeError("Could execute gnuplot for text plot") from None
+        raise RuntimeError('Could execute gnuplot for text plot') from None

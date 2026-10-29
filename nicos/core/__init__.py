@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,118 +24,25 @@
 """NICOS core APIs and classes."""
 
 from nicos.core.acquire import DevStatistics, acquire, read_environment
-from nicos.core.constants import (
-    FINAL,
-    INTERMEDIATE,
-    INTERRUPTED,
-    LIVE,
-    MAIN,
-    MAINTENANCE,
-    MASTER,
-    POLLER,
-    SIMULATION,
-    SLAVE,
-)
-from nicos.core.data import (
-    BaseDataset,
-    BlockDataset,
-    DataSink,
-    DataSinkHandler,
-    PointDataset,
-    ScanDataset,
-)
-from nicos.core.device import (
-    Device,
-    DeviceAlias,
-    DeviceMeta,
-    Measurable,
-    Moveable,
-    NoDevice,
-    Readable,
-    SubscanMeasurable,
-    Waitable,
-    requires,
-)
-from nicos.core.errors import (
-    AccessError,
-    CacheError,
-    CacheLockError,
-    CommunicationError,
-    ComputationError,
-    ConfigurationError,
-    HardwareError,
-    InvalidValueError,
-    LimitError,
-    ModeError,
-    MoveError,
-    NicosError,
-    NicosTimeoutError,
-    PositionError,
-    ProgrammingError,
-    SPMError,
-    UsageError,
-)
-from nicos.core.mixins import (
-    AutoDevice,
-    CanDisable,
-    DeviceMixinBase,
-    HasAutoDevices,
-    HasCommunication,
-    HasLimits,
-    HasMapping,
-    HasOffset,
-    HasPrecision,
-    HasTimeout,
-    HasWindowTimeout,
-    IsController,
-)
-from nicos.core.params import (
-    INFO_CATEGORIES,
-    ArrayDesc,
-    Attach,
-    Override,
-    Param,
-    Value,
-    absolute_path,
-    anytype,
-    dictof,
-    dictwith,
-    floatrange,
-    host,
-    intrange,
-    limits,
-    listof,
-    mailaddress,
-    nicosdev,
-    none_or,
-    nonemptylistof,
-    nonemptystring,
-    oneof,
-    oneofdict,
-    oneofdict_or,
-    pvname,
-    relative_path,
-    setof,
-    subdir,
-    tacodev,
-    tangodev,
-    tupleof,
-    vec3,
-)
+from nicos.core.constants import FINAL, INTERMEDIATE, INTERRUPTED, LIVE, \
+    MAIN, MAINTENANCE, MASTER, POLLER, SIMULATION, SLAVE
+from nicos.core.data import BaseDataset, BlockDataset, DataSink, \
+    DataSinkHandler, PointDataset, ScanDataset
+from nicos.core.device import Device, DeviceAlias, DeviceMeta, Measurable, \
+    Moveable, NoDevice, Readable, SubscanMeasurable, Waitable, requires
+from nicos.core.errors import AccessError, CacheError, CacheLockError, \
+    CommunicationError, ComputationError, ConfigurationError, HardwareError, \
+    InvalidValueError, LimitError, ModeError, MoveError, NicosError, \
+    NicosTimeoutError, PositionError, ProgrammingError, UsageError
+from nicos.core.mixins import AutoDevice, CanDisable, DeviceMixinBase, \
+    HasAutoDevices, HasCommunication, HasLimits, HasMapping, HasOffset, \
+    HasPrecision, HasTimeout, HasWindowTimeout, IsController
+from nicos.core.params import INFO_CATEGORIES, ArrayDesc, Attach, Override, \
+    Param, Value, absolute_path, anytype, dictof, dictwith, floatrange, host, \
+    intrange, limits, listof, mailaddress, nicosdev, none_or, nonemptylistof, \
+    nonemptystring, nonzero, oneof, oneof_or, oneofdict, oneofdict_or, \
+    pvname, relative_path, secret, setof, subdir, tangodev, tupleof, vec3
 from nicos.core.scan import Scan
-from nicos.core.utils import (
-    ACCESS_LEVELS,
-    ADMIN,
-    GUEST,
-    USER,
-    User,
-    formatStatus,
-    multiReset,
-    multiStatus,
-    multiStop,
-    multiWait,
-    system_user,
-    usermethod,
-    waitForCompletion,
-    watchdog_user,
-)
+from nicos.core.utils import ACCESS_LEVELS, ADMIN, GUEST, USER, User, \
+    formatStatus, multiReset, multiStatus, multiStop, multiWait, system_user, \
+    usermethod, waitForCompletion, watchdog_user

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -37,14 +37,14 @@ class Experiment(ImagingExperiment):
 
     @property
     def samplesymlink(self):
-        return os.path.join(self.proposalpath, "current")
+        return os.path.join(self.proposalpath, 'current')
 
     def _fillProposal(self, proposal, kwds):
         ImagingExperiment._fillProposal(self, proposal, kwds)
         # don't create a sample from propdb data
-        kwds["default_sample"] = ""
+        kwds['default_sample'] = ''
 
     def doFinish(self):
         if self.samplesymlink:
-            self.log.debug("Remove symlink: %s", self.samplesymlink)
+            self.log.debug('Remove symlink: %s', self.samplesymlink)
             os.unlink(self.samplesymlink)

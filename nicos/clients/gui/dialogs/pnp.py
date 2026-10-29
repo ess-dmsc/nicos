@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,45 +29,38 @@ from nicos.guisupport.qt import QMessageBox, QStyle, Qt, pyqtSignal
 class PnPSetupQuestion(QMessageBox):
     """Special QMessageBox for asking what to do a new setup was detected."""
 
-    closed = pyqtSignal("QMessageBox")
+    closed = pyqtSignal('QMessageBox')
 
     def __init__(self, parent, client, data):
         self.client = client
         client.setup.connect(self.on_client_setup)
         self.data = data
-        add_mode = data[0] == "added"
+        add_mode = data[0] == 'added'
         if add_mode:
             message = (
-                "<b>New sample environment detected</b><br/>"
-                "A new sample environment <b>%s</b> has been detected:<br/>%s"
-                % (data[1], data[2] or "")
-            )
+                '<b>New sample environment detected</b><br/>'
+                'A new sample environment <b>%s</b> has been detected:<br/>%s'
+                % (data[1], data[2] or ''))
         else:
             message = (
-                "<b>Sample environment removed</b><br/>"
-                "The sample environment <b>%s</b> has been removed:<br/>%s"
-                % (data[1], data[2] or "")
-            )
+                '<b>Sample environment removed</b><br/>'
+                'The sample environment <b>%s</b> has been removed:<br/>%s'
+                % (data[1], data[2] or ''))
         QMessageBox.__init__(
-            self,
-            QMessageBox.Icon.Information,
-            "NICOS Plug & Play",
-            message,
-            QMessageBox.StandardButton.NoButton,
-            parent,
-        )
+            self, QMessageBox.Icon.Information, 'NICOS Plug & Play',
+            message, QMessageBox.StandardButton.NoButton, parent)
         self.setWindowModality(Qt.WindowModality.NonModal)
-        self.b0 = self.addButton("Ignore", QMessageBox.ButtonRole.RejectRole)
-        self.b0.setIcon(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton)
-        )
+        self.b0 = self.addButton('Ignore', QMessageBox.ButtonRole.RejectRole)
+        self.b0.setIcon(self.style().standardIcon(QStyle.StandardPixmap
+                                                  .SP_DialogCancelButton))
         if add_mode:
-            self.b1 = self.addButton("Load setup", QMessageBox.ButtonRole.YesRole)
+            self.b1 = self.addButton('Load setup',
+                                     QMessageBox.ButtonRole.YesRole)
         else:
-            self.b1 = self.addButton("Remove setup", QMessageBox.ButtonRole.YesRole)
-        self.b1.setIcon(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOkButton)
-        )
+            self.b1 = self.addButton('Remove setup',
+                                     QMessageBox.ButtonRole.YesRole)
+        self.b1.setIcon(self.style().standardIcon(QStyle.StandardPixmap
+                                                  .SP_DialogOkButton))
         self.b0.clicked.connect(self.on_ignore_clicked)
         self.b1.clicked.connect(self.on_execute_clicked)
         self.b0.setFocus()
@@ -77,22 +70,22 @@ class PnPSetupQuestion(QMessageBox):
         self.reject()
 
     def on_execute_clicked(self):
-        if self.data[0] == "added":
-            self.client.run("AddSetup(%r)" % self.data[1])
+        if self.data[0] == 'added':
+            self.client.run('AddSetup(%r)' % self.data[1])
         else:
-            self.client.run("RemoveSetup(%r)" % self.data[1])
+            self.client.run('RemoveSetup(%r)' % self.data[1])
         self.closed.emit(self)
         self.accept()
 
     def closeEvent(self, event):
         self.closed.emit(self)
-        return QMessageBox.closeEvent(self, event)
+        QMessageBox.closeEvent(self, event)
 
     def on_client_setup(self, data):
         setupnames = data[0]
-        if self.data[0] == "added" and self.data[1] in setupnames:
+        if self.data[0] == 'added' and self.data[1] in setupnames:
             # somebody loaded the setup!
             self.on_ignore_clicked()
-        elif self.data[0] == "removed" and self.data[1] not in setupnames:
+        elif self.data[0] == 'removed' and self.data[1] not in setupnames:
             # somebody unloaded the setup!
             self.on_ignore_clicked()

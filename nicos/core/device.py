@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -26,61 +26,41 @@
 import inspect
 import re
 from time import time as currenttime
+from typing import Any, NamedTuple, Tuple, Union
 
 import numpy
 
 from nicos import session
 from nicos.core import status
 from nicos.core.constants import MASTER, POLLER, SIMULATION, SLAVE
-from nicos.core.errors import (
-    AccessError,
-    CacheLockError,
-    CommunicationError,
-    ConfigurationError,
-    InvalidValueError,
-    LimitError,
-    ModeError,
-    MoveError,
-    NicosError,
-    PositionError,
-    ProgrammingError,
-    UsageError,
-)
-from nicos.core.mixins import (
-    DeviceMixinMeta,
-    HasLimits,
-    HasOffset,
-    HasTimeout,
-    IsController,
-)
-from nicos.core.params import (
-    INFO_CATEGORIES,
-    Attach,
-    Override,
-    Param,
-    Value,
-    anytype,
-    dictof,
-    floatrange,
-    listof,
-    nicosdev,
-    none_or,
-    oneof,
-    setof,
-    tupleof,
-)
-from nicos.core.utils import (
-    formatStatus,
-    multiStatus,
-    multiStop,
-    multiWait,
-    statusString,
-    usermethod,
-)
+from nicos.core.errors import AccessError, CacheLockError, \
+    CommunicationError, ConfigurationError, InvalidValueError, LimitError, \
+    ModeError, MoveError, NicosError, PositionError, ProgrammingError, \
+    UsageError
+from nicos.core.mixins import DeviceMixinMeta, HasLimits, HasOffset, \
+    HasTimeout, IsController
+from nicos.core.params import INFO_CATEGORIES, Attach, Override, Param, \
+    Value, anytype, dictof, floatrange, listof, nicosdev, none_or, oneof, \
+    setof, tupleof
+from nicos.core.utils import formatStatus, multiStatus, multiStop, multiWait, \
+    statusString, usermethod
 from nicos.protocols.cache import FLAG_NO_STORE
 from nicos.utils import getVersions, loggers, number_types, parseDateString
 
 ALLOWED_CATEGORIES = {v[0] for v in INFO_CATEGORIES}
+
+
+# use Union for 3.9 compat, the shorter | syntax requires 3.10+
+class DeviceParInfo(NamedTuple):
+    value: Any
+    strvalue: str
+    unit: str
+    category: str
+
+
+class DeviceMetaInfo(NamedTuple):
+    key: Union[str, Tuple[str, str]]
+    info: Union[DeviceParInfo, Tuple[Any, str, str, str]]
 
 
 def requires(**access):
@@ -103,25 +83,22 @@ def requires(**access):
     The wrapper function calls `.Session.checkAccess` to verify the
     requirements.  If the check fails, `.AccessError` is raised.
     """
-
     def decorator(func):
         def new_func(*args, **kwds):
             try:
                 session.checkAccess(access)
             except AccessError as err:
-                msg = "cannot do %s: %s" % (func.__name__, err)
-                if "helpmsg" in access:
-                    msg += " (%s)" % access["helpmsg"]
+                msg = 'cannot do %s: %s' % (func.__name__, err)
+                if 'helpmsg' in access:
+                    msg += ' (%s)' % access['helpmsg']
                 if args and isinstance(args[0], Device):
                     raise AccessError(args[0], msg) from None
                 raise AccessError(msg) from None
             return func(*args, **kwds)
-
         new_func.__name__ = func.__name__
         new_func.__doc__ = func.__doc__
         new_func.real_func = func
         return new_func
-
     return decorator
 
 
@@ -144,11 +121,10 @@ class DeviceMeta(DeviceMixinMeta):
         seen_nonmixin = False
         for base in bases:
             if not isinstance(base, DeviceMeta) and seen_nonmixin:
-                raise ProgrammingError(
-                    "%s.%s device: mixin class %s must come"
-                    " before all non-mixins in the base"
-                    " class list" % (attrs["__module__"], name, base.__name__)
-                )
+                raise ProgrammingError('%s.%s device: mixin class %s must come'
+                                       ' before all non-mixins in the base'
+                                       ' class list' % (attrs['__module__'],
+                                                        name, base.__name__))
             if isinstance(base, DeviceMeta):
                 seen_nonmixin = True
         newtype = DeviceMixinMeta.__new__(mcs, name, bases, attrs)
@@ -158,59 +134,65 @@ class DeviceMeta(DeviceMixinMeta):
         for adevname, entry in list(newtype.attached_devices.items()):
             # adev names are always lowercased
             if adevname != adevname.lower():
-                raise ProgrammingError(
-                    "%r device: attached device name %r is "
-                    "not all-lowercase" % (name, adevname)
-                )
+                raise ProgrammingError('%r device: attached device name %r is '
+                                       'not all-lowercase' % (name, adevname))
             if not isinstance(entry, Attach):
-                raise ProgrammingError(
-                    "Please use 'Attach' to define an attached device."
-                )
+                raise ProgrammingError("Please use 'Attach' to define an "
+                                       'attached device.')
 
         # create parameter properties
         for param, info in newtype.parameters.items():
             # parameter names are always lowercased (enforce this)
             if param != param.lower():
-                raise ProgrammingError(
-                    "%r device: parameter name %r is not all-lowercase" % (name, param)
-                )
+                raise ProgrammingError('%r device: parameter name %r is not '
+                                       'all-lowercase' % (name, param))
             if not isinstance(info, Param):
-                raise ProgrammingError(
-                    "%r device %r parameter info should be "
-                    "a Param object" % (name, param)
-                )
-            if param in ("value", "status"):
-                raise ProgrammingError(
-                    '%r device: parameter names "value" '
-                    'and "status" are reserved and cannot '
-                    "be used" % (name,)
-                )
+                raise ProgrammingError('%r device %r parameter info should be '
+                                       'a Param object' % (name, param))
+            if param in ('value', 'status'):
+                raise ProgrammingError('%r device: parameter names "value" '
+                                       'and "status" are reserved and cannot '
+                                       'be used' % (name, ))
 
             # process overrides
             override = newtype.parameter_overrides.pop(param, None)
             if override:
                 info = newtype.parameters[param] = override.apply(info)
 
+            # Check the combined, final parameter configuration composed of
+            # Param and Override.
+            if info.mandatory:
+                if info.internal:
+                    raise ProgrammingError(
+                            'Ambiguous parameter definition detected for' \
+                            "parameter %r (device %r): 'internal' and "
+                            "'mandatory' must not be 'True' at the same time."
+                            %(param, name))
+                if info.volatile:
+                    raise ProgrammingError(
+                            'Ambiguous parameter definition detected for' \
+                            "parameter %r (device %r): 'volatile' and "
+                            "'mandatory' must not be 'True' at the same time."
+                            %(param, name))
+
             # create the getter method
             if not info.volatile:
-
                 def getter(self, param=param):
                     if param not in self._params:
                         self._initParam(param)
-                    if self._cache and param != "name":  # no renaming !
+                    if self._cache and param != 'name':  # no renaming !
                         value = self._cache.get(self, param, Ellipsis)
                         if value is not Ellipsis:
                             self._params[param] = value
                             return value
                     return self._params[param]
             else:
-                rmethod = getattr(newtype, "doRead" + param.title(), None)
+                rmethod = getattr(newtype, 'doRead' + param.title(), None)
                 if rmethod is None:
-                    raise ProgrammingError(
-                        "%r device %r parameter is marked "
-                        'as "volatile=True", but has no '
-                        "doRead%s method" % (name, param, param.title())
-                    )
+                    raise ProgrammingError('%r device %r parameter is marked '
+                                           'as "volatile=True", but has no '
+                                           'doRead%s method' %
+                                           (name, param, param.title()))
 
                 def getter(self, param=param, rmethod=rmethod):
                     if self._mode == SIMULATION:
@@ -225,37 +207,26 @@ class DeviceMeta(DeviceMixinMeta):
 
             # create the setter method
             if not info.settable:
-
                 def setter(self, value, param=param):
                     raise ConfigurationError(
-                        self,
-                        "the %s parameter can only be changed in the "
-                        "setup file" % param,
-                    )
+                        self, 'the %s parameter can only be changed in the '
+                        'setup file' % param)
             else:
-                wmethod = getattr(newtype, "doWrite" + param.title(), None)
-                umethod = getattr(newtype, "doUpdate" + param.title(), None)
+                wmethod = getattr(newtype, 'doWrite' + param.title(), None)
+                umethod = getattr(newtype, 'doUpdate' + param.title(), None)
 
-                def setter(
-                    self,
-                    value,
-                    param=param,
-                    wmethod=wmethod,
-                    umethod=umethod,
-                    chatty=info.chatty,
-                ):
+                def setter(self, value, param=param, wmethod=wmethod,
+                           umethod=umethod, chatty=info.chatty):
                     value = self._validateType(value, param)
-                    if getattr(self, "requires", None):  # for Moveables
+                    if getattr(self, 'requires', None):  # for Moveables
                         try:
                             session.checkAccess(self.requires)
                         except AccessError as err:
-                            raise AccessError(
-                                self, "cannot set parameter: %s" % err
-                            ) from None
+                            raise AccessError(self, 'cannot set parameter: %s'
+                                              % err) from None
                     if self._mode == SLAVE:
-                        raise ModeError(
-                            "setting parameter %s not possible in slave mode" % param
-                        )
+                        raise ModeError('setting parameter %s not possible in '
+                                        'slave mode' % param)
                     elif self._mode == SIMULATION:
                         if wmethod and not self._sim_intercept:
                             rv = wmethod(self, value)
@@ -268,9 +239,8 @@ class DeviceMeta(DeviceMixinMeta):
                             if value != oldvalue:
                                 valuestr = self.formatParam(param, value)
                                 oldvstr = self.formatParam(param, oldvalue)
-                                self.log.info(
-                                    "%s set to %s (was %s)", param, valuestr, oldvstr
-                                )
+                                self.log.info('%s set to %s (was %s)',
+                                              param, valuestr, oldvstr)
                         self._params[param] = value
                         return
                     oldvalue = getattr(self, param)
@@ -285,45 +255,40 @@ class DeviceMeta(DeviceMixinMeta):
                         if value != oldvalue:
                             valuestr = self.formatParam(param, value)
                             oldvstr = self.formatParam(param, oldvalue)
-                            self.log.info(
-                                "%s set to %s (was %s)", param, valuestr, oldvstr
-                            )
+                            self.log.info('%s set to %s (was %s)',
+                                          param, valuestr, oldvstr)
                     self._params[param] = value
                     if self._cache:
                         self._cache.put(self, param, value)
 
             # create a property and attach to the new device class
-            setattr(newtype, param, property(getter, setter, doc=info.formatDoc()))
+            setattr(newtype, param,
+                    property(getter, setter, doc=info.formatDoc()))
+
         if newtype.parameter_overrides:
-            raise ProgrammingError(
-                "class %r contains overrides for "
-                "non-existing nicos parameters: %r"
-                % (
-                    f"{attrs['__module__']}.{attrs['__qualname__']}",
-                    ", ".join(newtype.parameter_overrides),
-                )
-            )
+            raise ProgrammingError('class %r contains overrides for '
+                                   'non-existing nicos parameters: %r' %
+                                   (f"{attrs['__module__']}.{attrs['__qualname__']}",
+                                    ', '.join(newtype.parameter_overrides)))
 
         del newtype.parameter_overrides
-        if "parameter_overrides" in attrs:
-            del attrs["parameter_overrides"]
-        if "valuetype" in attrs:
-            newtype.valuetype = staticmethod(attrs["valuetype"])
+        if 'parameter_overrides' in attrs:
+            del attrs['parameter_overrides']
+        if 'valuetype' in attrs:
+            newtype.valuetype = staticmethod(attrs['valuetype'])
 
         # check attribute names for the attached devices (created by
         # Device.__init__)
         for adevname, entry in newtype.attached_devices.items():
-            pname = "_attached_%s" % adevname
+            pname = '_attached_%s' % adevname
             if newtype.parameters and (pname in newtype.parameters):
-                raise ProgrammingError(
-                    "%r device: attached device helper "
-                    "property %r collides with parameter" % (name, pname)
-                )
+                raise ProgrammingError('%r device: attached device helper '
+                                       'property %r collides with parameter' %
+                                       (name, pname))
             if pname in attrs:
-                raise ProgrammingError(
-                    "%r device: attached device helper "
-                    "property %r collides with attribute" % (name, pname)
-                )
+                raise ProgrammingError('%r device: attached device helper '
+                                       'property %r collides with attribute' %
+                                       (name, pname))
 
         return newtype
 
@@ -342,12 +307,8 @@ class Device(metaclass=DeviceMeta):
     * doInfo()
     """
 
-    __mergedattrs__ = [
-        "parameters",
-        "parameter_overrides",
-        "attached_devices",
-        "methods",
-    ]
+    __mergedattrs__ = ['parameters', 'parameter_overrides', 'attached_devices',
+                       'methods']
 
     # A dictionary mapping device names to classes (or lists of classes) that
     # describe this device's attached (subordinate) devices.
@@ -356,33 +317,24 @@ class Device(metaclass=DeviceMeta):
     # A dictionary mapping parameter names to parameter descriptions, given as
     # Param objects.
     parameters = {
-        "name": Param(
-            "The name of the device", type=str, settable=False, userparam=False
-        ),
-        "classes": Param(
-            "Names of device class and all its base classes",
-            type=listof(str),
-            settable=False,
-            userparam=False,
-        ),
-        "description": Param("A description of the device", type=str, settable=False),
-        "visibility": Param(
-            "Selects in which context the device should be shown/included",
-            type=setof("metadata", "namespace", "devlist"),
-            default=["metadata", "namespace", "devlist"],
-            settable=False,
-        ),
+        'name':        Param('The name of the device',
+                             type=nicosdev, settable=False, internal=True),
+        'classes':     Param('Names of device class and all its base classes',
+                             type=listof(str), settable=False, internal=True),
+        'description': Param('A description of the device',
+                             type=str, settable=False),
+        'visibility':  Param('Selects in which context the device should be '
+                             'shown/included',
+                             type=setof('metadata', 'namespace', 'devlist'),
+                             default=['metadata', 'namespace', 'devlist'],
+                             settable=False),
         # Don't allow setting loglevel to > INFO, as it could be confusing.
-        "loglevel": Param(
-            "The logging level of the device",
-            type=oneof("debug", "info"),
-            default="info",
-            settable=True,
-            preinit=True,
-        ),
+        'loglevel':    Param('The logging level of the device',
+                             type=oneof('debug', 'info'),
+                             default='info', settable=True, preinit=True),
     }
 
-    _ownparams = {"name"}
+    _ownparams = {'name'}
 
     # A dictionary mapping parameter names to Override objects that override
     # specific properties of parameters found in base classes.
@@ -412,7 +364,8 @@ class Device(metaclass=DeviceMeta):
         # register self in device registry
         if not self.temporary:
             if name in session.devices:
-                raise ProgrammingError("device with name %s already exists" % name)
+                raise ProgrammingError('device with name %s already exists' %
+                                       name)
             session.devices[name] = self
             session.device_case_map[name.lower()] = name
 
@@ -420,7 +373,7 @@ class Device(metaclass=DeviceMeta):
         # _config: device configuration (all parameter names lower-case)
         self._config = {name.lower(): value for (name, value) in config.items()}
         # _params: parameter values from config
-        self._params = {"name": name}
+        self._params = {'name': name}
         # _infoparams: cached list of parameters to get on info()
         self._infoparams = []
         # _adevs: "attached" device instances
@@ -433,7 +386,7 @@ class Device(metaclass=DeviceMeta):
         self._mode = session.mode
 
         # initialize a logger for the device
-        self.__dict__["log"] = session.getLogger(name)
+        self.__dict__['log'] = session.getLogger(name)
 
         try:
             # initialize device
@@ -442,38 +395,33 @@ class Device(metaclass=DeviceMeta):
             try:
                 self.shutdown()
             except Exception:
-                self.log.warning("could not shutdown after creation failed", exc=1)
+                self.log.warning('could not shutdown after creation failed',
+                                 exc=1)
             raise err
 
     attribute_whitelist = {
-        "valuetype",  # for all devices
-        "arraydesc",  # for image producers
-        "autodevices",  # for HasAutoDevices
+        'valuetype',  # for all devices
+        'arraydesc',  # for image producers
+        'autodevices',  # for HasAutoDevices
     }
 
     def __setattr__(self, name, value):
         # disallow modification of any public attributes that are not
         # parameters or otherwise properties
-        if name[0] != "_" and name not in self.attribute_whitelist:
+        if name[0] != '_' and name not in self.attribute_whitelist:
             obj = getattr(self.__class__, name, Ellipsis)
             if obj is Ellipsis:
-                raise UsageError(
-                    self,
-                    "device has no parameter %s, use "
-                    "ListParams(%s) to show all" % (name, self),
-                )
+                raise UsageError(self, 'device has no parameter %s, use '
+                                 'ListParams(%s) to show all' % (name, self))
             elif inspect.isroutine(obj):
-                raise UsageError(
-                    self, "%s cannot be assigned; it is a device method" % name
-                )
+                raise UsageError(self, '%s cannot be assigned; it is a device '
+                                 'method' % name)
             elif not isinstance(obj, property):
                 # this should also be forbidden at some point, but for now just
                 # emit a warning to make sure it doesn't break the world
                 raise ProgrammingError(
-                    self,
-                    f"setting a non-parameter attribute {self}.{name}: "
-                    "name needs to have an underscore prefix",
-                )
+                    self, f'setting a non-parameter attribute {self}.{name}: '
+                    'name needs to have an underscore prefix')
         object.__setattr__(self, name, value)
 
     def __str__(self):
@@ -481,17 +429,13 @@ class Device(metaclass=DeviceMeta):
 
     def __repr__(self):
         if not self.description:
-            return "<device %s (a %s.%s)>" % (
-                self._name,
-                self.__class__.__module__,
-                self.__class__.__name__,
-            )
-        return '<device %s "%s" (a %s.%s)>' % (
-            self._name,
-            self.description,
-            self.__class__.__module__,
-            self.__class__.__name__,
-        )
+            return '<device %s (a %s.%s)>' % (self._name,
+                                              self.__class__.__module__,
+                                              self.__class__.__name__)
+        return '<device %s "%s" (a %s.%s)>' % (self._name,
+                                               self.description,
+                                               self.__class__.__module__,
+                                               self.__class__.__name__)
 
     def __reduce__(self):
         # Used for pickling the device e.g. when sending between daemon and GUI
@@ -501,7 +445,7 @@ class Device(metaclass=DeviceMeta):
         return self._name
 
     def doReadClasses(self):
-        return [c.__module__ + "." + c.__name__ for c in self.__class__.__mro__]
+        return [c.__module__ + '.' + c.__name__ for c in self.__class__.__mro__]
 
     def doUpdateLoglevel(self, value):
         if session.sessiontype == POLLER:
@@ -514,12 +458,9 @@ class Device(metaclass=DeviceMeta):
         """Validate and create attached devices."""
         for aname, entry in sorted(self.attached_devices.items()):
             if not isinstance(entry, Attach):
-                raise ProgrammingError(
-                    self,
-                    "attached device entry for %r is "
-                    "invalid; the value should be a "
-                    "nicos.core.Attach object" % aname,
-                )
+                raise ProgrammingError(self, 'attached device entry for %r is '
+                                       'invalid; the value should be a '
+                                       'nicos.core.Attach object' % aname)
             value = self._config.pop(aname, None)
             devlist = []
             class_needed = entry.devclass
@@ -530,19 +471,16 @@ class Device(metaclass=DeviceMeta):
                 class_needed = object
 
             for i, devname in enumerate(entry.check(self, aname, value)):
-                if (devname is None) or (
-                    devname not in session.configured_devices and entry.missingok
-                ):
+                if (devname is None) or \
+                   (devname not in session.configured_devices and entry.missingok):
                     devlist.append(None)
                     continue
                 try:
                     dev = session.getDevice(devname, class_needed, source=self)
                 except UsageError:
                     raise ConfigurationError(
-                        self,
-                        "device %r item %d has wrong type (should be %s)"
-                        % (aname, i + 1, entry.devclass.__name__),
-                    ) from None
+                        self, 'device %r item %d has wrong type (should be %s)' %
+                        (aname, i + 1, entry.devclass.__name__)) from None
                 devlist.append(dev)
 
             for dev in devlist:
@@ -550,9 +488,8 @@ class Device(metaclass=DeviceMeta):
                     dev._sdevs.add(self._name)
                     if isinstance(self, IsController):
                         dev._controllers.add(self._name)
-            self.__dict__["_attached_%s" % aname] = self._adevs[aname] = (
+            self.__dict__['_attached_%s' % aname] = self._adevs[aname] = \
                 devlist[0] if entry.single else devlist
-            )
 
     def _iterAdevDefinitions(self):
         """Yield (attached_dev_name, Attach instance, actual attached dev)."""
@@ -594,6 +531,7 @@ class Device(metaclass=DeviceMeta):
            current execution mode.  This means that if one of these methods
            does hardware access, it must be done only if ``mode != SIMULATION``.
         """
+        self._sim_intercept = self._mode == SIMULATION and self.hardware_access
         self._cache = None
         self._subscriptions = []
 
@@ -602,40 +540,43 @@ class Device(metaclass=DeviceMeta):
         self._cache = self._getCache()
         lastconfig = None
         if self._cache:
-            lastconfig = self._cache.get("_lastconfig_", self._name, None)
-            old_classes = self._cache.get(self, "classes")
+            lastconfig = self._cache.get('_lastconfig_', self._name, None)
+            old_classes = self._cache.get(self, 'classes')
             new_classes = self.doReadClasses()
             if old_classes != new_classes and self._mode == MASTER:
-                self._cache.put(self, "classes", new_classes)
+                self._cache.put(self, 'classes', new_classes)
 
         def _init_param(param, paraminfo):
             param = param.lower()
             # mandatory parameters must be in config, regardless of cache
             if paraminfo.mandatory and param not in self._config:
-                raise ConfigurationError(
-                    self, "missing configuration parameter %r" % param
-                )
+                raise ConfigurationError(self, 'missing configuration '
+                                         'parameter %r in setup file' % param)
+
+            # A volatile parameter must not be given in the setup (except for
+            # tests, there it is ok because there is no hardware to read from)
+            if session.mode != SIMULATION:
+                if paraminfo.volatile and param in self._config:
+                    raise ConfigurationError(self, 'parameter %r is volatile and '
+                                            'must not be defined in the '
+                                            'setup file' % param)
+
             # Ellipsis representing "no value" since None is a valid value for
             # some parameters
             value = Ellipsis
             # try to get from cache
             if self._cache:
                 value = self._cache.get(self, param, Ellipsis)
-                if param == "name":  # clean up legacy, wrong values
-                    self._cache.put(self, "name", self._name)
+                if param == 'name':  # clean up legacy, wrong values
+                    self._cache.put(self, 'name', self._name)
                     value = self._name
                 if value is not Ellipsis:
                     try:
                         value = self._validateType(value, param, paraminfo)
                     except ConfigurationError as e:
-                        self.log.warning(
-                            "value of %s from cache (%r) is "
-                            "invalid: %r using default handling "
-                            "instead.",
-                            param,
-                            value,
-                            e,
-                        )
+                        self.log.warning('value of %s from cache (%r) is '
+                                         'invalid: %r using default handling '
+                                         'instead.', param, value, e)
                         value = Ellipsis
             if value is not Ellipsis:
                 if param in self._ownparams:
@@ -652,30 +593,21 @@ class Device(metaclass=DeviceMeta):
                         if lastconfig and lastconfig.get(param) != cfgvalue:
                             self.log.warning(
                                 "value of '%s' from cache (%s) differs from "
-                                "configured value (%s), using configured "
-                                "since it was changed in the setup file",
-                                param,
-                                valuestr,
-                                cfgvstr,
-                            )
+                                'configured value (%s), using configured '
+                                'since it was changed in the setup file',
+                                param, valuestr, cfgvstr)
                             value = cfgvalue
                             self._cache.put(self, param, value)
                         elif prefercache:
                             self.log.warning(
                                 "value of '%s' from cache (%s) differs from "
-                                "configured value (%s), using cached",
-                                param,
-                                valuestr,
-                                cfgvstr,
-                            )
+                                'configured value (%s), using cached',
+                                param, valuestr, cfgvstr)
                         else:
                             self.log.warning(
                                 "value of '%s' from cache (%s) differs from "
-                                "configured value (%s), using configured",
-                                param,
-                                valuestr,
-                                cfgvstr,
-                            )
+                                'configured value (%s), using configured',
+                                param, valuestr, cfgvstr)
                             value = cfgvalue
                             self._cache.put(self, param, value)
                 elif not paraminfo.settable and paraminfo.prefercache is False:
@@ -684,20 +616,18 @@ class Device(metaclass=DeviceMeta):
                     # the default is intended to be used but has changed)
                     defvalue = paraminfo.default
                     if defvalue != value:
-                        defvalue = self._validateType(defvalue, param, paraminfo)
+                        defvalue = self._validateType(defvalue, param,
+                                                      paraminfo)
                     if defvalue != value:
                         valuestr = self.formatParam(param, value)
                         defvstr = self.formatParam(param, paraminfo.default)
                         self.log.warning(
                             "value of '%s' from cache (%s) differs from "
-                            "default value (%s), using default",
-                            param,
-                            valuestr,
-                            defvstr,
-                        )
+                            'default value (%s), using default',
+                            param, valuestr, defvstr)
                         value = paraminfo.default
                         self._cache.put(self, param, value)
-                umethod = getattr(self, "doUpdate" + param.title(), None)
+                umethod = getattr(self, 'doUpdate' + param.title(), None)
                 if umethod:
                     umethod(value)
                 self._params[param] = value
@@ -708,19 +638,17 @@ class Device(metaclass=DeviceMeta):
             if param in self._config and paraminfo.internal:
                 self.log.warning(
                     "'%s' is configured in a setup file although "
-                    "declared as internal parameter",
-                    param,
+                    'declared as internal parameter',
+                    param
                 )
 
             if paraminfo.category is not None:
                 if paraminfo.category not in ALLOWED_CATEGORIES:
-                    self.log.error(
-                        "parameter %s uses illegal category %r!",
-                        param,
-                        paraminfo.category,
-                    )
+                    self.log.error('parameter %s uses illegal category %r!',
+                                   param, paraminfo.category)
                 else:
-                    self._infoparams.append((paraminfo.category, param, paraminfo.unit))
+                    self._infoparams.append((paraminfo.category, param,
+                                             paraminfo.unit))
             # end of _init_param()
 
         notfromcache = []
@@ -732,7 +660,7 @@ class Device(metaclass=DeviceMeta):
             else:
                 later.append((param, paraminfo))
 
-        if hasattr(self, "doPreinit"):
+        if hasattr(self, 'doPreinit'):
             self.doPreinit(self._mode)
 
         for param, paraminfo in later:
@@ -740,30 +668,26 @@ class Device(metaclass=DeviceMeta):
 
         # warn about parameters that weren't present in cache
         if self._cache and notfromcache:
-            self.log.info(
-                "these parameters were not present in cache: %s",
-                ", ".join(notfromcache),
-            )
+            self.log.info('these parameters were not present in cache: %s',
+                          ', '.join(notfromcache))
 
         self._infoparams.sort()
 
         # subscribe to parameter value updates, if a doUpdate method exists
         if self._cache:
             for param in self.parameters:
-                umethod = getattr(self, "doUpdate" + param.title(), None)
+                umethod = getattr(self, 'doUpdate' + param.title(), None)
                 if umethod:
-
                     def updateparam(key, value, time, umethod=umethod):
                         umethod(value)
-
                     self._cache.addCallback(self, param, updateparam)
                     self._subscriptions.append((param, updateparam))
 
         if self._cache:
-            self._cache.put("_lastconfig_", self._name, self._config)
+            self._cache.put('_lastconfig_', self._name, self._config)
 
         # call custom initialization
-        if hasattr(self, "doInit"):
+        if hasattr(self, 'doInit'):
             self.doInit(self._mode)
 
     def _getCache(self):
@@ -780,9 +704,8 @@ class Device(metaclass=DeviceMeta):
             value = paraminfo.type(value)
         except (ValueError, TypeError) as err:
             raise ConfigurationError(
-                self,
-                "%r is an invalid value for parameter %s: %s" % (value, param, err),
-            ) from err
+                self, '%r is an invalid value for parameter %s: %s' % (
+                    value, param, err)) from err
         return value
 
     def _initParam(self, param, paraminfo=None):
@@ -793,18 +716,17 @@ class Device(metaclass=DeviceMeta):
         from either the setup file or the device-specific default value.
         """
         paraminfo = paraminfo or self.parameters[param]
-        rmethod = getattr(self, "doRead" + param.title(), None)
-        umethod = getattr(self, "doUpdate" + param.title(), None)
+        rmethod = getattr(self, 'doRead' + param.title(), None)
+        umethod = getattr(self, 'doUpdate' + param.title(), None)
         done = False
+        value = Ellipsis
         # try to read from the hardware (only in non-simulation mode)
         if not self._sim_intercept and rmethod:
             try:
                 value = rmethod()
             except NicosError:
-                self.log.warning(
-                    "could not read initial value for parameter %s from device",
-                    param,
-                )
+                self.log.warning('could not read initial value for parameter '
+                                 '%s from device', param)
             else:
                 done = True
         if not done and param in self._params:
@@ -812,6 +734,7 @@ class Device(metaclass=DeviceMeta):
             value = self._params[param]
         elif not done:
             value = self._config.get(param, paraminfo.default)
+        # pylint: disable=used-before-assignment
         value = self._validateType(value, param, paraminfo)
         if self._cache:  # will not be there in simulation mode
             self._cache.put(self, param, value)
@@ -825,7 +748,7 @@ class Device(metaclass=DeviceMeta):
         """Set an otherwise read-only parameter.
 
         This is useful for parameters that change at runtime, but indirectly,
-        such as "last filenumber".
+        such as "last file number".
         """
         value = self._validateType(value, param)
         self._params[param] = value
@@ -851,13 +774,10 @@ class Device(metaclass=DeviceMeta):
         val = Ellipsis
         if maxage != 0:
             val = self._cache.get(
-                self,
-                name,
-                Ellipsis,
-                mintime=currenttime() - maxage if maxage is not None else 0,
-            )
+                self, name, Ellipsis,
+                mintime=currenttime() - maxage if maxage is not None else 0)
         if val is Ellipsis:
-            defmaxage = getattr(self, "maxage", None)
+            defmaxage = getattr(self, 'maxage', None)
             val = func(defmaxage if maxage is None else maxage)
             self._cache.put(self, name, val, currenttime(), defmaxage)
         return val
@@ -867,11 +787,11 @@ class Device(metaclass=DeviceMeta):
         if isinstance(value, list):
             value = tuple(value)
         fmtstr = self._getParamConfig(param).fmtstr
-        if fmtstr == "%r" and not use_repr:
-            fmtstr = "%s"
-        if fmtstr == "main":
+        if fmtstr == '%r' and not use_repr:
+            fmtstr = '%s'
+        if fmtstr == 'main':
             if isinstance(value, tuple):
-                fmtstr = "(" + ", ".join((self.fmtstr,) * len(value)) + ")"
+                fmtstr = '(' + ', '.join((self.fmtstr,) * len(value)) + ')'
             else:
                 fmtstr = self.fmtstr
         try:
@@ -887,8 +807,9 @@ class Device(metaclass=DeviceMeta):
             # switching to simulation mode: remove cache entirely
             # and rely on saved _params and values
             self._cache = None
+        self._sim_intercept = mode == SIMULATION and self.hardware_access
 
-    def history(self, name="value", fromtime=None, totime=None, interval=None):
+    def history(self, name='value', fromtime=None, totime=None, interval=None):
         """Return a history of the parameter *name* (can also be ``'value'`` or
         ``'status'``).
 
@@ -937,27 +858,21 @@ class Device(metaclass=DeviceMeta):
            sequence of tuples.
         """
         ret = []
-        if hasattr(self, "doInfo") and self._mode != SIMULATION:
+        if hasattr(self, 'doInfo') and self._mode != SIMULATION:
             ret.extend(self.doInfo())
-        selfunit = getattr(self, "unit", "")
+        selfunit = getattr(self, 'unit', '')
         for category, name, unit in self._infoparams:
             try:
                 parvalue = self._getFromCache(
-                    name, lambda _maxage=None: getattr(self, name)
-                )
+                    name, lambda _maxage=None: getattr(self, name))
             except Exception as err:
-                self.log.warning("error getting %s parameter", name, exc=err)
+                self.log.warning('error getting %s parameter', name, exc=err)
                 continue
-            parunit = (unit or "").replace("main", selfunit)
-            ret.append(
-                (
-                    name,
-                    parvalue,
-                    self.formatParam(name, parvalue, use_repr=False),
-                    parunit,
-                    category,
-                )
-            )
+            parunit = (unit or '').replace('main', selfunit)
+            pinfo = DeviceParInfo(
+                parvalue, self.formatParam(name, parvalue, use_repr=False),
+                parunit, category)
+            ret.append(DeviceMetaInfo(name, pinfo))
         return ret
 
     def shutdown(self):
@@ -970,7 +885,7 @@ class Device(metaclass=DeviceMeta):
            This method is called, if present, but not in simulation mode.  It
            should perform cleanup, for example closing connections to hardware.
         """
-        self.log.debug("shutting down device")
+        self.log.debug('shutting down device')
         caught_exc = None
         if self._mode != SIMULATION:
             # do not execute shutdown actions when simulating
@@ -981,7 +896,7 @@ class Device(metaclass=DeviceMeta):
                     self._cache.removeCallback(self, param, func)
 
             # execute custom shutdown actions
-            if hasattr(self, "doShutdown"):
+            if hasattr(self, 'doShutdown'):
                 try:
                     self.doShutdown()
                 except Exception as err:
@@ -1002,7 +917,13 @@ class Device(metaclass=DeviceMeta):
         if caught_exc is not None:
             raise caught_exc
 
-    @usermethod
+    @usermethod(doc="""
+        Return a list of versions for this device.
+
+        If the list isn't empty the entries are tuples (component, version)
+        where a "component" can be the name of a Python module, or an
+        external dependency (like a Tango server).
+    """)
     def version(self):
         """Return a list of versions for this device.
 
@@ -1020,7 +941,7 @@ class Device(metaclass=DeviceMeta):
            (component, version) tuples that are added to the version info.
         """
         versions = getVersions(self)
-        if not self._sim_intercept and hasattr(self, "doVersion"):
+        if not self._sim_intercept and hasattr(self, 'doVersion'):
             versions.extend(self.doVersion())
         return versions
 
@@ -1038,7 +959,8 @@ class Device(metaclass=DeviceMeta):
                 self._cache.lock(self._name)
             except CacheLockError:
                 if currenttime() > start + timeout:
-                    raise CommunicationError(self, "device locked in cache") from None
+                    raise CommunicationError(
+                        self, 'device locked in cache') from None
                 session.delay(self._base_loop_delay * 3)
             else:
                 break
@@ -1059,7 +981,8 @@ class Device(metaclass=DeviceMeta):
         try:
             self._cache.unlock(self._name)
         except CacheLockError:
-            raise CommunicationError(self, "device locked by other instance") from None
+            raise CommunicationError(
+                self, 'device locked by other instance') from None
 
     def _pollParam(self, name, with_ttl=0):
         """Read a parameter from the hardware and put its value into the cache.
@@ -1069,33 +992,31 @@ class Device(metaclass=DeviceMeta):
         devices, if *with_ttl* is > 0, the cached value gets the TTL of the
         device value, determined by :attr:`maxage`, multiplied by *with_ttl*.
         """
-        value = getattr(self, "doRead" + name.title())()
-        if with_ttl:
-            self._cache.put(
-                self, name, value, currenttime(), getattr(self, "maxage", 0) * with_ttl
-            )
+        if not self._cache:
+            return
+        value = getattr(self, 'doRead' + name.title())()
+        if not self._cache:
+            self._params[name] = value
+        elif with_ttl and (maxage := getattr(self, 'maxage', None)) is not None:
+            self._cache.put(self, name, value, currenttime(), maxage * with_ttl)
         else:
             self._cache.put(self, name, value)
 
-    def pollParams(
-        self, volatile_only=True, blocking=False, with_ttl=0, param_list=None
-    ):
-        """Poll all parameters (normally only volatile ones)."""
-        if param_list is None:
-            param_list = list(self.parameters)
-        param_list = [
-            param
-            for param in param_list
-            if self.parameters[param].volatile
-            or (not volatile_only and hasattr(self, "doRead" + param.title()))
-        ]
-        if blocking:
-            for param in param_list:
-                self._pollParam(param, with_ttl)
-        else:
-            self._cache.put_raw(
-                "poller/%s/pollparams" % self.name, param_list, flag=FLAG_NO_STORE
-            )
+    def pollParams(self, *params, with_ttl=0):
+        """Poll given *params* (or, if None, all parameters that have a
+        doReadParam() method), in a blocking manner.
+        """
+        for name in params or self.parameters:
+            if hasattr(self, 'doRead' + name.title()):
+                self._pollParam(name, with_ttl)
+
+    def asyncPollVolatileParams(self):
+        """Poll all volatile parameters asynchronously."""
+        if self._cache:
+            params = [name for (name, info) in self.parameters.items()
+                      if info.volatile]
+            self._cache.put_raw(f'poller/{self.name}/pollparams', params,
+                                flag=FLAG_NO_STORE)
 
 
 class Readable(Device):
@@ -1104,7 +1025,7 @@ class Readable(Device):
 
     Subclasses *need* to implement:
 
-    * doRead(maxage)
+    * doRead(maxage=0)
 
     Subclasses *can* implement:
 
@@ -1113,48 +1034,29 @@ class Readable(Device):
 
     Subclasses *can* override:
 
-    * doStatus(maxage)
+    * doStatus(maxage=0)
     * valueInfo()
     """
 
     parameters = {
-        "fmtstr": Param(
-            "Format string for the device value",
-            type=str,
-            default="%.3f",
-            settable=True,
-        ),
-        "unit": Param(
-            "Unit of the device main value", type=str, mandatory=True, settable=True
-        ),
-        "maxage": Param(
-            "Maximum age of cached value and status (zero "
-            "to never use cached values, or None to cache "
-            "them indefinitely)",
-            unit="s",
-            fmtstr="%.1f",
-            default=12,
-            settable=True,
-            type=none_or(floatrange(0, 24 * 3600)),
-        ),
-        "pollinterval": Param(
-            "Polling interval for value and status (or None to disable polling)",
-            unit="s",
-            fmtstr="%.1f",
-            default=5,
-            settable=True,
-            type=none_or(floatrange(0.5, 24 * 3600)),
-        ),
-        "warnlimits": Param(
-            "Range in which the device value should be "
-            "in normal operation; warnings may be triggered "
-            "when it is outside",
-            settable=True,
-            chatty=True,
-            unit="main",
-            fmtstr="main",
-            type=none_or(tupleof(anytype, anytype)),
-        ),
+        'fmtstr':       Param('Format string for the device value', type=str,
+                              default='%.3f', settable=True),
+        'unit':         Param('Unit of the device main value', type=str,
+                              mandatory=True, settable=True),
+        'maxage':       Param('Maximum age of cached value and status (zero '
+                              'to never use cached values, or None to cache '
+                              'them indefinitely)', unit='s', fmtstr='%.1f',
+                              default=12, settable=True,
+                              type=none_or(floatrange(0, 24 * 3600))),
+        'pollinterval': Param('Polling interval for value and status (or None '
+                              'to disable polling)', unit='s', fmtstr='%.1f',
+                              default=5, settable=True,
+                              type=none_or(floatrange(0.5, 24 * 3600))),
+        'warnlimits':   Param('Range in which the device value should be '
+                              'in normal operation; warnings may be triggered '
+                              'when it is outside', settable=True, chatty=True,
+                              unit='main', fmtstr='main',
+                              type=none_or(tupleof(anytype, anytype))),
     }
 
     def init(self):
@@ -1162,7 +1064,9 @@ class Readable(Device):
         # value in simulation mode
         self._sim_intercept = self._mode == SIMULATION and self.hardware_access
         self._sim_old_value = None
-        self._sim_value = 0  # no way to configure a useful default...
+        # if value is in the cache-file in test_dryrun, it ends up in
+        # self._config, otherwise we should get it from cache sync later
+        self._sim_value = self._config.get('value', 0)
         self._sim_min = None
         self._sim_max = None
         self._sim_started = None
@@ -1177,16 +1081,9 @@ class Readable(Device):
         name" is the device name.
         """
         if self._sim_min is not None:
-            return [
-                (
-                    self.name,
-                    self.format(self._sim_value),
-                    self.format(self._sim_min),
-                    self.format(self._sim_max),
-                )
-            ]
-        else:
-            return []
+            return [(self.name, self.format(self._sim_value),
+                     self.format(self._sim_min), self.format(self._sim_max))]
+        return []
 
     def _sim_setValue(self, pos):
         self._sim_old_value = self._sim_value
@@ -1205,19 +1102,17 @@ class Readable(Device):
             # save the last known value
             try:
                 self._sim_value = self.read()  # cached value is ok here
-                self.log.debug(
-                    "last value before simulation mode is %r", self._sim_value
-                )
+                self.log.debug('last value before simulation mode is %r',
+                               self._sim_value)
             except Exception as err:
-                self.log.warning("error reading last value", exc=err)
-        self._sim_intercept = sim_intercept
+                self.log.warning('error reading last value', exc=err)
         Device._setMode(self, mode)
 
     def __call__(self, *values):
         """Allow dev() as shortcut for read."""
         if values:
             # give a nicer error message than "TypeError: takes 1 argument"
-            raise UsageError(self, "not a moveable device")
+            raise UsageError(self, 'not a moveable device')
         return self.read()
 
     def valueInfo(self):
@@ -1237,9 +1132,19 @@ class Readable(Device):
         By default, this returns a Value that indicates one return value with
         the proper unit and format string of the device.
         """
-        return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
+        return Value(self.name, unit=self.unit, fmtstr=self.fmtstr),
 
-    @usermethod
+    @usermethod(doc="""
+        Read and return the main value of the device, which can then be used
+        further in the script.
+
+        If *maxage* is given, makes sure the value is at most that many seconds
+        old.  ``0`` will enforce reading from the hardware.
+
+        Example:
+
+        >>> maw(dev2, dev1.read())
+    """, helparglist='[maxage]')
     def read(self, maxage=None):
         """Read the (possibly cached) main value of the device.
 
@@ -1253,12 +1158,18 @@ class Readable(Device):
         """
         if self._sim_intercept:
             return self._sim_value
-        val = self._getFromCache("value", self.doRead, maxage)
+        val = self._getFromCache('value', self.doRead, maxage)
         if self._mode == SIMULATION:
             self._sim_setValue(val)
         return val
 
-    @usermethod
+    @usermethod(doc="""
+        Read and return the status of the device as a tuple of status constant
+        and textual extended info.
+
+        If *maxage* is given, makes sure the value is at most that many seconds
+        old.  ``0`` will enforce reading from the hardware.
+    """, helparglist='[maxage]')
     def status(self, maxage=None):
         """Return the (possibly cached) status of the device.
 
@@ -1280,8 +1191,8 @@ class Readable(Device):
            subdevices.
         """
         if self._sim_intercept:
-            return (status.OK, "simulated ok")
-        return self._getFromCache("status", self._combinedStatus, maxage)
+            return (status.OK, 'simulated ok')
+        return self._getFromCache('status', self._combinedStatus, maxage)
 
     def _combinedStatus(self, maxage=0):
         """Return the status of the device combined from hardware status and
@@ -1296,9 +1207,12 @@ class Readable(Device):
         except NicosError as err:
             stvalue = (status.ERROR, str(err))
         except Exception as err:
-            stvalue = (status.ERROR, "unhandled %s: %s" % (err.__class__.__name__, err))
+            self.log.debug('unhandled error during doStatus()', exc=1)
+            stvalue = (status.ERROR, 'unhandled %s: %s' %
+                       (err.__class__.__name__, err))
         if stvalue[0] not in status.statuses:
-            stvalue = (status.UNKNOWN, "status constant %r is unknown" % stvalue[0])
+            stvalue = (status.UNKNOWN,
+                       'status constant %r is unknown' % stvalue[0])
 
         if stvalue[0] == status.OK:
             value = None
@@ -1306,21 +1220,13 @@ class Readable(Device):
             if wl:
                 value = self.read(maxage)
                 if wl[0] is not None and value < wl[0]:
-                    stvalue = (
-                        status.WARN,
-                        statusString(
-                            stvalue[1],
-                            "below warn limit (%s)" % self.format(wl[0], unit=True),
-                        ),
-                    )
+                    stvalue = status.WARN, \
+                        statusString(stvalue[1], 'below warn limit (%s)' %
+                                     self.format(wl[0], unit=True))
                 elif wl[1] is not None and value > wl[1]:
-                    stvalue = (
-                        status.WARN,
-                        statusString(
-                            stvalue[1],
-                            "above warn limit (%s)" % self.format(wl[1], unit=True),
-                        ),
-                    )
+                    stvalue = status.WARN, \
+                        statusString(stvalue[1], 'above warn limit (%s)' %
+                                     self.format(wl[1], unit=True))
             if isinstance(self, HasLimits):
                 if value is None:
                     value = self.read(maxage)
@@ -1334,7 +1240,7 @@ class Readable(Device):
     def doStatus(self, maxage=0):
         if self._adevs:
             return multiStatus(self._adevs, maxage)
-        return (status.UNKNOWN, "doStatus not implemented")
+        return (status.UNKNOWN, 'doStatus not implemented')
 
     def poll(self, n=0, maxage=0):
         """Get status and value directly from the device and put both values
@@ -1356,24 +1262,30 @@ class Readable(Device):
         if self._sim_intercept or self._cache is None:
             return (self.status(), self.read())
         ret = None
-        if hasattr(self, "doPoll"):
+        if hasattr(self, 'doPoll'):
             try:
                 ret = self.doPoll(n, maxage)
             except Exception:
-                self.log.warning("error in doPoll", exc=1)
-        if ret is not None and ret[0] is not None:
+                self.log.warning('error in doPoll', exc=1)
+        if ret is None:
+            return self.status(maxage), self.read(maxage)
+        status, value = ret
+        if self._cache:
             ct = currenttime()
-            self._cache.put(self, "status", ret[0], ct, self.maxage)
-            self._cache.put(self, "value", ret[1], ct, self.maxage)
-            return ret[0], ret[1]
-        # updates shall always get through to the cache
-        # self._cache.invalidate(self, 'value')
-        # self._cache.invalidate(self, 'status')
-        return self.status(maxage), self.read(maxage)
+            self._cache.put(self, 'status', status, ct, self.maxage)
+            self._cache.put(self, 'value', value, ct, self.maxage)
+        return status, value
 
-    @usermethod
+    @usermethod(doc="""
+        Reset the device hardware and returns the new status afterwards.
+
+        Example:
+
+        >>> dev.reset()
+        (200, '')
+    """)
     def reset(self):
-        """Reset the device hardware.  Returns the new status afterwards.
+        """Reset the device hardware. Returns the new status afterward.
 
         This operation is forbidden in slave mode, and a no-op for hardware
         devices in simulation mode.
@@ -1383,18 +1295,18 @@ class Readable(Device):
            This method is called if implemented.  Otherwise, this is a no-op.
         """
         if self._mode == SLAVE:
-            raise ModeError("reset not possible in slave mode")
+            raise ModeError('reset not possible in slave mode')
         elif self._sim_intercept:
-            return status.OK, ""
+            return status.OK, ''
         if isinstance(self, HasTimeout):
-            self._setROParam("_timesout", None)
+            self._setROParam('_timesout', None)
             # reset should not trigger timeoutAction()
             self._timeoutActionCalled = True
-        if hasattr(self, "doReset"):
+        if hasattr(self, 'doReset'):
             self.doReset()
         # make sure, status is propagated to the cache after a reset
         if self._cache:
-            self._cache.invalidate(self, "status")
+            self._cache.invalidate(self, 'status')
         return self.status(0)
 
     def format(self, value, unit=False):
@@ -1412,7 +1324,7 @@ class Readable(Device):
         except (TypeError, ValueError):
             ret = str(value)
         if unit and self.unit:
-            return ret + " " + self.unit
+            return ret + ' ' + self.unit
         return ret
 
     def info(self):
@@ -1420,25 +1332,32 @@ class Readable(Device):
         ret = []
         try:
             val = self.read()
-            ret.append(("value", val, self.format(val), self.unit, "general"))
+            ret.append(DeviceMetaInfo(
+                'value',
+                DeviceParInfo(val, self.format(val), self.unit, 'general')))
         except Exception as err:
             self._info_errcount += 1
             # only display the message for the first 5 times and then
             # every 20 measurements. always display if in debugmode
             if self._info_errcount <= 5 or self._info_errcount % 20 == 0:
-                self.log.warning("error reading", exc=err)
+                self.log.warning('error reading', exc=err)
             else:
-                self.log.debug("error reading", exc=err)
-            ret.append(("value", None, "Error: %s" % err, "", "general"))
+                self.log.debug('error reading', exc=err)
+            ret.append(DeviceMetaInfo(
+                'value',
+                DeviceParInfo(None, 'Error: %s' % err, '', 'general')))
         else:
             self._info_errcount = 0
         try:
             st = self.status()
         except Exception as err:
-            errstr = "Error: %s" % err
-            ret.append(("status", (status.ERROR, errstr), errstr, "", "status"))
+            errstr = 'Error: %s' % err
+            ret.append(DeviceMetaInfo(
+                'status',
+                DeviceParInfo((status.ERROR, errstr), errstr, '', 'status')))
         else:
-            ret.append(("status", st, formatStatus(st), "", "status"))
+            ret.append(DeviceMetaInfo(
+                'status', DeviceParInfo(st, formatStatus(st), '', 'status')))
         return ret + Device.info(self)
 
 
@@ -1454,17 +1373,22 @@ class Waitable(Readable):
 
     * _getWaiters()
     * doEstimateTime(elapsed)
-    * doStatus(maxage)
+    * doStatus(maxage=0)
     """
 
     busystates = (status.BUSY,)
-    errorstates = {
-        status.NOTREACHED: PositionError,
-        status.ERROR: MoveError,
-        status.DISABLED: MoveError,
-    }
+    errorstates = {status.NOTREACHED: PositionError,
+                   status.ERROR: MoveError,
+                   status.DISABLED: MoveError}
 
-    @usermethod
+    @usermethod(doc="""
+        Wait until movement of device is completed and return the current
+        device value after waiting.
+
+        Example:
+
+        >>> maw(dev2, dev1.wait())
+    """)
     def wait(self):
         """Wait until movement of device is completed.
 
@@ -1494,7 +1418,7 @@ class Waitable(Readable):
         waiters = self._getWaiters()
         if waiters:
             return multiStatus(waiters, maxage)
-        return (status.UNKNOWN, "doStatus not implemented")
+        return (status.UNKNOWN, 'doStatus not implemented')
 
     def isCompleted(self):
         """Check for completion of movement.
@@ -1530,22 +1454,20 @@ class Waitable(Readable):
 
            This method can be implemented to override :meth:`isCompleted`.
         """
-        if hasattr(self, "doIsCompleted"):
+        if hasattr(self, 'doIsCompleted'):
             return self.doIsCompleted()
         st = self.status(0)
-        if self.loglevel == "debug":
+        if self.loglevel == 'debug':
             # only read and log the device position if debugging
             # as this could be expensive and is not needed otherwise
             try:
                 position = self.read(0)
             except Exception:
-                self.log.debug("isCompleted: status %r", formatStatus(st))
+                self.log.debug('isCompleted: status %r', formatStatus(st))
             else:
-                self.log.debug(
-                    "isCompleted: status %r at %s",
-                    formatStatus(st),
-                    self.format(position, unit=True),
-                )
+                self.log.debug('isCompleted: status %r at %s',
+                               formatStatus(st),
+                               self.format(position, unit=True))
         if st[0] in self.busystates:
             return False
         elif st[0] in self.errorstates:
@@ -1571,7 +1493,7 @@ class Waitable(Readable):
         try:
             return self.doEstimateTime(elapsed)
         except Exception:
-            self.log.debug("could not estimate time", exc=1)
+            self.log.debug('could not estimate time', exc=1)
             return None
 
     def doEstimateTime(self, elapsed):
@@ -1595,31 +1517,19 @@ class Moveable(Waitable):
     """
 
     parameters = {
-        "target": Param(
-            "Last target position of a start() action",
-            unit="main",
-            fmtstr="main",
-            type=anytype,
-            default=None,
-        ),
-        "fixed": Param(
-            "None if the device is not fixed, else a string describing why",
-            settable=False,
-            userparam=False,
-            type=str,
-        ),
-        "fixedby": Param(
-            "Who fixed it?",
-            settable=False,
-            userparam=False,
-            type=none_or(tupleof(str, int)),
-            default=None,
-        ),
-        "requires": Param(
-            "Access requirements for moving the device",
-            type=dictof(str, anytype),
-            userparam=False,
-        ),
+        'target': Param('Last target position of a start() action',
+                        unit='main', fmtstr='main', type=anytype,
+                        default=None),
+        'fixed':  Param('None if the device is not fixed, else a string '
+                        'describing why', settable=False, userparam=False,
+                        type=str),
+        'fixedby':  Param('Who fixed it?', settable=False, userparam=False,
+                          type=none_or(tupleof(str, int)), default=None),
+        'requires': Param('Access requirements for moving the device',
+                          type=dictof(str, anytype), userparam=False),
+        'ignore_general_stop': Param('Flag to ignore general stop',
+                                     type=bool, prefercache=False,
+                                     userparam=False),
     }
 
     #: The type of the device value, used for typechecking in doStart().
@@ -1649,10 +1559,8 @@ class Moveable(Waitable):
             if self._mode == MASTER:
                 if umin > amax or umax < amin:
                     # if user and abs limits are completely disjoint, reset
-                    self.log.info(
-                        "user limits were outside absolute limits; "
-                        "now reset to absolute limits"
-                    )
+                    self.log.info('user limits were outside absolute limits; '
+                                  'now reset to absolute limits')
                     restricted_limits = (amin, amax)
                 elif umin == umax == 0:
                     # if userlimits are both zero, assume failure to read
@@ -1660,29 +1568,19 @@ class Moveable(Waitable):
                     restricted_limits = self.doReadUserlimits()
                 else:
                     # otherwise restrict user to be within abs limits
-                    restricted_limits = (
-                        min(max(umin, amin), amax),
-                        max(min(umax, amax), amin),
-                    )
+                    restricted_limits = (min(max(umin, amin), amax),
+                                         max(min(umax, amax), amin))
                 if restricted_limits != (umin, umax):
                     self.userlimits = restricted_limits
             elif self._mode != SIMULATION:
                 if umin < amin:
-                    self.log.warning(
-                        "user minimum (%s) below absolute "
-                        "minimum (%s), please check and re-set "
-                        "limits",
-                        umin,
-                        amin,
-                    )
+                    self.log.warning('user minimum (%s) below absolute '
+                                     'minimum (%s), please check and re-set '
+                                     'limits', umin, amin)
                 if umax > amax:
-                    self.log.warning(
-                        "user maximum (%s) above absolute "
-                        "maximum (%s), please check and re-set "
-                        "limits",
-                        umax,
-                        amax,
-                    )
+                    self.log.warning('user maximum (%s) above absolute '
+                                     'maximum (%s), please check and re-set '
+                                     'limits', umax, amax)
             if self._mode == SIMULATION:
                 # special case: in simulation mode, doReadUserlimits is not
                 # called, so the limits are not set from the absolute limits,
@@ -1690,9 +1588,20 @@ class Moveable(Waitable):
                 # Set them directly (bypassing pos check, as this may work at
                 # this point for simulation)
                 if self.userlimits == (0.0, 0.0):
-                    self._params["userlimits"] = self.abslimits
+                    self._params['userlimits'] = self.abslimits
 
-    @usermethod
+    @usermethod(doc="""
+        Check if the given position can be moved to.
+
+        The return value is a tuple ``(valid, why)``.  The first item is a
+        boolean indicating if the position is valid, the second item is a
+        string with the reason if it is invalid.
+
+        Example:
+
+        >>> dev.isAllowed(10)
+        (False, 'out of limits')
+    """, helparglist='pos')
     def isAllowed(self, pos):
         """Check if the given position can be moved to.
 
@@ -1722,12 +1631,23 @@ class Moveable(Waitable):
             limits = self.userlimits
             if isinstance(pos, number_types):
                 if not limits[0] <= pos <= limits[1]:
-                    return False, "limits are [%s, %s]" % limits
-        if hasattr(self, "doIsAllowed"):
+                    return False, 'limits are [%s, %s]' % limits
+        if hasattr(self, 'doIsAllowed'):
             return self.doIsAllowed(pos)
-        return True, ""
+        return True, ''
 
-    @usermethod
+    @usermethod(doc="""
+        Start the movement of the device to a new position.
+
+        The validity of the given *pos* is checked before starting the movement
+        and in case of giving a not allowed value, it will raise an error.
+
+        This method doesn't wait for completion of the movement.
+
+        Example:
+
+        >>> dev.start(10)
+    """, helparglist='pos')
     def start(self, pos):
         """Start movement of the device to a new position.
 
@@ -1758,39 +1678,34 @@ class Moveable(Waitable):
         should not be started.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, "start not possible in slave mode")
+            raise ModeError(self, 'start not possible in slave mode')
         if self.fixed:
             # try to determine if we are already there
             try:
                 # this may raise if the position values are not numbers
-                if abs(self.read() - pos) <= getattr(self, "precision", 0):
-                    self.log.debug(
-                        "device fixed; start() allowed since "
-                        "already at desired position %s",
-                        pos,
-                    )
+                if abs(self.read() - pos) <= getattr(self, 'precision', 0):
+                    self.log.debug('device fixed; start() allowed since '
+                                   'already at desired position %s', pos)
                     return Ellipsis
             except Exception:
                 pass
-            self.log.warning("device fixed, not moving: %s", self.fixed)
+            self.log.warning('device fixed, not moving: %s', self.fixed)
             return Ellipsis
         if self.requires:
             try:
                 session.checkAccess(self.requires)
             except AccessError as err:
-                raise AccessError(self, "cannot start device: %s" % err) from None
+                raise AccessError(
+                    self, 'cannot start device: %s' % err) from None
         try:
             pos = self.valuetype(pos)
         except (ValueError, TypeError) as err:
-            raise InvalidValueError(
-                self, "%r is an invalid value for this device: %s" % (pos, err)
-            ) from None
+            raise InvalidValueError(self, '%r is an invalid value for this '
+                                    'device: %s' % (pos, err)) from None
         ok, why = self.isAllowed(pos)
         if not ok:
-            raise LimitError(
-                self,
-                "moving to %s is not allowed: %s" % (self.format(pos, unit=True), why),
-            )
+            raise LimitError(self, 'moving to %s is not allowed: %s' %
+                             (self.format(pos, unit=True), why))
         return pos
 
     def _start_unchecked(self, pos):
@@ -1798,22 +1713,22 @@ class Moveable(Waitable):
         if isinstance(self, HasTimeout):
             self.resetTimeout(pos)
         if self._sim_intercept:
-            self._setROParam("target", pos)
+            self._setROParam('target', pos)
             self._sim_setValue(pos)
             self._sim_started = session.clock.time
             return
         if self._cache:
-            self._cache.invalidate(self, "value")
-            self._cache.invalidate(self, "status")
-        if hasattr(self.valuetype, "compare"):
+            self._cache.invalidate(self, 'value')
+            self._cache.invalidate(self, 'status')
+        if hasattr(self.valuetype, 'compare'):
             target_equal = self.valuetype.compare(self.target, pos)
         else:
-            target_equal = self.target == pos
+            target_equal = (self.target == pos)
         if target_equal:
             # if the target hasn't changed, make the poller receive the correct
             # event in any case
-            self._setROParam("target", None)
-        self._setROParam("target", pos)
+            self._setROParam('target', None)
+        self._setROParam('target', pos)
         self.doStart(pos)
 
     def move(self, pos):
@@ -1823,7 +1738,7 @@ class Moveable(Waitable):
         """Calculate the time to move from one position to another.
 
         Return the estimated moving time in seconds.
-        This is a pure calculatory method which may be overwritten in derived
+        This is a pure calculation method which may be overwritten in derived
         classes.
 
         This basic implementation estimates the moving time
@@ -1831,11 +1746,11 @@ class Moveable(Waitable):
         If no calculation can be performed, return 0.
         """
         # speed is in physical units per second and ramp is per minute
-        if "speed" in self.parameters and self.speed != 0:
+        if 'speed' in self.parameters and self.speed != 0:
             return abs(target - old_value) / self.speed
-        elif "ramp" in self.parameters and self.ramp != 0:
-            return abs(target - old_value) / (self.ramp / 60.0)
-        return 0.0
+        elif 'ramp' in self.parameters and self.ramp != 0:
+            return abs(target - old_value) / (self.ramp / 60.)
+        return 0.
 
     def finish(self):
         """Finish up movement of the device.
@@ -1855,30 +1770,29 @@ class Moveable(Waitable):
         if self._sim_intercept:
             time = 0
             try:
-                if self._sim_old_value is not None and self._sim_value is not None:
+                if self._sim_old_value is not None and \
+                   self._sim_value is not None:
                     time = self.doTime(self._sim_old_value, self._sim_value)
             except Exception:
-                self.log.warning("could not time movement", exc=1)
+                self.log.warning('could not time movement', exc=1)
             if self._sim_started is not None:
                 session.clock.wait(self._sim_started + time)
                 self._sim_started = None
             self._sim_old_value = self._sim_value
             return
         # call doFinish
-        if hasattr(self, "doFinish"):
+        if hasattr(self, 'doFinish'):
             if self.doFinish() is False:
                 return
         # do a final read of the device
         pos = self.read(0)
         # check reached value to be equal to target
         if not self.isAtTarget(pos):
-            self.log.warning(
-                "did not reach target %s, last value is %s",
-                self.format(self.target, unit=True),
-                self.format(pos, unit=True),
-            )
+            self.log.warning('did not reach target %s, last value is %s',
+                             self.format(self.target, unit=True),
+                             self.format(pos, unit=True))
 
-    def isAtTarget(self, pos=None, target=None):
+    def isAtTarget(self, pos=None, target=None, maxage=0):
         """Check if the device has arrived at the given target.
         If target is omitted it defaults to the device's currently set target.
         If pos is omitted the device checks against its current read value.
@@ -1905,11 +1819,12 @@ class Moveable(Waitable):
         if target is None:
             target = self.target
         if pos is None:
-            pos = self.read(0)
+            pos = self.read(maxage)
 
-        if hasattr(self, "doIsAtTarget"):
+        if hasattr(self, 'doIsAtTarget'):
             return self.doIsAtTarget(pos, target)
-        elif isinstance(pos, (str, int)) and target is not None:
+        elif (isinstance(pos, (str, int)) and
+              target is not None):
             return target == pos
         return True
 
@@ -1927,7 +1842,7 @@ class Moveable(Waitable):
         self.start(target)
         return multiWait([self])[self]
 
-    @usermethod
+    @usermethod(doc="""Stop any movement of the device.""")
     def stop(self):
         """Stop any movement of the device.
 
@@ -1943,30 +1858,42 @@ class Moveable(Waitable):
         The :meth:`stop` method will return the device status after stopping.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, "stop not possible in slave mode")
+            raise ModeError(self, 'stop not possible in slave mode')
         elif self._sim_intercept:
             return
         if self.fixed:
-            self.log.debug("device fixed, not stopping: %s", self.fixed)
+            self.log.debug('device fixed, not stopping: %s', self.fixed)
             return
         if self.requires:
             try:
                 session.checkAccess(self.requires)
             except AccessError as err:
-                raise AccessError(self, "cannot stop device: %s" % err) from None
+                raise AccessError(
+                    self, 'cannot stop device: %s' % err) from None
         if isinstance(self, HasTimeout):
-            self._setROParam("_timesout", None)
-        if hasattr(self, "doStop"):
+            self._setROParam('_timesout', None)
+        if hasattr(self, 'doStop'):
             self.doStop()
         elif self._adevs:
             multiStop(self._adevs)
         if self._cache:
-            self._cache.invalidate(self, "value")
-            self._cache.invalidate(self, "status")
+            self._cache.invalidate(self, 'value')
+            self._cache.invalidate(self, 'status')
 
-    @usermethod
-    def fix(self, reason=""):
+    @usermethod(doc="""
+        Fix the device, so movement or stop can't be executed anymore.
+
+        The param *reason* should contain a descriptive message why the device
+        is blocked.
+
+        Example:
+
+        >>> dev.fix('Cryostat is mounted')
+    """, helparglist='[reason]')
+    def fix(self, reason=''):
         """Fix the device: don't allow movement anymore.
+
+        Returns true in case of successful fixing otherwise false.
 
         This blocks :meth:`start` or :meth:`stop` when called on the device.
 
@@ -1979,23 +1906,23 @@ class Moveable(Waitable):
         eu = session.getExecutingUser()
         if self.fixedby and not session.checkUserLevel(self.fixedby[1], eu):
             # fixed and not enough rights
-            self.log.error("device was fixed by %r already", self.fixedby[0])
+            self.log.error('device was fixed by %r already', self.fixedby[0])
             return False
+
+        if self.status()[0] == status.BUSY:
+            self.log.warning('device appears to be busy')
+        if reason:
+            suffix = ' (fixed by %r)' % eu.name
+            if not reason.endswith(suffix):
+                reason += suffix
         else:
-            if self.status()[0] == status.BUSY:
-                self.log.warning("device appears to be busy")
-            if reason:
-                suffix = " (fixed by %r)" % eu.name
-                if not reason.endswith(suffix):
-                    reason += suffix
-            else:
-                reason = "fixed by %r" % eu.name
-            # handle self
-            self._setROParam("fixed", reason)
-            self._setROParam("fixedby", (eu.name, eu.level))
-            # handle recursive fixes
-            self.doFix(reason)
-            return True
+            reason = 'fixed by %r' % eu.name
+        # handle self
+        self._setROParam('fixed', reason)
+        self._setROParam('fixedby', (eu.name, eu.level))
+        # handle recursive fixes
+        self.doFix(reason)
+        return True
 
     def doFix(self, reason):
         for _name, attinfo, dev in self._iterAdevDefinitions():
@@ -2003,9 +1930,11 @@ class Moveable(Waitable):
                 if isinstance(dev, Moveable):
                     dev.fix(reason)
 
-    @usermethod
+    @usermethod(doc="""Release the device, i.e. undo the effect of fix().""")
     def release(self):
         """Release the device, i.e. undo the effect of fix().
+
+        Returns true in case of successful releasing otherwise false.
 
         .. method:: doRelease()
 
@@ -2016,18 +1945,16 @@ class Moveable(Waitable):
         eu = session.getExecutingUser()
         if self.fixedby and not session.checkUserLevel(self.fixedby[1], eu):
             # fixed and not enough rights
-            self.log.error(
-                "device was fixed by %r and you are not allowed to release it",
-                self.fixedby[0],
-            )
+            self.log.error('device was fixed by %r and you are not allowed '
+                           'to release it', self.fixedby[0])
             return False
-        else:
-            # handle recursive releases
-            self.doRelease()
-            # handle self
-            self._setROParam("fixed", "")
-            self._setROParam("fixedby", None)
-            return True
+
+        # handle recursive releases
+        self.doRelease()
+        # handle self
+        self._setROParam('fixed', '')
+        self._setROParam('fixedby', None)
+        return True
 
     def doRelease(self):
         for _name, attinfo, dev in self._iterAdevDefinitions():
@@ -2047,7 +1974,7 @@ class Moveable(Waitable):
                 return remain
             return None
         for dev in waiters:
-            if hasattr(dev, "estimateTime"):
+            if hasattr(dev, 'estimateTime'):
                 eta.add(dev.estimateTime(elapsed))
         eta.discard(None)
         if eta:
@@ -2084,23 +2011,31 @@ class Measurable(Waitable):
     """
 
     parameter_overrides = {
-        "unit": Override(description="(not used)", mandatory=False),
+        'unit': Override(description='(not used)', mandatory=False),
     }
 
     parameters = {
-        "_lastpreset": Param(
-            "The latest used preset", internal=True, type=dict, settable=True
-        ),
+        '_lastpreset': Param('The latest used preset', internal=True,
+                             type=dict, settable=True),
     }
 
     errorstates = {status.ERROR: NicosError}
 
     def _setMode(self, mode):
         # overwritten from Readable: don't read out detectors, it's not useful
-        self._sim_intercept = mode == SIMULATION and self.hardware_access
         Device._setMode(self, mode)
 
-    @usermethod
+    @usermethod(doc="""
+        Set the new standard preset for this detector.
+
+        The *preset* parameters are key=value entries, separated by comma,
+        where the *key* is one of the allowed presets of the detector
+        device. Typical keys are ``t``, ``mon``, and so on.
+
+        Example:
+
+        >>> dev.preset(t=1, mon=100)
+    """, helparglist='preset')
     def setPreset(self, **preset):
         """Set the new standard preset for this detector.
 
@@ -2134,7 +2069,20 @@ class Measurable(Waitable):
             return self._sim_preset
         return self._lastpreset
 
-    @usermethod
+    @usermethod(doc="""
+        Start measurement, with either the given preset or the standard preset.
+
+        If the *preset* parameter is given, these presets will be used,
+        otherwise the previously used preset values.
+
+        The *preset* parameters are key=value entries, separated by comma,
+        where the *key* is one of the allowed presets of the detector
+        device. Typical keys are ``t``, ``mon``, and so on.
+
+        Example:
+
+        >>> dev.start(t=1, mon=100)
+    """, helparglist='preset, ...')
     def start(self, **preset):
         """Start measurement, with either the given preset or the standard
         preset.  If a preset is given, `doSetPreset` is called with that preset
@@ -2147,7 +2095,7 @@ class Measurable(Waitable):
            This method must be present and is called to start the measurement.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, "start not possible in slave mode")
+            raise ModeError(self, 'start not possible in slave mode')
         elif self._sim_intercept:
             self._sim_started = session.clock.time
             if preset:
@@ -2161,7 +2109,7 @@ class Measurable(Waitable):
         """Allow dev(), but not dev(pos)."""
         if pos is None:
             return self.read()
-        raise UsageError(self, "device cannot be moved")
+        raise UsageError(self, 'device cannot be moved')
 
     def duringMeasureHook(self, elapsed):
         """Hook called during measurement.
@@ -2179,7 +2127,11 @@ class Measurable(Waitable):
         how often this should be done.
         """
 
-    @usermethod
+    @usermethod(doc="""
+        Pause the measurement, if possible.
+
+        Returns ``True`` if paused successfully, otherwise ``False``.
+    """)
     def pause(self):
         """Pause the measurement, if possible.
 
@@ -2192,14 +2144,14 @@ class Measurable(Waitable):
            ``False`` is returned to indicate that pausing is not possible.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, "pause not possible in slave mode")
+            raise ModeError(self, 'pause not possible in slave mode')
         elif self._sim_intercept:
             return True
-        if hasattr(self, "doPause"):
+        if hasattr(self, 'doPause'):
             return self.doPause()
         return False
 
-    @usermethod
+    @usermethod(doc="""Resume paused measurement.""")
     def resume(self):
         """Resume paused measurement.
 
@@ -2210,16 +2162,19 @@ class Measurable(Waitable):
            If present, this is called to resume the measurement.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, "resume not possible in slave mode")
+            raise ModeError(self, 'resume not possible in slave mode')
         elif self._sim_intercept:
             return
-        if hasattr(self, "doResume"):
+        if hasattr(self, 'doResume'):
             self.doResume()
 
-    @usermethod
+    @usermethod(doc="""
+        Finish the measurement now, if it is running and not finished.
+    """)
     def finish(self):
-        """Finish the measurement now.  This should do nothing if the
-        measurement was already finished.
+        """Finish the measurement now.
+
+        This should do nothing if the measurement was already finished.
 
         This operation is forbidden in slave mode.
 
@@ -2232,12 +2187,12 @@ class Measurable(Waitable):
            measurement.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, "finish not possible in slave mode")
+            raise ModeError(self, 'finish not possible in slave mode')
         elif self._sim_intercept:
-            if hasattr(self, "doTime"):
+            if hasattr(self, 'doTime'):
                 time = self.doTime(self._sim_preset)
-            elif "t" in self._sim_preset:
-                time = self._sim_preset["t"]
+            elif 't' in self._sim_preset:
+                time = self._sim_preset['t']
             else:
                 time = 0
             if self._sim_started is not None:
@@ -2246,7 +2201,7 @@ class Measurable(Waitable):
             return
         self.doFinish()
 
-    @usermethod
+    @usermethod(doc="""Stop (abort) the measurement now.""")
     def stop(self):
         """Stop (abort) the measurement now.
 
@@ -2262,16 +2217,16 @@ class Measurable(Waitable):
            measurement.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, "stop not possible in slave mode")
+            raise ModeError(self, 'stop not possible in slave mode')
         elif self._sim_intercept:
             return
-        return self.doStop()
+        self.doStop()
 
-    @usermethod
+    @usermethod(helparglist='[maxage]')
     def read(self, maxage=None):
         """Return a list with the scalar result(s) of the last measurement."""
         if self._sim_intercept:
-            if hasattr(self, "doSimulate"):
+            if hasattr(self, 'doSimulate'):
                 result = self.doSimulate(self._sim_preset)
                 if not isinstance(result, list):
                     return [result]
@@ -2279,8 +2234,8 @@ class Measurable(Waitable):
             return [0] * len(self.valueInfo())
         # always get fresh result from cache => maxage parameter is ignored
         if self._cache:
-            self._cache.invalidate(self, "value")
-        result = self._getFromCache("value", self.doRead)
+            self._cache.invalidate(self, 'value')
+        result = self._getFromCache('value', self.doRead)
         if not isinstance(result, list):
             return [result]
         return result
@@ -2288,7 +2243,12 @@ class Measurable(Waitable):
     def doReadArrays(self, quality):
         return []
 
-    @usermethod
+    @usermethod(doc="""
+        Return a list with the array result(s) of the last measurement.
+
+        *quality* is the condition in which the result is requested:
+        'live', 'intermediate', 'final', or 'interrupted'.
+    """, helparglist='quality')
     def readArrays(self, quality):
         """Return a list with the array result(s) of the last measurement.
 
@@ -2303,7 +2263,7 @@ class Measurable(Waitable):
             return [result]
         return result
 
-    @usermethod
+    @usermethod(doc="""Prepare measurement before counting.""")
     def prepare(self):
         """Prepare measurement before counting.
 
@@ -2317,7 +2277,7 @@ class Measurable(Waitable):
         that fact (i.e. the device is BUSY until the preparation is done).
         """
         if not self._sim_intercept:
-            if hasattr(self, "doPrepare"):
+            if hasattr(self, 'doPrepare'):
                 return self.doPrepare()
 
     def readResults(self, quality):
@@ -2325,7 +2285,7 @@ class Measurable(Waitable):
         the array result(s) of the last measurement.
 
         The array results will be read first calling `readArrays` because
-        there might be side-effects on the scalar result of `read`, e.g.
+        there might be side effects on the scalar result of `read`, e.g.
         `ImageChannelMixin`'s standard implementation of `doRead` returns
         `self.readresult` which will probably be altered in `doReadArrays`.
         """
@@ -2340,11 +2300,14 @@ class Measurable(Waitable):
         try:
             st = self.status()
         except Exception as err:
-            self.log.warning("error getting status", exc=err)
-            errstr = "Error: %s" % err
-            ret.append(("status", (status.ERROR, errstr), errstr, "", "status"))
+            self.log.warning('error getting status', exc=err)
+            errstr = 'Error: %s' % err
+            ret.append(DeviceMetaInfo(
+                'status',
+                DeviceParInfo((status.ERROR, errstr), errstr, '', 'status')))
         else:
-            ret.append(("status", st, formatStatus(st), "", "status"))
+            ret.append(DeviceMetaInfo(
+                'status', DeviceParInfo(st, formatStatus(st), '', 'status')))
         return ret + Device.info(self)
 
     def valueInfo(self):
@@ -2357,7 +2320,7 @@ class Measurable(Waitable):
         value in a list.  The default indicates a single return value with no
         additional info about the value type.
         """
-        return (Value(self.name, unit=self.unit),)
+        return Value(self.name, unit=self.unit),
 
     def arrayInfo(self):
         """Describe the array values measured by this device.
@@ -2376,7 +2339,7 @@ class Measurable(Waitable):
         The default implementation returns only a 't' (time) preset.  This must
         be overridden by all measurables that support more presets.
         """
-        return ("t",)
+        return ('t',)
 
 
 class SubscanMeasurable(Measurable):
@@ -2403,7 +2366,7 @@ class SubscanMeasurable(Measurable):
 
     def start(self, **preset):
         if self._mode == SLAVE:
-            raise ModeError(self, "start not possible in slave mode")
+            raise ModeError(self, 'start not possible in slave mode')
         if preset:
             self.doSetPreset(**preset)
         # XXX start subscan measurable
@@ -2430,19 +2393,19 @@ class NoDevice(metaclass=DeviceMixinMeta):
         self.name = name
 
     def __str__(self):
-        return "<none>"
+        return '<none>'
 
     def __reduce__(self):
         return (str, (self.name,))
 
     def __getattr__(self, name):
-        raise AttributeError("alias %r does not point to any device" % self.name)
+        raise AttributeError('alias %r does not point to any device' %
+                             self.name)
 
     def __setattr__(self, name, value):
-        if name != "name":
-            raise ConfigurationError(
-                "alias %r does not point to any device" % self.name
-            )
+        if name != 'name':
+            raise ConfigurationError('alias %r does not point to any device' %
+                                     self.name)
         object.__setattr__(self, name, value)
 
 
@@ -2468,54 +2431,42 @@ class DeviceAlias(Device):
     """
 
     parameters = {
-        "alias": Param(
-            "Device to alias", type=none_or(nicosdev), settable=True, chatty=True
-        ),
-        "devclass": Param(
-            "Class name that the aliased device must be an instance of",
-            type=str,
-            default="nicos.core.device.Device",
-        ),
+        'alias':    Param('Device to alias', type=none_or(nicosdev),
+                          settable=True, chatty=True),
+        'devclass': Param('Class name that the aliased device must be an '
+                          'instance of',
+                          type=str, default='nicos.core.device.Device'),
     }
 
-    _ownattrs = ["_obj", "_mode", "_cache", "alias"]
-    _ownparams = {"alias", "name", "devclass", "visibility"}
+    _ownattrs = ['_obj', '_mode', '_cache', '_sim_intercept', 'alias']
+    _ownparams = {'alias', 'name', 'devclass', 'visibility', 'description'}
     _initialized = False
 
     __display__ = True
 
     def __init__(self, name, **config):
         self._obj = None
-        devclass = config.get("devclass", "nicos.core.device.Device")
+        devclass = config.get('devclass', 'nicos.core.device.Device')
         try:
-            modname, clsname = devclass.rsplit(".", 1)
+            modname, clsname = devclass.rsplit('.', 1)
             self._cls = session._nicos_import(modname, clsname)
         except Exception:
-            self.log.warning(
-                "could not import class %r; using Device as the alias devclass",
-                devclass,
-                exc=1,
-            )
+            self.log.warning('could not import class %r; using Device as the '
+                             'alias devclass', devclass, exc=1)
             self._cls = Device
         Device.__init__(self, name, **config)
         # update the configured alias device - we do this after the init
         # procedure to avoid calling init stuff in the aliased dev
-        devname = config.get("alias")
-        if devname is None and self._cache:
-            devname = self._cache.get(self, "alias", "")
-        self.doUpdateAlias(devname)
+        self.doUpdateAlias(self.alias)
         self._initialized = True
 
     def __repr__(self):
         if isinstance(self._obj, NoDevice):
-            return "<device %s, device alias pointing to nothing>" % self._name
+            return '<device %s, device alias pointing to nothing>' % self._name
         if not self.description:
-            return "<device %s, alias to %s>" % (self._name, self._obj)
-        return '<device %s, alias to %s "%s">' % (
-            self._name,
-            self._obj,
-            self.description,
-        )
+            return '<device %s, alias to %s>' % (self._name, self._obj)
+        return '<device %s, alias to %s "%s">' % (self._name, self._obj,
+                                                  self.description)
 
     def doUpdateAlias(self, devname, recursive=False):
         # Important NOTE: this is never called in the poller, since the poller
@@ -2528,10 +2479,17 @@ class DeviceAlias(Device):
                 self._reinitParams()
             return
         try:
-            newdev = session.getDevice(devname, (self._cls, DeviceAlias), source=self)
+            newdev = session.getDevice(devname, (self._cls, DeviceAlias),
+                                       source=self)
             if newdev is self:
-                raise NicosError(self, "cannot set alias pointing to itself")
+                raise NicosError(self, 'cannot set alias pointing to itself')
             if newdev != self._obj:
+                if isinstance(newdev, DeviceAlias):
+                    suffix = ''
+                    if newdev.alias is not None:
+                        suffix = f', consider setting alias to {newdev.alias}'
+                    msg = f'cannot set alias to another alias {newdev}{suffix}'
+                    raise NicosError(self, msg)
                 self._obj = newdev
                 if self._cache:
                     self._cache.setRewrite(str(self), devname)
@@ -2548,8 +2506,8 @@ class DeviceAlias(Device):
                 # If this is a recursive call (another target already failed),
                 # do not try others to avoid infinite looping through the
                 # alias config here.
-                self.log.exception("cannot point to %s" % devname)
-                self.doUpdateAlias("")
+                self.log.exception('cannot point to %s', devname)
+                self.doUpdateAlias('')
 
     def _reinitParams(self):
         if self._mode != MASTER:  # only in the copy that changed the alias
@@ -2575,37 +2533,31 @@ class DeviceAlias(Device):
         # first, check the preferred alias config
         for target, _ in session.alias_config.get(self._name, []):
             if target != devname and target in session.configured_devices:
-                self.log.warning(
-                    "could not find aliased device %s, pointing to %s instead",
-                    devname,
-                    target,
-                )
+                self.log.warning('could not find aliased device %s, '
+                                 'pointing to %s instead', devname, target)
                 new_target = target
                 break
         else:
             # then, check the config file
-            fromconfig = self._config.get("alias", "")
-            self.log.warning(
-                "could not find aliased device %s, pointing "
-                "to target from setup file (%s)",
-                devname,
-                fromconfig or "nothing",
-            )
+            fromconfig = self._config.get('alias', '')
+            self.log.warning('could not find aliased device %s, pointing '
+                             'to target from setup file (%s)',
+                             devname, fromconfig or 'nothing')
             new_target = fromconfig
         # if we have a potential new target, check if we can get hold of it
         if new_target:
             try:
-                session.getDevice(new_target, (self._cls, DeviceAlias), source=self)
+                session.getDevice(new_target, (self._cls, DeviceAlias),
+                                  source=self)
             except Exception:
                 # all hope is lost!
-                self.log.warning(
-                    "could not find %s either, pointing to nothing", new_target
-                )
-                new_target = ""
+                self.log.warning('could not find %s either, pointing to '
+                                 'nothing', new_target)
+                new_target = ''
         # now make the new choice of alias permanent, including in the cache
         # (which we must do with _setROParam since we might not be master yet)
         self.doUpdateAlias(new_target, recursive=True)
-        Device._setROParam(self, "alias", new_target)
+        Device._setROParam(self, 'alias', new_target)
 
     # Device methods that would not be alias-aware
 
@@ -2620,7 +2572,7 @@ class DeviceAlias(Device):
     def valueInfo(self):
         # override to replace name of the aliased device with the alias' name
         new_info = []
-        rx = r"^%s\b" % re.escape(self._obj.name)
+        rx = r'^%s\b' % re.escape(self._obj.name)
         for v in self._obj.valueInfo():
             new_v = v.copy()
             # replace dev name, if at start of value name, with alias name
@@ -2635,7 +2587,9 @@ class DeviceAlias(Device):
         ret = []
         if isinstance(self._obj, Device):
             ret = self._obj.info()
-        return ret + [("alias", str(self._obj), str(self._obj), "", "instrument")]
+        return ret + [DeviceMetaInfo(
+            'alias',
+            DeviceParInfo(str(self._obj), str(self._obj), '', 'instrument'))]
 
     @usermethod
     def version(self):
@@ -2660,7 +2614,7 @@ class DeviceAlias(Device):
     def shutdown(self):
         # re-implemented from Device to avoid running doShutdown
         # of the pointed-to device prematurely
-        self.log.debug("shutting down device")
+        self.log.debug('shutting down device')
         if self._mode != SIMULATION:
             # remove subscriptions to parameter value updates
             if self._cache:
@@ -2695,81 +2649,27 @@ class DeviceAlias(Device):
 
 # proxying of special methods to the object
 
-
 def make_method(name):
     def method(self, *args, **kw):
         return getattr(self._obj, name)(*args, **kw)
-
     return method
 
 
 for name in [
-    "__abs__",
-    "__add__",
-    "__and__",
-    "__bool__",
-    "__call__",
-    "__contains__",
-    "__delitem__",
-    "__divmod__",
-    "__float__",
-    "__floordiv__",
-    "__ge__",
-    "__getitem__",
-    "__gt__",
-    "__hash__",
-    "__iadd__",
-    "__iand__",
-    "__idivmod__",
-    "__ifloordiv__",
-    "__ilshift__",
-    "__imatmul__",
-    "__imod__",
-    "__imul__",
-    "__index__",
-    "__int__",
-    "__invert__",
-    "__ior__",
-    "__ipow__",
-    "__irshift__",
-    "__isub__",
-    "__iter__",
-    "__itruediv__",
-    "__ixor__",
-    "__le__",
-    "__len__",
-    "__lshift__",
-    "__lt__",
-    "__matmul__",
-    "__mod__",
-    "__mul__",
-    "__neg__",
-    "__next__",
-    "__or__",
-    "__pos__",
-    "__pow__",
-    "__radd__",
-    "__rand__",
-    "__rdivmod__",
-    "__reduce__",
-    "__reduce_ex__",
-    "__reversed__",
-    "__rfloorfiv__",
-    "__rlshift__",
-    "__rmatmul__",
-    "__rmod__",
-    "__rmul__",
-    "__ror__",
-    "__rpow__",
-    "__rrshift__",
-    "__rshift__",
-    "__rsub__",
-    "__rtruediv__",
-    "__rxor__",
-    "__setitem__",
-    "__sub__",
-    "__truediv__",
-    "__xor__",
+        '__abs__', '__add__', '__and__', '__bool__', '__call__',
+        '__contains__', '__delitem__', '__divmod__', '__float__',
+        '__floordiv__', '__ge__', '__getitem__', '__gt__', '__hash__',
+        '__iadd__', '__iand__', '__idivmod__', '__ifloordiv__', '__ilshift__',
+        '__imatmul__', '__imod__', '__imul__', '__index__', '__int__',
+        '__invert__', '__ior__', '__ipow__', '__irshift__', '__isub__',
+        '__iter__', '__itruediv__', '__ixor__', '__le__', '__len__',
+        '__lshift__', '__lt__', '__matmul__', '__mod__', '__mul__', '__neg__',
+        '__next__', '__or__', '__pos__', '__pow__', '__radd__', '__rand__',
+        '__rdivmod__', '__reduce__', '__reduce_ex__', '__reversed__',
+        '__rfloorfiv__', '__rlshift__', '__rmatmul__', '__rmod__', '__rmul__',
+        '__ror__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__',
+        '__rtruediv__', '__rxor__', '__setitem__', '__sub__', '__truediv__',
+        '__xor__',
 ]:
     if hasattr(Device, name):
         setattr(DeviceAlias, name, make_method(name))

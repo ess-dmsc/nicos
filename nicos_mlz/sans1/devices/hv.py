@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,49 +21,36 @@
 #
 # *****************************************************************************
 
-"""Special device for Sans1 High Voltage supply"""
+"""Special devices for Sans1 High Voltage supply"""
+
 
 from time import localtime, strftime, time as currenttime
 
-from tango import DevState
-
-from nicos.core import (
-    Attach,
-    HasLimits,
-    HasPrecision,
-    InvalidValueError,
-    Moveable,
-    Override,
-    Param,
-    PositionError,
-    Readable,
-    listof,
-    status,
-    tupleof,
-)
-from nicos.devices.entangle import Motor as TangoMotor, PowerSupply
-from nicos.devices.generic.sequence import (
-    BaseSequencer,
-    LockedDevice as NicosLockedDevice,
-    SeqDev,
-    SeqMethod,
-    SeqParam,
-    SeqSleep,
-)
+from nicos.core import Attach, HasLimits, HasPrecision, Moveable, Override, \
+    Param, Readable, dictof, floatrange, listof, status, tupleof
+from nicos.core.errors import ConfigurationError, InvalidValueError, \
+    PositionError
+from nicos.devices.generic.sequence import BaseSequencer, \
+    LockedDevice as NicosLockedDevice, SeqDev, SeqMethod, SeqParam, SeqSleep
 from nicos.devices.generic.switcher import Switcher
 
 
 class VoltageSwitcher(Switcher):
-    """mapping is now state:(value, precision)"""
+    """Comfort device to handle the different high voltage states.
+
+    The mapping is now "state: (value, precision)"
+    """
+
+    parameter_overrides = {
+        'mapping': Override(type=dictof(str, tupleof(floatrange(0), floatrange(0)))),
+    }
 
     def _mapTargetValue(self, target):
         if target not in self.mapping:
-            positions = ", ".join(repr(pos) for pos in self.mapping)
-            raise InvalidValueError(
-                self,
-                "%r is an invalid position for "
-                "this device; valid positions are %s" % (target, positions),
-            )
+            positions = ', '.join(repr(pos) for pos in self.mapping)
+            raise InvalidValueError(self, '%r is an invalid position for '
+                                    'this device; valid positions are %s'
+                                    % (target, positions))
         return self.mapping.get(target)[0]
 
     def _mapReadValue(self, value):
@@ -72,210 +59,169 @@ class VoltageSwitcher(Switcher):
             pos, prec = values
             if pos == value:
                 return name
-            elif prec:
+            if prec:
                 if abs(pos - value) <= prec:
                     return name
         if self.fallback is not None:
             return self.fallback
-        raise PositionError(
-            self,
-            "unknown position of %s: %s"
-            % (self._attached_moveable, self._attached_moveable.format(value, True)),
-        )
+        raise PositionError(self, 'unknown position of %s: %s' %
+                            (self._attached_moveable,
+                             self._attached_moveable.format(value, True))
+                            )
 
     def doStatus(self, maxage=0):
         # if the underlying device is moving or in error state,
         # reflect its status
         move_status = self._attached_moveable.status(maxage)
         if move_status[0] == status.BUSY:
-            if self.target == "LOW" and self._attached_moveable.read(0) < 70:
-                return status.OK, "below 70V"
+            if self.target == 'LOW' and self._attached_moveable.read(0) < 70:
+                return status.OK, 'below 70V'
         return move_status
 
 
-class VoltageSupply(PowerSupply):
-    """work around a bug either in the Tango server or in the hv supply itself
+class HV(HasLimits, BaseSequencer):
+    """High voltage control for the detector tubes.
 
-    basically the idle status is returned at the end of the ramp,
-    even if the output voltage is nowhere near the target value
+    The high voltage part of the detector electronics has some capacitors to
+    decouple the high voltage from the signals.  These capacitors have to be
+    handled carefully if the high voltage has been down for some (configurable)
+    time.  After that time the high voltage has to be ramped up with a certain
+    ramp to some "wait" points where the voltage has to stay for some time,
+    before the next intermediate step can be targeted.  This procedure is
+    called "cold start".
+
+    Due due the high number of the detector channels (each channel has its
+    own capacitor) the ramping down of the high voltage is limited of the
+    inherent discharging of the capacitor which takes a lot of time.  A
+    special device (called "discharger") helps to take off the charge from
+    the capacitors to reach the lower values quite quick.
+
     """
 
-    parameters = {
-        "_stopflag": Param(
-            "Supply was stopped",
-            type=bool,
-            settable=True,
-            mandatory=False,
-            internal=True,
-            default=False,
-        ),
-    }
+    hardware_access = False
 
-    parameter_overrides = {
-        "timeout": Override(default=90),
-        "precision": Override(volatile=True),
-    }
+    valuetype = floatrange(0)
 
-    _last_st = status.OK, ""
-
-    def timeoutAction(self):
-        if self.target is not None:
-            self.log.warning(
-                "Timeout! retrying once to reach %s",
-                self.format(self.target, unit=True),
-            )
-            # start() would clear timeoutActionCalled Flag
-            self.start(self.target)
-
-    def doStart(self, target):
-        self._stopflag = False
-        PowerSupply.doStart(self, target)
-
-    def doStatus(self, maxage=0):
-        # suppress intermittent tripped messages
-        st = PowerSupply.doStatus(self, maxage)
-        if st[0] == status.ERROR and "trip" in st[1]:
-            if "trip" not in self._last_st[1]:
-                st = (status.WARN, st[1])
-        self._last_st = st
-        return st
-
-    def doStop(self):
-        self._stopflag = True
-        PowerSupply.doStop(self)
-        self.wait()
-        PowerSupply.doStart(self, self.read(0))
-        self.wait()
-
-    def doReset(self):
-        self._stopflag = False
-        self._dev.Reset()
-
-    def doReadPrecision(self):
-        if self.target == 1:
-            return 69
-        return 3
-
-
-class HV(HasLimits, BaseSequencer):
-    valuetype = float
     attached_devices = {
-        "supply": Attach("NICOS Device for the highvoltage supply", Moveable),
-        "discharger": Attach("Switch to activate the discharge resistors", Moveable),
-        "interlock": Attach("Assume IDLE if set and Target is set to 0", Readable),
+        'supply':     Attach('NICOS Device for the high voltage supply',
+                             Moveable),
+        'discharger': Attach('Switch to activate the discharge resistors',
+                             Moveable),
+        'interlock':  Attach('Assume IDLE if set and Target is set to 0',
+                             Readable),
     }
 
     parameters = {
-        "ramp": Param(
-            "Current ramp speed (volt per minute)",
-            type=int,
-            unit="main/min",
-            settable=True,
-            volatile=True,
-        ),
-        "lasthv": Param(
-            "When was hv applied last (timestamp)",
-            type=float,
-            internal=True,
-            default=0.0,
-            mandatory=False,
-            settable=False,
-        ),
-        "maxofftime": Param(
-            "Maximum allowed Off-time for fast ramp-up",
-            type=int,
-            unit="s",
-            default=4 * 3600,
-        ),
-        "slowramp": Param(
-            "Slow ramp-up speed (volt per minute)",
-            type=int,
-            unit="main/min",
-            default=120,
-        ),
-        "fastramp": Param(
-            "Fast ramp-up speed (volt per minute)",
-            type=int,
-            unit="main/min",
-            default=1200,
-        ),
-        "rampsteps": Param(
-            "Cold-ramp-up sequence (voltage, stabilize_minutes)",
-            type=listof(tupleof(int, int)),
-            unit="",
-            default=[
-                (70, 3),
-                (300, 3),
-                (500, 3),
-                (800, 3),
-                (1100, 3),
-                (1400, 3),
-                (1500, 10),
-            ],
-        ),
+        'ramp':       Param('Current ramp speed (volt per minute)',
+                            type=int, unit='main/min', settable=True,
+                            volatile=True),
+        'lasthv':     Param('When was hv applied last (timestamp)',
+                            type=float, internal=True, default=0.0,
+                            mandatory=False, settable=False),
+        'maxofftime': Param('Maximum allowed Off-time for fast ramp-up',
+                            type=int, unit='s', default=4 * 3600),
+        'slowramp':   Param('Slow ramp-up speed (volt per minute)',
+                            type=int, unit='main/min', default=120),
+        'fastramp':   Param('Fast ramp-up speed (volt per minute)',
+                            type=int, unit='main/min', default=1200),
+        'rampsteps':  Param('Cold-ramp-up sequence (voltage, stabilize_minutes)',
+                            type=listof(tupleof(floatrange(0), floatrange(0))),
+                            unit='',
+                            default=[(70, 3),
+                                     (300, 3),
+                                     (500, 3),
+                                     (800, 3),
+                                     (1100, 3),
+                                     (1400, 3),
+                                     (1500, 10)]),
     }
 
     parameter_overrides = {
-        "abslimits": Override(default=(0, 1500), mandatory=False),
-        "unit": Override(default="V", mandatory=False, settable=False),
+        'abslimits': Override(default=(0, 1500), mandatory=False),
+        'unit':      Override(default='V', mandatory=False, settable=False),
     }
+
+    def doInit(self, mode):
+        sorted_ramp = sorted(self.rampsteps, key=lambda x: (x[0],))
+        if sorted_ramp != self.rampsteps:
+            raise ConfigurationError(
+                    self, 'Ramp step have to be monotonic in voltage!')
+        # Check start value in self.userlimits
+        st, txt = self._check_in_range(sorted_ramp[0][0], self.userlimits)
+        if st == status.WARN:
+            raise ConfigurationError(
+                    self, 'First step not in user limits: %s', txt)
+        # Check last value in self.userlimits
+        st, txt = self._check_in_range(sorted_ramp[-1][0], self.userlimits)
+        if st == status.WARN:
+            raise ConfigurationError(
+                    self, 'Last step not in user limits: %s', txt)
 
     def _generateSequence(self, target):
         hvdev = self._attached_supply
         disdev = self._attached_discharger
-        seq = [SeqMethod(hvdev, "stop"), SeqMethod(hvdev, "wait")]
+        seq = [
+            SeqMethod(hvdev, 'stop'),
+            SeqMethod(hvdev, 'wait'),
+        ]
 
         now = currenttime()
 
         # below first rampstep is treated as poweroff
         if target <= self.rampsteps[0][0]:
             # fast ramp
-            seq.append(SeqParam(hvdev, "ramp", self.fastramp))
-            seq.append(SeqDev(disdev, 1 if self.read() > target else 0))
+            seq.extend((
+                SeqParam(hvdev, 'ramp', self.fastramp),
+                SeqDev(disdev, 1 if self.read() > target else 0),
+            ))
             if self.read() > self.rampsteps[0][0]:
                 seq.append(SeqDev(hvdev, self.rampsteps[0][0]))
-            seq.append(SeqMethod(hvdev, "start", target))
+            seq.append(SeqMethod(hvdev, 'start', target))
             return seq
 
         # check off time
         if self.lasthv and now - self.lasthv <= self.maxofftime:
             # short ramp up sequence
-            seq.append(SeqParam(hvdev, "ramp", self.fastramp))
-            seq.append(SeqDev(disdev, 1 if self.read() > target else 0))
-            seq.append(SeqDev(hvdev, target))
-            # retry if target not reached
-            seq.append(SeqMethod(hvdev, "start", target))
+            seq.extend((
+                SeqParam(hvdev, 'ramp', self.fastramp),
+                SeqDev(disdev, 1 if self.read() > target else 0),
+                SeqDev(hvdev, target),
+                # retry if target not reached
+                SeqMethod(hvdev, 'start', target),
+            ))
             return seq
 
         # long sequence
-        self.log.warning(
-            "Voltage was down for more than %.2g hours, "
-            "ramping up slowly, be patient!",
-            self.maxofftime / 3600,
-        )
+        self.log.warning('Voltage was down for more than %.2g hours, '
+                         'ramping up slowly, be patient!',
+                         self.maxofftime / 3600)
 
-        self.log.info(
-            "Voltage will be ready around %s",
-            strftime("%X", localtime(now + self.doTime(self.doRead(0), target))),
-        )
+        self.log.info('Voltage will be ready around %s', strftime(
+            '%X', localtime(now + self.doTime(self.doRead(0), target))))
 
-        seq.append(SeqParam(hvdev, "ramp", self.slowramp))
-        seq.append(SeqDev(disdev, 0))
+        seq.extend((
+            SeqParam(hvdev, 'ramp', self.slowramp),
+            SeqDev(disdev, 0),
+        ))
         for voltage, minutes in self.rampsteps:
             # check for last point in sequence
             if target <= voltage:
-                seq.append(SeqDev(hvdev, target))
-                seq.append(
-                    SeqSleep(minutes * 60, "Stabilizing HV for %d minutes" % minutes)
-                )
+                seq.extend((
+                    SeqDev(hvdev, target),
+                    SeqSleep(minutes * 60,
+                             'Stabilizing HV for %d minutes' % minutes),
+                ))
                 break
-            else:  # append
-                seq.append(SeqDev(hvdev, voltage))
-                seq.append(
-                    SeqSleep(minutes * 60, "Stabilizing HV for %d minutes" % minutes)
-                )
-        seq.append(SeqDev(hvdev, target))  # be sure...
-        seq.append(SeqMethod(hvdev, "poll"))  # force a read
+            # append
+            seq.extend((
+                SeqDev(hvdev, voltage),
+                SeqSleep(minutes * 60,
+                         'Stabilizing HV for %d minutes' % minutes),
+            ))
+        seq.extend((
+            SeqDev(hvdev, target),  # be sure...
+            SeqMethod(hvdev, 'poll'),  # force a read
+        ))
         return seq
 
     def _waitFailed(self, step, action, exc_info):
@@ -292,7 +238,7 @@ class HV(HasLimits, BaseSequencer):
         # bugfix: avoid floating point rounding errors
         if voltage >= (self.rampsteps[-1][0] - 0.001):
             # just assigning does not work inside poller, but we want that!
-            self._setROParam("lasthv", currenttime())
+            self._setROParam('lasthv', currenttime())
         return voltage
 
     def doIsAllowed(self, target):
@@ -310,7 +256,7 @@ class HV(HasLimits, BaseSequencer):
                 fromVolts = volts
                 if volts >= target:
                     break
-        return duration * 60.0
+        return duration * 60.
 
     # convenience stuff
     def doReadRamp(self):
@@ -322,14 +268,16 @@ class HV(HasLimits, BaseSequencer):
 
 
 class HVOffDuration(Readable):
+    """Measure the time with no high voltage."""
+
+    hardware_access = False
+
     attached_devices = {
-        "hv_supply": Attach("HV Device", HV),
+        'hv_supply': Attach('HV Device', HV),
     }
     parameter_overrides = {
-        "unit": Override(mandatory=False),
+        'unit': Override(mandatory=False),
     }
-
-    valuetype = str
 
     def doRead(self, maxage=0):
         if self._attached_hv_supply:
@@ -337,16 +285,15 @@ class HVOffDuration(Readable):
             hours = int(secs / 3600)
             mins = int(secs / 60) % 60
             secs = int(secs) % 60
-            return "%g:%02d:%02d" % (hours, mins, secs)
-        return "never"
+            return '%g:%02d:%02d' % (hours, mins, secs)
+        return 'never'
 
-
-class ZMotor(TangoMotor):
-    tango_status_mapping = TangoMotor.tango_status_mapping.copy()
-    tango_status_mapping[DevState.FAULT] = status.WARN
+    def doReset(self):
+        self._attached_hv_supply._setROParam('lasthv', 0)
 
 
 class LockedDevice(HasPrecision, NicosLockedDevice):
+
     def doStart(self, target):
         if abs(self.read(0) - target) >= self.precision:
             NicosLockedDevice.doStart(self, target)

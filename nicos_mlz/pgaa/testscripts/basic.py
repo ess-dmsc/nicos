@@ -1,5 +1,6 @@
 # pylint: skip-file
 
+# test: needs = tango
 # test: subdirs = frm2
 # test: setups = pgaa
 # test: setupcode = SetDetectors(_60p, LEGe)
@@ -19,7 +20,7 @@ LEGe.status(0)
 
 read(Sample)
 
-maw(shutter, "open")
-maw(shutter, "closed")
+maw(shutter, 'open')
+maw(shutter, 'closed')
 count(TrueTime=1)
 count(LiveTime=1)

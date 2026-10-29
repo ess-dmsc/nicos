@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -26,25 +26,25 @@ from nicos.core.params import Attach, Param
 
 
 class BaseAvg(Readable):
+
     valuetype = float
 
     attached_devices = {
-        "dev": Attach("device", Readable),
+        'dev': Attach('device', Readable),
     }
 
     parameters = {
-        "nums": Param(
-            "number of data to average",
-            type=int,
-            settable=True,
-            userparam=True,
-            default=100,
-        ),
+        'nums': Param('number of data to average',
+                      type=int, settable=True, userparam=True, default=100),
     }
+
+    hardware_access = False
 
     def doStatus(self, maxage=0):
         return self._attached_dev.status(maxage=maxage)
 
     def doRead(self, maxage=0):
-        hist = [v for t, v in self._attached_dev.history()[-self.nums :]]
-        return sum(hist) / len(hist)
+        hist = [v for t, v in self._attached_dev.history()[-self.nums:]]
+        if hist:
+            return sum(hist) / len(hist)
+        return self._attached_dev.read(maxage)

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -40,20 +40,16 @@ def ramp(target, ramp=None):
 
     if ramp is not None:
         if ramp > 100:
-            raise UsageError(
-                "TemperatureController does not support ramps "
-                "higher then 100 K/min. If you want to get to "
-                "%f as fast as possible use rush(%f). "
-                "Ramp will be set to max." % (target, target)
-            )
+            raise UsageError('TemperatureController does not support ramps '
+                             'higher then 100 K/min. If you want to get to '
+                             '%f as fast as possible use rush(%f). '
+                             'Ramp will be set to max.' % (target, target))
         controller.ramp = ramp
     elif controller.ramp == 0:
-        raise UsageError(
-            "Ramp of the TemperatureController is 0. "
-            "Please specify a ramp with this command.\n"
-            'Use "ramp(target, RAMP)", '
-            '"timeramp(target, time)", or "rush(target)"'
-        )
+        raise UsageError('Ramp of the TemperatureController is 0. '
+                         'Please specify a ramp with this command.\n'
+                         'Use "ramp(target, RAMP)", '
+                         '"timeramp(target, time)", or "rush(target)"')
 
     controller.move(target)
 
@@ -65,7 +61,7 @@ def timeramp(target, time):
     given time into account. Ramps for tube and sample will be calculated
     separately"""
 
-    time = parseDuration(time, "timeramp")
+    time = parseDuration(time, 'timeramp')
 
     controller = getTemperatureController()
 
@@ -74,7 +70,7 @@ def timeramp(target, time):
     controller.move(controller.read())
 
     # set new target
-    controller.ramp = abs(target - controller.read()) / (time / 60)
+    controller.ramp = abs(target-controller.read())/(time/60)
     controller.move(target)
 
 

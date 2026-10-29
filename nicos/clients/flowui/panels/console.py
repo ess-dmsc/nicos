@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,7 +25,8 @@
 
 from os import path
 
-from nicos.clients.gui.panels.console import ConsolePanel as DefaultConsolePanel
+from nicos.clients.gui.panels.console import \
+    ConsolePanel as DefaultConsolePanel
 from nicos.clients.gui.utils import enumerateWithProgress
 from nicos.guisupport.qt import QTextCursor
 from nicos.utils import chunks
@@ -53,12 +54,11 @@ class ConsolePanel(DefaultConsolePanel):
       order, i.e. scrolling top to bottom
     """
 
-    panelName = "Console"
-    ui = path.join("panels", "console.ui")
+    ui = path.join('panels', 'console.ui')
 
     def __init__(self, parent, client, options):
         DefaultConsolePanel.__init__(self, parent, client, options)
-        if options.get("reverse_scrolling", False):
+        if options.get('reverse_scrolling', False):
             self.outView.enableReverseScrolling(True)
 
     def on_client_initstatus(self, state):
@@ -67,18 +67,14 @@ class ConsolePanel(DefaultConsolePanel):
         if self.outView.insert_position == QTextCursor.MoveOperation.End:
             DefaultConsolePanel.on_client_initstatus(self, state)
         else:
-            self.on_client_mode(state["mode"])
+            self.on_client_mode(state['mode'])
             self.outView.clear()
-            messages = list(
-                reversed(self.client.ask("getmessages", "10000", default=[]))
-            )
+            messages = list(reversed(self.client.ask('getmessages', '10000',
+                                                default=[])))
             total = len(messages) // 2500 + 1
-            for _, batch in enumerateWithProgress(
-                chunks(messages, 2500),
-                text="Synchronizing...",
-                parent=self,
-                total=total,
-            ):
+            for _, batch in enumerateWithProgress(chunks(messages, 2500),
+                                                  text='Synchronizing...',
+                                                  parent=self, total=total):
                 self.outView.addMessages(batch)
 
     def setExpertMode(self, expert):

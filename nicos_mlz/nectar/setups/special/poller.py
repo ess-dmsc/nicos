@@ -1,15 +1,19 @@
-description = "setup for the poller"
-group = "special"
+description = 'setup for the poller'
+group = 'special'
 
-sysconfig = dict(cache="nectarhw.nectar.frm2.tum.de")
+sysconfig = dict(cache = 'nectarhw.nectar.frm2.tum.de')
 
 devices = dict(
-    Poller=device(
-        "nicos.services.poller.Poller",
-        alwayspoll=[],  # setups that should be polled regardless if loaded
-        neverpoll=[],  # setups that should not be polled even if loaded
-        blacklist=["ccd"],  # DEVICES that should never be polled
+    Poller = device('nicos.services.poller.Poller',
+        alwayspoll = [],  # setups that should be polled regardless if loaded
+        neverpoll = [],  # setups that should not be polled even if loaded
+        blacklist = ['ccd'],  # DEVICES that should never be polled
         # (usually detectors or devices that have problems
         # with concurrent access from processes)
     ),
 )
+
+# Always import pyepics in the main thread first.
+startupcode = """
+import nicos.devices.epics.pyepics
+"""

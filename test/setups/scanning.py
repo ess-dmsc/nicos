@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,32 +21,28 @@
 #
 # *****************************************************************************
 
-name = "test scanning setup"
+name = 'test scanning setup'
 
-includes = ["axis", "detector"]
+includes = ['axis', 'detector']
 
 devices = dict(
-    motor2=device(
-        "nicos.devices.generic.VirtualMotor",
-        unit="deg",
-        curvalue=0,
-        abslimits=(0, 5),
+    motor2 = device('nicos.devices.generic.VirtualMotor',
+        unit = 'deg',
+        curvalue = 0,
+        abslimits = (0, 5),
     ),
-    manual=device(
-        "nicos.devices.generic.ManualMove",
-        unit="mm",
-        abslimits=(-5, 5),
+    manual = device('nicos.devices.generic.ManualMove',
+        unit = 'mm',
+        abslimits = (-5, 5),
     ),
-    tdev=device(
-        "test.utils.TestDevice",
-        unit="mm",
-        abslimits=(-5, 5),
-        maxage=0.0,  # no caching!
+    tdev = device('test.utils.TestDevice',
+        unit = 'mm',
+        abslimits = (-5, 5),
+        maxage = 0.0,  # no caching!
     ),
-    sry=device(
-        "nicos.devices.generic.VirtualMotor",
-        unit="deg",
-        curvalue=0,
-        abslimits=(-360, 360),
+    sry = device('nicos.devices.generic.VirtualMotor',
+        unit = 'deg',
+        curvalue = 0,
+        abslimits = (-360, 360),
     ),
 )

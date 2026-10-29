@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -41,7 +41,7 @@ class ZwoTC(PyTangoDevice, HasLimits, HasPrecision, LimaCooler, Moveable):
 
         nicosState = status.UNKNOWN
 
-        if self.doReadCooleron():
+        if self.cooler == 'ON':
             if abs(temperature - sp) < self.precision:
                 nicosState = status.OK
             else:
@@ -56,7 +56,11 @@ class ZwoTC(PyTangoDevice, HasLimits, HasPrecision, LimaCooler, Moveable):
 
     def doStart(self, target):
         if target > 10:
-            self.cooleron = False
+            self.cooler = 'OFF'
         else:
             self._dev.temperature_sp = target
-            self.cooleron = True
+            self.cooler = 'ON'
+
+    def doVersion(self):
+        return [(self.tangodevice,
+                 f'tango {self._dev.get_tango_lib_version() / 100:.02f}')]

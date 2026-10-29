@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -30,20 +30,13 @@ from nicos.utils import safeWriteFile
 
 
 def _get_instr_config():
-    currentfile = os.path.join(
-        config.setup_package_path,
-        config.instrument,
-        "setups",
-        "current_%s.py" % config.instrument,
-    )
-    return open(currentfile, encoding="utf-8").read()
+    currentfile = os.path.join(config.setup_package_path, config.instrument,
+                               'setups', 'current_%s.py' % config.instrument)
+    with open(currentfile, encoding='utf-8') as fp:
+        return fp.read()
 
 
 def _apply_instr_config(code):
-    currentfile = os.path.join(
-        config.setup_package_path,
-        config.instrument,
-        "setups",
-        "current_%s.py" % config.instrument,
-    )
+    currentfile = os.path.join(config.setup_package_path, config.instrument,
+                               'setups', 'current_%s.py' % config.instrument)
     safeWriteFile(currentfile, code, maxbackups=0)

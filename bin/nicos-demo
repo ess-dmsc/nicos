@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,7 +32,7 @@ from os import path
 from time import sleep
 
 import psutil
-import toml
+import tomlkit
 
 thisfile = path.realpath(__file__)
 bin_path = path.normpath(path.dirname(thisfile))
@@ -85,6 +85,7 @@ def cleanup():
     if need_cleanup:
         echo('Cleaning up...\n')
     pgid = None
+    all_stopped = True
     for nice_name, proc, prof in reversed(background_processes):
         try:
             if not pgid and hasattr(os, 'getpgid'):
@@ -98,16 +99,19 @@ def cleanup():
                 sleep(0.5)
             else:
                 proc.terminate()
+            proc.wait(2)
         except OSError as e:
             # might already have terminated early
             echo('could not stop %s: %s\n' % (nice_name, e))
-        else:
-            proc.wait()
+            all_stopped = False
+        except subprocess.TimeoutExpired:
+            echo('could not stop %s due to timeout\n' % nice_name)
+            all_stopped = False
     # under some circumstances (re-start due to internal errors)
     # the poller or watchdog may become detached
     # from its parents, so do a final safety kill
-    if pgid:
-        os.killpg(pgid, signal.SIGTERM)
+    if pgid and not all_stopped:
+        os.killpg(pgid, signal.SIGKILL)
     if need_cleanup:
         echo('NICOS demo finished.\n')
 
@@ -128,8 +132,8 @@ parser = argparse.ArgumentParser(
 
 nicos_root = path.normpath(path.dirname(path.dirname(__file__)))
 try:
-    with open(path.join(nicos_root, 'nicos.conf'), encoding='utf-8') as fp:
-        global_cfg = toml.load(fp)
+    with open(path.join(nicos_root, 'nicos.conf'), 'rb') as fp:
+        global_cfg = tomlkit.load(fp)
 except OSError:
     global_cfg = {}
 
@@ -152,8 +156,6 @@ services.add_argument('--nodaemon', '-D', action='store_true',
 # These services are opt-in.
 services.add_argument('--htmlmonitor', '-H', action='store_true',
                       help='start the web monitor')
-services.add_argument('--pushversioninfo', action='store_true',
-                      help='start the version update service')
 
 monitor = parser.add_argument_group('monitor related options')
 monitor.add_argument('--monitorsetup', '-m', action='store',
@@ -222,11 +224,6 @@ else:
     spawn('nicos-cache', '--clear', **spawnargs)
 echo(' cache')
 sleep(2)
-
-if opts.pushversioninfo:
-    spawn('nicos-pushversioninfo', **spawnargs)
-    echo(' pushversioninfo')
-    sleep(0.1)
 
 if not opts.nowatchdog:
     spawn('nicos-watchdog', **spawnargs)

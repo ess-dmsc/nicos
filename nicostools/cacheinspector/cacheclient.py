@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -42,35 +42,37 @@ class CacheSignals(QObject):
     keyUpdated = pyqtSignal(str, object)
 
 
-class Entry(namedtuple("Entry", "key value time ttl expired")):
+class Entry(namedtuple('Entry', 'key value time ttl expired')):
+
     def convertTime(self, ts=None):
         """Converts the unix time stamp to a readable time stamp."""
         ttup = time.localtime(ts if ts else self.time)
         if ttup[:3] == time.localtime()[:3]:
-            return time.strftime("%H:%M:%S", ttup)
+            return time.strftime('%H:%M:%S', ttup)
         else:
-            return time.strftime("%Y-%m-%d %H:%M:%S", ttup)
+            return time.strftime('%Y-%m-%d %H:%M:%S', ttup)
 
     @staticmethod
     def parseTime(string):
         if not string:
             return time.time()
         try:
-            tval = time.mktime(time.strptime(string, "%H:%M:%S"))
+            tval = time.mktime(time.strptime(string, '%H:%M:%S'))
         except ValueError:
-            tval = time.mktime(time.strptime(string, "%Y-%m-%d %H:%M:%S"))
+            tval = time.mktime(time.strptime(string, '%Y-%m-%d %H:%M:%S'))
         return tval
 
 
 class CICacheClient(BaseCacheClient):
+
     parameter_overrides = {
-        "cache": Override(mandatory=False, default=""),
-        "prefix": Override(mandatory=False, default=""),
+        'cache':  Override(mandatory=False, default=''),
+        'prefix': Override(mandatory=False, default=''),
     }
 
     def doInit(self, mode):
         BaseCacheClient.doInit(self, mode)
-        self.__dict__["signals"] = CacheSignals()
+        self.__dict__['signals'] = CacheSignals()
         self._db = {}
         self._dblock = threading.Lock()
         # since the base cache client automatically reconnects, we use
@@ -80,7 +82,7 @@ class CICacheClient(BaseCacheClient):
 
     def connect(self, cache):
         # override otherwise read-only server location parameter
-        self._setROParam("cache", cache)
+        self._setROParam('cache', cache)
         self._should_connect = True
         self._connect()
 
@@ -108,7 +110,7 @@ class CICacheClient(BaseCacheClient):
             return
         if not key.startswith(self._prefix):
             return
-        key = key[len(self._prefix) :]
+        key = key[len(self._prefix):]
         time = time and float(time)
         ttl = ttl and float(ttl) or None
         # self.log.debug('got %s=%s', key, value)
@@ -125,21 +127,21 @@ class CICacheClient(BaseCacheClient):
 
     def get(self, key):
         if not self._startup_done.wait(15):
-            self.log.warning("Cache _startup_done took more than 15s!")
+            self.log.warning('Cache _startup_done took more than 15s!')
             return None
         with self._dblock:
             return self._db.get(key)
 
     def update(self, key):
         """Refresh a value from cache with updated timestamp info."""
-        tosend = "@%s%s%s\n" % (self._prefix, key, OP_ASK)
+        tosend = '@%s%s%s\n' % (self._prefix, key, OP_ASK)
         for msgmatch in self._single_request(tosend):
             self._handle_msg(**msgmatch.groupdict())
 
     def put(self, key, entry):
         time = entry.time or currenttime()
-        ttlstr = entry.ttl and "+%s" % entry.ttl or ""
-        msg = "%s%s@%s%s%s\n" % (time, ttlstr, key, OP_TELL, entry.value)
+        ttlstr = entry.ttl and '+%s' % entry.ttl or ''
+        msg = '%s%s@%s%s%s\n' % (time, ttlstr, key, OP_TELL, entry.value)
         # self.log.debug('putting %s=%s', key, value)
         self._queue.put(msg)
         # the cache doesn't send this update back to us
@@ -148,8 +150,8 @@ class CICacheClient(BaseCacheClient):
         self.signals.keyUpdated.emit(key, entry)
 
     def delete(self, key):
-        self._queue.put("%s%s\n" % (key, OP_TELL))
-        entry = Entry(key, "", time.time(), "", True)
+        self._queue.put('%s%s\n' % (key, OP_TELL))
+        entry = Entry(key, '', time.time(), '', True)
         with self._dblock:
             self._db[key] = entry
         self.signals.keyUpdated.emit(key, entry)

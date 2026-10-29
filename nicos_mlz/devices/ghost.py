@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,6 +25,7 @@
 using the new GhOST proposal database.
 """
 
+import copy
 from datetime import date, datetime, time, timedelta
 
 import ghostapi.errors
@@ -32,13 +33,11 @@ import ghostapi.rest
 
 from nicos import session
 from nicos.core import USER, Param, User, dictof, nonemptystring
-from nicos.services.daemon.auth import (
-    AuthenticationError,
-    Authenticator as BaseAuthenticator,
-)
+from nicos.services.daemon.auth import AccessDeniedError, \
+    AuthenticationError, Authenticator as BaseAuthenticator
 from nicos.services.daemon.auth.params import UserLevelAuthEntry
 
-DTFORMAT = "%Y-%m-%d %H:%M:%S"
+DTFORMAT = '%Y-%m-%d %H:%M:%S'
 
 
 class GhostWrapper(ghostapi.rest.GhostRestAPI):
@@ -62,23 +61,23 @@ class GhostWrapper(ghostapi.rest.GhostRestAPI):
             # this avoids leaking authentication details via tracebacks
             error = str(err)
         if error:
-            raise AuthenticationError("login failed: %s" % error)
+            raise AuthenticationError('login failed: %s' % error)
 
         # check local contact status
         try:
             instrs = self.getLCInstruments(email)
-            self.is_local_contact = any(i["name"] == instr for i in instrs)
+            self.is_local_contact = any(i['name'] == instr for i in instrs)
         except ghostapi.errors.GhostApiException:
             # no access means: we are not local contact
             pass
-        self.log.debug("user is local contact? %s", self.is_local_contact)
+        self.log.debug('user is local contact? %s', self.isLocalContact())
         # we are a normal user => if configured, check that a proposal
         # is scheduled for us today
-        if not self.is_local_contact and strict:
+        if not self.isLocalContact() and strict:
             self.strictUserCheck(email)
         # get user's real name for display in daemon
         userdata = self.getUserData(email)
-        return userdata["firstname"] + " " + userdata["lastname"]
+        return userdata['firstname'] + ' ' + userdata['lastname']
 
     def strictUserCheck(self, email):
         """Check if user may log in considering the current proposal:
@@ -90,18 +89,14 @@ class GhostWrapper(ghostapi.rest.GhostRestAPI):
         Raises AuthenticationError if access denied.
         """
         sessions = self.getTodaysSessions()
-        if session.experiment.proptype == "user":
-            if not any(
-                ses["proposal_number"] == session.experiment.proposal
-                for ses in sessions
-            ):
-                raise AuthenticationError(
-                    "user is neither local contact " "nor member of current proposal"
-                )
+        if session.experiment.proptype == 'user':
+            if not any(ses['proposal_number'] == session.experiment.proposal
+                       for ses in sessions):
+                raise AccessDeniedError('user is neither local contact '
+                                        'nor member of current proposal')
         elif not sessions:
-            raise AuthenticationError(
-                "user is neither local contact " "nor has a proposal scheduled today"
-            )
+            raise AccessDeniedError('user is neither local contact '
+                                    'nor has a proposal scheduled today')
 
     def keepalive(self):
         """Called every now and then to refresh our session timeout."""
@@ -114,21 +109,19 @@ class GhostWrapper(ghostapi.rest.GhostRestAPI):
     def getTodaysSessions(self):
         today = datetime.combine(date.today(), time.min)
         delta = timedelta(days=1)
-        sessions = self.getExpSessionsForInstrument(
-            self.ghost_instrument, today, today + delta
-        )
-        return [ses for ses in sessions if ses["number"]]
+        sessions = self.getExpSessionsForInstrument(self.ghost_instrument,
+                                                    today, today + delta)
+        return [ses for ses in sessions if ses['number']]
 
     def canStartProposal(self, proposal):
         """Check if current user may start this proposal."""
-        if self.is_local_contact:
+        if self.isLocalContact():
             return True
         try:
-            return any(
-                ses["proposal_number"] == proposal for ses in self.getTodaysSessions()
-            )
+            return any(ses['proposal_number'] == proposal
+                       for ses in self.getTodaysSessions())
         except Exception:
-            session.log.warning("error querying proposals", exc=1)
+            self.log.warning('error querying proposals', exc=1)
             return False
 
     def queryProposals(self, proposal=None):
@@ -145,29 +138,31 @@ class GhostWrapper(ghostapi.rest.GhostRestAPI):
         try:
             sessions = self.getTodaysSessions()
         except Exception:
-            if not self.is_local_contact:
-                session.log.warning("error querying today's sessions from GhOST", exc=1)
+            if not self.isLocalContact():
+                self.log.warning(
+                    "error querying today's sessions from GhOST", exc=1)
                 return []
         if proposal is not None:
-            sessions = [ses for ses in sessions if ses["proposal_number"] == proposal]
-        if not sessions and proposal and self.is_local_contact:
-            session.log.debug("querying all exps for proposal %r", proposal)
+            sessions = [ses for ses in sessions
+                        if ses['proposal_number'] == proposal]
+        if not sessions and proposal and self.isLocalcontact():
+            self.log.debug('querying all exps for proposal %r', proposal)
             try:
                 sessions = self.getExperimentsForProposal(proposal)
             except Exception:
-                session.log.warning(
-                    "error querying sessions for proposal " "from GhOST", exc=1
-                )
+                self.log.warning(
+                    'error querying sessions for proposal from GhOST', exc=1)
                 return []
         for ses in sessions:
-            session.log.debug("candidate session: %r", ses)
-            if ses["number"] is None:
+            self.log.debug('candidate session: %r', ses)
+            if ses['number'] is None:
                 # experiment is not scheduled/permitted
                 continue
             try:
-                res = self.queryExperiment(ses["number"])
+                res = self.queryExperiment(ses['number'])
             except Exception:
-                session.log.warning("error querying session %s", ses["number"], exc=1)
+                self.log.warning(
+                    'error querying session %s', ses['number'], exc=1)
             else:
                 result.append(res)
 
@@ -179,40 +174,153 @@ class GhostWrapper(ghostapi.rest.GhostRestAPI):
         """
         sessinfo = self.getExperiment(sessid, details=True)
         samples = self.getSessionSamples(sessid)
-        session.log.debug("session data: %r", sessinfo)
-        session.log.debug("sample data: %r", samples)
+        self.log.debug('session data: %r', sessinfo)
+        self.log.debug('sample data: %r', samples)
 
-        info = {}
-        info["proposal"] = sessinfo["proposal"]
-        info["session"] = sessinfo["number"]
-        info["title"] = sessinfo["title"]
-        info["cycle"] = sessinfo["reactorcycle"]
-        info["instrument"] = sessinfo["instrument"]
-        info["startdate"] = datetime.strptime(sessinfo["start"], DTFORMAT)
-        info["enddate"] = datetime.strptime(sessinfo["end"], DTFORMAT)
-        if samples["basesamples"]:
-            info["default_sample"] = samples["basesamples"][0]["substance"]
-        info["users"] = []
-        for user in sessinfo["userdetails"]["sessionteam"]:
-            info["users"].append(
-                {
-                    "name": user["name"],
-                    "email": user["email"],
-                    "affiliation": user["affilation"],
-                }
-            )
-        info["localcontacts"] = [
-            {
-                "name": sessinfo["localcontact"],
-                "email": sessinfo["localcontact_email"],
-            }
-        ]
-        info["samples"] = samples["registeredsamples"]
-        info["data_emails"] = [user["email"] for user in info["users"]]
-        info["notif_emails"] = [user["email"] for user in info["users"]] + [
-            c["email"] for c in info["localcontacts"]
-        ]
+        info = {
+            'proposal': sessinfo['proposal'],
+            'session': sessinfo['number'],
+            'title': sessinfo['title'],
+            'cycle': sessinfo['reactorcycle'],
+            'instrument': sessinfo['instrument'],
+            'startdate': datetime.strptime(sessinfo['start'], DTFORMAT),
+            'enddate': datetime.strptime(sessinfo['end'], DTFORMAT),
+            'mainproposer': sessinfo['userdetails']['mainproposer'],
+            'samples': [],
+            'localcontacts': [{
+                'name': sessinfo['localcontact'],
+                'email': sessinfo['localcontact_email'],
+            }],
+            'users': [],
+            'substances': samples['basesamples'],
+            'default_sample': '',
+        }
+        for s in samples['registeredsamples']:
+            for b in info['substances']:
+                # At the moment the chemical formula is the only
+                # parameter to combine information from Ghost and
+                # SampleTracker systems
+                if s['formula'] == b['formula']:
+                    s1 = copy.copy(b)
+                    s1.update(s)
+                    info['samples'].append(s1)
+        if info['samples']:
+            info['default_sample'] = info['samples'][0]['name']
+        for user in sessinfo['userdetails']['sessionteam']:
+            info['users'].append({
+                'name': user['name'],
+                'email': user['email'],
+                'affiliation': user['affiliation'],
+            })
+        info['data_emails'] = [user['email'] for user in info['users']]
+        info['notif_emails'] = [user['email'] for user in info['users']] + \
+            [c['email'] for c in info['localcontacts']]
         return info
+
+
+# The information from Ghost for queryExperiment:
+# sessinfo looks like this:
+# (as of 02/25)
+# {
+#     'number': 'E00012-01A',
+#     'start': '2025-02-04 08:00:00',
+#     'end': '2025-02-07 08:00:00',
+#     'proposal': 'P00012-01',
+#     'title': 'Phonons in Lead',
+#     'beamdays': '3',
+#     'ID': '35cd5c41-29ea-480c-9148-a3f7fdbd605c',
+#     'localcontact': 'Björn Pedersen',
+#     'localcontact_email': 'bjoern.pedersen@frm2.tum.de',
+#     'reactorcycle': 'Virtual Cycle 4',
+#     'status': 'Users invited',
+#     'instrument': 'VTAS',
+#     'instrument_id': 'd2a686df-f429-4291-8e90-a7133437bcac',
+#     'userdetails': {
+#         'mainproposer': {
+#             'name': 'Björn Pedersen',
+#             'email': 'bjoern.pedersen@frm2.tum.de',
+#             'affiliation': 'Technische Universität München,  (München)'
+#         },
+#         'coproposers': [
+#             {
+#                 'name': 'Christian Felder',
+#                 'email': 'c.felder@fz-juelich.de',
+#                 'affiliation': 'Forschungszentrum Jülich GmbH,  (Jülich)'
+#             },
+#             {
+#                 'name': 'Alexander Zaft',
+#                 'email': 'a.zaft@fz-juelich.de',
+#                 'affiliation': 'Forschungszentrum Jülich GmbH,  (Jülich)'
+#             }
+#         ],
+#         'sessionteam': [
+#             {
+#                 'name': 'Björn Pedersen',
+#                 'email': 'bjoern.pedersen@frm2.tum.de',
+#                 'affiliation': 'Technische Universität München,  (München)'
+#             },
+#             {
+#                 'name': 'Christian Felder',
+#                 'email': 'c.felder@fz-juelich.de',
+#                 'affiliation': 'Forschungszentrum Jülich GmbH,  (Jülich)'
+#             },
+#             {
+#                 'name': 'Alexander Zaft',
+#                 'email': 'a.zaft@fz-juelich.de',
+#                 'affiliation': 'Forschungszentrum Jülich GmbH,  (Jülich)'
+#             }
+#         ]
+#     }
+# }
+# samples looks like this:
+# (as of 02/25)
+# {
+#     "basesamples": [
+#         {
+#             "substance": "Virtual",
+#             "formula": "VIrTUAl",
+#             "mass": "2",
+#             "volume": null,
+#             "spgr": "R3c",
+#             "cell": "4.00 4.00 4.00 90.00 90.00"
+#         }
+#     ],
+#     "registeredsamples": [
+#         {
+#             "SampleTrackerID": "21",
+#             "name": "Sample1",
+#             "formula": "C4H60",
+#             "mass": "1.000",
+#             "volume": "12.00",
+#             "exposure": "3456000",
+#             "activation": "Not determined yet",
+#             "registrationNeeded": "no",
+#             "registered": "no"
+#         },
+#         {
+#             "SampleTrackerID": "22",
+#             "name": "Sample2",
+#             "formula": "C4H6S",
+#             "mass": "1.000",
+#             "volume": "12.00",
+#             "exposure": "3456000",
+#             "activation": "Not determined yet",
+#             "registrationNeeded": "no",
+#             "registered": "no"
+#         },
+#         {
+#             "SampleTrackerID": "23",
+#             "name": "Sample3",
+#             "formula": "C4H6Se",
+#             "mass": "1.000",
+#             "volume": "12.00",
+#             "exposure": "3456000",
+#             "activation": "Not determined yet",
+#             "registrationNeeded": "no",
+#             "registered": "no"
+#         }
+#     ]
+# }
 
 
 class Authenticator(BaseAuthenticator):
@@ -224,24 +332,16 @@ class Authenticator(BaseAuthenticator):
     """
 
     parameters = {
-        "ghosthost": Param(
-            "Host of the GhOST system to authenticate against",
-            type=nonemptystring,
-            mandatory=True,
-        ),
-        "instrument": Param("Name of the instrument in GhOST", type=str),
-        "checkexp": Param(
-            "If true, check that users are either affiliated "
-            "with the current experiment, or registered "
-            "local contacts for the instrument",
-            type=bool,
-            default=True,
-        ),
-        "aliases": Param(
-            "Map of short user names to GhOST email addresses "
-            "and their desired user level",
-            type=dictof(nonemptystring, UserLevelAuthEntry),
-        ),
+        'ghosthost':  Param('Host of the GhOST system to authenticate against',
+                            type=nonemptystring, mandatory=True),
+        'instrument': Param('Name of the instrument in GhOST', type=str),
+        'checkexp':   Param('If true, check that users are either affiliated '
+                            'with the current experiment, or registered '
+                            'local contacts for the instrument', type=bool,
+                            default=True),
+        'aliases':    Param('Map of short user names to GhOST email addresses '
+                            'and their desired user level',
+                            type=dictof(nonemptystring, UserLevelAuthEntry)),
     }
 
     def authenticate(self, username, password):
@@ -249,23 +349,23 @@ class Authenticator(BaseAuthenticator):
             email, level = self.aliases[username]
         else:
             email, level = username, USER
-        ghost = GhostWrapper("https://" + self.ghosthost, self.log)
+        ghost = GhostWrapper('https://' + self.ghosthost, self.log)
         try:
-            realname = ghost.login(
-                self.instrument, email, password, strict=self.checkexp
-            )
+            realname = ghost.login(self.instrument, email, password,
+                                   strict=self.checkexp)
         except ghostapi.errors.GhostAccessError:
-            self.log.exception("during authentication")
-            raise AuthenticationError("unknown user or wrong password") from None
+            self.log.exception('during authentication')
+            raise AuthenticationError('unknown user or wrong password') \
+                from None
         except AuthenticationError:
-            self.log.exception("during authentication")
+            self.log.exception('during authentication')
             raise
         except Exception as err:
-            self.log.exception("during authentication")
-            raise AuthenticationError(
-                "exception during authenticate(): %s" % err
-            ) from None
+            self.log.exception('during authentication')
+            raise AuthenticationError('exception during authenticate(): %s'
+                                      % err) from None
         if email == username:
             # try to extract the user's real name from the user data
             username = realname
-        return User(username, level, {"ghost": ghost, "keepalive": ghost.keepalive})
+        return User(username, level, {'proposal_system': ghost,
+                                      'keepalive': ghost.keepalive})

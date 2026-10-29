@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,7 +23,8 @@
 
 import re
 
-from nicos.core import ConfigurationError, DeviceMixinBase, NicosError, Param
+from nicos.core import ConfigurationError, DeviceMixinBase, NicosError, \
+    Param, oneof
 
 
 class OptionalLimaFunctionality:
@@ -32,7 +33,7 @@ class OptionalLimaFunctionality:
         self._hwdev = hwdev
 
         if not self._isFunctionalityAvailable():
-            raise NicosError("Functionality not supported")
+            raise NicosError('Functionality not supported')
 
     def _testFunctionality(self):
         pass
@@ -41,7 +42,7 @@ class OptionalLimaFunctionality:
         try:
             self._testFunctionality()
         except NicosError as e:
-            if re.match("Error: No .*? capability", str(e)):
+            if re.match('Error: No .*? capability', str(e)):
                 return False
             else:
                 raise e
@@ -51,16 +52,16 @@ class OptionalLimaFunctionality:
 
 class LimaCooler(DeviceMixinBase):
     parameters = {
-        "cooleron": Param(
-            "Cooler enabled", type=bool, default=False, volatile=True, settable=True
-        ),
+        'cooler': Param('Switch the cooler ON/OFF',
+                        type=oneof('OFF', 'ON'), settable=True, userparam=True,
+                        volatile=True, default='OFF', category='instrument'),
     }
 
-    def doReadCooleron(self):
-        return self._dev.cooler == "ON"
+    def doReadCooler(self):
+        return self._dev.cooler
 
-    def doWriteCooleron(self, value):
-        self._dev.cooler = "ON" if value else "OFF"
+    def doWriteCooler(self, value):
+        self._dev.cooler = value
 
 
 class LimaShutter(OptionalLimaFunctionality):
@@ -85,35 +86,33 @@ class LimaShutter(OptionalLimaFunctionality):
     def doReadShuttermode(self):
         internalMode = self._dev.shutter_mode
 
-        if internalMode in ["AUTO_FRAME", "AUTO_SEQUENCE"]:
+        if internalMode in ['AUTO_FRAME', 'AUTO_SEQUENCE']:
             # this detector is only used in single acq mode,
             # so AUTO_FRAME and AUTO_SEQUENCE have the same
             # behaviour
-            return "auto"
-        elif internalMode == "MANUAL":
+            return 'auto'
+        elif internalMode == 'MANUAL':
             shutterState = self._dev.shutter_manual_state
 
-            if shutterState == "OPEN":
-                return "always_open"
-            elif shutterState == "CLOSED":
-                return "always_closed"
+            if shutterState == 'OPEN':
+                return 'always_open'
+            elif shutterState == 'CLOSED':
+                return 'always_closed'
             else:
-                raise ConfigurationError(
-                    self,
-                    "Camera shutter has unknown "
-                    + "state in manual mode (%s)" % shutterState,
-                )
+                raise ConfigurationError(self, 'Camera shutter has unknown '
+                                         + 'state in manual mode (%s)'
+                                         % shutterState)
         else:
-            raise ConfigurationError(
-                self, "Camera has unknown shutter mode (%s)" % internalMode
-            )
+            raise ConfigurationError(self,
+                                     'Camera has unknown shutter mode (%s)'
+                                     % internalMode)
 
     def doWriteShuttermode(self, value):
-        if value == "auto":
-            self._dev.shutter_mode = "AUTO_FRAME"
-        elif value == "always_open":
-            self._dev.shutter_mode = "MANUAL"
+        if value == 'auto':
+            self._dev.shutter_mode = 'AUTO_FRAME'
+        elif value == 'always_open':
+            self._dev.shutter_mode = 'MANUAL'
             self._dev.openShutterManual()
-        elif value == "always_closed":
-            self._dev.shutter_mode = "MANUAL"
+        elif value == 'always_closed':
+            self._dev.shutter_mode = 'MANUAL'
             self._dev.closeShutterManual()

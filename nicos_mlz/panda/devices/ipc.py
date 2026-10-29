@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,6 +23,7 @@
 
 """IPC class to work around reset bug of triple cards from göttingen"""
 
+
 from nicos.core import Param, status, usermethod
 from nicos.devices.vendor.ipc import Coder as _Coder, Motor as _Motor
 
@@ -33,14 +34,14 @@ class Coder(_Coder):
 
     Attention: Can now return negative step values!
     """
-
     parameters = {
-        "wrapbits": Param("Resolution to mitigate wraparound", type=int, default=25),
+        'wrapbits': Param('Resolution to mitigate wraparound', type=int,
+                          default=25),
     }
 
     def doReadSteps(self):
         steps = _Coder.doReadSteps(self)
-        if steps > 2 ** (self.wrapbits - 1):
+        if steps > 2**(self.wrapbits-1):
             return steps - 2**self.wrapbits
         return steps
 
@@ -48,20 +49,18 @@ class Coder(_Coder):
 # create a workaround class, not resetting
 class Motor(_Motor):
     def doReset(self):
-        if self._hwtype == "single":
+        if self._hwtype == 'single':
             _Motor.doReset(self)
         else:
-            self.log.warning(
-                "Resetting triple cards disabled. If you REALLY "
-                "want to reset, use %s.reallyReset() method",
-                self.name,
-            )
+            self.log.warning('Resetting triple cards disabled. If you REALLY '
+                             'want to reset, use %s.reallyReset() method',
+                             self.name)
 
     @usermethod
     def reallyReset(self):
         """Reset the device without any additional condition check.
 
-        In comparision to the .`reset` method the motor will be reset without
+        In comparison to the .`reset` method the motor will be reset without
         any condition.
         """
         _Motor.reset(self)
@@ -82,7 +81,7 @@ are connected to the other two channels, we try to store the parameters
 (which include the current position) into the internal eeprom before issuing
 a reset. This is a real problem, if not all channels are used for encoded axes!
 
-It is still inclear if the reset is needed at all, or what it really does.
+It is still unclear if the reset is needed at all, or what it really does.
 
 b) is difficult, as NICOS assumes that if Hardware (motordriver) says it moved
 by a certain number of steps, the corresponding motor actually did just that.
@@ -119,7 +118,7 @@ We try to work around this by following the sequence of:
     U N T E S T E D !
 
 Firmware-upgrade of the cards is impossible, as the developer is no longer
-available and we dont have access to the sourcecode....
+available and we don't have access to the sourcecode...
 """
 
 
@@ -127,18 +126,16 @@ available and we dont have access to the sourcecode....
 # if using this, please rename the class!
 class MotorUntested(_Motor):
     """UNTESTED!"""
-
     def doReset(self):
-        if self._hwtype == "triple":
-            self.log.warning(
-                "Resetting a triple Motor cards, please check " "the result carefully!"
-            )
+        if self._hwtype == 'triple':
+            self.log.warning('Resetting a triple Motor cards, please check '
+                             'the result carefully!')
             bus = self._attached_bus
             # make sure we are stopped.
             if self.status(0)[0] != status.OK:  # busy or error
                 bus.send(self.addr, 33)  # stop
                 try:
-                    self.wait()  # this might take a while, ignore errors
+                    self.wait()      # this might take a while, ignore errors
                 except Exception:
                     pass
             self._store()

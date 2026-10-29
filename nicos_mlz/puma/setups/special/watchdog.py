@@ -1,48 +1,40 @@
-description = "setup for the NICOS watchdog"
-group = "special"
+description = 'setup for the NICOS watchdog'
+group = 'special'
 
-# The entries in this list are dictionaries. Possible keys:
-#
-# 'setup' -- setup that must be loaded (default '' to mean all setups)
-# 'condition' -- condition for warning (a Python expression where cache keys
-#    can be used: t_value stands for t/value etc.
-# 'gracetime' -- time in sec allowed for the condition to be true without
-#    emitting a warning (default 5 sec)
-# 'message' -- warning message to display
-# 'priority' -- 1 or 2, where 2 is more severe (default 1)
-# 'action' -- code to execute if condition is true (default no code is executed)
-
+# watch_conditions:
+# The entries in this list are dictionaries.
+# For the entry keys and their meaning see:
+# https://forge.frm2.tum.de/nicos/doc/nicos-master/services/watchdog/#watch-conditions
 watch_conditions = [
-    dict(
-        condition="LogSpace_status[0] == WARN",
-        message="Disk space for log files becomes too low.",
-        type="critical",
-        gracetime=30,
+    dict(condition = 'LogSpace_status[0] == WARN',
+         message = 'Disk space for log files becomes too low.',
+         type = 'logspace',
+         gracetime = 30,
     ),
     dict(
-        condition="mtt_status[0] == NOTREACHED",
-        message="'mtt' axis move timed out. Positioning problem? Mobile block?",
+        condition = 'mtt_status[0] == NOTREACHED',
+        message = "'mtt' axis move timed out. Positioning problem? Mobile block?",
         # gracetime = 3,
-        type="critical",
+        type = 'critical',
     ),
     # dict(
-    # condition = 'ReactorPower_value > 0.5',
-    # message = "Reactor started?",
-    # # gracetime = 3,
-    # type = 'critical',
+        # condition = 'ReactorPower_value > 0.5',
+        # message = "Reactor started?",
+        # # gracetime = 3,
+        # type = 'critical',
     # ),
 ]
 
-includes = ["notifiers"]
-
-# The Watchdog device has two lists of notifiers, one for priority 1 and
-# one for priority 2.
+includes = ['notifiers']
 
 devices = dict(
-    Watchdog=device(
-        "nicos.services.watchdog.Watchdog",
-        cache="pumahw.puma.frm2.tum.de:14869",
-        notifiers={"default": ["email"], "critical": ["email", "smser"]},
-        watch=watch_conditions,
+    Watchdog = device('nicos.services.watchdog.Watchdog',
+        cache = 'pumahw.puma.frm2.tum.de:14869',
+        notifiers = {
+            'default': ['email'],
+            'critical': ['email', 'smser'],
+            'logspace': ['email', 'smser', 'logspace_notif'],
+        },
+        watch = watch_conditions,
     ),
 )

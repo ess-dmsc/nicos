@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,7 +25,6 @@
 Utility script for reformatting NICOS setup files via yapf
 (https://github.com/google/yapf).
 """
-
 import re
 
 import yapf
@@ -53,14 +52,13 @@ SPLIT_BEFORE_NAMED_ASSIGNS : True,
 USE_TABS : False,
 }"""
 
-
 def format_setup_text(origin):
     result = yapf.yapf_api.FormatCode(origin, style_config=STYLE_CONFIG)[0]
 
     # custom replacement for device class on device line
-    result = re.sub(r"(device\()\n\s*", "\\1", result)
+    result = re.sub(r'(device\()\n\s*', '\\1', result)
 
     # strip the result (in case of unnecessary newlines at the end)
-    result = result.strip() + "\n"
+    result = result.strip() + '\n'
 
     return result

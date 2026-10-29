@@ -1,77 +1,59 @@
-# Default POWTEX GUI config
-"""NICOS GUI configuration for POWTEX."""
+"""NICOS GUI default configuration."""
 
-main_window = docked(
-    hsplit(
+main_window = tabbed(
+    ('Instrument', docked(
         vsplit(
-            # panel('nicos.clients.gui.panels.generic.GenericPanel',
-            #       uifile = 'nicos_mlz/jcns/gui/jcnslogo.ui'),
-            panel("nicos.clients.gui.panels.expinfo.ExpInfoPanel"),
+            hsplit(
+                vsplit(
+                    panel('nicos.clients.gui.panels.cmdbuilder.CommandPanel',
+                          modules=['nicos_mlz.dns.gui.cmdlets']),
+                    panel('nicos.clients.gui.panels.status.ScriptStatusPanel'),
+                ),
+            ),
+            tabbed(
+                ('All output',
+                    panel('nicos.clients.gui.panels.console.ConsolePanel',
+                          hasinput=False, hasmenu=False)),
+                ('Errors/Warnings',
+                    panel('nicos.clients.gui.panels.errors.ErrorPanel')),
+            ),
         ),
+        ('Experiment Info', panel('nicos.clients.gui.panels.expinfo.ExpInfoPanel', dockpos='left')),
+        ('NICOS devices',
+            panel('nicos.clients.gui.panels.devices.DevicesPanel', icons=True, dockpos='right')),
+    )),
+    ('Script Editor',
         vsplit(
-            panel("nicos.clients.gui.panels.status.ScriptStatusPanel"),
-            panel("nicos.clients.gui.panels.console.ConsolePanel"),
-        ),
-        vsplit(
-            panel("nicos.clients.gui.panels.devices.DevicesPanel"),
-        ),
-    ),
+            panel('nicos.clients.gui.panels.scriptbuilder.CommandsPanel'),
+            panel('nicos.clients.gui.panels.editor.EditorPanel'),
+        )),
+    ('Scan Plotting', panel('nicos.clients.gui.panels.scans.ScansPanel')),
+    ('Device Plotting', panel('nicos.clients.gui.panels.history.HistoryPanel')),
+    ('Logbook', panel('nicos.clients.gui.panels.elog.ELogPanel')),
 )
 
 windows = [
-    window(
-        "Setup",
-        "setup",
-        tabbed(
-            ("Experiment", panel("nicos.clients.gui.panels.setup_panel.ExpPanel")),
-            ("Setups", panel("nicos.clients.gui.panels.setup_panel.SetupsPanel")),
-        ),
-    ),
-    window(
-        "Editor",
-        "editor",
-        vsplit(
-            panel("nicos.clients.gui.panels.scriptbuilder.CommandsPanel"),
-            panel("nicos.clients.gui.panels.editor.EditorPanel"),
-        ),
-    ),
-    window(
-        "Scans",
-        "plotter",
-        panel("nicos.clients.gui.panels.scans.ScansPanel"),
-    ),
-    window(
-        "History",
-        "find",
-        panel("nicos.clients.gui.panels.history.HistoryPanel"),
-    ),
-    window(
-        "Logbook",
-        "table",
-        panel("nicos.clients.gui.panels.elog.ELogPanel"),
-    ),
-    window(
-        "Errors",
-        "errors",
-        panel("nicos.clients.gui.panels.errors.ErrorPanel"),
-    ),
+    window('Live data', 'live', panel('nicos.clients.gui.panels.live.LiveDataPanel')),
+    window('Watchdog config', 'errors',
+           panel('nicos.clients.gui.panels.watchdog.WatchdogPanel')),
 ]
 
 tools = [
-    tool(
-        "Downtime report",
-        "nicos.clients.gui.tools.downtime.DownTimeTool",
-        sender="powtex@frm2.tum.de",
-    ),
-    tool(
-        "Sample environment logbooks",
-        "nicos.clients.gui.tools.website.WebsiteTool",
-        url="https://wiki.frm2.tum.de/se:jcns:log:index",
-    ),
-    tool("Calculator", "nicos.clients.gui.tools.calculator.CalculatorTool"),
-    tool(
-        "Emergency stop button",
-        "nicos.clients.gui.tools.estop.EmergencyStopTool",
-        runatstartup=True,
-    ),
+    tool('Downtime report', 'nicos.clients.gui.tools.downtime.DownTimeTool',
+         sender='jcns@frm2.tum.de'),
+    tool('Sample environment logbooks',
+         'nicos.clients.gui.tools.website.WebsiteTool',
+         url='https://wiki.frm2.tum.de/se:jcns:log:index'),
+    tool('Calculator', 'nicos.clients.gui.tools.calculator.CalculatorTool'),
+    tool('Neutron cross-sections', 'nicos.clients.gui.tools.website.WebsiteTool',
+         url='http://www.ncnr.nist.gov/resources/n-lengths/'),
+    tool('Neutron activation', 'nicos.clients.gui.tools.website.WebsiteTool',
+         url='https://webapps.frm2.tum.de/intranet/activation/'),
+    tool('Neutron calculations', 'nicos.clients.gui.tools.website.WebsiteTool',
+         url='https://webapps.frm2.tum.de/intranet/neutroncalc/'),
+    tool('Report NICOS bug or request enhancement',
+         'nicos.clients.gui.tools.bugreport.BugreportTool'),
+    tool('Emergency stop button', 'nicos.clients.gui.tools.estop.EmergencyStopTool',
+         runatstartup=False),
+    cmdtool('Server control (Marche)', 'marche-gui'),
 ]

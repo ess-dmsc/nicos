@@ -60,13 +60,13 @@ while(b)
     if strmatch('### Scan data',linDat)
         linDat=fgetl(fid);
         linDat=linDat(3:end);
-        % Generate list of vairables
+        % Generate list of variables
         [lspec linspec]=strtok(linDat,char(9));
         while ~isempty(linspec)
             [s linspec]=strtok(linspec,char(9));
             lspec=str2mat(lspec,s);
         end
-        % Find the location of the needed vairables in the variable list
+        % Find the location of the needed variables in the variable list
         xpos=[];    ypos=[];    mpos=[];
         for j=1:length(lspec(:,1))
             if strcmp(deblank(lspec(j,:)),xname)
@@ -98,8 +98,8 @@ while(b)
             end
             % Check for malformed EOF line
             if (sum(isnan(data(j,:)))==noOfEnt && ~scheck) && ~endOfFile 
-                warning(sprintf(['I think your scan file is improperly formatted (Possible scan ineruption?).\n'...
-                    'Reading data is stopped. If this is in error, disable this feature by creating a global vairable EOF with value 1']))
+                warning(sprintf(['I think your scan file is improperly formatted (Possible scan interruption?).\n'...
+                    'Reading data is stopped. If this is in error, disable this feature by creating a global variable EOF with value 1']))
                 endOfFile=true;
             end
             j=j+1;

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,12 +28,10 @@ import re
 import pamela as pam
 
 from nicos.core import ADMIN, GUEST, USER, Param, User, oneof
-from nicos.services.daemon.auth import (
-    AuthenticationError,
-    Authenticator as BaseAuthenticator,
-)
+from nicos.services.daemon.auth import AuthenticationError, \
+    Authenticator as BaseAuthenticator
 
-access_re = re.compile(r"access=(?P<level>\d+)")
+access_re = re.compile(r'access=(?P<level>\d+)')
 
 
 class Authenticator(BaseAuthenticator):
@@ -52,13 +50,9 @@ class Authenticator(BaseAuthenticator):
     """
 
     parameters = {
-        "defaultlevel": Param(
-            "Default user level if not in PAM settings",
-            settable=False,
-            userparam=False,
-            type=oneof(GUEST, USER, ADMIN),
-            default=GUEST,
-        ),
+        'defaultlevel': Param('Default user level if not in PAM settings',
+                              settable=False, userparam=False,
+                              type=oneof(GUEST, USER, ADMIN), default=GUEST),
     }
 
     def authenticate(self, username, password):
@@ -67,13 +61,13 @@ class Authenticator(BaseAuthenticator):
             entry = pwd.getpwnam(username)
             idx = access_re.search(entry.pw_gecos)
             if idx:
-                access = int(idx.group("level"))
+                access = int(idx.group('level'))
                 if access in (GUEST, USER, ADMIN):
                     return User(username, access)
             return User(username, self.defaultlevel)
         except pam.PAMError as err:
-            raise AuthenticationError("PAM authentication failed: %s" % err) from None
+            raise AuthenticationError(
+                'PAM authentication failed: %s' % err) from None
         except Exception as err:
             raise AuthenticationError(
-                "exception during PAM authentication: %s" % err
-            ) from None
+                'exception during PAM authentication: %s' % err) from None

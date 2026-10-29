@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,214 +28,213 @@ from nicos.devices.tango import PyTangoDevice
 
 
 class Shs(PyTangoDevice, Readable):
-    """
-    Basic IO Device object for devices in refsans'
-    contains common things for all devices.
-    """
+    """Basic IO Device object for devices in refsans.
 
-    _buffer_old = None
-
-    hardware_access = True
+    Contains common things for all devices.
+    """
 
     parameters = {
-        "address": Param(
-            "Starting offset (words) of IO area",
-            # type=intrange(0x3000, 0x47ff),
-            type=oneof(1026),
-            mandatory=False,
-            settable=False,
-            userparam=False,
-            default=1026,
-        ),
-        "banks": Param(
-            "Banks to be read",
-            type=listof(intrange(0, 0xFFFF)),
-            settable=False,
-            userparam=False,
-            default=[0x300, 0x400],
-        ),
+        'address': Param('Starting offset (words) of IO area',
+                         # type=intrange(0x3000, 0x47ff),
+                         type=oneof(1026), mandatory=False, settable=False,
+                         userparam=False, default=1026),
+        'banks': Param('Banks to be read',
+                       type=listof(intrange(0, 0xffff)), settable=False,
+                       userparam=False, default=[0x300, 0x400])
     }
 
-    def doInit(self, mode):
-        # switch off watchdog, important before doing any write access
-        pass
+    hardware_access = True
 
     def _readBuffer(self):
         buf = ()
         for bank in self.banks:
-            Notausgang = 1
-            while True:
-                self.log.debug("bank: 0x%04X", bank)
+            Notausgang = 0
+            while Notausgang < 6:
+                self.log.debug('bank: 0x%04X', bank)
                 for _ in range(2):
                     session.delay(0.1)
                     self._dev.WriteOutputWords((self.address, bank))
                 bu = tuple(self._dev.ReadOutputWords((0, 10)))
                 if bu[2] == bank:
-                    self.log.debug("Bank ok %d == %d", bu[2], bank)
+                    self.log.debug('Bank ok %d == %d', bu[2], bank)
                     buf += bu
                     break
-                self.log.debug("Data from wrong bank %d != %d", bu[2], bank)
+                self.log.debug('Data from wrong bank %d != %d', bu[2], bank)
                 Notausgang += 1
-                if Notausgang > 6:
-                    self.log.info("NOTAUSGANG<")  # raise error ???
-                    break
                 session.delay(0.5 * Notausgang)
+                if Notausgang > 6:
+                    self.log.info('NOTAUSGANG<')  # raise error ???
 
-        self.log.debug("buffer: %s", buf)
-        self._buffer_old = buf
+        self.log.debug('buffer: %s', buf)
         return buf
 
     def doRead(self, maxage=0):
         return self._readBuffer()
 
     def doStatus(self, maxage=0):
-        return status.OK, "DEBUG"
+        return status.OK, 'DEBUG'
 
 
 _groups = {
-    "open": ["Endschalter_Ex_Shutter"],
-    "Service": [
-        "Schluesselschalter_Wartung",
-        "Hupentest",
-        "Druck_service",
-        "Lampentest",
-        "Handbetrieb_tube",
-        "Ampeltest",
+    'open': ['Endschalter_Ex_Shutter'],
+    'Service': [
+        'Schluesselschalter_Wartung',
+        'Hupentest',
+        'Druck_service',
+        'Lampentest',
+        'Handbetrieb_tube',
+        'Ampeltest',
     ],
-    "Handbetrieb_tube": ["Handbetrieb_tube"],
-    "Ampel": ["gruen", "gelb", "rot"],
-    "Power_PO": ["PO-Aus-Schalter"],
-    "techOK": [
-        "Drucksensor_CB",
-        "Drucksensor_SFK",
-        "Drucksensor_Tube",
-        "Chopper_Drehzahl",
+    'Handbetrieb_tube': ['Handbetrieb_tube'],
+    'Ampel': [
+        'gruen',
+        'gelb',
+        'rot',
     ],
-    "doors": ["Tuer_PO", "Verbindungstuer", "Tuer_SR"],
-    "NOT-AUS": ["Not-Aus_Kreis"],
-    "Instrumentenverantwortlicher": ["Instrumentenverantwortlicher"],
-    "Betreten_Verboten": ["Betreten_Verboten"],
-    "USER": ["externer_User_Kontakt_A", "externer_User_Kontakt_B"],
-    "P-Key": ["Personenschluessel_Terminal"],
-    "Warte": [
-        "Freigabe_von_Warte_fuer_ESShutter",
-        "Schnellschluss-Shutter",
-        "6-fach-Shutter",
-        "Verbindung_zu_Warte_iO",
+    'Power_PO': ['PO-Aus-Schalter'],
+    'techOK': [
+        'Drucksensor_CB',
+        'Drucksensor_SFK',
+        'Drucksensor_Tube',
+        'Chopper_Drehzahl',
     ],
-    "PO_save": ["Probenort_Geraeumt", "Verbindungstuer", "Tuer_PO"],
-    "SR_save": ["Streurohr_Geraeumt", "Verbindungstuer", "Tuer_SR"],
-    "save": [
-        "Instrumentenverantwortlicher",
-        "PO_save",
-        "SR_save",
-        "Personenschluessel_Terminal",
+    'doors': [
+        'Tuer_PO',
+        'Verbindungstuer',
+        'Tuer_SR',
     ],
-    "Wartung_Key": ["Schluesselschalter_Wartung"],
-    "Freigabe_Hub_Streurohr": ["Freigabe_Hub_Streurohr"],
-    "Freigabe_Wartung": ["IV_key", "PO_save", "SR_save"],
-    "tube": [
-        "Handbetrieb_tube",
-        "Keine_Freigabe_Hub_Streurohr",
-        "Freigabe_Hub_Streurohr",
+    'NOT-AUS': ['Not-Aus_Kreis'],
+    'Instrumentenverantwortlicher': ['Instrumentenverantwortlicher'],
+    'Betreten_Verboten': ['Betreten_Verboten'],
+    'USER': [
+        'externer_User_Kontakt_A',
+        'externer_User_Kontakt_B',
     ],
-    "Freigabe": [
-        "IV_key",
-        "techOK",
-        "NOT-AUS",
-        "USER",
-        "PO_save",
-        "SR_save",
-        "P-Key",
-        "Warte",
+    'P-Key': ['Personenschluessel_Terminal'],
+    'Warte': [
+        'Freigabe_von_Warte_fuer_ESShutter',
+        'Schnellschluss-Shutter',
+        '6-fach-Shutter',
+        'Verbindung_zu_Warte_iO',
+    ],
+    'PO_save': [
+        'Probenort_Geraeumt',
+        'Verbindungstuer',
+        'Tuer_PO',
+    ],
+    'SR_save': [
+        'Streurohr_Geraeumt',
+        'Verbindungstuer',
+        'Tuer_SR',
+    ],
+    'save': [
+        'Instrumentenverantwortlicher',
+        'PO_save',
+        'SR_save',
+        'Personenschluessel_Terminal',
+    ],
+    'Wartung_Key': ['Schluesselschalter_Wartung'],
+    'Freigabe_Hub_Streurohr': ['Freigabe_Hub_Streurohr'],
+    'Freigabe_Wartung': [
+        'IV_key',
+        'PO_save',
+        'SR_save',
+    ],
+    'tube': [
+        'Handbetrieb_tube',
+        'Keine_Freigabe_Hub_Streurohr',
+        'Freigabe_Hub_Streurohr',
+    ],
+    'Freigabe': [
+        'IV_key',
+        'techOK',
+        'NOT-AUS',
+        'USER',
+        'PO_save',
+        'SR_save',
+        'P-Key',
+        'Warte',
     ],
 }
 
 
 class Group(Readable):
+
     valuetype = bool
 
     parameters = {
-        "bitlist": Param(
-            "Definition of a bit list",
-            type=listof(str),
-            settable=False,
-            userparam=False,
-        ),
-        "okmask": Param(
-            "Mask to define the bits results OK status",
-            type=int,
-            settable=False,
-            userparam=False,
-        ),
-        "condition": Param(
-            "Internal condition",
-            type=str,
-            settable=False,
-            volatile=True,
-            userparam=True,
-        ),
+        'bitlist': Param('Definition of a bit list',
+                         type=listof(str), settable=False, userparam=False,
+                         ),
+        'okmask': Param('Mask to define the bits results OK status',
+                        type=int, settable=False, userparam=False,
+                        ),
+        'condition': Param('Internal condition',
+                           type=str, settable=False, volatile=True,
+                           userparam=True),
     }
 
     attached_devices = {
-        "shs": Attach("shs", Readable),
+        'shs': Attach('shs', Shs),
     }
 
     parameter_overrides = {
-        "unit": Override(default="", volatile=True, mandatory=False),
-        "fmtstr": Override(default="%s"),
+        'unit': Override(volatile=True, mandatory=False),
+        'fmtstr': Override(default='%s'),
     }
 
+    hardware_access = False
+
     def doReadUnit(self):
-        return ""
+        return ''
 
     _register = {
-        "Shutter": (0, 0),  # 0x0000
-        "Ampeltest_inv": (3, 0),  # 0x0001
-        "Betreten_Verboten_inv": (3, 1),  # 0x0002
-        "Hupentest_inv": (3, 2),  # 0x0004
-        "Schluesselschalter_Wartung_inv": (3, 3),  # 0x0008
-        "Tuer_PO_auf": (3, 6),  # 0x0040
-        "Tuer_PO_zu": (3, 7),  # 0x0080
-        "Schnellschluss-Shutter_auf": (3, 8),  # 0x0100
-        "Schnellschluss-Shutter_zu": (3, 9),  # 0x0200
-        "6-fach-Shutter_auf": (3, 10),  # 0x0400
-        "6-fach-Shutter_zu": (3, 11),  # 0x0800
-        "Verbindung_zu_Warte_iO": (3, 12),  # 0x1000
-        "Freigabe_von_Warte_fuer_ESShutter": (3, 13),  # 0x2000
-        "Instrumentenverantwortlicher": (3, 14),  # 0x4000
-        "Not-Aus_Kreis_inv": (3, 15),  # 0x8000
-        "Verbindungstuer": (4, 8),  # 0x0100
-        "Tuer_SR_auf": (4, 10),  # 0x0400
-        "Tuer_SR_zu": (4, 11),  # 0x0800
-        "externer_User_Kontakt_A": (5, 0),  # 0x0001
-        "externer_User_Kontakt_B": (5, 1),  # 0x0002
-        "PO-Aus-Schalter_1": (5, 2),  # 0x0004
-        "PO-Aus-Schalter_2": (5, 4),  # 0x0008
-        "Drucksensor_CB": (6, 0),  # 0x0001
-        "Drucksensor_SFK": (6, 1),  # 0x0002
-        "Drucksensor_Tube": (6, 2),  # 0x0004
-        "Chopper_Drehzahl": (6, 3),  # 0x0008
-        "Druck_service_inv": (6, 4),  # 0x0010
-        "Safedetectorsystem": (6, 5),  # 0x0020
-        "Personenschluessel_Terminal": (6, 11),  # 0x0800
-        "Freigabe_Taster": (6, 12),  # 0x1000
-        "Lampentest_inv": (6, 13),  # 0x2000
-        "Endschalter_Ex_Shutter_inv": (6, 14),  # 0x4000
-        "Handbetrieb_tube_inv": (6, 15),  # 0x8000
-        "Probenort_Geraeumt_inv": (14, 2),  # 0x0004
-        "Streurohr_Geraeumt_inv": (14, 3),  # 0x0008
-        "IV_key_1": (15, 8),  # 0x0100
-        "IV_key_2": (15, 9),  # 0x0200
-        "gelb_inv": (17, 3),  # 0x0008
-        "Freigabe_EIN": (17, 10),  # 0x0400
-        "rot_inv": (18, 8),  # 0x0100
-        "Warnschilder": (18, 9),  # 0x0200
-        "Keine_Freigabe_Hub_Streurohr": (18, 10),  # 0x0400
+        'Shutter':                              (0, 0),    # 0x0000
+        'Ampeltest_inv':                        (3, 0),    # 0x0001
+        'Betreten_Verboten_inv':                (3, 1),    # 0x0002
+        'Hupentest_inv':                        (3, 2),    # 0x0004
+        'Schluesselschalter_Wartung_inv':       (3, 3),    # 0x0008
+        'Tuer_PO_auf':                          (3, 6),    # 0x0040
+        'Tuer_PO_zu':                           (3, 7),    # 0x0080
+        'Schnellschluss-Shutter_auf':           (3, 8),    # 0x0100
+        'Schnellschluss-Shutter_zu':            (3, 9),    # 0x0200
+        '6-fach-Shutter_auf':                   (3, 10),   # 0x0400
+        '6-fach-Shutter_zu':                    (3, 11),   # 0x0800
+        'Verbindung_zu_Warte_iO':               (3, 12),   # 0x1000
+        'Freigabe_von_Warte_fuer_ESShutter':    (3, 13),   # 0x2000
+        'Instrumentenverantwortlicher':         (3, 14),   # 0x4000
+        'Not-Aus_Kreis_inv':                    (3, 15),   # 0x8000
+        'Verbindungstuer':                      (4, 8),    # 0x0100
+        'Tuer_SR_auf':                          (4, 10),   # 0x0400
+        'Tuer_SR_zu':                           (4, 11),   # 0x0800
+        'externer_User_Kontakt_A':              (5, 0),    # 0x0001
+        'externer_User_Kontakt_B':              (5, 1),    # 0x0002
+        'PO-Aus-Schalter_1':                    (5, 2),    # 0x0004
+        'PO-Aus-Schalter_2':                    (5, 4),    # 0x0008
+        'Drucksensor_CB':                       (6, 0),    # 0x0001
+        'Drucksensor_SFK':                      (6, 1),    # 0x0002
+        'Drucksensor_Tube':                     (6, 2),    # 0x0004
+        'Chopper_Drehzahl':                     (6, 3),    # 0x0008
+        'Druck_service_inv':                    (6, 4),    # 0x0010
+        'Safedetectorsystem':                   (6, 5),    # 0x0020
+        'Personenschluessel_Terminal':          (6, 11),   # 0x0800
+        'Freigabe_Taster':                      (6, 12),   # 0x1000
+        'Lampentest_inv':                       (6, 13),   # 0x2000
+        'Endschalter_Ex_Shutter_inv':           (6, 14),   # 0x4000
+        'Handbetrieb_tube_inv':                 (6, 15),   # 0x8000
+        'Probenort_Geraeumt_inv':               (14, 2),   # 0x0004
+        'Streurohr_Geraeumt_inv':               (14, 3),   # 0x0008
+        'IV_key_1':                             (15, 8),   # 0x0100
+        'IV_key_2':                             (15, 9),   # 0x0200
+        'gelb_inv':                             (17, 3),   # 0x0008
+        'Freigabe_EIN':                         (17, 10),  # 0x0400
+        'rot_inv':                              (18, 8),   # 0x0100
+        'Warnschilder':                         (18, 9),   # 0x0200
+        'Keine_Freigabe_Hub_Streurohr':         (18, 10),  # 0x0400
         # nicht konzeptionell aber geht
-        "Freigabe_Hub_Streurohr_inv": (18, 10),  # 0x0400
-        "shutterzustand": (18, 11),  # 0x0800
-        "gruen_inv": (18, 12),  # 0x0800
+        'Freigabe_Hub_Streurohr_inv':           (18, 10),  # 0x0400
+        'shutterzustand':                       (18, 11),  # 0x0800
+        'gruen_inv':                            (18, 12),  # 0x0800
     }
 
     def _do_read_bits(self):
@@ -244,23 +243,24 @@ class Group(Readable):
         raw = self._attached_shs.read()
         for i, key in enumerate(self.bitlist):
             address, bit = self._register[key]
+            self.log.debug('%s', key)
+            self.log.debug('%d', ((raw[address] & (1 << bit)) >> bit) << i)
             res |= ((raw[address] & (1 << bit)) >> bit) << i
         return res
 
     def doRead(self, maxage=0):
-        return int(self._do_read_bits() == self.okmask)
+        return bool(self._do_read_bits() == self.okmask)
 
     def doStatus(self, maxage=0):
         bits = self._do_read_bits()
         if bits == self.okmask:
-            return status.OK, ""
-        return status.WARN, ", ".join(
-            self.format_statusbits(bits ^ self.okmask, self.bitlist)
-        )
+            return status.OK, ''
+        return status.WARN, ', '.join(
+            self.format_statusbits(bits ^ self.okmask, self.bitlist))
 
     def doReadCondition(self):
         res = self.status(0)[1]
-        return res if res else "ok"
+        return res if res else 'ok'
 
     def format_statusbits(self, sword, labels, start=0):
         """Return a list of labels according to bit state in `sword` starting

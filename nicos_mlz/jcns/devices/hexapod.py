@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,7 +32,9 @@ class Motor(BaseMotor):
     NICOS precision read-only and read it from Tango.
     """
 
-    parameter_overrides = {"precision": Override(volatile=True, settable=False)}
+    parameter_overrides = {
+        'precision': Override(volatile=True, settable=False)
+    }
 
     def doReadPrecision(self):
-        return float(self._getProperty("precision"))
+        return float(self._getProperty('precision'))

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -22,25 +22,28 @@
 # *****************************************************************************
 
 from nicos.core import Moveable, Readable, status
-from nicos.core.mixins import HasLimits
+from nicos.core.mixins import HasLimits, HasPrecision
 from nicos.core.params import Attach, Override, Param, floatrange
 
 
-class FocusPoint(HasLimits, Moveable):
+class FocusPoint(HasPrecision, HasLimits, Moveable):
+
     attached_devices = {
-        "table": Attach("table", Moveable),
-        "pivot": Attach("pivot", Readable),
+        'table': Attach('table', Moveable),
+        'pivot': Attach('pivot', Readable),
     }
 
     parameters = {
-        "gisansdistance": Param(
-            "GISANS distance", type=floatrange(0, None), default=10700
-        ),
+        'gisansdistance': Param('GISANS distance',
+                                type=floatrange(0), default=10700),
     }
 
     parameter_overrides = {
-        "abslimits": Override(mandatory=True, volatile=False),
+        'precision': Override(default=100),
+        'abslimits': Override(mandatory=True, volatile=False),
     }
+
+    hardware_access = False
 
     def moveToFocus(self):
         self._attached_table.move(self._calculation())
@@ -56,22 +59,14 @@ class FocusPoint(HasLimits, Moveable):
         if pivot is None:
             pivot = self._attached_pivot.read(0)
         focus = self.gisansdistance - pivot * self._attached_pivot.grid
-        self.log.debug("FocusPoint _calculation focus %f pivot %d", focus, pivot)
+        self.log.debug('FocusPoint _calculation focus %f pivot %d', focus,
+                       pivot)
         return focus
 
     def doStatus(self, maxage=0):
-        state = self._attached_table.status(maxage)
-        if state[0] != status.OK:
-            return state
+        st = self._attached_table.status(maxage)
+        if st[0] != status.OK:
+            return st
         table = self._attached_table.read(maxage)
         focus = self._calculation()
-        precision = 0
-        if hasattr(self._attached_table, "_attached_motor"):
-            precision = self._attached_table._attached_motor.precision
-        elif hasattr(self._attached_table, "_attached_device"):
-            precision = self._attached_table._attached_device.precision
-        elif hasattr(self._attached_table, "precision"):
-            precision = self._attached_table.precision
-        text = "focus" if abs(table - focus) <= precision else state[1]
-        # text = 'focus' if abs(table - focus) <= self.precision else state[1]
-        return status.OK, text
+        return status.OK, 'focus' if self.isAtTarget(table, focus) else st[1]

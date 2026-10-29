@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -30,6 +30,7 @@ from nicos.services.elog.utils import create_or_open, formatMessagePlain
 
 
 class Handler(BaseHandler):
+    """Create a local text file, where events will be written line by line."""
     def doInit(self, mode):
         BaseHandler.doInit(self, mode)
         self._fd = None
@@ -45,9 +46,9 @@ class Handler(BaseHandler):
     def handle_directory(self, time, data):
         BaseHandler.handle_directory(self, time, data)
         self._close()
-        logfile = path.join(self._logdir, "nicos_log.txt")
+        logfile = path.join(self._logdir, 'nicos_log.txt')
         self._fd = create_or_open(logfile)
-        self.log.info("Opened new output in %s", logfile)
+        self.log.info('Opened new output in %s', logfile)
 
     def handle_message(self, time, message):
         formatted = formatMessagePlain(message)

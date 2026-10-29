@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -26,7 +26,7 @@ Tests for the single (4-circle and related) positions utils
 """
 
 import numpy as np
-from pytest import approx
+import pytest
 
 from nicos.devices.sxtal.goniometer.posutils import vectorangle
 
@@ -35,4 +35,4 @@ def test_posutils():
     v1 = np.array((1, 2, 3))
     v2 = np.array((4, 5, 6))
 
-    assert vectorangle(v1, v2) == approx(0.2257261285533, abs=1e-5)
+    assert vectorangle(v1, v2) == pytest.approx(0.2257261285533, abs=1e-12)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>925</width>
-    <height>755</height>
+    <width>503</width>
+    <height>671</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -40,13 +40,13 @@
       <widget class="QLabel" name="label">
        <property name="minimumSize">
         <size>
-         <width>242</width>
+         <width>229</width>
          <height>93</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>242</width>
+         <width>229</width>
          <height>93</height>
         </size>
        </property>
@@ -75,14 +75,14 @@
       <widget class="QLabel" name="label_13">
        <property name="minimumSize">
         <size>
-         <width>132</width>
-         <height>80</height>
+         <width>144</width>
+         <height>84</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>132</width>
-         <height>80</height>
+         <width>144</width>
+         <height>84</height>
         </size>
        </property>
        <property name="text">
@@ -101,22 +101,16 @@
      </item>
      <item>
       <widget class="QLabel" name="label_12">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
        <property name="minimumSize">
         <size>
-         <width>132</width>
-         <height>80</height>
+         <width>144</width>
+         <height>84</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>132</width>
-         <height>80</height>
+         <width>144</width>
+         <height>84</height>
         </size>
        </property>
        <property name="text">
@@ -135,22 +129,16 @@
      </item>
      <item>
       <widget class="QLabel" name="label_11">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
        <property name="minimumSize">
         <size>
-         <width>132</width>
-         <height>80</height>
+         <width>144</width>
+         <height>84</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>132</width>
-         <height>80</height>
+         <width>144</width>
+         <height>84</height>
         </size>
        </property>
        <property name="text">
@@ -170,15 +158,25 @@
     </layout>
    </item>
    <item>
+    <widget class="Line" name="line_3">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copyright © 2009-2024 by the NICOS contributors.&lt;br/&gt;Distributed under the terms of the GNU General Public License version 2 or later.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copyright © 2009-present by the NICOS contributors.&lt;br/&gt;Distributed under the terms of the &lt;a href=&quot;https://www.gnu.org/licenses/old-licenses/gpl-2.0.html.en&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0057ae;&quot;&gt;GNU General Public License version 2&lt;/span&gt;&lt;/a&gt; or later.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="textFormat">
       <enum>Qt::RichText</enum>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
+     </property>
+     <property name="openExternalLinks">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -194,6 +192,9 @@
       <set>Qt::AlignCenter</set>
      </property>
      <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="openExternalLinks">
       <bool>true</bool>
      </property>
     </widget>
@@ -398,26 +399,12 @@
        <item row="2" column="1">
         <widget class="QLabel" name="label_10">
          <property name="text">
-          <string>Python, Qt, GR versions:</string>
+          <string>Python, Qt, PyQt, GR versions:</string>
          </property>
         </widget>
        </item>
        <item row="2" column="3">
         <widget class="QLabel" name="pyVersion">
-         <property name="text">
-          <string>unknown</string>
-         </property>
-        </widget>
-       </item>
-       <item row="9" column="1">
-        <widget class="QLabel" name="label_11">
-         <property name="text">
-          <string>Installed plugins:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="9" column="3">
-        <widget class="QLabel" name="plugins">
          <property name="text">
           <string>unknown</string>
          </property>
@@ -443,7 +430,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QPlainTextEdit" name="contributors">
+        <widget class="AuthorsList" name="contributors">
          <property name="frameShape">
           <enum>QFrame::NoFrame</enum>
          </property>
@@ -484,6 +471,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>AuthorsList</class>
+   <extends>QTextBrowser</extends>
+   <header>nicos/clients/gui/widgets/authorslist.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../../../../resources/nicos-gui.qrc"/>
  </resources>

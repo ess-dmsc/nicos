@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -35,7 +35,7 @@ class SampleChanger(MultiSwitcher):
     """
 
     parameter_overrides = {
-        "blockingmove": Override(default=True, settable=False),
+        'blockingmove': Override(default=True, settable=False),
     }
 
     def doStart(self, target):
@@ -45,6 +45,6 @@ class SampleChanger(MultiSwitcher):
     def _startRaw(self, target):
         """Initiate movement of the moveable to the translated raw value."""
         samplenr = int(self._mapReadValue(target)[1:])
-        self.log.debug("move to: %s %s", target, samplenr)
+        self.log.debug('move to: %s %s', target, samplenr)
         MultiSwitcher._startRaw(self, target)
         session.experiment.sample.select(samplenr)

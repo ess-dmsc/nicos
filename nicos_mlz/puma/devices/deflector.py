@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,31 +31,17 @@ class Deflector(Axis):
     """Special axis to store additional parameters for the deflectors."""
 
     parameters = {
-        "reflectivity": Param(
-            "Reflectivity of the material",
-            type=floatrange(0, 1),
-            settable=False,
-            userparam=False,
-            default=0.9,
-        ),
-        "length": Param(
-            "Length of the deflector blades",
-            type=floatrange(0, None),
-            settable=False,
-            prefercache=False,
-            default=40.0,
-            unit="mm",
-        ),
-        "thickness": Param(
-            "Thickness of the wafer",
-            type=floatrange(0, None),
-            settable=False,
-            userparam=False,
-            default=0.55,
-            unit="mm",
-        ),
+        'reflectivity': Param('Reflectivity of the material',
+                              type=floatrange(0, 1), settable=False,
+                              userparam=False, default=0.9),
+        'length': Param('Length of the deflector blades',
+                        type=floatrange(0, None), settable=False,
+                        prefercache=False, default=40., unit='mm'),
+        'thickness': Param('Thickness of the wafer',
+                           type=floatrange(0, None), settable=False,
+                           userparam=False, default=0.55, unit='mm'),
     }
 
     parameter_overrides = {
-        "unit": Override(mandatory=False, default="deg"),
+        'unit': Override(mandatory=False, default='deg'),
     }

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,60 +32,48 @@ class Pulse(BaseSequencer):
     """The device generates a 'trigger' signal.
 
     The device switches the attached device into the 'on' state (moving
-    attached device to 'onvalue') for 'ontime' seconds and switches the it back
+    attached device to 'onvalue') for 'ontime' seconds and switches it back
     to 'offvalue' after the 'ontime'.
     """
 
     parameters = {
-        "onvalue": Param(
-            "Value of the attached 'switch' considered to be as " "'on'",
-            type=anytype,
-            settable=False,
-            userparam=False,
-            mandatory=True,
-        ),
-        "offvalue": Param(
-            "Value of the attached 'switch' considered to be as " "'off'",
-            type=anytype,
-            settable=False,
-            userparam=False,
-            mandatory=True,
-        ),
-        "ontime": Param(
-            'Time to stay at "on" value',
-            type=float,
-            settable=False,
-            userparam=True,
-            mandatory=True,
-            unit="s",
-        ),
+        'onvalue': Param("Value of the attached 'switch' considered to be as "
+                         "'on'",
+                         type=anytype, settable=False, userparam=False,
+                         mandatory=True,
+                         ),
+        'offvalue': Param("Value of the attached 'switch' considered to be as "
+                          "'off'",
+                          type=anytype, settable=False, userparam=False,
+                          mandatory=True,
+                          ),
+        'ontime': Param('Time to stay at "on" value',
+                        type=float, settable=False, userparam=True,
+                        mandatory=True, unit='s',
+                        ),
     }
 
     attached_devices = {
-        "moveable": Attach("Device performing the trigger signal", Moveable),
+        'moveable': Attach('Device performing the trigger signal', Moveable),
     }
 
     hardware_access = False
 
     def doInit(self, mode):
-        if not self._attached_moveable.isAllowed(self.onvalue)[0]:
-            raise ConfigurationError(
-                self,
-                "'onvalue' is not allowed for the "
-                "'%s' device" % self._attached_moveable,
-            )
-        if not self._attached_moveable.isAllowed(self.offvalue)[0]:
-            raise ConfigurationError(
-                self,
-                "'offvalue' is not allowed for the "
-                "'%s' device" % self._attached_moveable,
-            )
+        allowed, msg = self._attached_moveable.isAllowed(self.onvalue)
+        if not allowed:
+            raise ConfigurationError(self, "'onvalue' is not allowed for the "
+                                     "'%s' device (%s)" % (self._attached_moveable, msg))
+        allowed, msg = self._attached_moveable.isAllowed(self.offvalue)
+        if not allowed:
+            raise ConfigurationError(self, "'offvalue' is not allowed for the "
+                                     "'%s' device (%s)" % (self._attached_moveable, msg))
         self.valuetype = oneof(self.offvalue, self.onvalue)
 
     def doStart(self, target):
         if self._seq_is_running():
             self.stop()
-            self.log.info("waiting for trigger to stop...")
+            self.log.info('waiting for trigger to stop...')
             self._hw_wait()
             self._seq_thread.join()
             self._seq_thread = None

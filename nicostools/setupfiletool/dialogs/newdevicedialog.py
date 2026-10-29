@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,15 +23,8 @@
 
 from os import path
 
-from nicos.guisupport.qt import (
-    QDialog,
-    QDialogButtonBox,
-    QMenu,
-    QRegularExpression,
-    QRegularExpressionValidator,
-    Qt,
-    uic,
-)
+from nicos.guisupport.qt import QDialog, QDialogButtonBox, QMenu, \
+    QRegularExpression, QRegularExpressionValidator, Qt, uic
 
 from .. import classparser
 from ..utilities.utilities import getClass
@@ -40,41 +33,37 @@ from ..utilities.utilities import getClass
 class NewDeviceDialog(QDialog):
     def __init__(self, classesList, parent=None):
         QDialog.__init__(self, parent)
-        uic.loadUi(
-            path.abspath(
-                path.join(
-                    path.dirname(__file__), "..", "ui", "dialogs", "newdevicedialog.ui"
-                )
-            ),
-            self,
-        )
-        self.menu = QMenu("Select class")
-        self.menuCustom = QMenu("Select class")
+        uic.loadUi(path.abspath(path.join(path.dirname(__file__),
+                                          '..',
+                                          'ui',
+                                          'dialogs',
+                                          'newdevicedialog.ui')), self)
+        self.menu = QMenu('Select class')
+        self.menuCustom = QMenu('Select class')
 
         for _class in sorted([getClass(__class) for __class in classesList]):
             self.recursiveMenu(_class, self.menu)
 
-        for _class in sorted(
-            [getClass(__class) for __class in classparser.getDeviceClasses(None)]
-        ):
-            if _class.startswith("nicos."):
+        for _class in sorted([getClass(__class) for __class in
+                              classparser.getDeviceClasses(None)]):
+            if _class.startswith('nicos.'):
                 self.recursiveMenu(_class, self.menu)
             else:
                 self.recursiveMenu(_class, self.menuCustom)
 
-        self.checkBoxCustomClasses.stateChanged.connect(self.stateChangedHandler)
+        self.checkBoxCustomClasses.stateChanged.connect(
+            self.stateChangedHandler)
 
-        self.lineEditDeviceName.setValidator(
-            QRegularExpressionValidator(QRegularExpression("[A-Za-z0-9_]*"))
-        )
+        self.lineEditDeviceName.setValidator(QRegularExpressionValidator(
+            QRegularExpression('[A-Za-z0-9_]*')))
         self.pushButtonSelectClass.setMenu(self.menu)
         self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setDisabled(True)
-        self.lineEditDeviceName.textChanged["const QString &"].connect(self.devChanged)
+        self.lineEditDeviceName.textChanged['const QString &'].connect(
+            self.devChanged)
 
     def devChanged(self, text):
         self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(
-            bool(text) and bool(self.labelSelectedClass.text())
-        )
+            bool(text) and bool(self.labelSelectedClass.text()))
 
     def stateChangedHandler(self, state):
         if state == Qt.CheckState.Checked:
@@ -83,15 +72,14 @@ class NewDeviceDialog(QDialog):
             self.pushButtonSelectClass.setMenu(self.menu)
 
     def recursiveMenu(self, partialString, parentMenu):
-        if not partialString.count("."):
+        if not partialString.count('.'):
             action = parentMenu.addAction(partialString)
             action.triggered.connect(self.classSelectedSlot)
         else:
-            uncombinedNextPartialString = partialString.split(".")
+            uncombinedNextPartialString = partialString.split('.')
             submenu = None
             for menu in parentMenu.findChildren(
-                QMenu, options=Qt.FindChildOption.FindDirectChildrenOnly
-            ):
+                QMenu, options=Qt.FindChildOption.FindDirectChildrenOnly):
                 if menu.title() == uncombinedNextPartialString[0]:
                     submenu = menu
                     uncombinedNextPartialString.pop(0)
@@ -101,17 +89,16 @@ class NewDeviceDialog(QDialog):
                 submenu = QMenu(uncombinedNextPartialString.pop(0), parentMenu)
                 parentMenu.addMenu(submenu)
 
-            nextPartialString = ".".join(uncombinedNextPartialString)
+            nextPartialString = '.'.join(uncombinedNextPartialString)
             self.recursiveMenu(nextPartialString, submenu)
 
     def classSelectedSlot(self):
         stringList = []
         self.recursiveActionParent(self.sender(), stringList)
         stringList.append(self.sender().text())
-        self.labelSelectedClass.setText(".".join(stringList))
+        self.labelSelectedClass.setText('.'.join(stringList))
         self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(
-            bool(self.lineEditDeviceName.text()) and bool(stringList)
-        )
+            bool(self.lineEditDeviceName.text()) and bool(stringList))
 
     def recursiveActionParent(self, action, partialStringList):
         if action.parent() in [self.menu, self.menuCustom]:

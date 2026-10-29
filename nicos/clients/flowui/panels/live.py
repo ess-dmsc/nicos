@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,26 +28,10 @@ import numpy
 from nicos.clients.flowui import uipath
 from nicos.clients.flowui.panels import get_icon
 from nicos.clients.gui.panels.live import LiveDataPanel as DefaultLiveDataPanel
-from nicos.guisupport.livewidget import (
-    AXES,
-)
-from nicos.guisupport.livewidget import (
-    LiveWidget as DefaultLiveWidget,
-)
-from nicos.guisupport.livewidget import (
-    LiveWidget1D as DefaultLiveWidget1D,
-)
-from nicos.guisupport.qt import (
-    QComboBox,
-    QGroupBox,
-    QListWidget,
-    QSize,
-    Qt,
-    QToolBar,
-    QVBoxLayout,
-    pyqtProperty,
-    pyqtSignal,
-)
+from nicos.guisupport.livewidget import AXES, \
+    LiveWidget as DefaultLiveWidget, LiveWidget1D as DefaultLiveWidget1D
+from nicos.guisupport.qt import QComboBox, QGroupBox, QListWidget, QSize, Qt, \
+    QToolBar, QVBoxLayout, pyqtProperty, pyqtSignal
 
 
 class State(Enum):
@@ -63,7 +47,7 @@ class LiveDataPanel(DefaultLiveDataPanel):
         self.set_icons()
 
     def createPanelToolbar(self):
-        toolbar = QToolBar("Live data")
+        toolbar = QToolBar('Live data')
         toolbar.addAction(self.actionOpen)
         toolbar.addAction(self.actionPrint)
         toolbar.addAction(self.actionSavePlot)
@@ -78,10 +62,10 @@ class LiveDataPanel(DefaultLiveDataPanel):
         return toolbar
 
     def set_icons(self):
-        self.actionPrint.setIcon(get_icon("print-24px.svg"))
-        self.actionSavePlot.setIcon(get_icon("save-24px.svg"))
-        self.actionUnzoom.setIcon(get_icon("zoom_out-24px.svg"))
-        self.actionOpen.setIcon(get_icon("folder_open-24px.svg"))
+        self.actionPrint.setIcon(get_icon('print-24px.svg'))
+        self.actionSavePlot.setIcon(get_icon('save-24px.svg'))
+        self.actionUnzoom.setIcon(get_icon('zoom_out-24px.svg'))
+        self.actionOpen.setIcon(get_icon('folder_open-24px.svg'))
 
     def getToolbars(self):
         return []
@@ -111,7 +95,7 @@ class LiveWidget1D(DefaultLiveWidget1D):
 
     clicked = pyqtSignal(str)
 
-    def __init__(self, name="", parent=None, **kwargs):
+    def __init__(self, name='', parent=None, **kwargs):
         DefaultLiveWidget1D.__init__(self, parent, **kwargs)
         self.setMinimumSize(150, 150)
         self.name = name
@@ -170,27 +154,29 @@ def process_axis_labels(datadesc, blobs, offset=0):
     """Convert the raw axis label descriptions.
     Similar to LiveDataPanel._process_axis_labels, but is flexible in datadesc.
     """
-    CLASSIC = {"define": "classic"}
+    CLASSIC = {'define': 'classic'}
     labels = {}
     titles = {}
-    for size, axis in zip(reversed(datadesc["shape"]), AXES):
+    for size, axis in zip(reversed(datadesc['shape']), AXES):
         # if the 'labels' key does not exist or does not have the right
         # axis key set default to 'classic'.
-        label = datadesc.get("labels", {"x": CLASSIC, "y": CLASSIC}).get(axis, CLASSIC)
+        label = datadesc.get(
+            'labels', {'x': CLASSIC, 'y': CLASSIC}).get(axis, CLASSIC)
 
-        if label["define"] == "range":
-            start = label.get("start", 0)
-            size = label.get("length", 1)
-            step = label.get("step", 1)
+        if label['define'] == 'range':
+            start = label.get('start', 0)
+            size = label.get('length', 1)
+            step = label.get('step', 1)
             end = start + step * size
             labels[axis] = numpy.arange(start, end, step)
-        elif label["define"] == "array":
-            index = label.get("index", 0)
-            labels[axis] = numpy.frombuffer(blobs[index], label.get("dtype", "<i4"))
+        elif label['define'] == 'array':
+            index = label.get('index', 0)
+            labels[axis] = numpy.frombuffer(blobs[index],
+                                            label.get('dtype', '<i4'))
         else:
             labels[axis] = numpy.array(range(size))
-        labels[axis] += offset if axis == "x" else 0
-        titles[axis] = label.get("title")
+        labels[axis] += offset if axis == 'x' else 0
+        titles[axis] = label.get('title')
 
     return labels, titles
 
@@ -198,13 +184,13 @@ def process_axis_labels(datadesc, blobs, offset=0):
 def processDataArrays(index, params, data):
     """Returns a list of arrays corresponding to the ``count`` of
     ``index`` into ``datadescs`` of the current params"""
-    datadesc = params["datadescs"][index]
-    count = datadesc.get("count", 1)
-    shape = datadesc["shape"]
+    datadesc = params['datadescs'][index]
+    count = datadesc.get('count', 1)
+    shape = datadesc['shape']
 
     # determine 1D array size
     arraysize = numpy.prod(shape)
-    arrays = numpy.split(data[: count * arraysize], count)
+    arrays = numpy.split(data[:count * arraysize], count)
 
     # reshape every array in the list
     for i, array in enumerate(arrays):
@@ -213,13 +199,12 @@ def processDataArrays(index, params, data):
 
 
 def process_livedata(widget, data, params, labels, idx):
-    descriptions = params["datadescs"]
+    descriptions = params['datadescs']
 
     # pylint: disable=len-as-condition
     if len(data):
         arrays = processDataArrays(
-            idx, params, numpy.frombuffer(data, descriptions[idx]["dtype"])
-        )
+            idx, params, numpy.frombuffer(data,descriptions[idx]['dtype']))
         if arrays is None:
             return
         widget.setData(arrays, labels)
@@ -229,7 +214,6 @@ class DetContainer:
     """
     Container class for items related to a detector.
     """
-
     def __init__(self, name):
         self.name = name
         self._params_cache = {}
@@ -252,7 +236,7 @@ class DetContainer:
         ch = self._previews_to_index[name]
         if self._params_cache and self._blobs_cache:
             params = dict(self._params_cache)
-            params["datadescs"] = [params["datadescs"][ch]]
+            params['datadescs'] = [params['datadescs'][ch]]
             return params, [self._blobs_cache[ch]]
         return None, None
 
@@ -261,7 +245,6 @@ class Preview:
     """
     Container class for items related to a preview.
     """
-
     def __init__(self, name, detector, widget):
         """
         :param name: name of the preview
@@ -294,14 +277,13 @@ class MultiLiveDataPanel(LiveDataPanel):
     * ``default_detector`` -- the default detector to be displayed in the main
     widget
     """
-
-    panelName = "MultidetectorLiveDataView"
-    ui = path.join(uipath, "panels", "ui_files", "live.ui")
+    panelName = 'MultidetectorLiveDataView'
+    ui = path.join(uipath, 'panels', 'ui_files', 'live.ui')
 
     def __init__(self, parent, client, options):
         self.fileList = QListWidget()
         self.tb_fileList = QComboBox()
-        self._detector_selected = options.get("default_detector", "")
+        self._detector_selected = options.get('default_detector', '')
         self._detectors = {}
         self._previews = {}
         LiveDataPanel.__init__(self, parent, client, options)
@@ -366,7 +348,7 @@ class MultiLiveDataPanel(LiveDataPanel):
     def on_client_cache(self, data):
         # Clear the previews if the list of detectors being used changes
         (_, key, _, _) = data
-        if key == "exp/detlist":
+        if key == 'exp/detlist':
             self._cleanup_existing_previews()
 
     def on_client_livedata(self, params, blobs):
@@ -376,40 +358,41 @@ class MultiLiveDataPanel(LiveDataPanel):
         :param params: data parameters
         :param blobs: data array
         """
-        det_name = params["det"]
+        det_name = params['det']
 
         if not self._previews:
             self._populate_previews()
 
         self.set_preview_data(params, blobs)
 
-        if not self._detector_selected or self._detector_selected not in self._previews:
+        if not self._detector_selected or \
+                self._detector_selected not in self._previews:
             return
 
         if self._previews[self._detector_selected].detector == det_name:
             pars, blob = self._detectors[det_name].get_preview_data(
-                self._detector_selected
-            )
+                self._detector_selected)
             DefaultLiveDataPanel.on_client_livedata(self, pars, blob)
 
     def find_detectors(self):
         """
         :return: a list with the name of all the configured detectors.
         """
-        state = self.client.ask("getstatus")
+        state = self.client.ask('getstatus')
         if not state:
             return []
-        detlist = self.client.getCacheKey("exp/detlist")
+        detlist = self.client.getCacheKey('exp/detlist')
         if not detlist:
             return []
-        return [det for det in detlist[1] if self.client.eval(f"{det}.arrayInfo()", [])]
+        return [det for det in detlist[1]
+                if self.client.eval(f'{det}.arrayInfo()', [])]
 
     def create_preview_widgets(self, det_name):
         """
         :param det_name: detector name
         :return: a list of preview widgets
         """
-        array_info = self.client.eval(f"{det_name}.arrayInfo()", ())
+        array_info = self.client.eval(f'{det_name}.arrayInfo()', ())
         previews = []
 
         for info in array_info:
@@ -429,11 +412,11 @@ class MultiLiveDataPanel(LiveDataPanel):
         :param params: data parameters
         :param blobs: data array
         """
-        parent = params["det"]
+        parent = params['det']
         self._detectors[parent].update_cache(params, blobs)
 
-        for index, datadesc in enumerate(params["datadescs"]):
-            normalized_type = self.normalizeType(datadesc["dtype"])
+        for index, datadesc in enumerate(params['datadescs']):
+            normalized_type = self.normalizeType(datadesc['dtype'])
             name = self._detectors[parent].get_preview_name(index)
             widget = self._previews[name].widget
             labels, _ = process_axis_labels(datadesc, blobs)
@@ -441,18 +424,13 @@ class MultiLiveDataPanel(LiveDataPanel):
                 # Previews are no longer correct widget types
                 self._cleanup_existing_previews()
                 return
-            process_livedata(
-                widget,
-                numpy.frombuffer(blobs[index], normalized_type),
-                params,
-                labels,
-                index,
-            )
+            process_livedata(widget,
+                             numpy.frombuffer(blobs[index], normalized_type),
+                             params, labels, index)
 
     def _has_plot_changed_dimensionality(self, widget, labels):
-        return (isinstance(widget, LiveWidget1D) and "y" in labels) or (
-            not isinstance(widget, LiveWidget1D) and "y" not in labels
-        )
+        return (isinstance(widget, LiveWidget1D) and 'y' in labels) or \
+               (not isinstance(widget, LiveWidget1D) and 'y' not in labels)
 
     def on_preview_clicked(self, det_name):
         """
@@ -461,7 +439,8 @@ class MultiLiveDataPanel(LiveDataPanel):
         """
         self._detector_selected = det_name
         parent = self._previews[det_name].detector
-        pars, blob = self._detectors[parent].get_preview_data(self._detector_selected)
+        pars, blob = self._detectors[parent].get_preview_data(
+            self._detector_selected)
 
         if pars and blob:
             DefaultLiveDataPanel.on_client_livedata(self, pars, blob)

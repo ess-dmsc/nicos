@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,15 +28,17 @@ from nicos.core.params import Attach
 
 class TriState(CanDisable, HasOffset, Readable):
     attached_devices = {
-        "port": Attach("port to read the real number", Readable),
+        'port': Attach('port to read the real number', Readable),
     }
 
     _enabled = True
 
+    hardware_access = False
+
     def doRead(self, maxage=0):
-        self.log.debug("enabled=%s", self._enabled)
+        self.log.debug('enabled=%s', self._enabled)
         if self._enabled:
-            self.log.debug("offset=%.3f", self.offset)
+            self.log.debug('offset=%.3f', self.offset)
             return self._attached_port.read(maxage) - self.offset
         return 0
 
@@ -44,9 +46,9 @@ class TriState(CanDisable, HasOffset, Readable):
         if self._enabled:
             stat = self._attached_port.status(maxage)
             if stat[0] == status.OK:
-                return status.OK, "enable"
+                return status.OK, 'enabled'
             return stat
-        return status.OK, "disable"
+        return status.DISABLED, 'disabled'
 
     def doEnable(self, on):
         self._enabled = on

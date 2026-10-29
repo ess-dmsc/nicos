@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -47,17 +47,16 @@ class GenericPanel(Panel):
       warning message will be added to the open dialog.
     """
 
-    panelName = "Generic"  # XXX this is not unique
+    panelName = 'Generic'  # XXX this is not unique
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         self._error_window = None
-        if "uifile" not in options:
-            raise ConfigurationError(
-                "GenericPanels require at least an" " `uifile` option."
-            )
-        loadUi(self, findResource(options["uifile"]))
-        if options.get("showmsg"):
+        if 'uifile' not in options:
+            raise ConfigurationError('GenericPanels require at least an'
+                                     ' `uifile` option.')
+        loadUi(self, findResource(options['uifile']))
+        if options.get('showmsg'):
             self.client.message.connect(self.on_client_message)
         if client.isconnected:
             self.on_client_connected()
@@ -69,18 +68,13 @@ class GenericPanel(Panel):
 
     def on_client_message(self, message):
         # show warnings and errors emitted by the current command in a window
-        if (
-            len(message) < 6
-            or message[5] != self.client.last_reqid
-            or message[2] < WARNING
-        ):
+        if len(message) < 6 or message[5] != self.client.last_reqid or \
+           message[2] < WARNING:
             return
-        msg = "%s: %s" % (message[0], message[3].strip())
+        msg = '%s: %s' % (message[0], message[3].strip())
         if self._error_window is None:
-
             def reset_errorwindow():
                 self._error_window = None
-
             self._error_window = ErrorDialog(self)
             self._error_window.accepted.connect(reset_errorwindow)
             self._error_window.addMessage(msg)

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -17,53 +17,47 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Module authors:
-#   Petr Cermak <cermak@mag.mff.cuni.cz>
+#   Petr Čermák <cermak@mag.mff.cuni.cz>
 #
 # *****************************************************************************
 
 from oauthlib.oauth2 import LegacyApplicationClient
 from requests_oauthlib import OAuth2Session
 
-from nicos.core import USER, Param, User
-from nicos.services.daemon.auth import (
-    AuthenticationError,
-    Authenticator as BaseAuthenticator,
-)
-from nicos.utils.credentials.keystore import nicoskeystore
+from nicos.core import USER, Param, User, secret
+from nicos.services.daemon.auth import AuthenticationError, \
+    Authenticator as BaseAuthenticator
 
 
 class Authenticator(BaseAuthenticator):
-    """Authenticates against oAuth2 server via Password Grant type."""
+    """Authenticates against oAuth2 server via Password Grant type.
+    """
 
     parameters = {
-        "tokenurl": Param("OAuth server token url to authenticate", type=str),
-        "clientid": Param("OAuth client id", type=str),
-        "keystoretoken": Param(
-            "Id used in the keystore for the OAuth client " "secret",
-            type=str,
-            default="oauth2server",
-        ),
+        'tokenurl': Param('OAuth server token url to authenticate',
+                          type=str),
+        'clientid': Param('OAuth client id',
+                          type=str),
+        'clientsecret': Param('ID used in the keystore for the OAuth client '
+                              'secret', type=secret, default='oauth2server'),
     }
 
     def authenticate(self, username, password):
-        secret = nicoskeystore.getCredential(self.keystoretoken)
+        secret_oauth = self.clientsecret.lookup()
         error = None
         try:
             oauth = OAuth2Session(
-                client=LegacyApplicationClient(client_id=self.clientid)
-            )
+                client=LegacyApplicationClient(client_id=self.clientid))
             token = oauth.fetch_token(
-                token_url=self.tokenurl,
-                username=username,
-                password=password,
-                client_id=self.clientid,
-                client_secret=secret,
-            )
+                token_url=self.tokenurl, username=username, password=password,
+                client_id=self.clientid, client_secret=secret_oauth)
         except Exception as err:
             # this avoids leaking credential details via tracebacks
             error = str(err)
         if error:
-            raise AuthenticationError("exception during authenticate(): %s" % error)
+            raise AuthenticationError('exception during authenticate(): %s'
+                                      % error)
         if not oauth.authorized:
-            raise AuthenticationError("wrong password")
-        return User(username, USER, {"token": token, "clientid": self.clientid})
+            raise AuthenticationError('wrong password')
+        return User(username, USER,
+                    {'token': token, 'clientid': self.clientid})

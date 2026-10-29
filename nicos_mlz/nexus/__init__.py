@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,43 +23,11 @@
 
 """Some convenience classes, methods for NeXus data writing."""
 
-from nicos.nexus.elements import (
-    ConstDataset,
-    DetectorDataset,
-    DeviceDataset,
-    NXAttribute,
-)
-
-
-seconds = NXAttribute("s", "string")
-counts = NXAttribute("counts", "string")
-
-
-def ReactorSource(name, powerdev):
-    """Return a typical reactor neutron source structure."""
-    return {
-        "name": ConstDataset(name, "string"),
-        "type": ConstDataset("Reactor Neutron Source", "string"),
-        "probe": ConstDataset("neutron", "string"),
-        "power": DeviceDataset(powerdev),
-        # 'flux': ,
-    }
-
-
-def CounterMonitor(monitor):
-    """Return a fission chamber monitor structure."""
-    return {
-        "mode": ConstDataset("monitor", "string"),
-        "type": ConstDataset("Fission_Chamber", "string"),
-        "preset": DeviceDataset(monitor, "preselection", dtype="float", units=counts),
-        "integral": DetectorDataset(monitor, "float", units=counts),
-    }
-
-
-def TimerMonitor(timer):
-    """Return a timer monitor structure."""
-    return {
-        "mode": ConstDataset("timer", "string"),
-        "preset": DeviceDataset(timer, "preselection", dtype="float", units=seconds),
-        "integral": DetectorDataset(timer, "float", units=seconds),
-    }
+from nicos_mlz.nexus.elements import ExperimentDescription, Reflection, \
+    SampleEnv, ScanDeviceDataset
+from nicos_mlz.nexus.sink import Sink as NexusSink
+from nicos_mlz.nexus.structures import CounterMonitor, Filter, Flipper, \
+    LocalContact, Polarizer, ReactorSource, Selector, Slit, SollerCollimator, \
+    TimerMonitor, User, aa, axis0, axis1, axis2, axis3, counts, deg, grams, \
+    mass_density, mm, nounit, seconds, signal
+from nicos_mlz.nexus.template import MLZTemplateProvider

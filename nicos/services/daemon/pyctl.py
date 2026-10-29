@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,7 +25,6 @@
 Python interface to the _pyctl module, to control the execution of Python
 code via a C trace function.
 """
-
 import threading
 import traceback
 
@@ -38,16 +37,16 @@ except ImportError:
 
     class _Controller:
         def __init__(self, *args, **kwds):
-            raise ImportError("Please install the nicos-pyctl package.")
+            raise ImportError('Please install the nicos-pyctl package.')
 
-
-__all__ = ["LINENO_ALL", "LINENO_TOPLEVEL", "LINENO_NAME", "Controller", "ControlStop"]
+__all__ = ['LINENO_ALL', 'LINENO_TOPLEVEL', 'LINENO_NAME',
+           'Controller', 'ControlStop']
 
 # defines from the C module
-LINENO_ALL = 0  # trace all line numbers
-LINENO_TOPLEVEL = 1  # trace only line numbers in toplevel frame
-LINENO_NAME = 2  # trace only line numbers in frames with the
-# filename given by break_only_in_filename
+LINENO_ALL      = 0   # trace all line numbers
+LINENO_TOPLEVEL = 1   # trace only line numbers in toplevel frame
+LINENO_NAME     = 2   # trace only line numbers in frames with the
+                      # filename given by break_only_in_filename
 
 
 class Controller(_Controller):
@@ -118,12 +117,8 @@ class Controller(_Controller):
     - lineno: current line number (in which frame, see lineno_behavior)
     """
 
-    def __init__(
-        self,
-        break_only_in_toplevel=False,
-        break_only_in_filename=None,
-        lineno_behavior=None,
-    ):
+    def __init__(self, break_only_in_toplevel=False,
+                 break_only_in_filename=None, lineno_behavior=None):
         if lineno_behavior is None:
             if break_only_in_toplevel:
                 lineno_behavior = LINENO_TOPLEVEL
@@ -131,13 +126,8 @@ class Controller(_Controller):
                 lineno_behavior = LINENO_NAME
             else:
                 lineno_behavior = LINENO_ALL
-        _Controller.__init__(
-            self,
-            self._breakfunc,
-            break_only_in_toplevel,
-            break_only_in_filename,
-            lineno_behavior,
-        )
+        _Controller.__init__(self, self._breakfunc, break_only_in_toplevel,
+                             break_only_in_filename, lineno_behavior)
         self.__continue = threading.Event()
         self.__continue_arg = None
 
@@ -147,9 +137,10 @@ class Controller(_Controller):
         if flag is not None:
             self.set_stop(flag)
 
-    def wait_for_continue(self):
+    def wait_for_continue(self, timeout=None):
         """Called from the break func: wait for set_continue() to be called."""
-        self.__continue.wait()
+        if not self.__continue.wait(timeout):
+            return Ellipsis
         self.__continue.clear()
         return self.__continue_arg
 
@@ -161,7 +152,7 @@ class Controller(_Controller):
     def stop(self, arg):
         """Called from outside: stop execution."""
         if arg is None:
-            arg = "stop method called"
+            arg = 'stop method called'
         # if execution is running, we set a stop flag ourselves
         if self.status == STATUS_RUNNING:
             self.set_stop(arg)
@@ -175,4 +166,4 @@ class Controller(_Controller):
         frame = self.currentframe
         if frame is None:
             return None
-        return "".join(traceback.format_stack(frame, limit)[2:])
+        return ''.join(traceback.format_stack(frame, limit)[2:])

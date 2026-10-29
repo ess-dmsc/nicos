@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,28 +25,21 @@
 from nicos.core.params import Param
 from nicos.devices.entangle import NamedDigitalOutput
 
-OPEN = "open"
-CLOSED = "closed"
+OPEN = 'open'
+CLOSED = 'closed'
 
 
 class Shutter(NamedDigitalOutput):
-    """Shutter implements a NamedDigitalOutput which moves to `stoptarget`
+    """Shutter that implements a NamedDigitalOutput which moves to `stoptarget`
     position when the device is stopped. This can be used to close the
     shutter in case of (emergency) stops. If the shutter should not move on
-    (emergency) stops please use `NamedDigitalOutput`."""
+    (emergency) stops please use `NamedDigitalOutput`.
+    """
 
     parameters = {
-        "stoptarget": Param(
-            "Target position on Stop", type=str, default="closed", userparam=False
-        )
+        'stoptarget': Param('Target position on Stop', type=str,
+                            default=CLOSED, userparam=False)
     }
-
-    def doInit(self, mode):
-        NamedDigitalOutput.doInit(self, mode)
-        # TODO: remove this code after successful migration
-        if self.stoptarget == "close":
-            self._setROParam("stoptarget", CLOSED)
-            self.log.warning("stoptarget parameter has been changed to %r", CLOSED)
 
     def doStop(self):
         self.maw(self.stoptarget)

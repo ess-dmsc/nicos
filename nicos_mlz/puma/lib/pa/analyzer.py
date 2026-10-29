@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -30,13 +30,13 @@ from .xa import xA
 def anaeff(theta0, theta, gamma, alpha, lsa, lsd, x, y, xp, eta, b, r, nv):
     """Calculate analyzer efficiency.
 
-    :param theta0: the nominal analyzer angle (negativ!)
+    :param theta0: the nominal analyzer angle (negative!)
     :param theta: is the analyzer tilt angle
     :param eta: the mosaicity in deg
     :param gamma: the deflector tilt angle
     :param alpha: the divergence angle
     :param lsa: the nominal sample-analyzer distance
-    :param lsd: the sample deflector diatance
+    :param lsd: the sample deflector distance
     :param x: x coordinate for the analyzer center
     :param y: y coordinate for the analyzer center
     :param xp: the scattering position at the sample
@@ -44,7 +44,7 @@ def anaeff(theta0, theta, gamma, alpha, lsa, lsd, x, y, xp, eta, b, r, nv):
     :param r: the reflectivity
     :param nv: neutron type: 0 - transmitted, 1 - reflected at deflector
     """
-    a = 1.0
+    a = 1.
     xn = xA(alpha, gamma, lsa, lsd, y, xp, nv)
     dx = b * sin(radians(theta0))
     ang = theta - theta0

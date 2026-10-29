@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,6 +29,7 @@ from nicos.guisupport.qt import QIcon, QPyDesignerCustomWidgetPlugin
 
 
 class NicosPluginBase(QPyDesignerCustomWidgetPlugin):
+
     widget_class = None
     widget_icon = None
     widget_description = None
@@ -53,14 +54,14 @@ class NicosPluginBase(QPyDesignerCustomWidgetPlugin):
             return self.widget_class(parent, designMode=True)
         except Exception as e:
             name = self.widget_class.__name__
-            print("Designer plugin error creating %s: %s" % (name, e))
+            print('Designer plugin error creating %s: %s' % (name, e))
             return None
 
     def name(self):
         return self.widget_class.__name__
 
     def group(self):
-        return "NICOS"
+        return 'NICOS'
 
     def icon(self):
         if self.widget_class.designer_icon is None:
@@ -89,36 +90,25 @@ from nicos.guisupport.widget import NicosWidget  # isort:skip
 
 # imported for side effects
 # pylint: disable=unused-import
-from nicos.guisupport import (
-    button,
-    containers,
-    display,
-    led,  # isort:skip
-    plots,
-    squeezedlbl,
-    tas,
-    trees,
-    typedvalue,
-)
+from nicos.guisupport import (button, containers, display, led,  # isort:skip
+                              plots, squeezedlbl, tas, trees, typedvalue,
+                              valuewidgets)
 
 # import other modules to make their widgets known to __subclasses__()
-for addmod in os.environ.get("NICOSDESIGNER_MODULES", "").split(":"):
+for addmod in os.environ.get('NICOSDESIGNER_MODULES', '').split(':'):
     if addmod:
         __import__(addmod)
 
 
 def _register(cls):
     if cls.designer_description:
-
         class Plugin(NicosPluginBase):
             widget_class = cls
-
-        Plugin.__name__ = cls.__name__ + "Plugin"
+        Plugin.__name__ = cls.__name__ + 'Plugin'
         globals()[Plugin.__name__] = Plugin
-        # print 'Registered', Plugin.__name__
+        # print('Registered', Plugin.__name__)
     for subcls in cls.__subclasses__():
         _register(subcls)
-
 
 _register(NicosWidget)
 

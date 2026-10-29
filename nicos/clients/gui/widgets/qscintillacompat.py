@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,22 +24,12 @@
 """NICOS GUI user editor qscintilla compat edit widget."""
 
 from nicos.guisupport.colors import colors
-from nicos.guisupport.qt import (
-    QColor,
-    QPainter,
-    QPlainTextEdit,
-    QRect,
-    QSize,
-    Qt,
-    QTextCursor,
-    QTextDocument,
-    QTextEdit,
-    QTextFormat,
-    QWidget,
-)
+from nicos.guisupport.qt import QColor, QPainter, QPlainTextEdit, QRect, \
+    QSize, Qt, QTextCursor, QTextDocument, QTextEdit, QTextFormat, QWidget
 
 
 class LineNumberArea(QWidget):
+
     codeEditor = None
 
     def __init__(self, editor):
@@ -58,12 +48,11 @@ class QScintillaCompatible(QPlainTextEdit):
     Wrapper that lets us use the same methods on the editor as for the
     QScintilla control.
     """
-
     lineNumberArea = None
 
     def __init__(self, parent):
         QPlainTextEdit.__init__(self, parent)
-        self.findtext = ""
+        self.findtext = ''
         self.findflags = 0
         self.lineNumberArea = LineNumberArea(self)
 
@@ -76,30 +65,21 @@ class QScintillaCompatible(QPlainTextEdit):
 
     def lineNumberAreaPaintEvent(self, event):
         painter = QPainter(self.lineNumberArea)
-        painter.fillRect(
-            event.rect(),
-            colors.switch_color(Qt.GlobalColor.lightGray, colors.base.lighter(130)),
-        )
+        painter.fillRect(event.rect(), colors.switch_color(Qt.GlobalColor.lightGray, colors.base.lighter(130)))
 
         block = self.firstVisibleBlock()
         blockNumber = block.blockNumber()
-        top = int(
-            self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
-        )
+        top = int(self.blockBoundingGeometry(block).
+                  translated(self.contentOffset()).top())
         bottom = top + int(self.blockBoundingRect(block).height())
 
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(blockNumber + 1)
                 painter.setPen(colors.text)
-                painter.drawText(
-                    0,
-                    top,
-                    self.lineNumberArea.width(),
-                    self.fontMetrics().height(),
-                    Qt.AlignmentFlag.AlignRight,
-                    number,
-                )
+                painter.drawText(0, top, self.lineNumberArea.width(),
+                                 self.fontMetrics().height(),
+                                 Qt.AlignmentFlag.AlignRight, number)
 
             block = block.next()
             top = bottom
@@ -113,24 +93,25 @@ class QScintillaCompatible(QPlainTextEdit):
         QPlainTextEdit.resizeEvent(self, event)
 
         cr = self.contentsRect()
-        self.lineNumberArea.setGeometry(
-            QRect(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height())
-        )
+        self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(),
+                                              self.lineNumberAreaWidth(),
+                                              cr.height()))
 
     def lineNumberAreaWidth(self):
-        return 3 + self.fontMetrics().horizontalAdvance(str(max(1, self.blockCount())))
+        return 3 + self.fontMetrics().horizontalAdvance(
+            str(max(1, self.blockCount())))
 
     def highlightCurrentLine(self):
         extraSelections = []
 
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
-            lineColor = colors.switch_color(
-                QColor(Qt.GlobalColor.yellow).lighter(160), colors.base.lighter(140)
-            )
+            lineColor = colors.switch_color(QColor(Qt.GlobalColor.yellow).lighter(160),
+                                            colors.base.lighter(140))
 
             selection.format.setBackground(lineColor)
-            selection.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
+            selection.format.setProperty(
+                QTextFormat.Property.FullWidthSelection, True)
             selection.cursor = self.textCursor()
             selection.cursor.clearSelection()
             extraSelections.append(selection)
@@ -141,9 +122,9 @@ class QScintillaCompatible(QPlainTextEdit):
         if dy:
             self.lineNumberArea.scroll(0, dy)
         else:
-            self.lineNumberArea.update(
-                0, rect.y(), self.lineNumberArea.width(), rect.height()
-            )
+            self.lineNumberArea.update(0, rect.y(),
+                                       self.lineNumberArea.width(),
+                                       rect.height())
 
         if rect.contains(self.viewport().rect()):
             self.updateLineNumberAreaWidth(0)
@@ -172,17 +153,14 @@ class QScintillaCompatible(QPlainTextEdit):
     def setCursorPosition(self, line, column):
         cursor = self.textCursor()
         cursor.move(QTextCursor.MoveOperation.Start)
-        cursor.move(
-            QTextCursor.MoveOperation.Down, QTextCursor.MoveMode.MoveAnchor, line
-        )
-        cursor.move(
-            QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.MoveAnchor, column
-        )
+        cursor.move(QTextCursor.MoveOperation.Down,
+                    QTextCursor.MoveMode.MoveAnchor, line)
+        cursor.move(QTextCursor.MoveOperation.Right,
+                    QTextCursor.MoveMode.MoveAnchor, column)
         self.setTextCursor(cursor)
 
-    def findFirst(
-        self, text, regexp, case, wholeword, wrap, forward=True, line=None, column=None
-    ):
+    def findFirst(self, text, regexp, case, wholeword, wrap, forward=True,
+                  line=None, column=None):
         flags = QTextDocument.FindFlag()
         if not forward:
             flags |= QTextDocument.FindBackward

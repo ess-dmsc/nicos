@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,27 +28,24 @@ from nicos.core.params import Attach, Override, Param, floatrange
 
 
 class ArmController(IsController, Device):
+
     parameters = {
-        "minangle": Param(
-            "Minimum angle between two arms",
-            type=floatrange(0, None),
-            settable=False,
-            userparam=False,
-            default=50.0,
-        ),
+        'minangle': Param('Minimum angle between two arms',
+                          type=floatrange(0, None), settable=False,
+                          userparam=False, default=50.),
     }
 
     attached_devices = {
-        "arm1": Attach("Arm 1 device", Moveable),
-        "arm2": Attach("Arm 2 device", Moveable),
+        'arm1': Attach('Arm 1 device', Moveable),
+        'arm2': Attach('Arm 2 device', Moveable),
     }
 
     parameter_overrides = {
-        "visibility": Override(default=()),
+        'visibility': Override(default=()),
     }
 
     def isAdevTargetAllowed(self, adev, adevtarget):
-        self.log.debug("%s: %s", adev, adevtarget)
+        self.log.debug('%s: %s', adev, adevtarget)
         if adev == self._attached_arm1:
             target = self._attached_arm2.target
             if target is None:
@@ -60,12 +57,9 @@ class ArmController(IsController, Device):
                 target = self._attached_arm1.read(0)
             absdiff = adevtarget - target
         if absdiff < 0:
-            return False, "Arms will cross."
+            return False, 'Arms will cross.'
         dist = abs(absdiff)
         if dist >= self.minangle:
-            return True, ""
-        return (
-            False,
-            "Arms become too close to each other: %.3f deg, min. "
-            "dist is %.3f" % (dist, self.minangle),
-        )
+            return True, ''
+        return False, 'Arms become too close to each other: %.3f deg, min. ' \
+            'dist is %.3f' % (dist, self.minangle)

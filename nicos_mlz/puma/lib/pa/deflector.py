@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,13 +25,13 @@ from math import degrees, tanh
 
 from .gauss import gaussian
 
-a0 = 1.0
-# all of the following parameters are just fit parameters to the reflectivy
+a0 = 1.
+# all the following parameters are just fit parameters to the reflectivity
 # curve provided by the deflector vendor (SWISS NEUTRONICS)
-xc = 0.0  # critical angle
+xc = 0.  # critical angle
 x0 = 1.05  # angle
-b = 20.0  # 1 / 0.05 with .05, where 0.05 is the 'm' value where the reflectivy
-# drops down rapidly
+b = 20.  # 1 / 0.05 with .05, where 0.05 is the 'm' value where the reflectivity
+         # drops down rapidly
 s = 0.3 / x0 / 3.5 * 4.5  # const from vendor of the deflector
 dx = degrees(0.55 / 40)  # thickness of deflector wafers / deflector height
 
@@ -39,7 +39,7 @@ dx = degrees(0.55 / 40)  # thickness of deflector wafers / deflector height
 def rdefl(x, nv):
     """Calculate reflectivity curve of deflectors as function of grazing angle.
 
-    :param x: effictive grazing angle of beam at deflector (in deg)
+    :param x: effective grazing angle of beam at deflector (in deg)
     :type x: ``float``
     :param nv: neutron spin: up(1), down(2)
     :type nv: ``1 or 2``
@@ -49,16 +49,16 @@ def rdefl(x, nv):
     ax = abs(x)
 
     if nv == 1:
-        ret = (1.0 - tanh((ax - 0.15 * x0) * b)) / 2.0
+        ret = (1. - tanh((ax - 0.15 * x0) * b)) / 2.
     else:
-        ret = (1.0 - tanh((ax - x0) * b)) / 2.0
-        ret *= 1.0 + s * (x0 / 4.5 - ax)
-    ret *= 1 - gaussian(a0, xc, dx, x)
+        ret = (1. - tanh((ax - x0) * b)) / 2.
+        ret *= (1. + s * (x0 / 4.5 - ax))
+    ret *= (1 - gaussian(a0, xc, dx, x))
     return ret
 
 
 def ddefl(gamma, alpha, L, d, nv):
-    """Calculate the propability of double reflection within deflector.
+    """Calculate the probability of double reflection within deflector.
 
     :param gamma: the tilt angle of the deflector
     :param alpha: the divergence angle of the incident beam (w.r.t. optical axis)
@@ -70,6 +70,6 @@ def ddefl(gamma, alpha, L, d, nv):
     y = gamma - alpha if gamma > 0 else alpha - gamma
     div = degrees(d / L)
     if y <= div:
-        return 0.0
+        return 0.
     rd = rdefl(y, nv)
     return max(0, (y / div - 1) * rd * rd)

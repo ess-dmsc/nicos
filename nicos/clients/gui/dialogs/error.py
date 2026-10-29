@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,15 +28,14 @@ from nicos.guisupport.qt import QDialog, QStyle
 
 
 class ErrorDialog(QDialog):
-    def __init__(self, parent, windowTitle="Error"):
+
+    def __init__(self, parent, windowTitle='Error'):
         QDialog.__init__(self, parent)
-        loadUi(self, "dialogs/error.ui")
+        loadUi(self, 'dialogs/error.ui')
 
         self.iconLabel.setPixmap(
-            self.style()
-            .standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
-            .pixmap(32, 32)
-        )
+            self.style().standardIcon(
+                QStyle.StandardPixmap.SP_MessageBoxWarning).pixmap(32, 32))
         self.setWindowTitle(windowTitle)
 
     def addMessage(self, message):
@@ -44,6 +43,6 @@ class ErrorDialog(QDialog):
         if existing:
             # limit the amount of displayed lines
             new = existing.splitlines()[-20:] + [message]
-            self.errorText.setText("\n".join(new))
+            self.errorText.setText('\n'.join(new))
         else:
             self.errorText.setText(message)

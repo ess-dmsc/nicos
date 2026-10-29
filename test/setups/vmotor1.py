@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,15 +21,14 @@
 #
 # *****************************************************************************
 
-name = "virtual motor setup 1"
+name = 'virtual motor setup 1'
 
-includes = ["stdsystem"]
+includes = ['stdsystem']
 
 devices = dict(
-    vmotor=device(
-        "nicos.devices.generic.VirtualMotor",
-        unit="mm",
-        curvalue=0,
-        abslimits=(-100, 100),
+    vmotor = device('nicos.devices.generic.VirtualMotor',
+        unit = 'mm',
+        curvalue = 0,
+        abslimits = (-100, 100),
     ),
 )

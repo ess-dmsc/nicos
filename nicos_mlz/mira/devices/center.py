@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -34,6 +34,6 @@ class CrappySensor(Sensor):
 
     def doStatus(self, maxage=0):
         stval, st = Sensor.doStatus(self, maxage)
-        if stval == status.WARN and st == "low":
-            return status.OK, "below sensor threshold"
+        if stval == status.WARN and st == 'low':
+            return status.OK, 'below sensor threshold'
         return stval, st

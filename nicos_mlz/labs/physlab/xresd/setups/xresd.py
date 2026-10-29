@@ -1,12 +1,13 @@
-description = "Basic setup for the XRESD"
+description = 'Basic setup for the XRESD'
 
-group = "basic"
+group = 'basic'
 
 includes = [
-    "d8",
-    "dectris",
-    "hv",
-    "incident",
-    "sample",
-    "shutter",
+    'd8',
+    'dectris',
+    'hv',
+    'incident',
+    'sample',
+    'shutter',
+    'collimator',
 ]

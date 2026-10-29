@@ -1,6 +1,6 @@
 # pylint: skip-file
 
-# Encode unicode strings to RTF 1.5-compatible command codes.
+# Encode Unicode strings to RTF 1.5-compatible command codes.
 # Command codes are of the form `\uN?`, where N is a signed 16-bit integer and
 # ? is a placeholder character for pre-1.5 RTF readers.
 
@@ -8,7 +8,7 @@ import codecs
 import re
 
 # Encode everything < 0x20, the \, { and } characters and everything > 0x7f
-_charescape = "([\x00-\x1f\\\\{}\x80-\uffff])"
+_charescape = '([\x00-\x1f\\\\{}\x80-\uffff])'
 
 _charescape = re.compile(_charescape)
 
@@ -18,16 +18,17 @@ _charescape = re.compile(_charescape)
 def _replace(match):
     cp = ord(match.group(1))
     # Convert codepoint into a signed integer, insert into escape sequence
-    return "\\u{0}?".format(cp > 32767 and cp - 65536 or cp)
+    return '\\u{0}?'.format(cp > 32767 and cp - 65536 or cp)
 
 
 def _rtfunicode_encode(text, errors):
     # Encode to RTF \uDDDDD? signed 16 integers and replacement char
-    return _charescape.sub(_replace, text).encode("ascii", errors)
+    return _charescape.sub(_replace, text).encode('ascii', errors)
+
 
 
 class Codec(codecs.Codec):
-    def encode(self, input, errors="strict"):
+    def encode(self, input, errors='strict'):
         return _rtfunicode_encode(input, errors), len(input)
 
 
@@ -41,9 +42,9 @@ class StreamWriter(Codec, codecs.StreamWriter):
 
 
 def rtfunicode(name):
-    if name == "rtfunicode":
+    if name == 'rtfunicode':
         return codecs.CodecInfo(
-            name="rtfunicode",
+            name='rtfunicode',
             encode=Codec().encode,
             decode=Codec().decode,  # raises NotImplementedError
             incrementalencoder=IncrementalEncoder,

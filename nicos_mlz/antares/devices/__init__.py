@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,23 +21,12 @@
 #
 # *****************************************************************************
 
-from nicos.core import Attach
-from nicos.devices.generic import Pulse, VirtualTimer
-
-from nicos_mlz.antares.devices.collimator import CollimatorLoverD, GeometricBlur
+from nicos_mlz.antares.devices.collimator import CollimatorLoverD, \
+    GeometricBlur
 from nicos_mlz.antares.devices.experiment import Experiment
 from nicos_mlz.antares.devices.monochromator import Monochromator
+from nicos_mlz.antares.devices.notifiers import TelegramNotifier
 from nicos_mlz.antares.devices.selector import SelectorTilt
 from nicos_mlz.antares.devices.toellner import ToellnerDc
-
-
-class TriggerTimer(VirtualTimer):
-    """NICOS pulse device."""
-
-    attached_devices = {
-        "trigger": Attach("Pulser device", Pulse),
-    }
-
-    def doStart(self):
-        self._attached_trigger.move(self._attached_trigger.onvalue)
-        VirtualTimer.doStart(self)
+from nicos_mlz.antares.devices.virtual import TriggerTimer, \
+    TriggerTimerStartStop, TriggerTimerStatus, TriggerTimerStatusFile

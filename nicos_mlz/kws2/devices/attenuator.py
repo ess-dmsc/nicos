@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,7 +23,8 @@
 
 """Class for controlling the KWS2 attenuator."""
 
-from nicos.core import Attach, HasTimeout, Moveable, Override, Readable, oneof, status
+from nicos.core import Attach, HasTimeout, Moveable, Override, Readable, \
+    oneof, status
 
 OUT = 1
 IN = 2
@@ -32,44 +33,44 @@ IN = 2
 class Attenuator(HasTimeout, Moveable):
     """Controlling the attenuator."""
 
-    valuetype = oneof("out", "in")
+    valuetype = oneof('out', 'in')
 
     attached_devices = {
-        "output": Attach("output bits", Moveable),
-        "input": Attach("input bits", Readable),
+        'output':    Attach('output bits', Moveable),
+        'input':     Attach('input bits', Readable),
     }
 
     parameter_overrides = {
-        "fmtstr": Override(default="%s"),
-        "timeout": Override(default=10),
-        "unit": Override(mandatory=False, default=""),
+        'fmtstr':     Override(default='%s'),
+        'timeout':    Override(default=10),
+        'unit':       Override(mandatory=False, default=''),
     }
 
     def doStatus(self, maxage=0):
         inputstatus = self._attached_input.read(maxage)
         if inputstatus == OUT:
-            if self.target == "out":
-                return status.OK, "idle"
+            if self.target == 'out':
+                return status.OK, 'idle'
             else:
-                return status.WARN, "out, but target=in"
+                return status.WARN, 'out, but target=in'
         elif inputstatus == IN:
-            if self.target == "in":
-                return status.OK, "idle"
+            if self.target == 'in':
+                return status.OK, 'idle'
             else:
-                return status.WARN, "in, but target=out"
+                return status.WARN, 'in, but target=out'
         # HasTimeout will check for target reached
-        return status.OK, "idle"
+        return status.OK, 'idle'
 
     def doRead(self, maxage=0):
         inputstatus = self._attached_input.read(maxage)
         if inputstatus == OUT:
-            return "out"
+            return 'out'
         elif inputstatus == IN:
-            return "in"
-        return "unknown"
+            return 'in'
+        return 'unknown'
 
     def doStart(self, target):
-        if target == "out":
+        if target == 'out':
             self._attached_output.start(OUT)
         else:
             self._attached_output.start(IN)

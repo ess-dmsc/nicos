@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,13 +32,9 @@ from os import path
 
 from nicos import session
 from nicos.core import NicosError, Override, Param, UsageError
-from nicos.devices.experiment import (
-    Experiment as BaseExperiment,
-    ImagingExperiment as BaseImagingExperiment,
-)
+from nicos.devices.experiment import Experiment as BaseExperiment, \
+    ImagingExperiment as BaseImagingExperiment
 from nicos.utils import expandTemplate, safeName
-
-PROPOSAL_RE = re.compile(r"P\d+-\d+$")
 
 
 class Experiment(BaseExperiment):
@@ -49,59 +45,56 @@ class Experiment(BaseExperiment):
     Also controls access to proposals based on this.
     """
 
+    PROPOSAL_RE = re.compile(r'^P\d+-\d+$')
+
     parameters = {
-        "reporttemplate": Param(
-            "File name of experimental report template " "(in templates)",
-            type=str,
-            default="experimental_report.rtf",
-        ),
+        'reporttemplate': Param('File name of experimental report template '
+                                '(in templates)',
+                                type=str, default='experimental_report.rtf'),
     }
 
     parameter_overrides = {
-        "propprefix": Override(default=""),
-        "mailserver": Override(default="mailhost.frm2.tum.de"),
-        "strictservice": Override(default=True),
+        'propprefix': Override(default=''),
+        'mailserver': Override(default='mailhost.frm2.tum.de'),
+        'strictservice': Override(default=True),
     }
 
     @property
-    def ghost(self):
+    def proposal_system(self):
         """Return the GhOST API proxy if the current user was authenticated
         against GhOST, else None.
         """
-        return session.getExecutingUser().data.get("ghost")
+        return session.getExecutingUser().data.get('proposal_system')
 
     def getProposalType(self, proposal):
-        if proposal in ("template", "current"):
-            raise UsageError(
-                self,
-                'The proposal names "template" and "current"'
-                " are reserved and cannot be used",
-            )
-        if PROPOSAL_RE.match(proposal):
-            return "user"
+        if proposal in ('template', 'current'):
+            raise UsageError(self, 'The proposal names "template" and "current"'
+                             ' are reserved and cannot be used')
+        if self.PROPOSAL_RE.match(proposal):
+            return 'user'
         if proposal == self.serviceexp:
-            return "service"
-        return "other" if self.strictservice else "service"
+            return 'service'
+        return 'other' if self.strictservice else 'service'
 
     def _newCheckHook(self, proptype, proposal):
         # check if user may start this proposal
-        if self.ghost is None:
+        if self.proposal_system is None:
             return  # no way to check
-        if proptype == "user":
-            if not self.ghost.canStartProposal(proposal):
-                raise NicosError(self, "Current user may not start this " "proposal")
-        elif proptype == "other":
-            if not self.ghost.isLocalContact():
-                raise NicosError(
-                    self, "Current user may not start a " "non-user proposal"
-                )
+        if proptype == 'user':
+            if not self.proposal_system.canStartProposal(proposal):
+                raise NicosError(self, 'Current user may not start this '
+                                 'proposal')
+        elif proptype == 'other':
+            if not self.proposal_system.isLocalContact():
+                raise NicosError(self, 'Current user may not start a '
+                                 'non-user proposal')
 
     def _newPropertiesHook(self, proposal, kwds):
-        if "cycle" not in kwds:
+        if 'cycle' not in kwds:
             # for compatibility with templates expecting a cycle number
-            kwds["cycle"] = "unknown_cycle"
-        if self.proptype == "user":
-            if self.ghost is not None:
+            kwds['cycle'] = 'unknown_cycle'
+        if self.proptype == 'user':
+            if self.proposal_system is not None:
                 self._fillProposal(proposal, kwds)
         return kwds
 
@@ -110,12 +103,12 @@ class Experiment(BaseExperiment):
         pass
 
     def _canQueryProposals(self):
-        return "ghost" in session.getExecutingUser().data
+        return 'proposal_system' in session.getExecutingUser().data
 
     def _queryProposals(self, proposal=None, kwds=None):
-        if self.ghost is None:
-            raise NicosError("cannot query proposals for logged-in user")
-        res = self.ghost.queryProposals(proposal)
+        if self.proposal_system is None:
+            raise NicosError('cannot query proposals for logged-in user')
+        res = self.proposal_system.queryProposals(proposal)
         if kwds:
             for prop in res:
                 res[prop].update(kwds)
@@ -123,9 +116,10 @@ class Experiment(BaseExperiment):
 
     def _fillProposal(self, proposal, kwds):
         try:
-            res = self.ghost.queryProposals(proposal)[0]
+            res = self.proposal_system.queryProposals(proposal)[0]
         except Exception:
-            self.log.warning("could not query proposal info to " "fill metadata", exc=1)
+            self.log.warning('could not query proposal info to '
+                             'fill metadata', exc=1)
             return
         for key in res:
             if key not in kwds:
@@ -135,21 +129,20 @@ class Experiment(BaseExperiment):
         try:
             self._generateExpReport()
         except Exception:
-            self.log.warning("could not generate experimental report", exc=1)
+            self.log.warning('could not generate experimental report',
+                             exc=1)
 
     def _generateExpReport(self):
         if not self.reporttemplate:
             return
         # read and translate ExpReport template
-        self.log.debug("looking for template in %r", self.templatepath)
+        self.log.debug('looking for template in %r', self.templatepath)
         try:
             data = self.getTemplate(self.reporttemplate)
         except IOError:
-            self.log.warning(
-                "reading experimental report template %s failed, "
-                "please fetch a copy from the User Office",
-                self.reporttemplate,
-            )
+            self.log.warning('reading experimental report template %s failed, '
+                             'please fetch a copy from the User Office',
+                             self.reporttemplate)
             return  # nothing to do about it.
 
         # prepare template....
@@ -159,64 +152,50 @@ class Experiment(BaseExperiment):
         # always specify default here !
         #
         # first clean up template
-        data = data.replace(
-            "\\par Please replace the place holder in the upper"
-            " part (brackets <>) by the appropriate values.",
-            "",
-        )
-        data = data.replace(
-            "\\par Description",
-            "\\par\n\\par "
-            "Please check all pre-filled values carefully! "
-            "They were partially read from the proposal and "
-            "might need correction.\n"
-            "\\par\n"
-            "\\par Description",
-        )
+        data = data.replace('\\par Please replace the placeholder in the upper'
+                            ' part (brackets <>) by the appropriate values.', '')
+        data = data.replace('\\par Description', '\\par\n\\par '
+                            'Please check all pre-filled values carefully! '
+                            'They were partially read from the proposal and '
+                            'might need correction.\n'
+                            '\\par\n'
+                            '\\par Description')
         # replace placeholders with templating markup
         # TODO: change placeholders
-        data = data.replace(
-            "<your title as mentioned in the submission form>",
-            '"{{title:The title of your proposed experiment}}"',
-        )
-        data = data.replace("<proposal No.>", "Proposal {{proposal:0815}}")
-        data = data.replace("<your name> ", "{{users:A. Guy, A. N. Otherone}}")
-        data = data.replace("<coauthor, same affilation> ", "and coworkers")
-        data = data.replace("<other coauthor> ", "S. T. Ranger")
-        data = data.replace(
-            "<your affiliation>, }",
-            "{{affiliation:affiliation of main proposer and " "coworkers}}, }\n\\par ",
-        )
-        data = data.replace(
-            "<other affiliation>", "affiliation of coproposers " "other than 1"
-        )
-        data = data.replace("<Instrument used>", "{{instrument:<The Instrument used>}}")
-        data = data.replace(
-            "<date of experiment>",
-            "{{from_date:01.01.1970}} " "- {{to_date:12.03.2038}}",
-        )
-        data = data.replace(
-            "<local contact>", "{{localcontact:L. Contact " "<l.contact@frm2.tum.de>}}"
-        )
+        data = data.replace('<your title as mentioned in the submission form>',
+                            '"{{title:The title of your proposed experiment}}"')
+        data = data.replace('<proposal No.>', 'Proposal {{proposal:0815}}')
+        data = data.replace('<your name> ', '{{users:A. Guy, A. N. Otherone}}')
+        data = data.replace('<coauthor, same affiliation> ', 'and coworkers')
+        data = data.replace('<other coauthor> ', 'S. T. Ranger')
+        data = data.replace('<your affiliation>, }',
+                            '{{affiliation:affiliation of main proposer and '
+                            'coworkers}}, }\n\\par ')
+        data = data.replace('<other affiliation>', 'affiliation of coproposers '
+                            'other than 1')
+        data = data.replace('<Instrument used>',
+                            '{{instrument:<The Instrument used>}}')
+        data = data.replace('<date of experiment>', '{{from_date:01.01.1970}} '
+                            '- {{to_date:12.03.2038}}')
+        data = data.replace('<local contact>', '{{localcontact:L. Contact '
+                            '<l.contact@frm2.tum.de>}}')
 
         # collect info
         stats = self._statistics()
         # encode all text that may be Unicode into RTF \u escapes
         for key, stat in stats.items():
             if isinstance(stat, str):
-                stats[key] = stat.encode("rtfunicode")
+                stats[key] = stat.encode('rtfunicode')
 
         # template data
         newcontent, _, _ = expandTemplate(data, stats)
         newfn, _, _ = expandTemplate(self.reporttemplate, stats)
 
-        with open(path.join(self.proposalpath, newfn), "w", encoding="utf-8") as fp:
+        with open(path.join(self.proposalpath, newfn), 'w',
+                  encoding='utf-8') as fp:
             fp.write(newcontent)
-        self.log.info(
-            "An experimental report template was created at %r for "
-            "your convenience.",
-            path.join(self.proposalpath, newfn),
-        )
+        self.log.info('An experimental report template was created at %r for '
+                      'your convenience.', path.join(self.proposalpath, newfn))
 
 
 class ImagingExperiment(Experiment, BaseImagingExperiment):
@@ -227,35 +206,33 @@ class ImagingExperiment(Experiment, BaseImagingExperiment):
     """
 
     parameter_overrides = {
-        "dataroot": Override(default="/data/FRM-II"),
+        'dataroot': Override(default='/data/FRM-II'),
     }
 
     @property
     def elogpath(self):
         """path to the eLogbook of the current experiment/sample"""
-        return path.join(self.proposalpath, "logbook")
+        return path.join(self.proposalpath, 'logbook')
 
     @property
     def extrapaths(self):
         paths = set(Experiment.extrapaths.fget(self))
         paths.update(BaseImagingExperiment.extrapaths.fget(self))
         if self.sampledir:
-            paths.add(path.join(self.samplepath, "eval", "recon"))
+            paths.add(path.join(self.samplepath, 'eval', 'recon'))
 
         return tuple(paths)
 
     @property
     def customproposalsymlink(self):
-        if self.proptype == "service":
+        if self.proptype == 'service':
             return None
 
         # construct user name
-        user = re.split("[,(<@]", self.users)[0].strip()
-        user = user if user else "Unknown User"
+        user = re.split('[,(<@]', self.users)[0].strip()
+        user = user if user else 'Unknown User'
 
-        date = time.strftime("%F").replace("-", "_")
-        return path.join(
-            self.proposalpath,
-            "..",
-            safeName("%s-%s-%s-%s" % (date, user, self.proposal, self.title)),
-        )
+        date = time.strftime('%F').replace('-', '_')
+        return path.join(self.proposalpath, '..',
+                         safeName('%s-%s-%s-%s' %
+                                  (date, user, self.proposal, self.title)))

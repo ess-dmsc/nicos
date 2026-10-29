@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,7 +23,7 @@
 
 from os import path
 
-import numpy
+import numpy as np
 
 from nicos.clients.gui.panels.live import LiveDataPanel
 from nicos.clients.gui.utils import loadUi
@@ -33,59 +33,52 @@ uipath = path.dirname(__file__)
 
 
 class CascadeControls(QWidget):
-    controlsui = f"{uipath}/cascadecontrols.ui"
 
-    foilsnumber = 0
+    controlsui = f'{uipath}/cascadecontrols.ui'
 
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
         loadUi(self, self.controlsui)
-        for w in (
-            self.foilLabel,
-            self.foilBox,
-            self.timeChannelLabel,
-            self.timeChannelBox,
-        ):
-            w.setHidden(True)
-        self.singleSlidesBox.setDisabled(True)
-        self.setFoilsOrder(list(range(self.foilsnumber)))
+        # for w in (self.foilLabel, self.foilBox, self.timeChannelLabel,
+        #           self.timeChannelBox):
+        #     w.setHidden(True)
+        self.setHidden(True)
+        self.setFoilsOrder([])
 
     def initControls(self, data):
         imagedata = len(data.shape) < 3
-        self.singleSlidesBox.setDisabled(imagedata)
-        if imagedata:
-            self.singleSlidesBox.setChecked(False)
-        else:
-            self.foilBox.setMaximum(self.foilsnumber)
-            self.timeChannelBox.setMaximum(data.shape[0] // self.foilsnumber)
+        self.setHidden(imagedata)
+        if not imagedata:
+            foilsnumber = data.shape[0]
+            self.foilBox.setMaximum(foilsnumber)
+            self.timeChannelBox.setMaximum(data.shape[1])
+            self.setFoilsOrder(list(range(foilsnumber)))
 
     def handleData(self, data):
-        if len(data.shape) > 2:
-            if self.singleSlidesBox.isChecked():
-                foil = self._foilsorder.index(self.foilBox.value() - 1)
-                time_channel = self.timeChannelBox.value()
-                timechannels = data.shape[0] // self.foilsnumber
-                if time_channel:
-                    idx = foil * timechannels + time_channel - 1
-                    return data[idx]
-                startfoil = foil * timechannels
-                return numpy.sum(data[startfoil : startfoil + timechannels], axis=0)
-            return numpy.sum(data, axis=0)
-        return data
+        if len(data.shape) == 2:
+            return data
+        foil = self.foilBox.value()
+        time_channel = self.timeChannelBox.value()
+        if not (foil or time_channel):
+            return np.sum(data, axis=(0, 1))
+        if time_channel:
+            if foil:
+                return data[self._foilsorder.index(foil - 1)][time_channel - 1]
+            return np.sum(data, axis=0)[time_channel - 1]
+        return np.sum(data, axis=1)[self._foilsorder.index(foil - 1)]
 
     def setFoilsOrder(self, foilsorder):
         self._foilsorder = foilsorder
-        self.foilsnumber = len(foilsorder)
 
 
 class CascadeLiveDataPanel(LiveDataPanel):
+
     def __init__(self, parent, client, options):
         LiveDataPanel.__init__(self, parent, client, options)
 
     def _initControlsGUI(self):
         self.controls = CascadeControls()
         self.splitter.addWidget(self.controls)
-        self.controls.singleSlidesBox.toggled.connect(self.showData)
         self.controls.foilBox.valueChanged.connect(self.showData)
         self.controls.timeChannelBox.valueChanged.connect(self.showData)
 
@@ -99,12 +92,13 @@ class CascadeLiveDataPanel(LiveDataPanel):
         if data is None:  # no data
             return
 
-        arrays = data.get("dataarrays", [])
-        labels = data.get("labels", {})
-        titles = data.get("titles", {})
+        arrays = data.get('dataarrays', [])
+        labels = data.get('labels', {})
+        titles = data.get('titles', {})
 
         # copy to avoid modifications of original data
-        self.controls.setFoilsOrder(self.client.eval("psd_channel.foilsorder", []))
+        self.controls.setFoilsOrder(
+            self.client.eval('psd_channel.foilsorder', []))
 
         # if multiple datasets have to be displayed in one widget, they have
         # the same dimensions, so we only need the dimensions of one set
@@ -128,18 +122,21 @@ class CascadeLiveDataPanel(LiveDataPanel):
 
     def setData(self, arrays, labels=None, titles=None, uid=None, display=True):
         """Dispatch data array to corresponding live widgets.
+
         Cache array based on uid parameter. No caching if uid is ``None``.
         """
         if uid:
             if uid not in self._datacache:
-                self.log.debug("add to cache: %s", uid)
+                self.log.debug('add to cache: %s', uid)
                 self._datacache[uid] = {}
-            self._datacache[uid]["dataarrays"] = arrays
+            self._datacache[uid]['dataarrays'] = arrays
         if display:
             if uid:
                 if titles is None:
-                    titles = self._datacache[uid].get("titles")
+                    titles = self._datacache[uid].get('titles')
                 if labels is None:
-                    labels = self._datacache[uid].get("labels")
-            self._initLiveWidget(arrays[0])
-            self._setData(arrays, labels, titles)
+                    labels = self._datacache[uid].get('labels')
+            self.controls.initControls(arrays[0])
+            arr = self.controls.handleData(arrays[0])
+            self._initLiveWidget(arr)
+            self._setData([arr], labels, titles)

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,35 +21,31 @@
 #
 # *****************************************************************************
 
-name = "test_pulse setup"
+name = 'test_pulse setup'
 
 devices = dict(
-    sw=device(
-        "test.test_simple.test_pulse.PulseSwitch",
-        states=["up", "down"],
+    sw = device('test.test_simple.test_pulse.PulseSwitch',
+        states = ['up', 'down'],
     ),
     # well configured
-    pulse1=device(
-        "nicos.devices.generic.Pulse",
-        onvalue="up",
-        offvalue="down",
-        ontime=0.01,
-        moveable="sw",
+    pulse1 = device('nicos.devices.generic.Pulse',
+        onvalue = 'up',
+        offvalue = 'down',
+        ontime = 0.01,
+        moveable = 'sw',
     ),
     # onvalue wrong
-    pulse2=device(
-        "nicos.devices.generic.Pulse",
-        onvalue="UP",
-        offvalue="down",
-        ontime=0.01,
-        moveable="sw",
+    pulse2 = device('nicos.devices.generic.Pulse',
+        onvalue = 'UP',
+        offvalue = 'down',
+        ontime = 0.01,
+        moveable = 'sw',
     ),
     # offvalue wrong
-    pulse3=device(
-        "nicos.devices.generic.Pulse",
-        onvalue="up",
-        offvalue="DOWN",
-        ontime=0.01,
-        moveable="sw",
+    pulse3 = device('nicos.devices.generic.Pulse',
+        onvalue = 'up',
+        offvalue = 'DOWN',
+        ontime = 0.01,
+        moveable = 'sw',
     ),
 )

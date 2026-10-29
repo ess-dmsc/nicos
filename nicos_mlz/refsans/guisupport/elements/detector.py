@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,18 +24,12 @@
 
 from nicos.core import status
 from nicos.guisupport.elements import statuscolor
-from nicos.guisupport.qt import (
-    QBrush,
-    QColor,
-    QGraphicsRectItem,
-    QPen,
-    QRectF,
-    QSizeF,
-    QTransform,
-)
+from nicos.guisupport.qt import QBrush, QColor, QGraphicsRectItem, QPen, \
+    QRectF, QSizeF, QTransform
 
 
 class DetectorHalo(QGraphicsRectItem):
+
     def __init__(self, width, parent=None, scene=None):
         w = width + 2
         if parent and isinstance(parent, QGraphicsRectItem):
@@ -60,12 +54,13 @@ class DetectorHalo(QGraphicsRectItem):
 
 
 class Detector(QGraphicsRectItem):
+
     def __init__(self, parent=None, scene=None):
         QGraphicsRectItem.__init__(self, 0, 0, 10, 45, parent)
         transform = QTransform()
         transform.translate(0, 5)
         self.setTransform(transform)
-        self.setBrush(QBrush(QColor("#00FF00")))
+        self.setBrush(QBrush(QColor('#00FF00')))
         if not parent and scene:
             scene.addItem(self)
         self._halo = DetectorHalo(5, self, scene)

@@ -1,75 +1,117 @@
-description = "setup for the NICOS watchdog"
-group = "special"
-
-# The entries in this list are dictionaries. Possible keys:
-#
-# 'setup' -- setup that must be loaded (default '' to mean all setups)
-# 'condition' -- condition for warning (a Python expression where cache keys
-#    can be used: t_value stands for t/value etc.
-# 'gracetime' -- time in sec allowed for the condition to be true without
-#    emitting a warning (default 5 sec)
-# 'precondition'
-#   If present, this condition must be fullfiled for at least ``precondtime``,
-#   before condition will trigger. Default is no precondition.
-# 'precondtime'
-#   The time a precondition must be fulfilled. Default is 5 seconds.
-# 'message' -- warning message to display
-# 'type' -- for defining different types of warnings; this corresponds to the
-#   configured notifiers (default 'default')
-#   type '' does not emit warnings (useful together with scriptaction)
-# 'scriptaction' -- 'pausecount' to pause the count loop on the condition
-#   or 'stop' or 'immediatestop' to cancel script execution
-#   (default '')
-# 'action' -- code to execute if condition is true (default no code is executed)
+description = 'setup for the NICOS watchdog'
+group = 'special'
 
 watch_conditions = [
-    dict(
-        condition="LogSpace_status[0] == WARN",
-        message="Disk space for the log files becomes too low.",
-        type="critical",
-        gracetime=30,
+    dict(condition = 'LogSpace_status[0] == WARN',
+         message = 'Disk space for the log files becomes too low.',
+         type = 'logspace',
+         gracetime = 30,
     ),
-    dict(
-        condition="Space_status[0] == WARN",
-        message="Disk space for the data files becomes too low.",
-        type="critical",
-        gracetime=10,
+    dict(condition = 'Space_status[0] == WARN',
+         message = 'Disk space for the data files becomes too low.',
+         type = 'critical',
+         gracetime = 10,
     ),
-    dict(
-        condition='s_tripped_value == "Trip"',
-        # precondition = 's_hv_value != "Off"',
-        # precondtime = 60,
-        # setup = 'source',
-        message="Small detector high voltage current too high",
-        type="critical",
-        setup="charmsmall",
-        action='maw(s_hv, "off")',
-        actiontimeout=600,
-        # gracetime = 5,
+    dict(condition = 's_hv_status[0] == WARN',
+         setup = 'charmsmall',
+         message = 'One of the small detector HV channels out of limits',
+         type = 'charm',
     ),
-    dict(
-        condition='b_tripped_value == "Trip"',
-        # precondition = 's_hv_value != "Off"',
-        # precondtime = 60,
-        # setup = 'source',
-        message="Big detector high voltage current too high",
-        type="critical",
-        setup="charmbig",
-        action='maw(b_hv, "off")',
-        actiontimeout=600,
-        # gracetime = 5,
+    dict(condition = "s_hv_status[0] == ERROR and s_hv_status[1] == 'Tripped'",
+         precondition = 's_hv_value != "Off"',
+         precondtime = 60,
+         message = 'Small detector high voltage tripped (current too high)',
+         type = 'charm',
+         setup = 'charmsmall',
+         # action = "maw('s_hv', 'off')",
+         # actiontimeout = 600,
+         # gracetime = 5,
+    ),
+    dict(condition = 'b_hv_status[0] == WARN',
+         setup = 'charmbig',
+         message = 'One of the big detector HV channels out of limits',
+         type = 'charm',
+    ),
+    dict(condition = "b_hv_status[0] == ERROR and b_hv_status[1] == 'Tripped'",
+         precondition = 'b_hv_value != "Off"',
+         precondtime = 60,
+         message = 'Big detector high voltage tripped (current too high)',
+         type = 'charm',
+         setup = 'charmbig',
+         # action = "maw('b_hv', 'off')",
+         # actiontimeout = 600,
+         # gracetime = 5,
     ),
 ]
 
-# The Watchdog device has two lists of notifiers, one for priority 1 ('default')
-# and one for priority 2 ('critical').
+nguide_conditions = [
+    dict(condition = 'p1_nguide_status[0] == WARN',
+        # precondition = 'p1_nguide_value < 10',
+        # precondtime = 60,
+        type = 'neutronguide',
+        message = 'ErwiN: P1 is too high (> 10 mbar)',
+    ),
+    dict(condition = 'p2_nguide_status[0] == WARN',
+        # precondition = 'p2_nguide_value < 10',
+        # precondtime = 60,
+        type = 'neutronguide',
+        message = 'ErwiN: P2 is too high (> 10 mbar)',
+    ),
+]
+
+charm_conditions = [
+    dict(condition = 'charm2_pdet_status[0] == WARN',
+        type = 'charm',
+        setup = 'charmbox02',
+        message = 'ErwiN/Charm: Pdet outside [7.0, 7.8] bar',
+    ),
+    dict(condition = 'charm2_ppump1_status[0] == WARN',
+        type = 'charm',
+        setup = 'charmbox02',
+        message = 'ErwiN/Charm: P pump 1 outside [7.0, 7.8] bar',
+    ),
+    dict(condition = 'charm2_ppump2_status[0] == WARN',
+        type = 'charm',
+        setup = 'charmbox02',
+        message = 'ErwiN/Charm: P pump 2 outside [7.0, 7.8] bar',
+    ),
+    dict(condition = 'charm2_t1_status[0] == WARN',
+        type = 'charm',
+        setup = 'charmbox02',
+        message = 'ErwiN/Charm: T1 is too high',
+    ),
+    dict(condition = 'charm2_t2_status[0] == WARN',
+        type = 'charm',
+        setup = 'charmbox02',
+        message = 'ErwiN/Charm: T2 is too high',
+    ),
+    dict(condition = 'charm2_t3_status[0] == WARN',
+        type = 'charm',
+        setup = 'charmbox02',
+        message = 'ErwiN/Charm: T3 is too high',
+    ),
+    dict(condition = 'charm2_flow_status[0] == WARN',
+        type = 'charm',
+        setup = 'charmbox02',
+        message = 'ErwiN/Charm: Helium flow is out of range',
+    ),
+]
+
+includes = ['notifiers']
+
+notifiers = {
+    'default': ['email'],
+    'critical': ['email'],
+    'neutronguide': ['ngmail'],
+    'logspace': ['email', 'logspace_notif'],
+    'charm': ['dmail', 'dsms'],
+}
 
 devices = dict(
-    Watchdog=device(
-        "nicos.services.watchdog.Watchdog",
-        cache="localhost:14869",
-        notifiers={"default": [], "critical": []},
-        watch=watch_conditions,
-        loglevel="info",
+    Watchdog = device('nicos.services.watchdog.Watchdog',
+        cache = 'localhost:14869',
+        notifiers = notifiers,
+        watch = watch_conditions + nguide_conditions + charm_conditions,
+        loglevel = 'info',
     ),
 )

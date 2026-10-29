@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -30,16 +30,13 @@ from nicos.guisupport.qt import QDialog, QListWidgetItem, uic
 class AddXcludeDialog(QDialog):
     def __init__(self, setups, typ, parent=None):
         QDialog.__init__(self, parent)
-        uic.loadUi(
-            path.abspath(
-                path.join(
-                    path.dirname(__file__), "..", "ui", "dialogs", "addxcludedialog.ui"
-                )
-            ),
-            self,
-        )
-        self.setWindowTitle("New %s ... " % typ)
-        self.labelHeader.setText("Add new %s:" % typ)
+        uic.loadUi(path.abspath(path.join(path.dirname(__file__),
+                                          '..',
+                                          'ui',
+                                          'dialogs',
+                                          'addxcludedialog.ui')), self)
+        self.setWindowTitle('New %s ... ' % typ)
+        self.labelHeader.setText('Add new %s:' % typ)
         for setup in setups:
             QListWidgetItem(setup, self.listWidgetSetups)
 
@@ -49,9 +46,9 @@ class AddXcludeDialog(QDialog):
 
 class AddIncludeDialog(AddXcludeDialog):
     def __init__(self, setups, parent=None):
-        AddXcludeDialog.__init__(self, setups, "include", parent)
+        AddXcludeDialog.__init__(self, setups, 'include', parent)
 
 
 class AddExcludeDialog(AddXcludeDialog):
     def __init__(self, setups, parent=None):
-        AddXcludeDialog.__init__(self, setups, "exclude", parent)
+        AddXcludeDialog.__init__(self, setups, 'exclude', parent)

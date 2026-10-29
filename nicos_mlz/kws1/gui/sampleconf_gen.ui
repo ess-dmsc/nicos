@@ -24,12 +24,11 @@
      </property>
      <property name="font">
       <font>
-       <weight>75</weight>
        <bold>true</bold>
       </font>
      </property>
      <property name="text">
-      <string>Generates sample definitons for all positions
+      <string>Generates sample definitions for all positions
 of the selected sample holder.</string>
      </property>
     </widget>

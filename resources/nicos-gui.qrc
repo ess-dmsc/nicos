@@ -1,5 +1,6 @@
 <RCC>
   <qresource>
+    <file alias="stop-red">icons/media-playback-stop-red.png</file>
     <file alias="hamburger">icons/hamburger-icon.png</file>
     <file alias="finishearly">icons/media-playback-finish.png</file>
     <file alias="viewonly">icons/emblem-readonly.png</file>
@@ -8,7 +9,6 @@
     <file alias="appicon">icons/32x32/nicos.png</file>
     <file alias="up">icons/go-up.png</file>
     <file alias="down">icons/go-down.png</file>
-    <file>nicos-logo-mlz.png</file>
     <file alias="finish">icons/media-playback-stop-grey.png</file>
     <file alias="pausecount">icons/media-playback-pause-red.png</file>
     <file alias="simulate">icons/media-playback-start-2.png</file>
@@ -67,9 +67,18 @@
     <file alias="nicos-logo">nicos-logo.svg</file>
     <file alias="nicos-logo-high">nicos-logo.svg</file>
     <file alias="demo-logo-auth">demo-logo-auth.png</file>
-    <file alias="mlz-logo-auth">mlz-logo-auth.svg</file>
-    <file alias="ess-logo-auth">ess-logo-auth.svg</file>
-    <file alias="psi-logo-auth">psi-logo-auth.svg</file>
+    <file alias="mlz-logo-auth">mlz-logo-auth.png</file>
+    <file alias="psi-logo-auth">psi-logo-auth.png</file>
+    <file alias="ess-logo-auth">ess-logo-auth.png</file>
+  </qresource>
+  <qresource prefix="mgml">
+    <file alias="mgml-logo-auth">../nicos_mgml/resources/mgml-logo-auth.png</file>
+  </qresource>
+  <qresource prefix="lahn">
+    <file alias="lahn-logo-auth">../nicos_lahn/resources/lahn-logo-auth.png</file>
+  </qresource>
+  <qresource prefix="brin">
+    <file alias="brin-logo-auth">../nicos_batan/resources/brin-logo-auth.png</file>
   </qresource>
   <qresource prefix="leds">
     <file alias="status_white">leds/simplewhite.png</file>
@@ -102,7 +111,6 @@
     <file alias="check_circle_green">material/icons/check_circle_green-24px.svg</file>
     <file alias="cut">material/icons/cut-24px.svg</file>
     <file alias="device_unknown">material/icons/device_unknown-24px.svg</file>
-    <file alias="document">material/icons/document-24px.svg</file>
     <file alias="done">material/icons/done-24px.svg</file>
     <file alias="edit">material/icons/edit-24px.svg</file>
     <file alias="eject">material/icons/eject-24px.svg</file>
@@ -110,7 +118,6 @@
     <file alias="exit_to_app">material/icons/exit_to_app-24px.svg</file>
     <file alias="file_copy">material/icons/file_copy-24px.svg</file>
     <file alias="fingerprint">material/icons/fingerprint-24px.svg</file>
-    <file alias="find">material/icons/find-24px.svg</file>
     <file alias="finish_early">material/icons/finish_early-24px.svg</file>
     <file alias="folder_open">material/icons/folder_open-24px.svg</file>
     <file alias="group_work">material/icons/group_work-24px.svg</file>
@@ -128,9 +135,7 @@
     <file alias="redo">material/icons/redo-24px.svg</file>
     <file alias="refresh">material/icons/refresh-24px.svg</file>
     <file alias="remove">material/icons/remove-24px.svg</file>
-    <file alias="reset_zoom">material/icons/reset_zoom-24px.svg</file>
     <file alias="save">material/icons/save-24px.svg</file>
-    <file alias="save_as">material/icons/save_as-24px.svg</file>
     <file alias="settings_applications">material/icons/settings_applications-24px.svg</file>
     <file alias="skip_next">material/icons/skip_next-24px.svg</file>
     <file alias="stop">material/icons/stop-24px.svg</file>

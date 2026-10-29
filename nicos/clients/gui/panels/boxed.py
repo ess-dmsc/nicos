@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,18 +29,18 @@ from nicos.utils.loggers import NicosLogger
 class Boxed(QWidget, SetupDepPanelMixin):
     setWidgetVisible = SetupDepPanelMixin.setWidgetVisible
     layout_type = QLayout
-    logger_name = "Boxed"
+    logger_name = 'Boxed'
 
     def __init__(self, item, window, menuwindow, topwindow, parent=None):
         from nicos.clients.gui.panels.utils import createWindowItem
-
         QWidget.__init__(self, parent)
         self.log = NicosLogger(self.logger_name)
         self.log.parent = topwindow.log
         layout = self.layout_type(parent)
         SetupDepPanelMixin.__init__(self, window.client, item.options)
         for subitem in item.children:
-            sub = createWindowItem(subitem, window, menuwindow, topwindow, self.log)
+            sub = createWindowItem(subitem, window, menuwindow, topwindow,
+                                   self.log)
             if sub:
                 layout.addWidget(sub)
         self.setLayout(layout)
@@ -48,9 +48,9 @@ class Boxed(QWidget, SetupDepPanelMixin):
 
 class VerticalBoxed(Boxed):
     layout_type = QVBoxLayout
-    logger_name = "VerticalBoxed"
+    logger_name = 'VerticalBoxed'
 
 
 class HorizontalBoxed(Boxed):
     layout_type = QHBoxLayout
-    logger_name = "HorizontalBoxed"
+    logger_name = 'HorizontalBoxed'

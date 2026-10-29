@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -41,7 +41,7 @@ def read_and_check_cache_file(fn):
             fd.seek(0, os.SEEK_SET)
         for line in fd:
             if '\x00' in line:
-#                print('found nullbyte in file %s' % fn)
+#                print('found null byte in file %s' % fn)
                 bad = True
                 continue
             try:
@@ -62,7 +62,7 @@ def read_and_check_cache_file(fn):
                     continue
                 if nsplit == 3 and fields[2] not in '+-':
                     bad = True
-#                    print('found bad persistency marker in line %r in file %s' % (line, fn))
+#                    print('found bad persistence marker in line %r in file %s' % (line, fn))
                     continue
             except (ValueError, IndexError):
                 bad = True
@@ -90,9 +90,9 @@ count = 0
 for fn, data in badfiles.items():
     try:
         # make backup
-        with open(fn + '.bak', 'wb') as fo:  # codespell:ignore
+        with open(fn + '.bak', 'wb') as fo:
             with open(fn, 'rb') as fi:
-                fo.write(fi.read())  # codespell:ignore
+                fo.write(fi.read())
         # rewrite cache file
         with open(fn, 'w', encoding='utf-8') as f:
             f.write(data)

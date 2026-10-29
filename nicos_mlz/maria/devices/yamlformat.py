@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,11 +31,12 @@ from nicos.core.data.dataset import ScanDataset
 from nicos.core.device import Readable
 from nicos.devices.datasinks.image import ImageSink
 
-from nicos_mlz.devices.yamlbase import YAMLBaseFileSinkHandler
+from nicos_mlz.devices.datasinks.yamlbase import YAMLBaseFileSinkHandler
 
 
 class YAMLFileSinkHandler(YAMLBaseFileSinkHandler):
-    filetype = "MLZ.MARIA.2.0-beta1"
+
+    filetype = 'MLZ.MARIA.2.0-beta1'
 
     def _processArrayInfo(self, arrayinfo):
         # images are not handled by this sink
@@ -47,29 +48,30 @@ class YAMLFileSinkHandler(YAMLBaseFileSinkHandler):
         stack = self.manager._stack
         if len(stack) >= 2 and isinstance(stack[-2], ScanDataset):
             scands = stack[-2]
-            meas["info"] = scands.info
+            meas['info'] = scands.combinedinfo  # XXX: clarify w/ instrument scientists
         else:
-            meas["info"] = self.dataset.info
+            meas['info'] = self.dataset.combinedinfo  # XXX: clarify w/ instrument scientists
 
         # store device information
-        devs = meas["devices"] = []
+        devs = meas['devices'] = []
         # all available nicos devices
         devices = dict(session.devices)
         # log all devices in the dataset
-        for info, val in zip(self.dataset.devvalueinfo, self.dataset.devvaluelist):
+        for (info, val) in zip(self.dataset.devvalueinfo,
+                               self.dataset.devvaluelist):
             dev = session.getDevice(info.name)
             try:
                 state, status = dev.status()
             except NicosError:
-                dev.log.warning("could not get status for data file")
+                dev.log.warning('could not get status for data file')
                 devices.pop(info.name, None)
                 continue
             entry = self._dict()
-            entry["name"] = info.name
-            entry["unit"] = info.unit
-            entry["value"] = val
-            entry["state"] = state
-            entry["status"] = status
+            entry['name'] = info.name
+            entry['unit'] = info.unit
+            entry['value'] = val
+            entry['state'] = state
+            entry['status'] = status
             devs.append(entry)
             # remove devices already logged here
             devices.pop(info.name, None)
@@ -81,13 +83,13 @@ class YAMLFileSinkHandler(YAMLBaseFileSinkHandler):
                 try:
                     state, status = dev.status()
                 except NicosError:
-                    dev.log.warning("could not get status for data file")
+                    dev.log.warning('could not get status for data file')
                     continue
-                entry["name"] = name
-                entry["unit"] = self._devpar(name, "unit")
-                entry["value"] = self._readdev(name)
-                entry["state"] = state
-                entry["status"] = status
+                entry['name'] = name
+                entry['unit'] = self._devpar(name, 'unit')
+                entry['value'] = self._readdev(name)
+                entry['state'] = state
+                entry['status'] = status
                 devs.append(entry)
 
 
@@ -95,12 +97,11 @@ class YAMLFileSink(ImageSink):
     """Saves MARIA image data and header in yaml format"""
 
     parameter_overrides = {
-        "filenametemplate": Override(
-            mandatory=False,
-            settable=False,
-            userparam=False,
-            default=["%(proposal)s_" "%(pointcounter)010d.yaml"],
-        ),
+        'filenametemplate': Override(mandatory=False, settable=False,
+                                     userparam=False,
+                                     default=['%(proposal)s_'
+                                              '%(pointcounter)010d.yaml'],
+                                     ),
     }
 
     handlerclass = YAMLFileSinkHandler

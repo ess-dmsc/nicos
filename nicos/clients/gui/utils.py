@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,41 +24,21 @@
 """NICOS GUI utilities."""
 
 import logging
-from contextlib import contextmanager
 from os import path
 
 from nicos.core import MAINTENANCE, MASTER, SIMULATION, SLAVE
-from nicos.guisupport.qt import (
-    QApplication,
-    QByteArray,
-    QColor,
-    QCursor,
-    QDateTime,
-    QDialog,
-    QFileDialog,
-    QFont,
-    QLabel,
-    QMessageBox,
-    QProgressDialog,
-    QPushButton,
-    QSettings,
-    QSize,
-    QStyle,
-    Qt,
-    QTextEdit,
-    QToolButton,
-    QVBoxLayout,
-    QWidget,
-    uic,
-)
+from nicos.guisupport.qt import QApplication, QByteArray, QColor, QDateTime, \
+    QDialog, QFileDialog, QFont, QLabel, QMessageBox, QProgressDialog, \
+    QPushButton, QSettings, QSize, QStyle, Qt, QTextEdit, QToolButton, \
+    QVBoxLayout, QWidget, uic
 
 
 def splitTunnelString(tunnel):
-    tmp = tunnel.split("@")
+    tmp = tunnel.split('@')
     host = tmp[-1]
-    username, password = "", ""
+    username, password = '', ''
     if len(tmp) > 1:
-        tmp = tmp[0].split(":")
+        tmp = tmp[0].split(':')
         username = tmp[0]
         if len(tmp) > 1:
             password = tmp[1]
@@ -79,24 +59,22 @@ def dialogFromUi(parent, uiname):
 
 
 def loadBasicWindowSettings(window, settings):
-    window.restoreGeometry(settings.value("geometry", "", QByteArray))
-    window.restoreState(settings.value("windowstate", "", QByteArray))
+    window.restoreGeometry(settings.value('geometry', '', QByteArray))
+    window.restoreState(settings.value('windowstate', '', QByteArray))
     try:
-        window.splitstate = settings.value("splitstate", "", QByteArray)
+        window.splitstate = settings.value('splitstate', '', QByteArray)
     except TypeError:
-        window.splitstate = ""
+        window.splitstate = ''
 
 
 def loadUserStyle(window, settings):
-    window.user_font = settings.value("font", QFont("Monospace"), QFont)
+    window.user_font = settings.value('font', QFont('Monospace'), QFont)
     window.user_color = settings.value(
-        "color", QApplication.palette().base().color(), QColor
-    )
+        'color', QApplication.palette().base().color(), QColor)
 
 
-def enumerateWithProgress(
-    seq, text, every=1, parent=None, total=None, force_display=False
-):
+def enumerateWithProgress(seq, text, every=1, parent=None, total=None,
+                          force_display=False):
     total = total or len(seq)
     pd = QProgressDialog(parent, labelText=text)
     pd.setRange(0, total)
@@ -122,12 +100,10 @@ def showToolText(toolbar, action):
 
 
 def modePrompt(mode):
-    return {
-        SLAVE: "slave >>",
-        SIMULATION: "SIM >>",
-        MAINTENANCE: "maint >>",
-        MASTER: ">>",
-    }[mode]
+    return {SLAVE:       'slave >>',
+            SIMULATION:  'SIM >>',
+            MAINTENANCE: 'maint >>',
+            MASTER:      '>>'}[mode]
 
 
 class DlgUtils:
@@ -141,72 +117,67 @@ class DlgUtils:
         QMessageBox.information(self, self._dlgutils_title, text)
 
     def askQuestion(self, text, select_no=False):
-        defbutton = (
-            select_no
-            and QMessageBox.StandardButton.No
-            or QMessageBox.StandardButton.Yes
-        )
+        defbutton = select_no and QMessageBox.StandardButton.No or \
+                    QMessageBox.StandardButton.Yes
         buttons = QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        return (
-            QMessageBox.question(self, self._dlgutils_title, text, buttons, defbutton)
-            == QMessageBox.StandardButton.Yes
-        )
+        return QMessageBox.question(self, self._dlgutils_title, text, buttons,
+                                    defbutton) == QMessageBox.StandardButton.Yes
 
-    def selectInputFile(self, ctl, text="Choose an input file"):
+    def selectInputFile(self, ctl, text='Choose an input file'):
         previous = ctl.text()
         if previous:
             startdir = path.dirname(previous)
         else:
-            startdir = "."
-        fn = QFileDialog.getOpenFileName(self, text, startdir, "All files (*)")[0]
+            startdir = '.'
+        fn = QFileDialog.getOpenFileName(self, text, startdir, 'All files (*)')[0]
         if fn:
             ctl.setText(fn)
 
-    def selectOutputFile(self, ctl, text="Choose an output filename"):
+    def selectOutputFile(self, ctl, text='Choose an output filename'):
         previous = ctl.text()
         if previous:
             startdir = path.dirname(previous)
         else:
-            startdir = "."
-        fn = QFileDialog.getSaveFileName(self, text, startdir, "All files (*)")[0]
+            startdir = '.'
+        fn = QFileDialog.getSaveFileName(self, text, startdir, 'All files (*)')[0]
         if fn:
             ctl.setText(fn)
 
-    def selectDirectory(self, ctl, text="Choose a directory"):
+    def selectDirectory(self, ctl, text='Choose a directory'):
         previous = ctl.text()
-        startdir = previous or "."
+        startdir = previous or '.'
         fname = QFileDialog.getExistingDirectory(self, text, startdir)
         if fname:
             ctl.setText(fname)
 
     def viewTextFile(self, fname):
-        with open(fname, encoding="utf-8", errors="replace") as f:
+        with open(fname, encoding='utf-8', errors='replace') as f:
             contents = f.read()
-        qd = QDialog(self, "PreviewDlg", True)
-        qd.setCaption("File preview")
+        qd = QDialog(self, 'PreviewDlg', True)
+        qd.setCaption('File preview')
         qd.resize(QSize(500, 500))
-        lay = QVBoxLayout(qd, 11, 6, "playout")
-        lb = QLabel(qd, "label")
-        lb.setText("Viewing %s:" % fname)
+        lay = QVBoxLayout(qd, 11, 6, 'playout')
+        lb = QLabel(qd, 'label')
+        lb.setText('Viewing %s:' % fname)
         lay.addWidget(lb)
-        tx = QTextEdit(qd, "preview")
+        tx = QTextEdit(qd, 'preview')
         tx.setReadOnly(1)
         tx.setText(contents)
         font = QFont(tx.font())
-        font.setFamily("monospace")
+        font.setFamily('Monospace')
         tx.setFont(font)
         lay.addWidget(tx)
-        btn = QPushButton(qd, "ok")
+        btn = QPushButton(qd, 'ok')
         btn.setAutoDefault(1)
         btn.setDefault(1)
-        btn.setText("Close")
+        btn.setText('Close')
         btn.clicked.connect(qd.accept)
         lay.addWidget(btn, 0, QWidget.AlignRight)
         qd.show()
 
 
 class SettingGroup:
-    global_group = ""
+    global_group = ''
 
     def __init__(self, name):
         self.name = name
@@ -230,26 +201,23 @@ class ScriptExecQuestion(QMessageBox):
 
     def __init__(self):
         QMessageBox.__init__(
-            self,
-            QMessageBox.Icon.Information,
-            "Error",
-            "A script is currently running.  What do you want to do?",
-            QMessageBox.StandardButton.NoButton,
-        )
+            self, QMessageBox.Icon.Information, 'Error',
+            'A script is currently running.  What do you want to do?',
+            QMessageBox.StandardButton.NoButton)
 
         # Using NoRole to avoid buttons getting rearranged depending on OS
-        self.queueBtn = self.addButton("Queue script", QMessageBox.ButtonRole.NoRole)
-        self.queueBtn.setIcon(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOkButton)
-        )
-        self.execBtn = self.addButton("Execute now!", QMessageBox.ButtonRole.NoRole)
-        self.execBtn.setIcon(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
-        )
-        self.cancelBtn = self.addButton("Cancel", QMessageBox.ButtonRole.NoRole)
-        self.cancelBtn.setIcon(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton)
-        )
+        self.queueBtn = self.addButton('Queue script',
+                                       QMessageBox.ButtonRole.NoRole)
+        self.queueBtn.setIcon(self.style().standardIcon(
+            QStyle.StandardPixmap.SP_DialogOkButton))
+        self.execBtn = self.addButton('Execute now!',
+                                      QMessageBox.ButtonRole.NoRole)
+        self.execBtn.setIcon(self.style().standardIcon(
+            QStyle.StandardPixmap.SP_MessageBoxWarning))
+        self.cancelBtn = self.addButton('Cancel',
+                                        QMessageBox.ButtonRole.NoRole)
+        self.cancelBtn.setIcon(self.style().standardIcon(
+            QStyle.StandardPixmap.SP_DialogCancelButton))
 
     def exec(self):
         QMessageBox.exec(self)
@@ -272,21 +240,21 @@ class DlgPresets:
 
     def load(self):
         self.settings.beginGroup(self.group)
-        for ctl, default in self.ctls:
-            entry = "presets/" + ctl.objectName()
+        for (ctl, default) in self.ctls:
+            entry = 'presets/' + ctl.objectName()
             val = self.settings.value(entry, default, type(default))
             try:
-                getattr(self, "set_" + ctl.__class__.__name__)(ctl, val)
+                getattr(self, 'set_' + ctl.__class__.__name__)(ctl, val)
             except Exception as err:
                 print(ctl, err)
         self.settings.endGroup()
 
     def save(self):
         self.settings.beginGroup(self.group)
-        for ctl, _ in self.ctls:
-            entry = "presets/" + ctl.objectName()
+        for (ctl, _) in self.ctls:
+            entry = 'presets/' + ctl.objectName()
             try:
-                val = getattr(self, "get_" + ctl.__class__.__name__)(ctl)
+                val = getattr(self, 'get_' + ctl.__class__.__name__)(ctl)
                 self.settings.setValue(entry, val)
             except Exception as err:
                 print(err)
@@ -368,27 +336,16 @@ class DebugHandler(logging.Handler):
     def emit(self, record):
         if self.mainwindow.debugConsole:
             msg = self.format(record)
-            self.mainwindow.debugConsole.addLogMsg("#" * 80)
+            self.mainwindow.debugConsole.addLogMsg('#' * 80)
             self.mainwindow.debugConsole.addLogMsg(msg)
-
-
-@contextmanager
-def waitCursor():
-    try:
-        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
-        yield
-    finally:
-        QApplication.restoreOverrideCursor()
 
 
 def split_query(fromtime, totime, interval, func):
     # if requested period is longer than 1 day it will be sequenced
     maxquery = 3600 * 24
     history = []
-    if totime - fromtime > maxquery:
-        for sequence in range(int((totime - fromtime) // maxquery)):
-            if sequence:
-                fromtime += maxquery
-            history.extend(func(fromtime, fromtime + maxquery, interval))
+    while fromtime < totime - maxquery:
+        history.extend(func(fromtime, fromtime + maxquery, interval))
+        fromtime += maxquery
     history.extend(func(fromtime, totime, interval))
     return history

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -17,12 +17,12 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Module authors:
-#   Bjoern Pedersen <bjoern.pedersen@frm2.tum.de>
+#   Björn Pedersen <bjoern.pedersen@frm2.tum.de>
 #
 # *****************************************************************************
 
 """
-Utilility class to access and store credentials
+Utility class to access and store credentials
 
 The current implementation uses the :py:class:`EncryptedNicosKeyStore`, a file
 based multi-keyring keystore as backend.
@@ -53,9 +53,9 @@ from . import NicosKeyStore
 
 
 class NicosKeyRing(EncryptedKeyring):
-    """Keyring that allows easy setting of storage location"""
+    """Keyring that allows easy setting of storage location."""
 
-    def __init__(self, storepath=""):
+    def __init__(self, storepath=''):
         EncryptedKeyring.__init__(self)
         self.storepath = os.path.expanduser(storepath)
 
@@ -68,7 +68,7 @@ class NicosKeyRing(EncryptedKeyring):
 
 
 class EncryptedNicosKeyStore(NicosKeyStore):
-    """Multi-keyring keystore
+    """Multi-keyring keystore.
 
     This keystore uses multiple keyrings, but allows write access only to
     the last one in the list.
@@ -77,23 +77,23 @@ class EncryptedNicosKeyStore(NicosKeyStore):
     storepathes = config.keystorepaths
     keyrings = []
 
-    def __init__(self, storekey="nicos"):
+    def __init__(self, storekey='nicos'):
         for sp in self.storepathes:
             ring = NicosKeyRing(sp)
             ring.keyring_key = storekey
             self.keyrings.append(ring)
 
-    def getCredential(self, credid, domain="nicos"):
+    def getCredential(self, credid, domain='nicos'):
         for ring in self.keyrings:
             pw = ring.get_password(domain, credid)
             if pw is not None:
                 return pw
         return None
 
-    def setCredential(self, credid, passwd, domain="nicos"):
+    def setCredential(self, credid, passwd, domain='nicos'):
         return self.keyrings[-1].set_password(domain, credid, passwd)
 
-    def delCredential(self, credid, domain="nicos"):
+    def delCredential(self, credid, domain='nicos'):
         return self.keyrings[-1].delete_password(domain, credid)
 
 

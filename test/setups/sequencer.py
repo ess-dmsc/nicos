@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,40 +21,35 @@
 #
 # *****************************************************************************
 
-name = "test_sequencer setup"
+name = 'test_sequencer setup'
 
-includes = ["stdsystem", "multiswitch"]
+includes = ['stdsystem', 'multiswitch']
 
 devices = dict(
-    sm1=device(
-        "nicos.devices.generic.VirtualMotor",
-        abslimits=(0, 10),
-        unit="V",
+    sm1 = device('nicos.devices.generic.VirtualMotor',
+        abslimits = (0, 10),
+        unit = 'V',
     ),
-    sm2=device(
-        "nicos.devices.generic.VirtualMotor",
-        abslimits=(0, 10),
-        unit="",
+    sm2 = device('nicos.devices.generic.VirtualMotor',
+        abslimits = (0, 10),
+        unit = '',
     ),
-    sm3=device(
-        "nicos.devices.generic.VirtualMotor",
-        abslimits=(0, 10),
-        unit="",
+    sm3 = device('nicos.devices.generic.VirtualMotor',
+        abslimits = (0, 10),
+        unit = '',
     ),
-    ld=device(
-        "nicos.devices.generic.LockedDevice",
-        device="sm1",
-        lock="sm2",
-        lockvalue=10,
-        unlockvalue=0,
-        keepfixed=True,
+    ld = device('nicos.devices.generic.LockedDevice',
+        device = 'sm1',
+        lock = 'sm2',
+        lockvalue = 10,
+        unlockvalue = 0,
+        keepfixed = True,
     ),
-    ld2=device(
-        "nicos.devices.generic.LockedDevice",
-        device="sc1",
-        lock="sm2",
-        lockvalue=10,
-        unlockvalue=0,
-        keepfixed=True,
+    ld2 = device('nicos.devices.generic.LockedDevice',
+        device = 'sc1',
+        lock = 'sm2',
+        lockvalue = 10,
+        unlockvalue = 0,
+        keepfixed = True,
     ),
 )

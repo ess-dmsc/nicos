@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,17 +25,11 @@
 
 from math import sqrt
 
-from nicos.core import (
-    Attach,
-    ConfigurationError,
-    Moveable,
-    Param,
-    Value,
-    anytype,
-    tupleof,
-)
+from nicos.core import Attach, ConfigurationError, Moveable, Param, Value, \
+    anytype, tupleof
 from nicos.devices.generic.detector import Detector as GenericDetector
-from nicos.devices.generic.sequence import MeasureSequencer, SeqCall, SeqDev, SeqWait
+from nicos.devices.generic.sequence import MeasureSequencer, SeqCall, SeqDev, \
+    SeqWait
 
 
 class AsymDetector(MeasureSequencer):
@@ -48,17 +42,15 @@ class AsymDetector(MeasureSequencer):
     """
 
     attached_devices = {
-        "detector": Attach("Standard detector device", GenericDetector),
-        "flipper": Attach("Flipper to switch on/off", Moveable),
+        'detector': Attach('Standard detector device', GenericDetector),
+        'flipper': Attach('Flipper to switch on/off', Moveable),
     }
 
     parameters = {
-        "flipvalues": Param(
-            "On/off values for the flipper", type=tupleof(anytype, anytype)
-        ),
-        "counter": Param(
-            "Name of the counter to use for calculation", type=str, default="ctr1"
-        ),
+        'flipvalues': Param('On/off values for the flipper',
+                            type=tupleof(anytype, anytype)),
+        'counter':    Param('Name of the counter to use for calculation',
+                            type=str, default='ctr1'),
     }
 
     _vindex = 0
@@ -72,31 +64,25 @@ class AsymDetector(MeasureSequencer):
         self._nvalues = len(det_values)
         for v in det_values:
             vup = v.copy()
-            vup.name += "_up"
+            vup.name += '_up'
             upvalues.append(vup)
             vdn = v.copy()
-            vdn.name += "_dn"
+            vdn.name += '_dn'
             dnvalues.append(vdn)
-        calcvalues = [
-            Value("FR", unit="", type="other"),
-            Value("Asym", unit="", type="other", errors="next"),
-            Value("dAsym", unit="", type="error"),
-        ]
+        calcvalues = [Value('FR', unit='', type='other'),
+                      Value('Asym', unit='', type='other', errors='next'),
+                      Value('dAsym', unit='', type='error')]
         self._valueinfo = tuple(calcvalues + upvalues + dnvalues)
 
         pinfo = set(self._attached_detector.presetInfo())
-        self._presetinfo = (
-            pinfo | {p + "_up" for p in pinfo} | {p + "_dn" for p in pinfo}
-        )
+        self._presetinfo = pinfo | \
+            {p + '_up' for p in pinfo} | {p + '_dn' for p in pinfo}
 
-        self._results = (
-            [0.0, 0.0, 0.0]
-            + self._attached_detector.read()
-            + self._attached_detector.read()
-        )
+        self._results = [0.0, 0.0, 0.0] + self._attached_detector.read() + \
+            self._attached_detector.read()
 
     def doUpdateCounter(self, name):
-        for i, value in enumerate(self._attached_detector.valueInfo()):
+        for (i, value) in enumerate(self._attached_detector.valueInfo()):
             if value.name == name:
                 self._vindex = i
                 break
@@ -111,10 +97,10 @@ class AsymDetector(MeasureSequencer):
         for v in self._attached_detector.presetInfo():
             if v in preset:
                 self._up_preset[v] = self._dn_preset[v] = preset[v]
-            if v + "_up" in preset:
-                self._up_preset[v] = preset[v + "_up"]
-            if v + "_dn" in preset:
-                self._dn_preset[v] = preset[v + "_dn"]
+            if v + '_up' in preset:
+                self._up_preset[v] = preset[v + '_up']
+            if v + '_dn' in preset:
+                self._dn_preset[v] = preset[v + '_dn']
         self._lastpreset = preset
 
     def doStart(self):
@@ -142,9 +128,9 @@ class AsymDetector(MeasureSequencer):
 
     def _readDet(self, phase):
         if phase == 0:
-            self._results[3 : 3 + self._nvalues] = self._attached_detector.read()
+            self._results[3:3 + self._nvalues] = self._attached_detector.read()
         else:
-            self._results[3 + self._nvalues :] = self._attached_detector.read()
+            self._results[3 + self._nvalues:] = self._attached_detector.read()
 
     def _evaluateResults(self):
         TU = self._results[3]
@@ -158,14 +144,13 @@ class AsymDetector(MeasureSequencer):
             self._results[:3] = [0.0, 0.0, 0.0]
         else:
             A = (U - D) / (U + D)
-            dA = sqrt((1 - A) ** 2 * (U / TU) + (1 + A) ** 2 * (D / TD)) / (U + D)
+            dA = sqrt((1 - A)**2 * (U / TU) + (1 + A)**2 * (D / TD)) / (U + D)
             self._results[:3] = [U / D, A, dA]
 
     def _generateSequence(self):
         seq = []
-        order = (
-            (0, 1) if self._attached_flipper.read() == self.flipvalues[0] else (1, 0)
-        )
+        order = (0, 1) if self._attached_flipper.read() == self.flipvalues[0] \
+                else (1, 0)
         for i, phase in enumerate(order):
             if i:
                 seq.append(SeqDev(self._attached_flipper, self.flipvalues[phase]))
@@ -176,7 +161,7 @@ class AsymDetector(MeasureSequencer):
         return seq
 
     def doPause(self):
-        self._attached_detector.pause()
+        return self._attached_detector.pause()
 
     def doResume(self):
         self._attached_detector.resume()

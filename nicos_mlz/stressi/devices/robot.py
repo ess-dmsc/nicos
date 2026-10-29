@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,21 +24,22 @@
 """Some robot specific CARESS devices."""
 
 from nicos.core.params import Attach, Override
-from nicos.devices.vendor.caress.motor import Motor
+from nicos.devices.vendor.caress.motor import Motor as CARESSMotor
 
 
-class RobotMotor(Motor):
+class Motor(CARESSMotor):
     """CARESS motor using the CARESS robot devices.
 
     CARESS uses a special device to control the speed.
     """
 
     attached_devices = {
-        "speedmotor": Attach("Device to control the axis speed", Motor, multiple=False),
+        'speedmotor': Attach('Device to control the axis speed',
+                             CARESSMotor, multiple=False),
     }
 
     parameter_overrides = {
-        "speed": Override(volatile=True),
+        'speed': Override(volatile=True),
     }
 
     def doReadSpeed(self):

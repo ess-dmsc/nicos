@@ -2,13 +2,14 @@ import ast
 
 
 class TemplateScriptHandler(ast.NodeVisitor):
+
     # Store the found keys by block id of the AST
     blocks = {}
 
     # Store the values for the keys (without key marker)
     values = {}
 
-    kmark = "__"  # key marker
+    kmark = '__'  # key marker
 
     def __init__(self, code):
         self.ast = ast.parse(code)
@@ -27,7 +28,8 @@ class TemplateScriptHandler(ast.NodeVisitor):
                 break
             v = self._extract_node(self.ast.body[i], _ast.body[i])
             # print(block, '%r' % v)
-            self.values.update({k.strip(self.kmark): v for k, v in zip(block, v)})
+            self.values.update(
+                {k.strip(self.kmark): v for k, v in zip(block, v)})
         return self.values
 
     def get(self, key):
@@ -38,9 +40,9 @@ class TemplateScriptHandler(ast.NodeVisitor):
             return []
         if isinstance(node1, ast.Assign):
             return self._extract_assign(node1, node2)
-        elif isinstance(node1, ast.Expr):
+        if isinstance(node1, ast.Expr):
             return self._extract_expr(node1, node2)
-        elif isinstance(node1, ast.For):
+        if isinstance(node1, ast.For):
             return self._extract_for(node1, node2)
 
     def _extract_attribute(self, node1, node2):
@@ -68,8 +70,7 @@ class TemplateScriptHandler(ast.NodeVisitor):
             return []
         if isinstance(node1.value, ast.Call):
             return self._extract_call(node1.value, node2.value)
-        else:
-            print("EXPR", node1.value, node2.value)
+        print('EXPR', node1.value, node2.value)
 
     def _extract_call(self, node1, node2):
         ret = []
@@ -80,7 +81,8 @@ class TemplateScriptHandler(ast.NodeVisitor):
                 for a1, a2 in zip(node1.args, node2.args):
                     if isinstance(a1, ast.Str) and self._is_key(a1.s):
                         ret.append(self._value(a2))
-                    elif isinstance(a1, ast.Starred) and self._is_key(a1.value.id):
+                    elif isinstance(a1, ast.Starred) and \
+                        self._is_key(a1.value.id):
                         ret.append(self._value(a2.value))
             if node1.keywords or node2.keywords:
                 for k1, k2 in zip(node1.keywords, node2.keywords):
@@ -101,7 +103,7 @@ class TemplateScriptHandler(ast.NodeVisitor):
         if len(node1.targets) != len(node2.targets):
             return []
         ret = []
-        for n1, n2 in zip(node1.targets, node2.targets):
+        for (n1, n2) in zip(node1.targets, node2.targets):
             if isinstance(n1, (ast.Tuple, ast.List)):
                 for name1, name2 in zip(n1.elts, n2.elts):
                     if self._value(name1) != self._value(name2):
@@ -119,16 +121,15 @@ class TemplateScriptHandler(ast.NodeVisitor):
     def _value(self, node):
         if isinstance(node, ast.Num):
             return node.n
-        elif isinstance(node, ast.Str):
+        if isinstance(node, ast.Str):
             return node.s
-        elif isinstance(node, ast.Name):
+        if isinstance(node, ast.Name):
             return node.id
-        elif isinstance(node, ast.List):
+        if isinstance(node, ast.List):
             return self._list(node)
-        elif isinstance(node, ast.Tuple):
+        if isinstance(node, ast.Tuple):
             return tuple(self._list(node))
-        else:
-            print("Value", node.value)
+        print('Value', node.value)
 
     def _list(self, node):
         return [self._value(e) for e in node.elts]

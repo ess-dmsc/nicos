@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,8 +31,8 @@ class PartialDigitalInput(DigitalInput):
     """
 
     parameters = {
-        "startbit": Param("Number of the first bit", type=int, default=0),
-        "bitwidth": Param("Number of bits", type=int, default=1),
+        'startbit': Param('Number of the first bit', type=int, default=0),
+        'bitwidth': Param('Number of bits', type=int, default=1),
     }
 
     def doInit(self, mode):
@@ -49,8 +49,8 @@ class PartialDigitalOutput(DigitalOutput):
     """
 
     parameters = {
-        "startbit": Param("Number of the first bit", type=int, default=0),
-        "bitwidth": Param("Number of bits", type=int, default=1),
+        'startbit': Param('Number of the first bit', type=int, default=0),
+        'bitwidth': Param('Number of bits', type=int, default=1),
     }
 
     def doInit(self, mode):
@@ -63,5 +63,6 @@ class PartialDigitalOutput(DigitalOutput):
 
     def doStart(self, target):
         curVal = DigitalOutput.doRead(self)
-        newVal = (curVal & ~(self._mask << self.startbit)) | (target << self.startbit)
+        newVal = (curVal & ~(self._mask << self.startbit)) | \
+                 (target << self.startbit)
         DigitalOutput.doStart(self, newVal)

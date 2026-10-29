@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -30,13 +30,13 @@ def qrange(wavelength, detpos, rmin, rmax):
 
     - wavelength: given in A or nm
     - detpos: distance between sample and detector in cm
-    - rmin: first cell after beam stop in cm
+    - rmin: first cell after beamstop in cm
     - rmax: last cell in cm
     """
 
     const = 4 * pi / wavelength
 
-    qmin = const * sin(atan2(rmin, detpos) / 2.0)
-    qmax = const * sin(atan2(rmax, detpos) / 2.0)
+    qmin = const * sin(atan2(rmin, detpos) / 2.)
+    qmax = const * sin(atan2(rmax, detpos) / 2.)
 
     return qmin, qmax

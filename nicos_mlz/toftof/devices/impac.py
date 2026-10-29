@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,30 +32,20 @@ class TemperatureSensor(PyTangoDevice, Readable):
     """The temperature readout device of the IMPAC pyrometer."""
 
     parameters = {
-        "address": Param(
-            "Device address",
-            type=intrange(0, 97),
-            default=0,
-            settable=False,
-        ),
+        'address': Param('Device address',
+                         type=intrange(0, 97), default=0, settable=False,),
     }
 
     parameter_overrides = {
-        "comtries": Override(default=5),
+        'comtries': Override(default=5),
     }
-
-    def doInit(self, mode):
-        pass
 
     def doRead(self, maxage=0):
         # return current temperature
-        what = "%02dms" % self.address
-        temp = float(self._dev.Communicate(what))
+        temp = float(self._dev.Communicate(f'{self.address:02d}ms'))
         if temp > 77769:
-            temp = -0
-        else:
-            temp /= 10.0
-        return temp
+            return -0
+        return temp / 10
 
     def doStatus(self, maxage=0):
-        return status.OK, "idle"
+        return status.OK, 'idle'

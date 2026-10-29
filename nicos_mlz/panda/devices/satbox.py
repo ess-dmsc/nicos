@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,22 +21,11 @@
 #
 # *****************************************************************************
 
-"""PANDA's Attenuator controling device for NICOS."""
+"""PANDA's Attenuator controlling device for NICOS."""
 
 from nicos import session
-from nicos.core import (
-    Attach,
-    HasTimeout,
-    InvalidValueError,
-    Moveable,
-    Override,
-    Param,
-    Readable,
-    floatrange,
-    listof,
-    oneof,
-    status,
-)
+from nicos.core import Attach, HasTimeout, InvalidValueError, Moveable, \
+    Override, Param, Readable, floatrange, listof, oneof, status
 
 
 def bits(x, n):
@@ -53,39 +42,32 @@ class SatBox(HasTimeout, Moveable):
     valuetype = int
 
     attached_devices = {
-        "input": Attach("Endswitch input", Readable),
-        "output": Attach("Output", Moveable),
+        'input':   Attach('Endswitch input', Readable),
+        'output':  Attach('Output', Moveable),
     }
 
     parameters = {
-        "blades": Param(
-            "Thickness of the blades, starting with lowest bit",
-            type=listof(floatrange(0, 1000)),
-            mandatory=True,
-        ),
-        "readout": Param(
-            "Determine blade state from output or from switches",
-            type=oneof("switches", "outputs"),
-            mandatory=True,
-            default="output",
-            chatty=True,
-        ),
+        'blades':  Param('Thickness of the blades, starting with lowest bit',
+                         type=listof(floatrange(0, 1000)), mandatory=True),
+        'readout': Param('Determine blade state from output or from switches',
+                         type=oneof('switches', 'outputs'), mandatory=True,
+                         default='output', chatty=True),
     }
 
     parameter_overrides = {
-        "timeout": Override(default=5),
+        'timeout': Override(default=5),
     }
 
     def _readOutputs(self, maxage=0):
         # just read back the OUTPUT values
-        return bits(self._attached_output.read(), len(self.blades))
+        return bits(self._attached_output.read(maxage), len(self.blades))
 
-    def _readSwitches(self):
+    def _readSwitches(self, maxage=0):
         # deduce blade state from switches
-        state = bits(self._attached_input.read(), len(self.blades) * 2)
+        state = bits(self._attached_input.read(maxage), len(self.blades)*2)
         realstate = []
         for i in range(0, len(state), 2):
-            bladestate = state[i : i + 2]
+            bladestate = state[i:i+2]
             if bladestate == (0, 1):
                 realstate.append(1)
             elif bladestate == (1, 0):
@@ -95,24 +77,22 @@ class SatBox(HasTimeout, Moveable):
         return tuple(realstate)
 
     def doRead(self, maxage=0):
-        bladestate = (
-            self._readSwitches() if self.readout == "switches" else self._readOutputs()
-        )
+        bladestate = self._readSwitches(maxage) if self.readout == 'switches' else \
+            self._readOutputs(maxage)
         # only sum up blades which are used for sure (0/None->ignore)
         return sum(b * r for b, r in zip(self.blades, bladestate) if r)
 
     def doStatus(self, maxage=0):
-        if self.readout == "outputs":
-            return status.OK, ""
+        if self.readout == 'outputs':
+            return status.OK, ''
         if self._readSwitches() == self._readOutputs():
-            return status.OK, ""
-        return status.BUSY, "moving"
+            return status.OK, ''
+        return status.BUSY, 'moving'
 
     def doStart(self, target):
         if target > sum(self.blades):
-            raise InvalidValueError(
-                self, "Value %d too big!, maximum is %d" % (target, sum(self.blades))
-            )
+            raise InvalidValueError(self, 'Value %d too big!, maximum is %d'
+                                    % (target, sum(self.blades)))
         which = 0
         pos = target
         # start with biggest blade and work downwards, ignoring disabled blades
@@ -121,16 +101,15 @@ class SatBox(HasTimeout, Moveable):
                 which |= 1 << self.blades.index(bladewidth)
                 pos -= bladewidth
         if pos != 0:
-            self.log.warning(
-                "Value %d impossible, trying %d instead!", target, target + 1
-            )
+            self.log.warning('Value %d impossible, trying %d instead!',
+                             target, target + 1)
             return self.start(target + 1)
         self._attached_output.move(which)
-        if self.readout == "output":
+        if self.readout == 'output':
             # if we have no readback, give blades time to react
             session.delay(1)
 
     def doIsAllowed(self, target):
         if not (0 <= target <= sum(self.blades)):
-            return False, "Value outside range 0..%d" % sum(self.blades)
-        return True, ""
+            return False, 'Value outside range 0..%d' % sum(self.blades)
+        return True, ''

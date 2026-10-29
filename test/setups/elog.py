@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,14 +23,13 @@
 
 from test.utils import cache_addr
 
-name = "elog setup"
+name = 'elog setup'
 
 devices = dict(
-    LogbookHtml=device("nicos.services.elog.handler.html.Handler"),
-    LogbookText=device("nicos.services.elog.handler.text.Handler"),
-    Logbook=device(
-        "nicos.services.elog.Logbook",
-        handlers=["LogbookHtml", "LogbookText"],
-        cache=cache_addr,
+    LogbookHtml = device('nicos.services.elog.handler.html.Handler'),
+    LogbookText = device('nicos.services.elog.handler.text.Handler'),
+    Logbook = device('nicos.services.elog.Logbook',
+        handlers = ['LogbookHtml', 'LogbookText'],
+        cache = cache_addr,
     ),
 )

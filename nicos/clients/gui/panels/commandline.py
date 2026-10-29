@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,11 +31,11 @@ from nicos.guisupport.utils import setBackgroundColor
 class CommandLinePanel(Panel):
     """Provides just an input box for entering commands and no output view."""
 
-    panelName = "CommandLinePanel"
+    panelName = 'CommandLinePanel'
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, "panels/commandline.ui")
+        loadUi(self, 'panels/commandline.ui')
 
         self.commandInput.history = self.cmdhistory
         self.commandInput.completion_callback = self.completeInput
@@ -48,12 +48,12 @@ class CommandLinePanel(Panel):
         self.commandInput.setEnabled(not viewonly)
 
     def loadSettings(self, settings):
-        self.cmdhistory = settings.value("cmdhistory") or []
+        self.cmdhistory = settings.value('cmdhistory') or []
 
     def saveSettings(self, settings):
         # only save 100 entries of the history
         cmdhistory = self.commandInput.history[-100:]
-        settings.setValue("cmdhistory", cmdhistory)
+        settings.setValue('cmdhistory', cmdhistory)
 
     def getMenus(self):
         return []
@@ -69,7 +69,8 @@ class CommandLinePanel(Panel):
 
     def completeInput(self, fullstring, lastword):
         try:
-            return self.client.ask("complete", fullstring, lastword, default=[])
+            return self.client.ask('complete', fullstring, lastword,
+                                   default=[])
         except Exception:
             return []
 
@@ -77,17 +78,17 @@ class CommandLinePanel(Panel):
         self.label.setText(modePrompt(mode))
 
     def on_client_initstatus(self, state):
-        self.on_client_mode(state["mode"])
+        self.on_client_mode(state['mode'])
 
     def on_client_experiment(self, data):
         (_, proptype) = data
-        if proptype == "user":
+        if proptype == 'user':
             # only clear when switching TO a user experiment
             self.commandInput.history = []
 
     def on_commandInput_execRequested(self, script, action):
-        if action == "queue":
+        if action == 'queue':
             self.client.run(script)
         else:
-            self.client.tell("exec", script)
-        self.commandInput.setText("")
+            self.client.tell('exec', script)
+        self.commandInput.setText('')

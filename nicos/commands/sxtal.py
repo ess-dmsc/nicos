@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,89 +32,72 @@ from nicos.core import FINAL, NicosError, Scan
 from nicos.devices.generic.detector import DummyDetector
 from nicos.devices.sxtal.instrument import SXTalBase
 
+__all__ = [
+    'ScanList', 'ScanDataset', 'ScanOmega', 'ScanT2T',
+]
+
 
 class Intensity(DummyDetector):
     temporary = True
 
 
 class HKLScan(Scan):
-    def __init__(
-        self,
-        devices,
-        startpositions,
-        scanmode="omega",
-        endpositions=None,
-        firstmoves=None,
-        multistep=None,
-        detlist=None,
-        envlist=None,
-        preset=None,
-        scaninfo=None,
-        subscan=False,
-    ):
-        self._intensity = Intensity("intensity")
+    def __init__(self, devices, startpositions, scanmode='omega',
+                 endpositions=None, firstmoves=None, multistep=None,
+                 detlist=None, envlist=None, preset=None, scaninfo=None,
+                 scanuserinfo=None, subscan=False):
+        self._intensity = Intensity('intensity')
         detlist = [self._intensity]
-        Scan.__init__(
-            self,
-            devices,
-            startpositions,
-            endpositions,
-            firstmoves,
-            multistep,
-            detlist,
-            envlist,
-            preset,
-            scaninfo,
-            subscan,
-        )
+        Scan.__init__(self, devices, startpositions, endpositions,
+                      firstmoves, multistep, detlist, envlist,
+                      preset, scaninfo, scanuserinfo, subscan)
         self.scanmode = scanmode
 
     def acquire(self, point, preset):
-        _scanfuncs[self.scanmode](
-            point.target[0], preset=self._preset["t"], subscan=True
-        )
+        _scanfuncs[self.scanmode](point.target[0],
+                                  preset=self._preset['t'], subscan=True)
         subscan = self.dataset.subsets[-1].subsets[-1]
-        index = [
-            i for (i, v) in enumerate(subscan.detvalueinfo) if v.type == "counter"
-        ][0]
+        index = [i for (i, v) in enumerate(subscan.detvalueinfo)
+                 if v.type == 'counter'][0]
         vals = [x[index] for x in subscan.detvaluelists]
         if vals:
-            session.experiment.data.putResults(FINAL, {"intensity": [max(vals)]})
+            session.experiment.data.putResults(FINAL,
+                                               {'intensity': [max(vals)]})
 
 
 @usercommand
-@helparglist("peaklist, [preset], [scanmode]")
-def ScanList(peaklist, preset=1.0, scanmode=None):
+@helparglist('peaklist, [preset], [scanmode]')
+def ScanList(peaklist, preset=1., scanmode=None):
     instr = session.instrument
     if not isinstance(instr, SXTalBase):
-        raise NicosError("your instrument device is not a SXTAL device")
+        raise NicosError('your instrument device is not a SXTAL device')
     if scanmode is None:
         scanmode = instr.scanmode
     if not isinstance(peaklist, list):
         lst = session.experiment.sample.peaklists.get(peaklist)
         if lst is None:
-            raise NicosError("no peak list named %s found" % peaklist)
+            raise NicosError('no peak list named %s found' % peaklist)
     pos = [[v] for v in peaklist]
-    HKLScan([instr], pos, scanmode=scanmode, preset={"t": preset}).run()
+    HKLScan([instr], pos, scanmode=scanmode, preset={'t': preset}).run()
 
 
 @usercommand
-@helparglist("dmin, dmax, [preset], [scanmode]")
-def ScanDataset(dmin, dmax, preset=1.0, scanmode=None):
+@helparglist('dmin, dmax, [preset], [scanmode]')
+def ScanDataset(dmin, dmax, preset=1., scanmode=None):
     instr = session.instrument
     if not isinstance(instr, SXTalBase):
-        raise NicosError("your instrument device is not a SXTAL device")
+        raise NicosError('your instrument device is not a SXTAL device')
     if scanmode is None:
         scanmode = instr.scanmode
     ds = session.experiment.sample.cell.dataset(dmin, dmax)
     pos = [[v] for v in ds.tolist()]
     # session.log.info(pos)
-    HKLScan([instr], pos, scanmode=scanmode, preset={"t": preset}).run()
+    HKLScan([instr], pos, scanmode=scanmode, preset={'t': preset}).run()
 
 
 @usercommand
-@helparglist("hkl, [preset], [subscan]")
-def ScanOmega(hkl, preset=1.0, subscan=False):
+@helparglist('hkl, [preset], [subscan]')
+def ScanOmega(hkl, preset=1., subscan=False):
     """Perform a centered omega scan at the specified Q point.
 
     The default scan width is calculated from the instrumental resolution.  The
@@ -128,19 +111,20 @@ def ScanOmega(hkl, preset=1.0, subscan=False):
     """
     instr = session.instrument
     if not isinstance(instr, SXTalBase):
-        raise NicosError("your instrument device is not a SXTAL device")
-    if not hasattr(instr, "_attached_omega"):
+        raise NicosError('your instrument device is not a SXTAL device')
+    if not hasattr(instr, '_attached_omega'):
         raise NicosError('your instrument device has no attached "omega"')
     width = instr.getScanWidthFor(hkl)
     sps = instr.scansteps
     sw = width / sps
     op = instr._attached_omega.read(0)
-    cscan(instr._attached_omega, op, sw, sps // 2, instr, preset, subscan=subscan)
+    cscan(instr._attached_omega, op, sw, sps // 2, instr,
+          preset, subscan=subscan)
 
 
 @usercommand
-@helparglist("hkl, [preset], [subscan]")
-def ScanT2T(hkl, preset=1.0, subscan=False):
+@helparglist('hkl, [preset], [subscan]')
+def ScanT2T(hkl, preset=1., subscan=False):
     """Perform a centered 'omega/two theta' scan at the specified Q point.
 
     The default scan width is calculated from the instrumental resolution.  The
@@ -154,10 +138,10 @@ def ScanT2T(hkl, preset=1.0, subscan=False):
     """
     instr = session.instrument
     if not isinstance(instr, SXTalBase):
-        raise NicosError("your instrument device is not a SXTAL device")
-    if not hasattr(instr, "_attached_omega"):
+        raise NicosError('your instrument device is not a SXTAL device')
+    if not hasattr(instr, '_attached_omega'):
         raise NicosError('your instrument device has no attached "omega"')
-    if not hasattr(instr, "_attached_ttheta"):
+    if not hasattr(instr, '_attached_ttheta'):
         raise NicosError('your instrument device has no attached "ttheta"')
     width = instr.getScanWidthFor(hkl)
     sps = instr.scansteps
@@ -165,18 +149,11 @@ def ScanT2T(hkl, preset=1.0, subscan=False):
     instr.maw(hkl)
     op = instr._attached_omega.read(0)
     tp = instr._attached_ttheta.read(0)
-    cscan(
-        [instr._attached_omega, instr._attached_ttheta],
-        [op, tp],
-        [sw, 2 * sw],
-        sps // 2,
-        instr,
-        preset,
-        subscan=subscan,
-    )
+    cscan([instr._attached_omega, instr._attached_ttheta], [op, tp],
+          [sw, 2 * sw], sps // 2, instr, preset, subscan=subscan)
 
 
 _scanfuncs = {
-    "omega": ScanOmega,
-    "t2t": ScanT2T,
+    'omega': ScanOmega,
+    't2t': ScanT2T,
 }

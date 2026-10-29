@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,4 +24,3 @@
 """STRESSI specific data sinks."""
 
 from nicos_mlz.stressi.datasinks.caresssink import CaressScanfileSink
-from nicos_mlz.stressi.datasinks.yamlsink import YamlDatafileSink

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -17,7 +17,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Module authors:
-#   Bjoern Pedersen <bjoern.pedersen@frm2.tum.de>
+#   Björn Pedersen <bjoern.pedersen@frm2.tum.de>
 #
 # *****************************************************************************
 
@@ -25,39 +25,40 @@
 Tests for DeviceInfo
 """
 
+import pytest
+
 from nicos.core.utils import DeviceValue, DeviceValueDict
-from test.utils import raises
 
 
 def test_deviceinfo():
     val = 10.0
-    unit = "mm"
-    formatted = "%f %s" % (val, unit)
-    a = DeviceValue(val, formatted, unit, "meta")
+    unit = 'mm'
+    formatted = '%f %s' % (val, unit)
+    a = DeviceValue(val, formatted, unit, 'meta')
     assert str(a) == formatted
     assert float(a) == val
     assert int(a) == int(val)
 
-    b = DeviceValue("str", "str", "", "meta")
-    assert raises(ValueError, float, b)
-    assert raises(ValueError, int, b)
+    b = DeviceValue('str', 'str', '', 'meta')
+    pytest.raises(ValueError, float, b)
+    pytest.raises(ValueError, int, b)
 
-    c = DeviceValue(0, str(0), "", "meta")
+    c = DeviceValue(0, str(0), '', 'meta')
     assert int(c) == 0
 
 
 def test_devicevaluedict():
     dvd = DeviceValueDict()
 
-    val = "0 mm"
-    dvd["a.b.c"] = val
+    val = '0 mm'
+    dvd['a.b.c'] = val
 
-    assert dvd["a.b.c"].raw == val
-    assert dvd["a.b.c"].formatted == val
+    assert dvd['a.b.c'].raw == val
+    assert dvd['a.b.c'].formatted == val
 
-    val2 = DeviceValue(12, "12 cm", "cm", "meta")
-    dvd["x.y"] = val2
+    val2 = DeviceValue(12, '12 cm', 'cm', 'meta')
+    dvd['x.y'] = val2
 
-    assert dvd["x.y"].raw == 12
-    assert dvd["x.y"].formatted == "12 cm"
-    assert dvd["x.y"].unit == "cm"
+    assert dvd['x.y'].raw == 12
+    assert dvd['x.y'].formatted == '12 cm'
+    assert dvd['x.y'].unit == 'cm'

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -30,23 +30,24 @@ import pytest
 from nicos.commands.scan import scan
 from nicos.core.data import ScanData
 from nicos.services.elog import genplot
+
 from test.utils import hasGnuplot, runtime_root
 
-session_setup = "scanning"
+session_setup = 'scanning'
 
 
-@pytest.mark.skipif(not hasGnuplot(), reason="Skipped due to missing gnuplot")
+@pytest.mark.skipif(not hasGnuplot(), reason='Skipped due to missing gnuplot')
 def test_scan_gen_elog(session):
-    m = session.getDevice("motor")
-    mm = session.getDevice("manual")
+    m = session.getDevice('motor')
+    mm = session.getDevice('manual')
     mm.move(0)
 
-    session.experiment.setDetectors([session.getDevice("det")])
+    session.experiment.setDetectors([session.getDevice('det')])
 
     try:
         # plain scan, with some extras: infostring, firstmove
-        scan(m, 0, 1, 5, 0.0, "test scan", manual=1)
+        scan(m, 0, 1, 5, 0., 'test scan', manual=1)
         dataset = ScanData(session.experiment.data.getLastScans()[-1])
-        genplot.plotDataset(dataset, path.join(runtime_root, "testplt"), "svg")
+        genplot.plotDataset(dataset, path.join(runtime_root, 'testplt'), 'svg')
     finally:
         session.experiment.detlist = []

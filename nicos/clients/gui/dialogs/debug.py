@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -26,21 +26,12 @@
 import codeop
 import sys
 
-from nicos.guisupport.qt import (
-    QCoreApplication,
-    QFont,
-    QMainWindow,
-    QPlainTextEdit,
-    QSplitter,
-    Qt,
-    QTextCursor,
-    QTextOption,
-    pyqtSignal,
-)
+from nicos.guisupport.qt import QCoreApplication, QFont, QMainWindow, \
+    QPlainTextEdit, QSplitter, Qt, QTextCursor, QTextOption, pyqtSignal
 from nicos.protocols.daemon import DAEMON_EVENTS
 
 # prevent importing the traceback.py from this package
-traceback = __import__("traceback")
+traceback = __import__('traceback')
 
 
 class StdoutProxy:
@@ -50,7 +41,7 @@ class StdoutProxy:
 
     def write(self, text):
         if not self.skip:
-            stripped_text = text.rstrip("\n")
+            stripped_text = text.rstrip('\n')
             self.write_func(stripped_text)
             QCoreApplication.processEvents()
         self.skip = not self.skip
@@ -59,7 +50,7 @@ class StdoutProxy:
 class ConsoleBox(QPlainTextEdit):
     closeConsole = pyqtSignal()
 
-    def __init__(self, ps1=">>> ", ps2="... ", startup_message="", parent=None):
+    def __init__(self, ps1='>>> ', ps2='... ', startup_message='', parent=None):
         QPlainTextEdit.__init__(self, parent)
         self.ps1, self.ps2 = ps1, ps2
         self.history = []
@@ -70,7 +61,8 @@ class ConsoleBox(QPlainTextEdit):
 
         self.setWordWrapMode(QTextOption.WrapMode.WrapAnywhere)
         self.setUndoRedoEnabled(False)
-        self.document().setDefaultFont(QFont("Monospace", 10, QFont.Weight.Normal))
+        self.document().setDefaultFont(QFont('Monospace', 10,
+                                             QFont.Weight.Normal))
         self.showMessage(startup_message)
 
     def showMessage(self, message):
@@ -91,19 +83,17 @@ class ConsoleBox(QPlainTextEdit):
     def getCommand(self):
         doc = self.document()
         curr_line = doc.findBlockByLineNumber(doc.lineCount() - 1).text()
-        return curr_line[len(self.ps1) :]
+        return curr_line[len(self.ps1):]
 
     def setCommand(self, command):
         if self.getCommand() == command:
             return
         self.moveCursor(QTextCursor.MoveOperation.End)
-        self.moveCursor(
-            QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor
-        )
+        self.moveCursor(QTextCursor.MoveOperation.StartOfLine,
+                        QTextCursor.MoveMode.KeepAnchor)
         for _ in range(len(self.ps1)):
-            self.moveCursor(
-                QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor
-            )
+            self.moveCursor(QTextCursor.MoveOperation.Right,
+                            QTextCursor.MoveMode.KeepAnchor)
         self.textCursor().removeSelectedText()
         self.textCursor().insertText(command)
         self.moveCursor(QTextCursor.MoveOperation.End)
@@ -111,7 +101,8 @@ class ConsoleBox(QPlainTextEdit):
     def getConstruct(self, command):
         self.construct.append(command)
         try:
-            res = self.compiler("\n".join(self.construct), "<interactive>", "single")
+            res = self.compiler('\n'.join(self.construct),
+                                '<interactive>', 'single')
         except SyntaxError:
             # syntax error, start from scratch
             self.construct = []
@@ -130,7 +121,7 @@ class ConsoleBox(QPlainTextEdit):
         if self.history:
             self.history_index = max(0, self.history_index - 1)
             return self.history[self.history_index]
-        return ""
+        return ''
 
     def getNextHistoryEntry(self):
         if self.history:
@@ -138,7 +129,7 @@ class ConsoleBox(QPlainTextEdit):
             self.history_index = min(hist_len, self.history_index + 1)
             if self.history_index < hist_len:
                 return self.history[self.history_index]
-        return ""
+        return ''
 
     def getCursorPosition(self):
         return self.textCursor().columnNumber() - len(self.ps1)
@@ -185,24 +176,20 @@ class ConsoleBox(QPlainTextEdit):
         elif event.key() == Qt.Key.Key_Down:
             self.setCommand(self.getNextHistoryEntry())
             return
-        elif (
-            event.key() == Qt.Key.Key_D
-            and event.modifiers() == Qt.KeyboardModifier.ControlModifier
-        ):
+        elif event.key() == Qt.Key.Key_D and \
+             event.modifiers() == Qt.KeyboardModifier.ControlModifier:
             self.closeConsole.emit()
-        return QPlainTextEdit.keyPressEvent(self, event)
+        QPlainTextEdit.keyPressEvent(self, event)
 
 
 class DebugConsole(QMainWindow):
+
     def __init__(self, parent):
         QMainWindow.__init__(self, parent)
         self.resize(800, 500)
-        self.setWindowTitle("Debug console")
+        self.setWindowTitle('Debug console')
 
-        self.console = ConsoleBox(
-            parent=self,
-            startup_message="-" * 80
-            + """
+        self.console = ConsoleBox(parent=self, startup_message='-' * 80 + """
 NICOS GUI debug console
 Objects in the namespace:
   app             Qt application object
@@ -211,33 +198,28 @@ Objects in the namespace:
 Helper functions:
   watch(*events)  Install a handler for daemon events (all if no arguments)
                   that prints them to this console
-"""
-            + "-" * 80,
-        )
+""" + '-' * 80)
         self.outbox = QPlainTextEdit(self)
-        self.outbox.document().setDefaultFont(self.console.document().defaultFont())
+        self.outbox.document().setDefaultFont(
+            self.console.document().defaultFont())
         self.mainwidget = QSplitter(Qt.Orientation.Vertical, self)
         self.mainwidget.addWidget(self.console)
         self.mainwidget.addWidget(self.outbox)
         self.setCentralWidget(self.mainwidget)
         self.console.closeConsole.connect(self.close)
 
-        self.console.namespace.update(
-            dict(
-                app=QCoreApplication.instance(),
-                main=parent,
-                client=parent.client,
-                watch=self.install_handlers,
-            )
-        )
+        self.console.namespace.update(dict(
+            app    = QCoreApplication.instance(),
+            main   = parent,
+            client = parent.client,
+            watch  = self.install_handlers,
+        ))
 
     def install_handlers(self, *events):
         def make_handler(event):
             def handler(*args):
                 self.on_client_signal(event, args)
-
             return handler
-
         if not events:
             events = DAEMON_EVENTS
         for event in events:
@@ -247,4 +229,4 @@ Helper functions:
         self.outbox.appendPlainText(msg)
 
     def on_client_signal(self, name, args):
-        self.outbox.appendPlainText("event: %s %r" % (name, args))
+        self.outbox.appendPlainText('event: %s %r' % (name, args))

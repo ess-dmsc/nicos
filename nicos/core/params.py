@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,25 +24,27 @@
 """Parameter definition helpers and typechecking combinators."""
 
 import copy
+import os
 import re
 from os import path
 
 import numpy as np
 
 from nicos.core.errors import ConfigurationError, ProgrammingError
-from nicos.utils import decodeAny, parseHostPort, readonlydict, readonlylist
+from nicos.utils import Secret, decodeAny, parseHostPort, readonlydict, \
+    readonlylist
 
 INFO_CATEGORIES = [
-    ("experiment", "Experiment information"),
-    ("sample", "Sample and alignment"),
-    ("instrument", "Instrument setup"),
-    ("offsets", "Offsets"),
-    ("limits", "Limits"),
-    ("precisions", "Precisions/tolerances"),
-    ("status", "Device status"),
-    ("general", "Device positions and sample environment state"),
-    ("presets", "Detector preset information"),
-    ("result", "Updated values after counting"),
+    ('experiment', 'Experiment information'),
+    ('sample', 'Sample and alignment'),
+    ('instrument', 'Instrument setup'),
+    ('offsets', 'Offsets'),
+    ('limits', 'Limits'),
+    ('precisions', 'Precisions/tolerances'),
+    ('status', 'Device status'),
+    ('general', 'Device positions and sample environment state'),
+    ('presets', 'Detector preset information'),
+    ('result', 'Updated values after counting'),
 ]
 
 
@@ -114,33 +116,19 @@ class Param:
               ...
           }
 
-          parameters['param'].ext_desc = '''
+          parameters['param'].ext_desc = \"\"\"
           long description
-          '''
+          \"\"\"
     """
 
     _notset = object()
 
     # pylint: disable=redefined-builtin,too-many-arguments
-    def __init__(
-        self,
-        description,
-        type=float,
-        default=_notset,
-        mandatory=False,
-        settable=False,
-        volatile=False,
-        unit=None,
-        fmtstr="%r",
-        category=None,
-        preinit=False,
-        prefercache=None,
-        userparam=None,
-        internal=False,
-        chatty=False,
-        no_sim_restore=False,
-        ext_desc="",
-    ):
+    def __init__(self, description, type=float, default=_notset,
+                 mandatory=False, settable=False, volatile=False,
+                 unit=None, fmtstr='%r', category=None, preinit=False,
+                 prefercache=None, userparam=None, internal=False,
+                 chatty=False, no_sim_restore=False, ext_desc=''):
         self.type = fixup_conv(type)
         if default is self._notset:
             default = type()
@@ -160,12 +148,15 @@ class Param:
         self.ext_desc = ext_desc
         self.classname = None  # filled by DeviceMeta
 
-        if internal and mandatory:
-            raise ProgrammingError(
-                "Ambiguous parameter settings detected. "
-                "'internal' and 'mandatory' must be used "
-                "exclusively."
-            )
+        if mandatory:
+            if internal:
+                raise ProgrammingError("Ambiguous parameter settings detected. "
+                                       "'internal' and 'mandatory' must must " \
+                                       "not be 'True' at the same time.")
+            if volatile:
+                raise ProgrammingError("Ambiguous parameter settings detected. "
+                                       "'volatile' and 'mandatory' must must " \
+                                       "not be 'True' at the same time.")
 
         if userparam is None:  # implicit settings
             self.userparam = not self.internal
@@ -173,45 +164,45 @@ class Param:
             self.userparam = userparam
 
     def __repr__(self):
-        return "<Param info>"
+        return '<Param info>'
 
     def serialize(self):
         return self.__dict__
 
     def formatDoc(self):
-        txt = "Parameter: "
-        txt += self.description or ""
-        txt += "\n"
+        txt = 'Parameter: '
+        txt += self.description or ''
+        txt += '\n'
         if isinstance(self.type, type):
-            txt += "\n    * Type: " + self.type.__name__
+            txt += '\n    * Type: ' + self.type.__name__
         else:
-            txt += "\n    * Type: " + (self.type.__doc__ or "")
-        txt += "\n    * Default value: ``" + repr(self.default) + "``"
+            txt += '\n    * Type: ' + (self.type.__doc__ or '')
+        txt += '\n    * Default value: ``' + repr(self.default) + '``'
         if self.unit is not None:
-            if self.unit == "main":
+            if self.unit == 'main':
                 txt += "\n    * Unit: 'main' -> get unit from Device"
             else:
-                txt += "\n    * Unit: " + self.unit
+                txt += '\n    * Unit: ' + self.unit
         if self.settable:
-            txt += "\n    * Settable at runtime"
+            txt += '\n    * Settable at runtime'
         else:
-            txt += "\n    * Not settable at runtime"
+            txt += '\n    * Not settable at runtime'
         if self.category:
-            txt += "\n    * Info category: " + self.category
+            txt += '\n    * Info category: ' + self.category
         if self.mandatory:
-            txt += "\n    * Is mandatory (must be given in setup)"
+            txt += '\n    * Is mandatory (must be given in setup)'
         if self.volatile:
-            txt += "\n    * Is volatile (will always be read from hardware)"
+            txt += '\n    * Is volatile (will always be read from hardware)'
         if self.preinit:
-            txt += "\n    * Is initialized before device preinit"
+            txt += '\n    * Is initialized before device preinit'
         if self.prefercache is not None:
-            txt += "\n    * Prefer value from cache: %s" % self.prefercache
+            txt += '\n    * Prefer value from cache: %s' % self.prefercache
         if not self.userparam:
-            txt += "\n    * Not shown to user"
+            txt += '\n    * Not shown to user'
         if self.chatty:
-            txt += "\n    * Will print a message when changed"
+            txt += '\n    * Will print a message when changed'
         if self.no_sim_restore:
-            txt += "\n    * Will not be restored in simulation copy"
+            txt += '\n    * Will not be restored in simulation copy'
         return txt
 
 
@@ -247,7 +238,7 @@ class Override:
 
 
 class Attach:
-    """Specifies required properties of the attached dev(s) of an device class.
+    """Specifies required properties of the attached dev(s) of a device class.
 
     The `.Device.attached_devices` attribute contains a mapping of internal
     names of attached devices to instances of this class.
@@ -255,7 +246,7 @@ class Attach:
     internal device name to the attached device itself as `.Device._adevs`.
     Attached devices also contain a set `.Devices._sdevs` which contains
     the names of devices using this particular device as an attached device
-    (two way linkage).
+    (two-way linkage).
 
     Attributes (equivalent to constructor arguments):
 
@@ -294,23 +285,14 @@ class Attach:
 
     Only description and class are mandatory parameters.
     """
-
-    def __init__(
-        self,
-        description,
-        devclass,
-        optional=False,
-        multiple=False,
-        missingok=False,
-        dontfix=False,
-    ):
+    def __init__(self, description, devclass, optional=False, multiple=False,
+                 missingok=False, dontfix=False):
         def complain(multiple, test):
-            raise ProgrammingError(
-                "devclass %r (%s): multiple should be a "
-                "bool or a list of integers, but is %r "
-                "(testing for %s)" % (devclass.__name__, description, multiple, test)
-            )
-
+            raise ProgrammingError('devclass %r (%s): multiple should be a '
+                                   'bool or a list of integers, but is %r '
+                                   '(testing for %s)' % (devclass.__name__,
+                                                         description, multiple,
+                                                         test))
         # first check all our parameters.
         single = False
 
@@ -328,20 +310,20 @@ class Attach:
         # allowed non-list values are converted to a list above already...
         if isinstance(multiple, list):
             if not multiple:
-                complain(multiple, "list should be non-empty")
+                complain(multiple, 'list should be non-empty')
             for item in multiple:
                 try:
                     if item != int(item):
                         complain(multiple, "list items should be int's")
                     if item < 0:
-                        complain(multiple, "list items should be positive")
+                        complain(multiple, 'list items should be positive')
                 except (TypeError, ValueError):
-                    complain(multiple, "list items should be numbers")
+                    complain(multiple, 'list items should be numbers')
         elif not (isinstance(multiple, bool) and multiple):
-            complain(multiple, "is-a-list")
+            complain(multiple, 'is-a-list')
         # multiple is now True or a list of integers
         if not isinstance(optional, bool):
-            raise ProgrammingError("optional must be a boolean")
+            raise ProgrammingError('optional must be a boolean')
         # now set member values
         self.description = description
         self.devclass = devclass
@@ -357,7 +339,6 @@ class Attach:
         Also returns a list of all attached devices which should be created.
         May raise a configurationError, if something is wrongly configured.
         """
-
         def check_count(multiple, optional, count):
             if (count == 0) and optional:
                 return True
@@ -378,20 +359,17 @@ class Attach:
         if self.single:
             if check_count(self.multiple, self.optional, len(args)):
                 return args or [None]
-            raise ConfigurationError(
-                dev, "device misses device %r in " "configuration" % aname
-            )
+            raise ConfigurationError(dev, 'device misses device %r in '
+                                     'configuration' % aname)
 
         # Don't change it to more pythonic style since we want to check for
         # the boolean 'True' value
         if self.multiple is True:
             if check_count(self.multiple, self.optional, len(args)):
                 return args
-            raise ConfigurationError(
-                dev,
-                "wrong number of devices (%d) for %r"
-                " in configuration (specified=%r)" % (len(args), aname, args),
-            )
+            raise ConfigurationError(dev, 'wrong number of devices (%d) for %r'
+                                     ' in configuration (specified=%r)' %
+                                     (len(args), aname, args))
 
         # here we have:
         # - multiple is a list
@@ -404,37 +382,29 @@ class Attach:
 
         # check number of devices
         if len(args) < mindevs:
-            raise ConfigurationError(
-                dev,
-                "not enough devices (%d<%d) for %r"
-                " in configuration (specified=%r)" % (len(args), mindevs, aname, args),
-            )
+            raise ConfigurationError(dev, 'not enough devices (%d<%d) for %r'
+                                     ' in configuration (specified=%r)' %
+                                     (len(args), mindevs, aname, args))
         if len(args) > maxdevs:
-            raise ConfigurationError(
-                dev,
-                "too many devices (%d>%d) for %r in "
-                "configuration (specified=%r)" % (len(args), maxdevs, aname, args),
-            )
+            raise ConfigurationError(dev, 'too many devices (%d>%d) for %r in '
+                                     'configuration (specified=%r)' %
+                                     (len(args), maxdevs, aname, args))
 
         if check_count(self.multiple, self.optional, len(args)):
             return args
-        raise ConfigurationError(
-            dev,
-            "wrong number of devices (%d) for %r in "
-            "configuration (specified=%r)" % (len(args), aname, args),
-        )
+        raise ConfigurationError(dev, 'wrong number of devices (%d) for %r in '
+                                 'configuration (specified=%r)' %
+                                 (len(args), aname, args))
 
     def __repr__(self):
-        s = "Attach(%r, %s.%s" % (
-            self.description,
-            self.devclass.__module__,
-            self.devclass.__name__,
-        )
+        s = 'Attach(%r, %s.%s' % (self.description,
+                                  self.devclass.__module__,
+                                  self.devclass.__name__)
         if self.multiple:
-            s += ", multiple=%s" % self.multiple
+            s += ', multiple=%s' % self.multiple
         if self.optional:
-            s += ", optional=%r" % self.optional
-        return s + ")"
+            s += ', optional=%r' % self.optional
+        return s + ')'
 
 
 class Value:
@@ -472,19 +442,13 @@ class Value:
     """
 
     # pylint: disable=redefined-builtin
-    def __init__(self, name, type="other", errors="none", unit="", fmtstr="%.3f"):
-        if type not in (
-            "counter",
-            "monitor",
-            "time",
-            "other",
-            "error",
-            "filename",
-            "info",
-        ):
-            raise ProgrammingError("invalid Value type parameter")
-        if errors not in ("none", "next", "sqrt"):
-            raise ProgrammingError("invalid Value errors parameter")
+    def __init__(self, name, type='other', errors='none', unit='',
+                 fmtstr='%.3f'):
+        if type not in ('counter', 'monitor', 'time', 'other', 'error',
+                        'filename', 'info'):
+            raise ProgrammingError('invalid Value type parameter')
+        if errors not in ('none', 'next', 'sqrt'):
+            raise ProgrammingError('invalid Value errors parameter')
         self.name = name
         self.type = type
         self.errors = errors
@@ -492,7 +456,7 @@ class Value:
         self.fmtstr = fmtstr
 
     def __repr__(self):
-        return "value %r" % self.name
+        return 'value %r' % self.name
 
     def copy(self):
         return Value(self.name, self.type, self.errors, self.unit, self.fmtstr)
@@ -506,7 +470,7 @@ class ArrayDesc:
     * name, a name for the array
     * shape, a tuple of lengths in 1 to N dimensions arranged as for C order
       arrays, i.e. (..., t, y, x), which is also the numpy shape
-    * dtype, the data type of a single value, in numpy format
+    * dtype, the datatype of a single value, in numpy format
     * dimnames, a list of names for each dimension
 
     The class can try to determine if a given image-type can be converted
@@ -524,16 +488,14 @@ class ArrayDesc:
         self.shape = shape
         self.dtype = np.dtype(dtype)
         if dimnames is None:
-            dimnames = ["X", "Y", "Z", "T", "E", "U", "V", "W"][: len(shape)]
+            dimnames = ['X', 'Y', 'Z', 'T', 'E', 'U', 'V', 'W'][:len(shape)]
         self.dimnames = dimnames
 
     def __repr__(self):
-        return "ArrayDesc(%r, %r, %r, %r)" % (
-            self.name,
-            self.shape,
-            self.dtype,
-            self.dimnames,
-        )
+        return '<ArrayDesc %r - type: %s, shape: %s>' % (
+            self.name, self.dtype,
+            ', '.join([f'{s} ({d})' for s, d in zip(self.shape,
+                                                    self.dimnames[::-1])]))
 
     def copy(self):
         return ArrayDesc(self.name, self.shape, self.dtype, self.dimnames)
@@ -547,7 +509,7 @@ _notset = object()
 def convdoc(conv):
     if isinstance(conv, type):
         return conv.__name__
-    return (conv.__doc__.splitlines() or [""])[0].strip()
+    return (conv.__doc__.splitlines() or [''])[0].strip()
 
 
 def fixup_conv(conv):
@@ -567,7 +529,7 @@ def fixup_conv(conv):
 def string(s=None):
     """a string"""
     if s is None:
-        return ""
+        return ''
     if isinstance(s, bytes):
         # str(s) would result in the string "b'...'"
         return decodeAny(s)
@@ -577,13 +539,14 @@ def string(s=None):
 def boolean(v=None):
     """a boolean value"""
     if isinstance(v, str):
-        raise ValueError("please use True or False without quotes, or 1/0)")
+        raise ValueError('please use True or False without quotes, or 1/0)')
     return bool(v)
 
 
 class listof:
+
     def __init__(self, conv):
-        self.__doc__ = "a list of %s" % convdoc(conv)
+        self.__doc__ = 'a list of %s' % convdoc(conv)
         if conv is str:
             conv = string
         self.conv = fixup_conv(conv)
@@ -591,20 +554,21 @@ class listof:
     def __call__(self, val=None):
         val = val if val is not None else []
         if not isinstance(val, (list, tuple, np.ndarray)):
-            raise ValueError("value needs to be a list")
+            raise ValueError('value needs to be a list')
         return readonlylist(map(self.conv, val))
 
 
 class nonemptylistof:
+
     def __init__(self, conv):
-        self.__doc__ = "a non-empty list of %s" % convdoc(conv)
+        self.__doc__ = 'a non-empty list of %s' % convdoc(conv)
         self.conv = fixup_conv(conv)
 
     def __call__(self, val=None):
         if val is None:
             return readonlylist([self.conv()])
         if not isinstance(val, (list, tuple, np.ndarray)) or len(val) < 1:
-            raise ValueError("value needs to be a nonempty list")
+            raise ValueError('value needs to be a nonempty list')
         return readonlylist(map(self.conv, val))
 
 
@@ -614,24 +578,24 @@ def nonemptystring(s=Ellipsis):
         # used for setting the internal default if no default is given
         return None
     if not (s and isinstance(s, str)):
-        raise ValueError("must be a non-empty string!")
+        raise ValueError('must be a non-empty string!')
     return s
 
 
 class tupleof:
+
     def __init__(self, *types):
         if not types:
-            raise ProgrammingError("tupleof() needs some types as arguments")
-        self.__doc__ = "a tuple of (" + ", ".join(map(convdoc, types)) + ")"
+            raise ProgrammingError('tupleof() needs some types as arguments')
+        self.__doc__ = 'a tuple of (' + ', '.join(map(convdoc, types)) + ')'
         self.types = [fixup_conv(typeconv) for typeconv in types]
 
     def __call__(self, val=None):
         if val is None:
             return tuple(type() for type in self.types)
-        if not isinstance(val, (list, tuple, np.ndarray)) or not len(self.types) == len(
-            val
-        ):
-            raise ValueError("value needs to be a %d-tuple" % len(self.types))
+        if not isinstance(val, (list, tuple, np.ndarray)) or \
+           not len(self.types) == len(val):
+            raise ValueError('value needs to be a %d-tuple' % len(self.types))
         return tuple(t(v) for (t, v) in zip(self.types, val))
 
 
@@ -639,27 +603,26 @@ def limits(val=None):
     """a tuple of lower and upper limit"""
     val = val if val is not None else (0, 0)
     if not isinstance(val, (list, tuple, np.ndarray)) or len(val) != 2:
-        raise ValueError("value must be a list or tuple and have 2 elements")
+        raise ValueError('value must be a list or tuple and have 2 elements')
     ll = float(val[0])
     ul = float(val[1])
     if ll > ul:
-        raise ValueError("upper limit must be greater than lower limit")
+        raise ValueError('upper limit must be greater than lower limit')
     return (ll, ul)
 
 
 class dictof:
+
     def __init__(self, keyconv, valconv):
-        self.__doc__ = "a dict of %s keys and %s values" % (
-            convdoc(keyconv),
-            convdoc(valconv),
-        )
+        self.__doc__ = 'a dict of %s keys and %s values' % \
+                       (convdoc(keyconv), convdoc(valconv))
         self.keyconv = fixup_conv(keyconv)
         self.valconv = fixup_conv(valconv)
 
     def __call__(self, val=None):
         val = val if val is not None else {}
         if not isinstance(val, dict):
-            raise ValueError("value needs to be a dict")
+            raise ValueError('value needs to be a dict')
         ret = {}
         for k, v in val.items():
             ret[self.keyconv(k)] = self.valconv(v)
@@ -667,10 +630,10 @@ class dictof:
 
 
 class dictwith:
+
     def __init__(self, **convs):
-        self.__doc__ = "a dict with the following keys: " + ", ".join(
-            "%s: %s" % (k, convdoc(c)) for k, c in convs.items()
-        )
+        self.__doc__ = 'a dict with the following keys: ' + \
+            ', '.join('%s: %s' % (k, convdoc(c)) for k, c in convs.items())
         self.keys = set(convs)
         self.convs = {k: fixup_conv(conv) for (k, conv) in convs.items()}
 
@@ -678,15 +641,15 @@ class dictwith:
         if val is None:
             return {k: conv() for k, conv in self.convs.items()}
         if not isinstance(val, dict):
-            raise ValueError("value needs to be a dict")
+            raise ValueError('value needs to be a dict')
         vkeys = set(val)
         msgs = []
         if vkeys - self.keys:
-            msgs.append("unknown keys: %s" % (vkeys - self.keys))
+            msgs.append('unknown keys: %s' % (vkeys - self.keys))
         if self.keys - vkeys:
-            msgs.append("missing keys: %s" % (self.keys - vkeys))
+            msgs.append('missing keys: %s' % (self.keys - vkeys))
         if msgs:
-            raise ValueError("Key mismatch in dictionary: " + ", ".join(msgs))
+            raise ValueError('Key mismatch in dictionary: ' + ', '.join(msgs))
         ret = {}
         for k in self.keys:
             ret[k] = self.convs[k](val[k])
@@ -694,18 +657,17 @@ class dictwith:
 
 
 class intrange:
+
     def __init__(self, fr, to):
         if isinstance(fr, bool) or isinstance(to, bool):
-            raise ValueError(
-                "intrange works with integer numbers! " "A boolean was given!"
-            )
+            raise ValueError('intrange works with integer numbers! '
+                             'A boolean was given!')
         fr = int(fr)
         to = int(to)
         if fr > to:
-            raise ValueError(
-                "intrange must fulfill from <= to, given was " "[%f, %f]" % (fr, to)
-            )
-        self.__doc__ = "an integer in the range [%d, %d]" % (fr, to)
+            raise ValueError('intrange must fulfill from <= to, given was '
+                             '[%f, %f]' % (fr, to))
+        self.__doc__ = 'an integer in the range [%d, %d]' % (fr, to)
         self.fr = fr
         self.to = to
 
@@ -713,28 +675,26 @@ class intrange:
         if val is None:
             return self.fr
         if isinstance(val, bool):
-            raise ValueError("value is not an integer!")
+            raise ValueError('value is not an integer!')
         val = int(val)
         if not self.fr <= val <= self.to:
-            raise ValueError(
-                "value needs to fulfill %d <= x <= %d" % (self.fr, self.to)
-            )
+            raise ValueError('value needs to fulfill %d <= x <= %d' %
+                             (self.fr, self.to))
         return val
 
 
 class floatrange:
+
     def __init__(self, fr, to=None):
         fr = float(fr)
         if to is not None:
             to = float(to)
             if fr > to:
-                raise ValueError(
-                    "floatrange must fulfill from <= to, given "
-                    "was [%f, %f]" % (fr, to)
-                )
-            self.__doc__ = "a float in the range [%f, %f]" % (fr, to)
+                raise ValueError('floatrange must fulfill from <= to, given '
+                                 'was [%f, %f]' % (fr, to))
+            self.__doc__ = 'a float in the range [%f, %f]' % (fr, to)
         else:
-            self.__doc__ = "a float >= %f" % fr
+            self.__doc__ = 'a float >= %f' % fr
         self.fr = fr
         self.to = to
 
@@ -744,17 +704,43 @@ class floatrange:
         val = float(val)
         if self.to is not None:
             if not self.fr <= val <= self.to:
-                raise ValueError(
-                    "value needs to fulfill %f <= x <= %f" % (self.fr, self.to)
-                )
+                raise ValueError('value needs to fulfill %f <= x <= %f' %
+                                 (self.fr, self.to))
         elif self.fr > val:
-            raise ValueError("value needs to fulfill %f <= x" % self.fr)
+            raise ValueError('value needs to fulfill %f <= x' % self.fr)
         return val
 
 
+class nonzero:
+    """a nonzero number value"""
+
+    def __init__(self, conv, default=None):
+        self.__doc__ = 'Nonzero value of %s' % convdoc(conv)
+        self.conv = fixup_conv(conv)
+        # initial check for default value
+        try:
+            default_ = (default or conv()) or 1
+            self.default = conv(default_)
+        except ValueError as exc:
+            raise ValueError(f'{default} is no good default value for {conv}, '
+                             'please choose a valid nonzero value!') from exc
+
+    def __call__(self, val=None):
+        if val is None:
+            return self.default
+        if (val := self.conv(val)) == 0:
+            raise ValueError('value needs to be != 0')
+        return val
+
+
+# in case the impl. of nonzero ever changes, divisor defaults to 1 explicitly
+divisor = nonzero(float, 1)
+
+
 class setof:
+
     def __init__(self, *vals):
-        self.__doc__ = "a (sub)set of " + ", ".join(map(repr, vals))
+        self.__doc__ = 'a (sub)set of ' + ', '.join(map(repr, vals))
         self.vals = frozenset(vals)
 
     def __call__(self, val=None):
@@ -762,16 +748,15 @@ class setof:
             return frozenset()
         val = frozenset(val)
         if val.difference(self.vals):
-            raise ValueError(
-                "invalid value: %s, may only contain a (sub)set "
-                "of %s" % (val, ", ".join(map(repr, self.vals)))
-            )
+            raise ValueError('invalid value: %s, may only contain a (sub)set '
+                             'of %s' % (val, ', '.join(map(repr, self.vals))))
         return val
 
 
 class oneof:
+
     def __init__(self, *vals):
-        self.__doc__ = "one of " + ", ".join(map(repr, vals))
+        self.__doc__ = 'one of ' + ', '.join(map(repr, vals))
         self.vals = vals
 
     def __call__(self, val=None):
@@ -780,16 +765,33 @@ class oneof:
                 return self.vals[0]
             return None
         if val not in self.vals:
-            raise ValueError(
-                "invalid value: %s, must be one of %s"
-                % (val, ", ".join(map(repr, self.vals)))
-            )
+            raise ValueError('invalid value: %s, must be one of %s' %
+                             (val, ', '.join(map(repr, self.vals))))
         return val
 
 
+class oneof_or:
+
+    def __init__(self, vals, validator):
+        self.conv = fixup_conv(validator)
+        self.vals = vals
+        self.__doc__ = \
+            f'one of {", ".join(map(repr, self.vals))} or {self.conv.__doc__}'
+
+    def __call__(self, val=None):
+        if val is None:
+            if self.vals:
+                return self.vals[0]
+            return self.conv(val)
+        if val in self.vals:
+            return val
+        return self.conv(val)
+
+
 class oneofdict:
+
     def __init__(self, vals):
-        self.__doc__ = "one of " + ", ".join(map(repr, vals.values()))
+        self.__doc__ = 'one of ' + ', '.join(map(repr, vals.values()))
         self.vals = vals
 
     def __call__(self, val=None):
@@ -798,28 +800,26 @@ class oneofdict:
         if val in self.vals:
             val = self.vals[val]
         elif val not in self.vals.values():
-            raise ValueError(
-                "invalid value: %s, must be one of %s"
-                % (val, ", ".join(map(repr, self.vals.values())))
-            )
+            raise ValueError('invalid value: %s, must be one of %s' %
+                             (val, ', '.join(map(repr, self.vals.values()))))
         return val
 
 
 class oneofdict_or:
-    def __init__(self, named_vals, validator):
+    def __init__(self, vals, validator):
         self.conv = fixup_conv(validator)
-        self.__doc__ = (
-            "one of " + ", ".join(map(repr, named_vals)) + ", or " + self.conv.__doc__
-        )
-        self.named_vals = {k: self.conv(v) for (k, v) in named_vals.items()}
+        self.__doc__ = 'one of ' + ', '.join(map(repr, vals)) + \
+            ', or ' + self.conv.__doc__
+        self.vals = {k: self.conv(v) for (k, v) in vals.items()}
 
     def __call__(self, val=None):
-        return self.conv(self.named_vals.get(val, val))
+        return self.conv(self.vals.get(val, val))
 
 
 class none_or:
+
     def __init__(self, conv):
-        self.__doc__ = "None or %s" % convdoc(conv)
+        self.__doc__ = 'None or %s' % convdoc(conv)
         self.conv = fixup_conv(conv)
 
     def __call__(self, val=None):
@@ -828,29 +828,16 @@ class none_or:
         return self.conv(val)
 
 
-nicosdev_re = re.compile(r"^[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)?$", re.I)
+nicosdev_re = re.compile(r'^[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)?$', re.I)
 
 
 def nicosdev(val=None):
     """a valid NICOS device name"""
     if not val:
-        return ""
+        return ''
     val = string(val)
     if not nicosdev_re.match(val):
-        raise ValueError("%r is not a valid NICOS device name" % val)
-    return val
-
-
-tacodev_re = re.compile(r"^(//[\w.-]+/)?[\w-]+/[\w-]+/[\w-]+$", re.I)
-
-
-def tacodev(val=None):
-    """a valid taco device"""
-    if val in ("", None):
-        return ""
-    val = string(val)
-    if not tacodev_re.match(val):
-        raise ValueError("%r is not a valid Taco device name" % val)
+        raise ValueError('%r is not a valid NICOS device name' % val)
     return val
 
 
@@ -859,36 +846,35 @@ def tacodev(val=None):
 # without any attributes and properties
 # the device name must begin with 'tango://'
 tangodev_re = re.compile(
-    r"^(tango://)([\w.-]+:[\d]+/)?([\w-]+/){2}[\w-]+(#dbase=(no|yes))?$", re.I
-)
+    r'^(tango://)([\w.-]+:[\d]+/)?([\w-]+/){2}[\w-]+(#dbase=(no|yes))?$', re.I)
 #   r'^(tango://)([\w.-]+:[\d]+/)?([\w-]+/){2}[\w-]+(/[\w-]+)?(->[\w-]+)?(#dbase=(no|yes))?$', re.I)
 
 
 def tangodev(val=None):
     """a valid tango device"""
-    if val in ("", None):
-        return ""
+    if val in ('', None):
+        return ''
     val = string(val)
-    if not val.startswith("tango://"):
+    if not val.startswith('tango://'):
         raise ValueError('%r should start with "tango://"' % val)
     if not tangodev_re.match(val):
-        raise ValueError("%r is not a valid Tango device name" % val)
+        raise ValueError('%r is not a valid Tango device name' % val)
     return val
 
 
 # Valid characters for PV-names are documented in the EPICS base manual:
 #   http://www.aps.anl.gov/epics/base/R3-15/3-docs/AppDevGuide/node7.html
-pvname_re = re.compile(r"^[a-z0-9_:\.\[\]<>;-]+$", re.IGNORECASE)
+pvname_re = re.compile(r'^[a-z0-9_:\.\[\]<>;-]+$', re.IGNORECASE)
 
 
 def pvname(val=None):
     """a valid EPICS PV-name"""
-    if val in ("", None):
-        return ""
+    if val in ('', None):
+        return ''
 
     val = string(val)
     if not pvname_re.match(val):
-        raise ValueError("%r is not a valid PV name" % val)
+        raise ValueError('%r is not a valid PV name' % val)
     return val
 
 
@@ -896,27 +882,25 @@ def pvname(val=None):
 # for source
 
 mailaddress_re = re.compile(
-    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"  # dot-atom
+    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"                # dot-atom
     r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*"'  # quoted-string
-    r")@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+([A-Z]{2,99}|XN[A-Z0-9-]+)\.?$",  # domain
-    re.IGNORECASE,
-)
+    r')@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+([A-Z]{2,99}|XN[A-Z0-9-]+)\.?$',   # domain
+    re.IGNORECASE)
 
 
 def mailaddress(val=None):
     """a valid mail address"""
-    if val in ("", None):
-        return ""
+    if val in ('', None):
+        return ''
     val = string(val)
-    parts = val.split("@")
-    parts[-1] = parts[-1].encode("idna").decode("ascii")
-    val = "@".join(parts)
-    if ">" in val and not val.strip().endswith(">"):
-        raise ValueError("%r is not a valid email address" % val)
+    parts = val.split('@')
+    parts[-1] = parts[-1].encode('idna').decode('ascii')
+    val = '@'.join(parts)
+    if '>' in val and not val.strip().endswith('>'):
+        raise ValueError('%r is not a valid email address' % val)
     if not mailaddress_re.match(
-        val.strip().partition("<")[-1].rpartition(">")[0] or val
-    ):
-        raise ValueError("%r is not a valid email address" % val)
+       val.strip().partition('<')[-1].rpartition('>')[0] or val):
+        raise ValueError('%r is not a valid email address' % val)
     return val
 
 
@@ -925,37 +909,34 @@ def absolute_path(val=path.sep):
     val = string(val)
     if path.isabs(val):
         return val
-    raise ValueError(
-        "%r is not a valid absolute path (should start with %r)" % (val, path.sep)
-    )
+    raise ValueError('%r is not a valid absolute path (should start with %r)' %
+                     (val, path.sep))
 
 
-def relative_path(val=""):
+def relative_path(val=''):
     """a relative path, may not use ../../.. tricks"""
     val = path.normpath(string(val))
     if path.isabs(val):
-        raise ValueError(
-            "%r is not a valid relative path (should NOT start "
-            "with %r)" % (val, path.sep)
-        )
-    if val[:2] != "..":
+        raise ValueError('%r is not a valid relative path (should NOT start '
+                         'with %r)' % (val, path.sep))
+    if val[:2] != '..':
         return val
-    raise ValueError("%r is not a valid relative path (traverses outside)" % val)
+    raise ValueError('%r is not a valid relative path (traverses outside)' %
+                     val)
 
 
-def expanded_path(val=""):
+def expanded_path(val=''):
     """an absolute filepath which expands also '~' and $var constructs"""
     return path.expanduser(path.expandvars(val))
 
 
-def subdir(val=""):
+def subdir(val=''):
     """a relative subdir (a string NOT containing any path.sep)"""
     val = string(val)
-    for sep in [path.sep, "\\", "/"]:
+    for sep in [path.sep, '\\', '/']:
         if sep in val:
-            raise ValueError(
-                "%r is not a valid subdirectory (contains a %r)" % (val, sep)
-            )
+            raise ValueError('%r is not a valid subdirectory (contains a %r)' %
+                             (val, sep))
     return val
 
 
@@ -969,24 +950,24 @@ def vec3(val=None):
     val = val if val is not None else [0, 0, 0]
     ret = [float(v) for v in val]
     if len(ret) != 3:
-        raise ValueError("value needs to be a 3-element vector")
+        raise ValueError('value needs to be a 3-element vector')
     return readonlylist(ret)
 
 
 ipv4_re = re.compile(
-    r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}"
-    r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+    r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}'
+    r'(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 )
 
 
-def ipv4(val="0.0.0.0"):
+def ipv4(val='0.0.0.0'):
     """a IP v4 address"""
-    if val in ("", None):
-        return ""
+    if val in ('', None):
+        return ''
     val = string(val)
     res = ipv4_re.match(val)
     if not res or res.group() != res.string:
-        raise ValueError("%r is not a valid IPv4 address" % val)
+        raise ValueError('%r is not a valid IPv4 address' % val)
     return val
 
 
@@ -996,8 +977,8 @@ class host:
     Optionally, defaulthost and/or defaultport can be specified.
     """
 
-    def __init__(self, defaulthost="", defaultport=None):
-        self.__doc__ = "a host[:port] value"
+    def __init__(self, defaulthost='', defaultport=None):
+        self.__doc__ = 'a host[:port] value'
         self.defaulthost = defaulthost
         if defaultport is not None:
             self.defaultport = self._checkport(defaultport)
@@ -1010,29 +991,81 @@ class host:
             if not 0 < p < 65536:
                 raise ValueError
         except ValueError:
-            raise ValueError("The port is not a valid port number") from None
+            raise ValueError('The port is not a valid port number') from None
         return p
 
     def _addDefaults(self, host, port=None):
         host = host if host is not None else self.defaulthost
         port = port if port is not None else self.defaultport
-        return (host + ":%d" % port) if port else host
+        return (host + ':%d' % port) if port else host
 
-    def __call__(self, val=""):
+    def __call__(self, val=''):
         if val is None:
             if self.defaulthost:
                 return self._addDefaults(None)
             else:
-                raise ValueError("A None host is not allowed " "without defaulthost")
+                raise ValueError('A None host is not allowed '
+                                 'without defaulthost')
         if not isinstance(val, (str, tuple, list)):
-            raise ValueError("must be a string or tuple/list (host, port)!")
+            raise ValueError('must be a string or tuple/list (host, port)!')
         if not val:
-            return self._addDefaults("")
+            return self._addDefaults('')
 
         try:
             host, port = parseHostPort(val, self.defaultport, True)
         except ValueError:
-            raise ValueError("%r is not in the form host_name[:port]" % val) from None
+            raise ValueError(
+                '%r is not in the form host_name[:port]' % val) from None
         if not host:
-            raise ValueError("Empty hostname is not allowed")
+            raise ValueError('Empty hostname is not allowed')
         return self._addDefaults(host, port)
+
+
+class secret:
+    """Parameter type to lookup external secret sources.
+
+    *externalkey*: the external key to look up
+    *default*: (optional) default value if not resolved
+
+    Calling `lookup` will resolve to the expected secret.
+
+    Lookup is performed in this order and the first match returned:
+
+    1. externalkey looked up in the nicos keystore
+    2. NICOS_<upper(externalkey)> from the environment
+    3. (optional) the given default
+    """
+
+    def __init__(self, externalkey='', default=None):
+        if isinstance(externalkey, Secret):  # from using Secret() in setup
+            self.externalkey = externalkey[0]
+            self.default = externalkey[1].get('default')
+        else:
+            self.externalkey = externalkey
+            self.default = default
+
+    def lookup(self, error=None):
+        """Look up the secret in the NICOS keystore.
+
+        If *error* is given, raise a ConfigurationError if the secret cannot
+        be found and no default is given.
+        """
+        if not self.externalkey:
+            raise ConfigurationError('No external key given for this secret')
+        try:
+            from nicos.utils.credentials import keystore
+            val = keystore.nicoskeystore.getCredential(self.externalkey)
+        except ImportError:
+            val = None
+
+        if not val:
+            env_name = f'NICOS_{self.externalkey.upper().replace("-", "_")}'
+            val = os.environ.get(env_name)
+        if not val:
+            val = self.default
+        if not val and error:
+            raise ConfigurationError(error)
+        return val
+
+    def __repr__(self):
+        return f'<secret {self.externalkey!r}>'

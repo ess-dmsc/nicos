@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -101,7 +101,8 @@ class SimLogSender(logging.Handler):
             self.socket.send(serialize((SIM_MESSAGE, msg)))
 
     def send_block_result(self, block, time):
-        self.socket.send(serialize((SIM_BLOCK_RES, [block, time, self.simuuid])))
+        self.socket.send(serialize((SIM_BLOCK_RES,
+                                    [block, time, self.simuuid])))
 
     def add_result(self, obj):
         self.socket.send(serialize((SIM_RESULT, obj)))
@@ -125,7 +126,8 @@ class SimLogSender(logging.Handler):
                 devname = session.devices[adev.alias].name
                 if devname in devinfo:
                     devinfo[devname][3].append(adev.name)
-        self.socket.send(serialize((SIM_END_RES, [stoptime, devinfo, self.simuuid])))
+        self.socket.send(serialize((SIM_END_RES,
+                                    [stoptime, devinfo, self.simuuid])))
 
 
 class Abort(Exception):
@@ -148,9 +150,9 @@ class SimulationSession(Session):
         pass
 
     @classmethod
-    def run(cls, sock, uuid, setups, user, code, quiet=False, debug=False):
+    def run(cls, sock, uuid, setups, user, code, quiet=False, debug=False, cache=None):
         session.__class__ = cls
-        session._is_sandboxed = sock.startswith("ipc://")
+        session._is_sandboxed = sock.startswith('ipc://')
         session._debug_log = debug
 
         socket = nicos_zmq_ctx.socket(zmq.DEALER)
@@ -164,7 +166,7 @@ class SimulationSession(Session):
         # send log messages back to daemon if requested
         session.log_sender = SimLogSender(socket, session, uuid, quiet)
 
-        username, level = user.rsplit(",", 1)
+        username, level = user.rsplit(',', 1)
         session._user = User(username, int(level))
 
         try:
@@ -172,14 +174,14 @@ class SimulationSession(Session):
             session.__init__(SIMULATION)
         except Exception as err:
             try:
-                session.log.exception("Fatal error while initializing")
+                session.log.exception('Fatal error while initializing')
             finally:
-                print("Fatal error while initializing:", err, file=sys.stderr)
+                print('Fatal error while initializing:', err, file=sys.stderr)
             return 1
 
         # Give a sign of life and then tell the log handler to only log
         # errors during setup.
-        session.log.info("setting up dry run...")
+        session.log.info('setting up dry run...')
         session.begin_setup()
         # Handle "print" statements in the script.
         sys.stdout = LoggingStdout()
@@ -188,19 +190,23 @@ class SimulationSession(Session):
             # Initialize the session in simulation mode.
             session._mode = SIMULATION
 
-            # Load the setups from the original system, this should give the
-            # information about the cache address.
-            session.log.info("loading simulation mode setups: %s", ", ".join(setups))
-            session.loadSetup(setups, allow_startupcode=False)
+            if cache is None:
+                # Load the setups from the original system, this should give the
+                # information about the cache address.
+                session.log.info('loading simulation mode setups: %s',
+                                 ', '.join(setups))
+                session.loadSetup(setups, allow_startupcode=False)
+            else:
+                session.current_sysconfig['cache'] = cache
 
             # Synchronize setups and cache values.
-            session.log.info("synchronizing to master session")
+            session.log.info('synchronizing to master session')
             session.simulationSync(db)
 
             # Set session to always abort on errors.
-            session.experiment.errorbehavior = "abort"
+            session.experiment.errorbehavior = 'abort'
         except BaseException:
-            session.log.exception("Exception in dry run setup")
+            session.log.exception('Exception in dry run setup')
             session.log_sender.finish()
             session.shutdown()
             return 1
@@ -218,12 +224,12 @@ class SimulationSession(Session):
                 last_clock = session.clock.time
                 session.log_sender.send_block_result(i, time)
         except Abort:
-            session.log.info("Dry run finished by abort()")
+            session.log.info('Dry run finished by abort()')
         except BaseException:
-            session.log.exception("Exception in dry run")
+            session.log.exception('Exception in dry run')
             exception = True
         else:
-            session.log.info("Dry run finished")
+            session.log.info('Dry run finished')
         finally:
             session.log_sender.finish(exception)
 
@@ -231,9 +237,8 @@ class SimulationSession(Session):
         session.shutdown()
 
     def _initLogging(self, prefix=None, console=True):
-        Session._initLogging(
-            self, prefix, console=False, logfile=not self._is_sandboxed
-        )
+        Session._initLogging(self, prefix, console=False,
+                             logfile=not self._is_sandboxed)
         if self._debug_log:
             self.log.addHandler(SimDebugHandler())
         self.log.addHandler(self.log_sender)
@@ -248,26 +253,28 @@ class SimulationSession(Session):
     def abortScript(self):
         raise Abort
 
+    def userinput(self, prompt, validator=str, default=Ellipsis):
+        if default is not Ellipsis:
+            return validator(default)
+        raise NicosError('cannot dry-run userinput() without a default value')
+
 
 class SimulationSupervisor(Thread):
     """Thread for starting a simulation process, receiving messages from a zmq
     socket and displaying/sending them to the client.
     """
 
-    def __init__(
-        self, sandbox, uuid, code, setups, user, emitter, more_args=None, quiet=False
-    ):
+    def __init__(self, sandbox, uuid, code, setups, user, emitter,
+                 more_args=None, quiet=False, cache=None):
         self.results = []
-        Thread.__init__(
-            self,
-            target=self._run,
-            name="SimulationSupervisor",
-            args=(sandbox, uuid, code, setups, user, emitter, more_args or [], quiet),
-        )
+        Thread.__init__(self, target=self._run,
+                        name='SimulationSupervisor',
+                        args=(sandbox, uuid, code, setups, user, emitter,
+                              more_args or [], quiet, cache))
         # "daemonize this thread" attribute, not referring to the NICOS daemon.
         self.daemon = True
 
-    def _run(self, sandbox, uuid, code, setups, user, emitter, args, quiet):
+    def _run(self, sandbox, uuid, code, setups, user, emitter, args, quiet, cache=None):
         socket = nicos_zmq_ctx.socket(zmq.DEALER)
         poller = zmq.Poller()
         poller.register(socket, zmq.POLLIN)
@@ -275,37 +282,39 @@ class SimulationSupervisor(Thread):
             # create a new temporary directory for the sandbox helper to
             # mount the filesystem
             tempdir = tempfile.mkdtemp()
-            rootdir = path.join(tempdir, "root")
+            rootdir = path.join(tempdir, 'root')
             os.mkdir(rootdir)
             # since the sandbox does not have TCP connection, use a Unix socket
-            sockname = "ipc://" + path.join(tempdir, "sock")
+            sockname = 'ipc://' + path.join(tempdir, 'sock')
             socket.bind(sockname)
             prefixargs = [sandbox, rootdir, str(os.getuid()), str(os.getgid())]
         else:
-            port = socket.bind_to_random_port("tcp://127.0.0.1")
-            sockname = "tcp://127.0.0.1:%s" % port
+            port = socket.bind_to_random_port('tcp://127.0.0.1')
+            sockname = 'tcp://127.0.0.1:%s' % port
             prefixargs = []
-        scriptname = path.join(config.nicos_root, "bin", "nicos-simulate")
-        userstr = "%s,%d" % (user.name, user.level)
+        scriptname = path.join(config.nicos_root, 'bin', 'nicos-simulate')
+        userstr = '%s,%d' % (user.name, user.level)
+        options = []
         if quiet:
-            args.append("--quiet")
+            options.append('--quiet')
         if config.sandbox_simulation_debug:
-            args.append("--debug")
-        proc = createSubprocess(
-            prefixargs
-            + [sys.executable, scriptname, sockname, uuid, ",".join(setups), userstr]
-            + args,
-            stdin=subprocess.PIPE,
-        )
+            options.append('--debug')
+        if cache:
+            options.append(f'--cache={cache}')
+
+        proc = createSubprocess(prefixargs + [sys.executable, scriptname] +
+                                options + [
+                                    sockname, uuid, ','.join(setups), userstr]
+                                + args, stdin=subprocess.PIPE)
         proc.stdin.write(code.encode())
         proc.stdin.close()
         if sandbox:
-            if not session.current_sysconfig.get("cache"):
-                raise NicosError("no cache is configured")
+            if not session.current_sysconfig.get('cache'):
+                raise NicosError('no cache is configured')
             socket.send(pickle.dumps(session.cache.get_values()))
         else:
             # let the subprocess connect to the cache
-            socket.send(b"")
+            socket.send(b'')
         while True:
             res = poller.poll(500)
             if not res:
@@ -313,18 +322,20 @@ class SimulationSupervisor(Thread):
                     if emitter:
                         request = emitter.current_script()
                         if request.reqid == uuid:
-                            request.setSimstate("failed")
+                            request.setSimstate('failed')
                             request.emitETA(emitter._controller)
                     if not quiet:
-                        session.log.warning("Dry run has terminated " "prematurely")
+                        session.log.warning('Dry run has terminated '
+                                            'prematurely')
                     return
                 continue
             msgtype, msg = unserialize(socket.recv())
             if msgtype == SIM_MESSAGE:
                 if emitter:
-                    emitter.emit_event("simmessage", msg)
+                    emitter.emit_event('simmessage', msg)
                 else:
-                    record = logging.LogRecord(msg[0], msg[2], "", 0, msg[3], (), None)
+                    record = logging.LogRecord(msg[0], msg[2], '',
+                                               0, msg[3], (), None)
                     record.message = msg[3].rstrip()
                     session.log.handle(record)
             elif msgtype == SIM_BLOCK_RES:
@@ -338,10 +349,10 @@ class SimulationSupervisor(Thread):
             elif msgtype == SIM_END_RES:
                 if emitter:
                     if not quiet:
-                        emitter.emit_event("simresult", msg)
+                        emitter.emit_event('simresult', msg)
                     request = emitter.current_script()
                     if request.reqid == uuid:
-                        request.setSimstate("success")
+                        request.setSimstate('success')
                         request.emitETA(emitter._controller)
                 # In the console session, the summary is printed by the
                 # sim() command.
@@ -352,7 +363,7 @@ class SimulationSupervisor(Thread):
         try:
             proc.wait(5)
         except TimeoutError:
-            raise Exception("did not terminate within 5 seconds") from None
+            raise Exception('did not terminate within 5 seconds') from None
         if sandbox:
             try:
                 os.rmdir(rootdir)

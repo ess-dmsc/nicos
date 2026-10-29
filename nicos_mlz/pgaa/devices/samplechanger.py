@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -22,11 +22,13 @@
 # *****************************************************************************
 """Class for the sample changer."""
 
-from nicos.core import Attach, IsController, Moveable, Override, Param, status
+from nicos import session
+from nicos.core import Attach, HasLimits, IsController, Moveable, Override, \
+    Param, status
 from nicos.core.errors import LimitError
-from nicos.core.mixins import HasLimits
 from nicos.core.params import floatrange, intrange
-from nicos.devices.generic.sequence import BaseSequencer, SeqDev, SeqSleep
+from nicos.devices.generic.sequence import BaseSequencer, SeqDev, SeqMethod, \
+    SeqSleep
 from nicos.utils import number_types
 
 
@@ -38,8 +40,10 @@ class SeqSampleMotor(SeqDev):
             limits = self.dev.userlimits
             if isinstance(self.target, number_types):
                 if not limits[0] <= self.target <= limits[1]:
-                    raise LimitError(self.dev, "limits are [%s, %s]" % limits)
-        if hasattr(self.dev, "doIsAllowed"):
+                    raise LimitError(self.dev, 'limits are [%s, %s]' % limits)
+        # The isAllowed will be called before running the sequence! Therefore
+        # the 'doIsAllowed' has to be used.
+        if hasattr(self.dev, 'doIsAllowed'):
             allowed, remark = self.dev.doIsAllowed(self.target)
             if not allowed:
                 raise LimitError(self.dev, remark)
@@ -53,45 +57,52 @@ class SampleChanger(IsController, BaseSequencer):
     valuetype = intrange(1, 16)
 
     attached_devices = {
-        "motor": Attach("Stage rotation", Moveable),
-        "push": Attach("Moving sample to rotation stage", Moveable),
+        'motor': Attach('Stage rotation', Moveable),
+        'push': Attach('Moving sample to rotation stage', Moveable),
     }
 
     parameters = {
-        "delay": Param(
-            "Time to wait until the push device is finished",
-            type=floatrange(0, 2),
-            default=2,
-            settable=False,
-            unit="s",
-        ),
+        'delay': Param('Time to wait until the push device is finished',
+                       type=floatrange(0, 2), default=2, settable=False,
+                       unit='s'),
     }
 
     parameter_overrides = {
-        "unit": Override(default=""),
-        "fmtstr": Override(default="%.0f"),
+        'unit': Override(default=''),
+        'fmtstr': Override(default='%.0f'),
     }
 
     def isAdevTargetAllowed(self, adev, adevtarget):
         if adev == self._attached_motor:
-            if self._attached_push._attached_sensort.read(0) in ["down", 0]:
+            if self._attached_push._attached_sensort.read(0) in ['down', 0]:
                 return False, '"push" is not in top position or moving'
+            if not any(self._attached_motor.isAtTarget(adevtarget, target)
+                       for target in list(range(self.valuetype.fr,
+                                                self.valuetype.to + 1))):
+                return False, 'invalid motor target position'
         elif adev == self._attached_push:
             if self._attached_motor.status(0)[0] == status.BUSY:
-                return False, "motor moving"
-            if self._attached_motor.read(0) not in list(range(1, 17)):
-                return False, "invalid motor position"
-        return True, ""
+                return False, 'motor moving'
+            pos = self._attached_motor.read(0)
+            if not self._attached_motor.isAtTarget(pos):
+                return False, 'invalid motor position, precision exceeded'
+            if not any(self._attached_motor.isAtTarget(pos, target)
+                       for target in list(range(self.valuetype.fr,
+                                                self.valuetype.to + 1))):
+                return False, 'invalid motor position'
+        return True, ''
 
     def _generateSequence(self, target):
-        seq = []
-        if target != self.doRead(0):
-            seq.append(SeqDev(self._attached_push, "up", stoppable=False))
-            seq.append(SeqSleep(self.delay))
-            seq.append(SeqSampleMotor(self._attached_motor, target, stoppable=False))
-            seq.append(SeqSleep(self.delay))
-            seq.append(SeqDev(self._attached_push, "down", stoppable=False))
-        return seq
+        if target == self.doRead(0):
+            return []
+        return [
+            SeqDev(self._attached_push, 'up', stoppable=False),
+            SeqSleep(self.delay),
+            SeqSampleMotor(self._attached_motor, target, stoppable=False),
+            SeqSleep(self.delay),
+            SeqDev(self._attached_push, 'down', stoppable=False),
+            SeqMethod(session.experiment.sample, 'select', target),
+        ]
 
     def doRead(self, maxage=0):
         return round(self._attached_motor.read(maxage))

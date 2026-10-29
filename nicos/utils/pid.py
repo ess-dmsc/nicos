@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,17 +29,8 @@ class PID:
     Proportional–integral–derivative controller.
     """
 
-    def __init__(
-        self,
-        init_arg,
-        setpoint,
-        P=0.1,
-        I=0.1,
-        D=0.05,
-        current_time=None,
-        arg_min=None,
-        arg_max=None,
-    ):
+    def __init__(self, init_arg, setpoint, P=0.1, I=0.1, D=0.05,
+                 current_time=None, arg_min=None, arg_max=None):
         self._Kp = P
         self._Ki = I
         self._Kd = D

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,31 +21,27 @@
 #
 # *****************************************************************************
 
-"""Class for PUMA phi axis."""
+"""Class for PUMA stt axis."""
 
 from nicos.core import Attach, Moveable, Param
 from nicos.devices.generic.axis import Axis
 
 
 class CombAxis(Axis):
-    """Class for PUMA phi axis.
+    """Class for PUMA stt axis.
 
-    When psi axis must stay at the same angle relative to the incoming beam.
+    When sth axis must stay at the same angle relative to the incoming beam.
     For example, when the magnet is used
     """
 
     attached_devices = {
-        "fix_ax": Attach("axis that moves back", Moveable),
+        'fix_ax': Attach('axis that moves back', Moveable),
     }
 
     parameters = {
-        "iscomb": Param(
-            "If it is combined or normal axis",
-            type=bool,
-            default=False,
-            mandatory=True,
-            settable=True,
-        ),
+        'iscomb': Param('If it is combined or normal axis',
+                        type=bool, default=False, mandatory=True,
+                        settable=True),
     }
 
     _fixpos = None
@@ -58,7 +54,8 @@ class CombAxis(Axis):
         self._update_fixpos(val)
 
     def _update_fixpos(self, val):
-        self._fixpos = self.read(0) + self._attached_fix_ax.read(0) if val else None
+        self._fixpos = self.read(0) + self._attached_fix_ax.read(0) if val \
+            else None
 
     def doIsAllowed(self, target):
         mainax = Axis.doIsAllowed(self, target)
@@ -67,13 +64,9 @@ class CombAxis(Axis):
         relpos = self._fixpos - target
         fixax = self._attached_fix_ax.isAllowed(relpos)
         if mainax[0] and fixax[0]:
-            return True, "Ok"
-        return False, "%s: %s, %s: %s" % (
-            self,
-            mainax[1],
-            self._attached_fix_ax,
-            fixax[1],
-        )
+            return True, 'Ok'
+        return False, '%s: %s, %s: %s' % \
+            (self, mainax[1], self._attached_fix_ax, fixax[1])
 
     def _postMoveAction(self):
         if self.iscomb:

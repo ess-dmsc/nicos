@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,6 +31,7 @@ from nicos.guisupport.qt import QFileDialog, QLineEdit, QSortFilterProxyModel
 
 
 class FileFilterProxyModel(QSortFilterProxyModel):
+
     _wildcard = None
 
     def setFilterWildcard(self, wildcard):
@@ -62,7 +63,7 @@ class FileFilterDialog(QFileDialog):
             if isinstance(child, QLineEdit):
                 break
         else:
-            raise NicosError("QLineEdit not found in QFileDialog")
+            raise NicosError('QLineEdit not found in QFileDialog')
         child.textChanged.connect(filterproxy.setFilterWildcard)
         child.returnPressed.disconnect(self.accept)
         child.returnPressed.connect(self.on_returnPressed)

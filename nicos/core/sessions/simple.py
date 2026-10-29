@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -50,37 +50,27 @@ class NoninteractiveSession(Session):
 
     @classmethod
     def _notify_systemd(cls, appname, status, ready=False):
-        if hasattr(systemd.daemon, "Notification"):
+        if hasattr(systemd.daemon, 'Notification'):
             # older module from PyPI
             systemd.daemon.notify(systemd.daemon.Notification.STATUS, status)
             if ready:
                 systemd.daemon.notify(systemd.daemon.Notification.READY)
         else:
             # newer module from systemd package
-            systemd.daemon.notify(("READY=1\n" if ready else "") + "STATUS=" + status)
+            systemd.daemon.notify(('READY=1\n' if ready else '') +
+                                  'STATUS=' + status)
 
     @classmethod
     def _get_maindev(cls, appname, maindevname, setupname):
-        session.loadSetup(
-            setupname or appname,
-            allow_special=True,
-            raise_failed=True,
-            autoload_system=False,
-        )
+        session.loadSetup(setupname or appname, allow_special=True,
+                          raise_failed=True, autoload_system=False)
         return session.getDevice(maindevname or appname.capitalize())
 
     @classmethod
-    def run(
-        cls,
-        appname,
-        maindevname=None,
-        setupname=None,
-        pidfile=True,
-        daemon=False,
-        start_args=None,
-    ):
-        if daemon == "systemd":
-            cls._notify_systemd(appname, "initializing session")
+    def run(cls, appname, maindevname=None, setupname=None, pidfile=True,
+            daemon=False, start_args=None):
+        if daemon == 'systemd':
+            cls._notify_systemd(appname, 'initializing session')
         elif daemon:
             daemonize()
         else:
@@ -90,11 +80,11 @@ class NoninteractiveSession(Session):
             maindev.quit(signum=signum)
 
         def reload_handler(signum, frame):
-            if hasattr(maindev, "reload"):
+            if hasattr(maindev, 'reload'):
                 maindev.reload()
 
         def status_handler(signum, frame):
-            if hasattr(maindev, "statusinfo"):
+            if hasattr(maindev, 'statusinfo'):
                 maindev.statusinfo()
 
         session.__class__ = cls
@@ -105,52 +95,51 @@ class NoninteractiveSession(Session):
 
             signal.signal(signal.SIGINT, quit_handler)
             signal.signal(signal.SIGTERM, quit_handler)
-            if hasattr(signal, "SIGUSR1"):
+            if hasattr(signal, 'SIGUSR1'):
                 signal.signal(signal.SIGUSR1, reload_handler)
                 signal.signal(signal.SIGUSR2, status_handler)
 
-            if pidfile and daemon != "systemd":
+            if pidfile and daemon != 'systemd':
                 writePidfile(appname)
 
             session._beforeStart(maindev, daemonized=daemon)
         except Exception as err:
             try:
-                session.log.exception("Fatal error while initializing")
+                session.log.exception('Fatal error while initializing')
             finally:
-                print("Fatal error while initializing:", err, file=sys.stderr)
+                print('Fatal error while initializing:', err, file=sys.stderr)
             return 1
 
-        if daemon == "systemd":
-            cls._notify_systemd(appname, "starting main device")
+        if daemon == 'systemd':
+            cls._notify_systemd(appname, 'starting main device')
 
         start_args = start_args or ()
         maindev.start(*start_args)
 
-        if daemon == "systemd":
-            if hasattr(maindev, "_ready_evt"):
+        if daemon == 'systemd':
+            if hasattr(maindev, 'wait_for_ready'):
                 timeout = 120
-                if not maindev._ready_evt.wait(timeout=timeout):
-                    session.log.error(
-                        f"Service {appname} did not start up within {timeout}s, exiting."
-                    )
+                if not maindev.wait_for_ready(timeout):
+                    session.log.error('Service %s did not start up within %d '
+                                      'seconds, exiting.', appname, timeout)
                     return 1
-            session.log.info(
-                f"Startup finished, signaling SystemD that service {appname} is ready"
-            )
-            cls._notify_systemd(appname, "running", ready=True)
+            session.log.info('Startup finished, signaling systemd that service'
+                             ' %s is ready', appname)
+            cls._notify_systemd(appname, 'running', ready=True)
 
         # For services that don't run in a separate thread
-        if hasattr(maindev, "run_main_loop"):
+        if hasattr(maindev, 'run_main_loop'):
             maindev.run_main_loop()
 
         maindev.wait()
 
         session.shutdown()
-        if pidfile and daemon != "systemd":
+        if pidfile and daemon != 'systemd':
             removePidfile(appname)
 
 
 class SingleDeviceSession(NoninteractiveSession):
+
     @classmethod
     def _get_maindev(cls, appname, maindevcls, setup):  # pylint: disable=arguments-renamed
         return maindevcls(appname, **setup)
@@ -162,7 +151,7 @@ class ScriptSession(Session):
     """
 
     @classmethod
-    def run(cls, setup, code, mode=SLAVE, appname="script"):
+    def run(cls, setup, code, mode=SLAVE, appname='script'):
         session.__class__ = cls
 
         try:
@@ -170,9 +159,9 @@ class ScriptSession(Session):
             session.__init__(appname)
         except Exception as err:
             try:
-                session.log.exception("Fatal error while initializing")
+                session.log.exception('Fatal error while initializing')
             finally:
-                print("Fatal error while initializing:", err, file=sys.stderr)
+                print('Fatal error while initializing:', err, file=sys.stderr)
             return 1
 
         # Load the initial setup and handle becoming master.

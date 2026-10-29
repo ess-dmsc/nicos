@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -20,11 +20,12 @@
 #   Jens Krüger <jens.krueger@frm2.tum.de>
 #
 # *****************************************************************************
-"""Classes to display the PUMA multi detector devices."""
+"""Classes to display the PUMA multidetector devices."""
 
 from .crystaltable import CrystalTable
 from .detbox import DetectorBox
 from .dettable import DetectorGuide, DetectorTable
 from .reflex import Reflex
 
-__all__ = ("Reflex", "CrystalTable", "DetectorTable", "DetectorBox", "DetectorGuide")
+__all__ = ('Reflex', 'CrystalTable', 'DetectorTable', 'DetectorBox',
+           'DetectorGuide')

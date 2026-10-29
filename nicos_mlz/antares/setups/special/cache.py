@@ -1,20 +1,15 @@
-description = "setup for the cache server"
-group = "special"
+description = 'setup for the cache server'
+group = 'special'
 
 devices = dict(
-    DB=device(
-        "nicos.services.cache.database.influxdb.InfluxDBCacheDatabase",
-        url="http://app.antares.frm2.tum.de:8086",
-        keystoretoken="influxdb",
-        org="mlz",
-        bucket="nicos-cache",
-        loglevel="info",
+    DB = device('nicos.services.cache.database.FlatfileCacheDatabase',
+        storepath = '/data/cache',
+        loglevel = 'info',
     ),
-    Server=device(
-        "nicos.services.cache.server.CacheServer",
-        description="Value caching server",
-        db="DB",
-        server="",
-        loglevel="info",
+    Server = device('nicos.services.cache.server.CacheServer',
+        description = 'Value caching server',
+        db = 'DB',
+        server = '0.0.0.0:14869',
+        loglevel = 'info',
     ),
 )

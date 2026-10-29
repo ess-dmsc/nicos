@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,14 +32,14 @@ from nicos.utils import findResource
 
 
 class TomographyPanel(Panel):
-    panelName = "Tomography"
+    panelName = 'Tomography'
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource("nicos_mlz/pgaa/gui/panels/tomography.ui"))
+        loadUi(self, findResource('nicos_mlz/pgaa/gui/panels/tomography.ui'))
 
         self.current_status = None
-        self.run_color = QColor("#ffdddd")
+        self.run_color = QColor('#ffdddd')
         self.idle_color = parent.user_color
 
         client.connected.connect(self.on_client_connected)
@@ -100,8 +100,8 @@ class TomographyPanel(Panel):
         pass
 
     def on_client_message(self, message):
-        if message[-1] == "(sim) ":
-            return
+        if message[-1] == '(sim) ':
+            pass
 
     def on_takeOpenBeam_clicked(self):
         pass
@@ -123,16 +123,13 @@ class TomographyPanel(Panel):
         y = self.yValue.value()
         z = self.zValue.value()
         phi = self.phiValue.value()
-        code = "move(x, %r)\nmove(y, %r)\nmove(z, %r)\nmove(phi, %r)\n" "wait()\n" % (
-            x,
-            y,
-            z,
-            phi,
-        )
+        code = 'move(x, %r)\nmove(y, %r)\nmove(z, %r)\nmove(phi, %r)\n' \
+               'wait()\n' % (x, y, z, phi)
         self.execScript(code)
 
     def on_getPositions_clicked(self):
-        ret = self.client.eval("[x.read(), y.read(), z.read(), phi.read()]", None)
+        ret = self.client.eval('[x.read(), y.read(), z.read(), phi.read()]',
+                               None)
         if ret:
             self.xValue.setValue(float(ret[0]))
             self.yValue.setValue(float(ret[1]))
@@ -142,16 +139,16 @@ class TomographyPanel(Panel):
     def execScript(self, script):
         if not script:
             return
-        action = "queue"
-        if self.current_status != "idle":
+        action = 'queue'
+        if self.current_status != 'idle':
             qwindow = ScriptExecQuestion()
             result = qwindow.exec()
             if result == QMessageBox.StandardButton.Cancel:
                 return
-            elif result == QMessageBox.StandardButton.Apply:
-                action = "execute"
-        if action == "queue":
+            if result == QMessageBox.StandardButton.Apply:
+                action = 'execute'
+        if action == 'queue':
             self.client.run(script)
             self.mainwindow.action_start_time = time.time()
         else:
-            self.client.tell("exec", script)
+            self.client.tell('exec', script)

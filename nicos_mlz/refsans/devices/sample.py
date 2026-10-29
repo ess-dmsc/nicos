@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,22 +31,13 @@ class Sample(BaseSample):
     """Refsans specific sample."""
 
     parameters = {
-        "width": Param(
-            "width of sample lateral",
-            type=floatrange(0, 100),
-            settable=True,
-            default=100,
-            unit="mm",
-            fmtstr="%.1f",
-            category="sample",
-        ),
-        "length": Param(
-            "length of sample in beam",
-            type=floatrange(0, 100),
-            settable=True,
-            default=100,
-            unit="mm",
-            fmtstr="%.1f",
-            category="sample",
-        ),
+        'width': Param('width of sample lateral',
+                       type=floatrange(0, 100), settable=True, default=100,
+                       unit='mm', fmtstr='%.1f', category='sample'),
+        'length': Param('length of sample in beam',
+                        type=floatrange(0, 100), settable=True, default=100,
+                        unit='mm', fmtstr='%.1f', category='sample'),
+        'height': Param('height of sample in beam',
+                        type=floatrange(0, 100), settable=True, default=0,
+                        unit='mm', fmtstr='%.1f', category='sample'),
     }

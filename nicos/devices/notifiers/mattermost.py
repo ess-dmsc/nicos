@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -25,9 +25,8 @@ import json
 
 import requests
 
-from nicos.core import ConfigurationError, Param
+from nicos.core import Param, secret
 from nicos.devices.notifiers import Notifier
-from nicos.utils.credentials.keystore import nicoskeystore
 
 
 class Mattermost(Notifier):
@@ -36,7 +35,7 @@ class Mattermost(Notifier):
     Mattermost is a group chat system similar to Slack, but open source.
 
     To use this notifier, some Mattermost user must register an "Incoming
-    Webhook" on the Mattermost instance.  The credid parameter should be set to
+    Webhook" on the Mattermost instance.  The hookid parameter should be set to
     a NICOS keystore credential ID of the "secret" part of the hook URL.
 
     Receivers can be given as channels, using the last part of the channel's
@@ -49,7 +48,7 @@ class Mattermost(Notifier):
     you would set the following configuration::
 
        baseurl = 'https://chat.example.org'
-       credid = '...' (a keystore ID with the value 'xsdkue8djsk')
+       hookid = secret('...') (a keystore ID with the value 'xsdkue8djsk')
        receivers = ['nicos-notifications', '@joe']
 
     The `username` parameter can be set freely, Mattermost will show "bot"
@@ -57,51 +56,41 @@ class Mattermost(Notifier):
     """
 
     parameters = {
-        "baseurl": Param("URL of the Mattermost instance", type=str, mandatory=True),
-        "username": Param(
-            "User name to show for notifications", type=str, mandatory=True
-        ),
-        "iconurl": Param(
-            "URL of an image to show next to notifications", type=str, default=""
-        ),
-        "credid": Param(
-            "Credential ID in the NICOS keystore " "for the hook ID",
-            type=str,
-            default="mattermost",
-        ),
+        'baseurl':  Param('URL of the Mattermost instance',
+                          type=str, mandatory=True),
+        'username': Param('User name to show for notifications',
+                          type=str, mandatory=True),
+        'iconurl':  Param('URL of an image to show next to notifications',
+                          type=str, default=''),
+        'hookid':   Param('NICOS keystore secret name for the hook ID',
+                          type=secret, default='mattermost'),
     }
 
     _headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
     }
 
     def doInit(self, mode):
-        secret_hookid = nicoskeystore.getCredential(self.credid)
-        if not secret_hookid:
-            raise ConfigurationError("Mattermost hook ID missing in keystore")
-        self._hookurl = self.baseurl + "/hooks/" + secret_hookid
+        secret_hookid = self.hookid.lookup('Mattermost hookid not in keystore')
+        self._hookurl = self.baseurl + '/hooks/' + secret_hookid
 
     def send(self, subject, body, what=None, short=None, important=True):
-        message = "**%s**\n\n```\n%s\n```" % (subject, body)
+        message = '**%s**\n\n```\n%s\n```' % (subject, body)
         if important:
-            message = "@all " + message
+            message = '@all ' + message
 
         for entry in self._getAllRecipients(important):
-            self.log.debug("sending Mattermost message to %s", entry)
-            data = {"text": message, "username": self.username, "channel": entry}
+            self.log.debug('sending Mattermost message to %s', entry)
+            data = {'text': message, 'username': self.username,
+                    'channel': entry}
             if self.iconurl:
-                data["icon_url"] = self.iconurl
+                data['icon_url'] = self.iconurl
             try:
-                response = requests.post(
-                    self._hookurl,
-                    headers=self._headers,
-                    data=json.dumps(data),
-                    timeout=2,
-                )
+                response = requests.post(self._hookurl, headers=self._headers,
+                                         data=json.dumps(data), timeout=2)
                 if not response.ok:
-                    raise ValueError(response.json()["message"])
+                    raise ValueError(response.json()['message'])
             except Exception as err:
-                self.log.warning(
-                    "Could not send Mattermost " "message to %s: %s", entry, err, exc=1
-                )
+                self.log.warning('Could not send Mattermost '
+                                 'message to %s: %s', entry, err, exc=1)

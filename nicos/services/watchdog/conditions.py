@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -37,11 +37,11 @@ class Condition:
     triggered, it will remove the condition from the warn list and execute the
     ok action, if configured.
 
-    The complex logic regarding preconditions and gracetime is handled by
+    The complex logic regarding preconditions and grace time is handled by
     stacking Condition objects on top of each other.
 
     Besides triggered, the condition can also be "expired": if some cache keys
-    used to calculate the triggered state are not available any more, the
+    used to calculate the triggered state are not available anymore, the
     condition becomes expired and the user is notified.
 
     Finally, conditions can be disabled, which means that their triggered
@@ -111,9 +111,8 @@ class Expression(Condition):
             if self.setup_enabled and self.enabled and not self.expires_at:
                 self.expires_at = time + 6
         except Exception:
-            self.log.warning(
-                "error evaluating %r warning " "condition", self.expr, exc=1
-            )
+            self.log.warning('error evaluating %r warning '
+                             'condition', self.expr, exc=1)
         else:
             self.expires_at = 0
             self.triggered = bool(value) and self.enabled and self.setup_enabled
@@ -180,11 +179,8 @@ class ConditionWithPrecondition(Condition):
 
     @property
     def triggered(self):
-        return (
-            self.enabled
-            and self.cond.triggered
-            and (self.cooldown_flag or self.pre.triggered)
-        )
+        return self.enabled and self.cond.triggered and \
+            (self.cooldown_flag or self.pre.triggered)
 
     def is_expired(self, time):
         return self.pre.is_expired(time) or self.cond.is_expired(time)

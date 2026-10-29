@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -47,8 +47,8 @@ class PLCLimits(AnalogInput, Moveable):
     valuetype = limits
 
     def doStart(self, target):
-        self._dev.SetParam([[min(target)], ["UserMin"]])
-        self._dev.SetParam([[max(target)], ["UserMax"]])
+        self._dev.SetParam([[min(target)], ['UserMin']])
+        self._dev.SetParam([[max(target)], ['UserMax']])
 
     def doRead(self, maxage=0):
-        return self._dev.GetParam("UserMin"), self._dev.GetParam("UserMax")
+        return self._dev.GetParam('UserMin'), self._dev.GetParam('UserMax')

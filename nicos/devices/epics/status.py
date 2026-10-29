@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -35,3 +35,8 @@ STAT_TO_STATUS = {
     9: status.ERROR,  # Communication error
     17: status.UNKNOWN,  # Invalid/unknown IOC state
 }
+
+# A timeout is an ERROR, but since there are more errors than timeout errors
+# we use a string consistently to be able to differentiate a timeout error
+# from other errors.
+EPICS_TIMEOUT_MSG = 'timeout reading status'

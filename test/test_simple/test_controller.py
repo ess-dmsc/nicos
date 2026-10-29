@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -17,7 +17,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Module authors:
-#   Bjoern Pedersen <bjoern.pedersen@frm2.tum.de>
+#   Björn Pedersen <bjoern.pedersen@frm2.tum.de>
 #
 # *****************************************************************************
 
@@ -25,25 +25,26 @@
 Test the IsController mixin.
 """
 
-from nicos.core import LimitError
-from test.utils import raises
+import pytest
 
-session_setup = "controller"
+from nicos.core import LimitError
+
+session_setup = 'controller'
 
 
 def test_controller(session):
-    controller = session.getDevice("controller")
-    dev1 = session.getDevice("dev1")
-    dev2 = session.getDevice("dev2")
+    controller = session.getDevice('controller')
+    dev1 = session.getDevice('dev1')
+    dev2 = session.getDevice('dev2')
     assert dev1.read() == 0
     assert dev2.read() == 0
 
-    dev2.move(100.0)
-    assert dev2.read() == 100.0
-    assert raises(LimitError, dev1.move, 200.0)
+    dev2.move(100.)
+    assert dev2.read() == 100.
+    pytest.raises(LimitError, dev1.move, 200.)
 
-    controller.move((10.0, 20.0))
+    controller.move((10., 20.))
     assert dev1.read() == 10.0
     assert dev2.read() == 20.0
 
-    assert raises(LimitError, controller.move, (300.0, 0))
+    pytest.raises(LimitError, controller.move, (300., 0))

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,7 +28,6 @@ from nicos.commands import helparglist, usercommand
 from nicos.commands.scan import _handleScanArgs, _infostr
 from nicos.core import Moveable, UsageError
 from nicos.core.scan import Scan
-from nicos.core.spm import Bare, Dev, spmsyntax
 from nicos.core.utils import waitForCompletion
 from nicos.devices.abstract import Motor as NicosMotor
 
@@ -38,13 +37,12 @@ from nicos_mlz.jcns.devices.shutter import OPEN
 
 
 def underlying_motor(devices):
-    return [
-        dev._attached_motor if isinstance(dev, MicrostepMotor) else dev
-        for dev in devices
-    ]
+    return [dev._attached_motor if isinstance(dev, MicrostepMotor) else dev
+            for dev in devices]
 
 
 class RScan(Scan):
+
     def moveDevices(self, devices, positions, wait=True):
         if wait:
             # stop running microstep sequence if wait is true because
@@ -83,11 +81,9 @@ class RScan(Scan):
 
     def handleError(self, what, err):
         # consider all movement errors fatal
-        if what in ("move", "wait"):
-            session.log.warning(
-                "Positioning problem, stopping all moving " "motors and detectors",
-                exc=1,
-            )
+        if what in ('move', 'wait'):
+            session.log.warning('Positioning problem, stopping all moving '
+                                'motors and detectors', exc=1)
             try:
                 for dev in self._devices:
                     if isinstance(dev, NicosMotor):
@@ -114,35 +110,29 @@ class RScan(Scan):
 
 def _fixType(dev, args, mkpos):
     if not args:
-        raise UsageError("at least two arguments are required")
+        raise UsageError('at least two arguments are required')
     if isinstance(dev, (list, tuple)):
         if not isinstance(args[0], (list, tuple)):
-            raise UsageError("positions must be a list if devices are a list")
+            raise UsageError('positions must be a list if devices are a list')
         devs = dev
         if isinstance(args[0][0], (list, tuple)):
             for l in args[0]:
                 if len(l) != len(args[0][0]):
-                    raise UsageError(
-                        "all position lists must have the same " "number of entries"
-                    )
+                    raise UsageError('all position lists must have the same '
+                                     'number of entries')
             values = list(zip(*args[0]))
             restargs = args[1:]
         else:
             if len(args) < 3:
-                raise UsageError(
-                    "at least four arguments are required in "
-                    "start-step-end scan command"
-                )
-            if not (
-                isinstance(args[0], (list, tuple))
-                and isinstance(args[1], (list, tuple))
-                and isinstance(args[2], (list, tuple))
-            ):
-                raise UsageError("start, step and end must be lists")
+                raise UsageError('at least four arguments are required in '
+                                 'start-step-end scan command')
+            if not (isinstance(args[0], (list, tuple)) and
+                    isinstance(args[1], (list, tuple)) and
+                    isinstance(args[2], (list, tuple))):
+                raise UsageError('start, step and end must be lists')
             if not len(dev) == len(args[0]) == len(args[1]) == len(args[2]):
-                raise UsageError(
-                    "start, step and end lists must be of " + "equal length"
-                )
+                raise UsageError('start, step and end lists must be of ' +
+                                 'equal length')
             values = mkpos(args[0], args[1], args[2])
             restargs = args[3:]
     else:
@@ -152,10 +142,8 @@ def _fixType(dev, args, mkpos):
             restargs = args[1:]
         else:
             if len(args) < 3:
-                raise UsageError(
-                    "at least four arguments are required in "
-                    "start-step-end scan command"
-                )
+                raise UsageError('at least four arguments are required in '
+                                 'start-step-end scan command')
             values = mkpos([args[0]], [args[1]], [args[2]])
             restargs = args[3:]
     devs = [session.getDevice(d, Moveable) for d in devs]
@@ -163,8 +151,7 @@ def _fixType(dev, args, mkpos):
 
 
 @usercommand
-@helparglist("dev, [start, step, end | listofpoints], t=seconds, ...")
-@spmsyntax(Dev(Moveable), Bare, Bare, Bare)
+@helparglist('dev, [start, step, end | listofpoints], t=seconds, ...')
 def rscan(dev, *args, **kwargs):
     """Scan ranges over device(s) and count detector(s).
 
@@ -177,69 +164,50 @@ def rscan(dev, *args, **kwargs):
     >>> rscan(dev, [0, 1, 2, 3, 7, 8, 9, 10])  # scans at the given positions.
 
     For floating point arguments, the length of the result is
-    ``int(round((end - start) / step + 1)``. Because of floating point
+    ``int(round((end - start) / step + 1))``. Because of floating point
     overflow, this rule may result in the last element being greater than
     ``end``, e.g.
 
     >>> rscan(dev, 30, .1, 30.19)   # scans from 30 to 30.2 in steps of 0.1.
 
     """
-
     def mkpos(starts, steps, ends):
         def mk(starts, steps, numpoints):
-            return [
-                [start + i * step for (start, step) in zip(starts, steps)]
-                for i in range(numpoints)
-            ]
-
+            return [[start + i * step for (start, step) in zip(starts, steps)]
+                    for i in range(numpoints)]
         # use round to handle floating point overflows
-        numpoints = [
-            int(round((end - start) / step + 1))
-            for (start, step, end) in zip(starts, steps, ends)
-        ]
+        numpoints = [int(round((end - start) / step + 1))
+                     for (start, step, end) in zip(starts, steps, ends)]
         if all(n == numpoints[0] for n in numpoints):
             if numpoints[0] > 0:
                 if numpoints[0] > 1:
                     return mk(starts, steps, numpoints[0])
                 else:
-                    raise UsageError(
-                        "invalid number of points. At least two "
-                        "points are necessary to define a range "
-                        "scan. Please check parameters."
-                    )
+                    raise UsageError('invalid number of points. At least two '
+                                     'points are necessary to define a range '
+                                     'scan. Please check parameters.')
             else:
-                raise UsageError(
-                    "negative number of points. Please check "
-                    "parameters. Maybe step parameter has wrong"
-                    "sign."
-                )
+                raise UsageError('negative number of points. Please check '
+                                 'parameters. Maybe step parameter has wrong'
+                                 'sign.')
         else:
-            raise UsageError("all entries must generate the same number of " "points")
+            raise UsageError('all entries must generate the same number of '
+                             'points')
 
-    scanstr = _infostr("rscan", (dev,) + args, kwargs)
+    scaninfo = _infostr('rscan', (dev,) + args, kwargs)
     devs, values, restargs = _fixType(dev, args, mkpos)
-    preset, scaninfo, detlist, envlist, move, multistep = _handleScanArgs(
-        restargs, kwargs, scanstr
-    )
+    preset, scanuserinfo, detlist, envlist, move, multistep = \
+        _handleScanArgs(restargs, kwargs)
     oldspeed = dev.speed
     try:
         if len(values) > 1:
             step = values[1][0] - values[0][0]
-        if "t" in preset:
-            speed = math.fabs(step / float(preset["t"]))
+        if 't' in preset:
+            speed = math.fabs(step / float(preset['t']))
             dev.speed = speed
         else:
-            raise UsageError("missing preset parameter t.")
-        RScan(
-            devs,
-            values[:-1],
-            values[1:],
-            move,
-            multistep,
-            detlist,
-            envlist,
-            preset,
-            scaninfo,
-        ).run()
+            raise UsageError('missing preset parameter t.')
+        RScan(devs, values[:-1], values[1:], move, multistep, detlist,
+              envlist, preset, scaninfo, scanuserinfo).run()
     finally:
         dev.speed = oldspeed

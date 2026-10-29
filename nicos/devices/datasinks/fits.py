@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,24 +28,19 @@ import numpy
 
 from nicos.core import NicosError
 from nicos.core.params import Override
-from nicos.devices.datasinks.image import (
-    ImageFileReader,
-    ImageSink,
-    SingleFileSinkHandler,
-)
+from nicos.devices.datasinks.image import ImageFileReader, ImageSink, \
+    SingleFileSinkHandler
 from nicos.utils import toAscii
 
 try:
-    import astropy.io.fits as pyfits
+    from astropy.io import fits
 except ImportError:
-    try:
-        import pyfits
-    except ImportError:
-        pyfits = None
+    fits = None
 
 
 class FITSImageSinkHandler(SingleFileSinkHandler):
-    filetype = "fits"
+
+    filetype = 'fits'
     defer_file_creation = True
     accept_final_images_only = True
 
@@ -54,7 +49,7 @@ class FITSImageSinkHandler(SingleFileSinkHandler):
         npData = numpy.array(image)
 
         # create primary hdu from image data
-        hdu = pyfits.PrimaryHDU(npData)
+        hdu = fits.PrimaryHDU(npData)
 
         # create fits header from nicos header and add entries to hdu
         self._buildHeader(self.dataset.metainfo, hdu)
@@ -63,31 +58,31 @@ class FITSImageSinkHandler(SingleFileSinkHandler):
         hdu.writeto(fp)
 
     def _collectHeaderItems(self, info):
+
         finished = currenttime()
         header = {}
 
-        for (dev, param), (_, strvalue, unit, _) in info.items():
-            header["%s/%s" % (dev, param)] = ("%s %s" % (strvalue, unit)).strip()
+        for (dev, param), pinfo in info.items():
+            header['%s/%s' % (dev, param)] = ('%s %s' % (pinfo.strvalue,
+                                                         pinfo.unit)).strip()
 
         header = OrderedDict(
-            [
-                (
-                    "begintime",
-                    strftime("%Y-%m-%d %H:%M:%S", localtime(self.dataset.started)),
-                ),
-                ("endtime", strftime("%Y-%m-%d %H:%M:%S", localtime(finished))),
-            ]
-            + sorted(header.items())
+            [('begintime',
+              strftime('%Y-%m-%d %H:%M:%S', localtime(self.dataset.started))),
+             ('endtime',
+              strftime('%Y-%m-%d %H:%M:%S', localtime(finished)))
+             ] + sorted(header.items())
         )
         return header
 
     def _buildHeader(self, info, hdu):
+
         for key, value in self._collectHeaderItems(info).items():
             # The FITS standard defines max 8 characters for a header key.
             # To make longer keys possible, we use the HIERARCH keyword
             # here (67 chars max).
             # To get a consistent looking header, add it to every key
-            key = "HIERARCH %s" % key
+            key = 'HIERARCH %s' % key
 
             # use only ascii characters and escapes if necessary.
             value = toAscii(str(value))
@@ -97,9 +92,8 @@ class FITSImageSinkHandler(SingleFileSinkHandler):
 
             # Split the dataset into several header entries if necessary
             # (due to the limited length)
-            splittedHeaderItems = [
-                value[i : i + maxValLen] for i in range(0, len(value), maxValLen)
-            ]
+            splittedHeaderItems = [value[i:i + maxValLen]
+                                   for i in range(0, len(value), maxValLen)]
 
             for item in splittedHeaderItems:
                 hdu.header.append((key, item))
@@ -111,33 +105,30 @@ class FITSImageSink(ImageSink):
     NICOS headers are also written into the file using the standard FITS header
     facility, with HIERARCH type keys.
 
-    Requires the pyfits library to be installed.
+    Requires the astropy library to be installed.
     """
 
     parameter_overrides = {
-        "filenametemplate": Override(default=["%(pointcounter)08d.fits"]),
+        'filenametemplate': Override(default=['%(pointcounter)08d.fits']),
     }
 
     handlerclass = FITSImageSinkHandler
 
-    def doPreinit(self, _mode):
+    def doPreinit(self, mode):
         # Stop creation of the FITSImageSink as it would make no sense
-        # without pyfits.
-        if pyfits is None:
-            raise NicosError(
-                self,
-                "pyfits module is not available. Check"
-                " if it is installed and in your PYTHONPATH",
-            )
+        # without astropy.
+        if fits is None:
+            raise NicosError(self, 'The astropy.io.fits module is not '
+                             'available, check if it is installed')
 
     def isActiveForArray(self, arraydesc):
         return len(arraydesc.shape) == 2
 
 
 class FITSFileReader(ImageFileReader):
-    filetypes = [("fits", "FITS File (*.fits)")]
+    filetypes = [('fits', 'FITS File (*.fits)')]
 
     @classmethod
     def fromfile(cls, filename):
-        hdu_list = pyfits.open(filename)
+        hdu_list = fits.open(filename)
         return numpy.flipud(hdu_list[0].data)

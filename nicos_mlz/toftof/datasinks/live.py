@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,28 +23,49 @@
 
 """TOFTOF special Live view sink for NICOS."""
 
-import numpy
+import numpy as np
 
-from nicos.devices.datasinks.special import (
-    LiveViewSink as BaseLiveViewSink,
-    LiveViewSinkHandler as BaseLiveViewSinkHandler,
-)
+from nicos.devices.datasinks.special import LiveViewSink as BaseLiveViewSink, \
+    LiveViewSinkHandler as BaseLiveViewSinkHandler
+
+from nicos_mlz.toftof.lib import calculations as calc
 
 
 class LiveViewSinkHandler(BaseLiveViewSinkHandler):
+
     def processArrays(self, result):
         data = result[1][0]
         if data is not None:
             if len(data.shape) == 2:
-                treated = numpy.transpose(data)[self.detector._anglemap, :].astype(
-                    "<u4"
-                )
+                treated = np.transpose(data)[
+                    self.detector._anglemap, :].astype('<u4')
                 return [treated]
 
     def getLabelDescs(self, result):
+        metainfo = self.dataset.metainfo
+
+        # Scale factor to calc the right unit
+        sf = 1e3
+        wl = metainfo['chWL', 'value'][0]
+        timeinterval = metainfo['det', 'timeinterval'][0] * sf
+        nChannels = metainfo['det', 'timechannels'][0]
+        # The first interval is [tof, tof + timeinterval)
+        tof = timeinterval + calc.t2(0, wl, calc.Lsd) * sf
+        y_classic = {
+            'define': 'classic',
+            'title': 'detectors',
+        }
+        x_tof = {
+            'define': 'range',
+            'title': 'time of flight (ms)',
+            'start': tof,
+            'length': nChannels,
+            'step': timeinterval,
+        }
+
         return {
-            "x": {"define": "classic", "title": "time channels"},
-            "y": {"define": "classic", "title": "detectors"},
+            'x': x_tof,
+            'y': y_classic,
         }
 
 

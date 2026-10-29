@@ -1,6 +1,6 @@
-description = "Email notifier example"
+description = 'Email notifier example'
 
-group = "lowlevel"
+group = 'lowlevel'
 
 devices = dict(
     # Configure source and copy addresses to an existing address.
@@ -10,7 +10,7 @@ devices = dict(
     #         ('nobody@example.host', 'all'),   # gets all messages
     #         ('nobody@example.host', 'important'), # gets only important messages
     #     ],
-    #     mailserver = 'mailserver.host',  # please adapt!
+    #     mailserver = 'mailhost.frm2.tum.de',
     #     subject = 'NICOS',
     # ),
 )

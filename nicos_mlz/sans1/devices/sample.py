@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -37,7 +37,7 @@ class Sample(NicosSample):
 
     parameter_overrides = {
         # We want this to occur in the data files.
-        "samplenumber": Override(category="sample"),
+        'samplenumber': Override(category='sample'),
     }
 
     def new(self, parameters):
@@ -50,6 +50,6 @@ class Sample(NicosSample):
     def _applyParams(self, number, parameters):
         if number > 0:
             # move sample changer to new position!
-            sc = session.getDevice("SampleChanger")
+            sc = session.getDevice('SampleChanger')
             sc.maw(number)
         NicosSample._applyParams(self, number, parameters)

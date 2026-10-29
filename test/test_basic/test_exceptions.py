@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -23,11 +23,12 @@
 
 """NICOS exception tests."""
 
+import pytest
+
 from nicos.core.errors import CacheLockError
 
 
 def test_exceptions():
-    try:
-        raise CacheLockError("user")
-    except CacheLockError as e:
-        assert e.args == ("locked by user",)
+    with pytest.raises(CacheLockError) as excinfo:
+        raise CacheLockError('user')
+    assert excinfo.value.args == ('locked by user',)

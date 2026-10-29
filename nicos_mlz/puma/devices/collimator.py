@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,16 +31,11 @@ class Collimator(Axis):
     """Polarization collimator device."""
 
     parameters = {
-        "divergency": Param(
-            "Divergency of the collimator",
-            type=floatrange(0, None),
-            settable=False,
-            userparam=False,
-            default=0.5,
-            unit="deg",
-        ),
+        'divergency': Param('Divergence of the collimator',
+                            type=floatrange(0, None), settable=False,
+                            userparam=False, default=0.5, unit='deg'),
     }
 
     parameter_overrides = {
-        "unit": Override(mandatory=False, default="deg"),
+        'unit': Override(mandatory=False, default='deg'),
     }

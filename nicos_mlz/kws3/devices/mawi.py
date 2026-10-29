@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,16 +29,14 @@ class MeanTemp(PyTangoDevice, Readable):
     """Returns mean temperature of some channels of a MawiTherm VectorInput."""
 
     parameters = {
-        "first": Param(
-            "First channel to include", type=intrange(1, 8), default=1, settable=True
-        ),
-        "last": Param(
-            "Last channel to include", type=intrange(1, 8), default=8, settable=True
-        ),
+        'first': Param('First channel to include', type=intrange(1, 8),
+                       default=1, settable=True),
+        'last':  Param('Last channel to include', type=intrange(1, 8),
+                       default=8, settable=True),
     }
 
     def doRead(self, maxage=0):
         if self.first > self.last:
             return 0
-        allchannels = self._dev.value[self.first - 1 : self.last]
+        allchannels = self._dev.value[self.first - 1:self.last]
         return float(sum(allchannels) / len(allchannels))

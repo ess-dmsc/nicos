@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,16 +28,19 @@ import numpy as np
 
 from nicos.core import HasPrecision, Moveable, Param, Readable
 from nicos.core.errors import ConfigurationError
-from nicos.core.params import floatrange, Attach
+from nicos.core.params import Attach, Override, floatrange
 from nicos.devices.abstract import TransformedMoveable, TransformedReadable
 
 from nicos_mlz.refsans.devices.mixins import PolynomFit
 
 
 class AnalogEncoder(PolynomFit, TransformedReadable):
+
     attached_devices = {
-        "device": Attach("Sensing device (poti etc)", Readable),
+        'device': Attach('Sensing device (poti etc)', Readable),
     }
+
+    hardware_access = False
 
     def _readRaw(self, maxage=0):
         return self._attached_device.read(maxage)
@@ -46,27 +49,28 @@ class AnalogEncoder(PolynomFit, TransformedReadable):
         """Return a read analogue signal corrected by a polynom.
 
         A correcting polynom of at least first order is used.
-        Result is then offset + mul * <previously calculated value>
         """
         return self._fit(value)
 
 
 class AnalogMove(HasPrecision, PolynomFit, TransformedMoveable):
     """Does only work for polynomial order of 1
-    a reverse polynomial can only be done for a order of 1
+    a reverse polynomial can only be done for an order of 1
     """
 
     attached_devices = {
-        "device": Attach("Acting device (motor etc)", Moveable),
+        'device': Attach('Acting device (motor etc)', Moveable),
     }
+
+    hardware_access = False
 
     def _mapReadValue(self, value):
         return self._fit(value)
 
     def _mapTargetValue(self, target):
-        self.log.debug("uncorrected value: %f", target)
+        self.log.debug('uncorrected value: %f', target)
         result = (target - self.poly[0]) / self.poly[1]
-        self.log.debug("final result: %f", result)
+        self.log.debug('final result: %f', result)
         return result
 
     def _readRaw(self, maxage=0):
@@ -78,22 +82,31 @@ class AnalogMove(HasPrecision, PolynomFit, TransformedMoveable):
     def doUpdatePoly(self, poly):
         if len(poly) != 2:
             self._fitter = None
-            raise ConfigurationError("Only a linear correction is allowed")
+            raise ConfigurationError('Only a linear correction is allowed')
         self._fitter = np.polynomial.Polynomial(poly)
 
 
 class Ohmmeter(TransformedReadable):
-    """Calculates a resistance from a simple voltagedivider"""
+    """Calculates a resistance from a simple voltage divider"""
 
     attached_devices = {
-        "device": Attach("Sensing device (ADC etc)", Readable),
+        'device': Attach('Sensing device (ADC etc)', Readable),
     }
 
     parameters = {
-        "u_high": Param("upper Voltage", type=floatrange(0.0), default=3.3),
-        "u_low": Param("lower Voltage", type=floatrange(0.0), default=0.0),
-        "r_arb": Param("2. Resistor", type=floatrange(0.0), default=1000.0),
+        'u_high': Param('Upper voltage',
+                        type=floatrange(0.), default=3.3, unit='V', ),
+        'u_low': Param('Lower voltage',
+                       type=floatrange(0.), default=0.0, unit='V', ),
+        'r_arb': Param('Second Resistor',
+                       type=floatrange(0.), default=1000.0, unit='Ohm', ),
     }
+
+    parameter_overrides = {
+        'unit': Override(default='Ohm', mandatory=False),
+    }
+
+    hardware_access = False
 
     def _readRaw(self, maxage=0):
         return self._attached_device.read(maxage)
@@ -105,22 +118,29 @@ class Ohmmeter(TransformedReadable):
 
 
 class PTxxlinearC(TransformedReadable):
-    """Calculates a resistance from a simple voltagedivider."""
+    """Calculates a resistance from a simple voltage divider."""
 
     attached_devices = {
-        "device": Attach("Sensing device a resistor", Readable),
+        'device': Attach('Sensing device a resistor', Readable),
     }
 
     parameters = {
-        "r0": Param("Resistance at 0 deg Celsius", type=floatrange(0.0), default=1000),
-        "r_cable": Param(
-            "Resistance of cable 2 * wire", type=floatrange(0.0), default=0.0
-        ),
-        "alpha": Param("alpha of PTs", type=floatrange(0.0), default=0.003851),
+        'r0': Param('Resistance at 0 deg Celsius',
+                    type=floatrange(0.), default=1000, unit='Ohm', ),
+        'r_cable': Param('Resistance of cable 2 * wire',
+                         type=floatrange(0.), default=0.0, unit='Ohm', ),
+        'alpha': Param('alpha of PTs',
+                       type=floatrange(0.), default=0.003851),
     }
+
+    parameter_overrides = {
+        'unit': Override(default='degC', mandatory=False),
+    }
+
+    hardware_access = False
 
     def _readRaw(self, maxage=0):
         return self._attached_device.read(maxage)
 
     def _mapReadValue(self, value):
-        return (value - self.r0) / (self.alpha * self.r0)
+        return (value - self.r_cable - self.r0) / (self.alpha * self.r0)
