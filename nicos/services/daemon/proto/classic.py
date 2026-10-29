@@ -63,7 +63,7 @@ class Server(BaseServer, socketserver.TCPServer):
 
     def emit(self, event, data, blobs, handler=None):
         data = self.serializer.serialize_event(event, data)
-        for hdlr in (handler,) if handler else self._handlers.values():
+        for hdlr in (handler,) if handler else list(self._handlers.values()):
             try:
                 hdlr.event_queue.put((event, data, blobs), True, 0.1)
             except queue.Full:
