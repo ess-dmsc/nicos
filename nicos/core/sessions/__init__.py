@@ -403,7 +403,7 @@ class Session:
 
     def _createSysconfig(self, key):
         cls, is_list = {'instrument': (Instrument, False),
-                        'experiment': (Experiment, False),
+                        'experiment': (Device, False),
                         'datasinks':  (DataSink, True),
                         'notifiers':  (Notifier, True)}[key]
         configured = self.current_sysconfig[key]
