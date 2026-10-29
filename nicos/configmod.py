@@ -32,6 +32,7 @@ from os import path
 from re import compile as regexcompile, escape as regexescape
 
 import tomlkit
+from platformdirs import PlatformDirs
 
 
 class config:
@@ -46,6 +47,9 @@ class config:
     umask = None  # as a string!
 
     nicos_root = path.normpath(path.dirname(path.dirname(__file__)))
+    if not path.isdir(path.join(nicos_root, 'resources')):
+        # installed as a wheel: 'resources' is inside the 'nicos' package
+        nicos_root = path.normpath(path.dirname(__file__))
 
     setup_package = None  # the root package to find setups in
     setup_subdirs = []  # setup groups to be used, as a list
@@ -146,6 +150,13 @@ def readConfig():
     # Get the root path of the NICOS install.
     nicos_root = config.nicos_root
     global_cfg = readToml(path.join(nicos_root, 'nicos.conf'))
+    if not global_cfg:
+        # fall back to the site, then the user configuration directory
+        dirs = PlatformDirs('nicos')
+        for config_dir in (dirs.site_config_path, dirs.user_config_path):
+            if (config_dir / 'nicos.conf').exists():
+                global_cfg = readToml(str(config_dir / 'nicos.conf'))
+                break
 
     # Apply global PYTHONPATH, so that we can find the setup package in it.
     if 'PYTHONPATH' in global_cfg.get('environment', {}):

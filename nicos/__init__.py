@@ -34,8 +34,15 @@ import numpy
 from nicos.configmod import config
 
 # Determine our version(s).
+import importlib.metadata  # isort:skip
 from nicos._vendor.gitversion import get_git_version, get_nicos_version  # isort:skip
-__version__ = nicos_version = get_nicos_version()
+try:
+    __version__ = nicos_version = importlib.metadata.version(__name__)
+except importlib.metadata.PackageNotFoundError:
+    try:
+        __version__ = nicos_version = get_nicos_version()
+    except Exception:
+        __version__ = nicos_version = '0.0.0'
 
 # Check for Python version 3.9+.
 if sys.version_info[:2] < (3, 9):

@@ -25,6 +25,7 @@
 
 import os
 import queue
+import shutil
 import signal
 import sys
 import threading
@@ -489,7 +490,8 @@ class Poller(Device):
             self._start_child(setup)
 
     def _start_child(self, setup):
-        poller_script = path.join(config.nicos_root, 'bin', 'nicos-poller')
+        poller_script = shutil.which('nicos-poller') or \
+            path.join(config.nicos_root, 'bin', 'nicos-poller')
         additional_args = []
         if session._daemon_mode == 'systemd':
             additional_args.append('-D')
