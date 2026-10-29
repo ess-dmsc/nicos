@@ -155,7 +155,9 @@ dev = [
 line-length = 88
 # E501 reports lines that exceed the length of 120.
 lint.pycodestyle.max-line-length = 120
+# Upstream-owned paths keep the upstream style; see UPSTREAM.md.
 exclude = [
+    "nicos/",
     "nicos_mlz/",
     "nicos_sinq/",
     "nicos_demo/",
@@ -164,7 +166,25 @@ exclude = [
     "data/",
     "tools/",
     "bin/",
-    "nicos/guisupport/gui_rc_qt*.py",
+    "conftest.py",
+    "test/bin/",
+    "test/faulty_setups/",
+    "test/fixtures/",
+    "test/nexus/",
+    "test/scripts/",
+    "test/script_templates/",
+    "test/setups/",
+    "test/test_basic/",
+    "test/test_console/",
+    "test/test_custom/",
+    "test/test_daemon/",
+    "test/test_gui/",
+    "test/test_secop/",
+    "test/test_simple/",
+    "test/test_simulation/",
+    "test/test_stresstest/",
+    "test/__init__.py",
+    "test/utils.py",
 ]
 
 # Configure global rules to apply; see https://docs.astral.sh/ruff/rules/ for details.

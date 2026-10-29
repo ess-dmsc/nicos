@@ -30,4 +30,5 @@ repos:
     - id: codespell
 # Ignore certain file paths: uses regex pattern. Primarily used by
 # pre-commit-hooks, other hooks might have their own exclude pattern signature.
-exclude: 'nicos_mlz|resources/material|nicos_demo/vspodi/data'
+# Upstream-owned paths keep the upstream style; see UPSTREAM.md.
+exclude: '^(nicos|nicos_mlz|nicos_demo|nicostools|tools|bin|resources)/|^conftest\.py$|^test/(bin|faulty_setups|fixtures|nexus|scripts|script_templates|setups|test_basic|test_console|test_custom|test_daemon|test_gui|test_secop|test_simple|test_simulation|test_stresstest)/|^test/(utils|__init__)\.py$'
