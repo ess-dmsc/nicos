@@ -33,6 +33,9 @@ from nicos_ess.devices.datamanager import DataManager
 class EssExperiment(Device):
     """Hold proposal, user, sample and counter context for ESS runs."""
 
+    # read by Session.elogEvent; ESS runs no elog service
+    _elog_enabled = False
+
     parameters = {
         "proposal": Param(
             "Current proposal number or proposal string",
@@ -125,6 +128,13 @@ class EssExperiment(Device):
             internal=True,
             no_sim_restore=True,
             category="experiment",
+        ),
+        "scriptnames": Param(
+            "File names of the currently executed scripts",
+            type=listof(str),
+            settable=True,
+            internal=True,
+            no_sim_restore=True,
         ),
         "errorbehavior": Param(
             "Behavior on unhandled errors in commands",
