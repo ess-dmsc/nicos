@@ -390,7 +390,6 @@ def build_motor_cfg(**overrides):
         "has_msgtxt": True,
         "has_errorbit": True,
         "has_reseterror": True,
-        "monitor_deadband": 0.1,
         "monitor": False,
     }
     cfg.update(overrides)

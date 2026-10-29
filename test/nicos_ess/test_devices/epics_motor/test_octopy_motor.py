@@ -31,7 +31,6 @@ def create_octopy_pair(device_harness):
         shared={
             "motorpv": MOTOR_PV,
             "precision": 0.01,
-            "speed": 2.0,
             "unit": "mm",
             "warnlimits": (-100.0, 100.0),
             "monitor": True,
