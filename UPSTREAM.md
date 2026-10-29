@@ -34,6 +34,7 @@ Everything here either goes upstream or moves into `nicos_ess/`.
 | `nicos/guisupport/qt.py` | default to Qt6 on Apple silicon | upstream |
 | `bin/nicos-gui` | start `nicos_ess.gui.main` | keep |
 | `resources/nicos-gui.qrc`, `resources/material/icons/`, `nicos/guisupport/gui_rc_qt*.py` | four extra ESS icons, ESS versions of two icons; logos of facilities we do not carry removed | upstream icons; keep logo removal |
+| `test/utils.py` | elog start timeout 5 s instead of 2 s (CI runners are slower) | upstream |
 | `test/bin/simulate` | put the checkout root, not `test/`, on `sys.path` (else `test/nicos_ess` shadows `nicos_ess`) | upstream (bug) |
 | `test/test_custom/test_dryrun.py` | skip `nicos_mlz` instrument dry runs | keep |
 | `nicos_demo/pyproject.toml`, `test/test_basic/test_{cache_numpy,timeseries}.py`, `test/test_epics/`, `test/test_redis/`, `test/setups/custom/ess_*.py`, `test/setups/custom/estia_*.py` | ESS-only files | keep / move with their code |

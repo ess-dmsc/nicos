@@ -539,7 +539,7 @@ def startCache(hostport, setup='cache', wait=10):
     return startSubprocess('cache', setup, wait_cb=cache_wait_cb)
 
 
-def startElog(wait=2):
+def startElog(wait=5):
     def elog_wait_cb():
         start = monotonic()
         logfile = path.join(runtime_root, 'cacheserver.log')
