@@ -515,7 +515,7 @@ class EditorPanel(Panel):
         font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         font.setItalic(False)
         font.setBold(False)
-        sizes = self._get_font_sizes(font.family())
+        sizes = self._get_font_sizes(font.family()) or QFontDatabase.standardSizes()
         point_size = DEFAULT_FONT_SIZE
         if point_size not in sizes:
             # If size does not exist, use one that is close.
