@@ -21,6 +21,7 @@ from nicos.core import (
 from nicos.core.params import Override
 from nicos.devices.experiment import Experiment
 from nicos.utils import createThread, readFileCounter
+from nicos_ess.devices.datamanager import DataManager
 
 
 class EssExperiment(Experiment):
@@ -71,6 +72,8 @@ class EssExperiment(Experiment):
         "errorbehavior": Override(default="abort", userparam=False),
         "elog": Override(default=False),
     }
+
+    datamanager_class = DataManager
 
     def doInit(self, mode):
         self._yuos_client = None
