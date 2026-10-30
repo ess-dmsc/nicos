@@ -28,8 +28,11 @@ class SamplePanel(PanelBase):
         self._build_ui()
         self.initialise_connection_status_listeners()
 
-    def load_sample_data(self):
-        self.samples = self.client.eval("session.experiment.get_samples()")
+    def load_sample_data(self, data=None):
+        if data is not None:
+            self.samples = [dict(x) for x in data.values()]
+        else:
+            self.samples = self.client.eval("session.experiment.get_samples()")
 
     def save_sample_data(self, samples):
         self.client.run(f"Exp.set_samples({samples})")
@@ -40,7 +43,7 @@ class SamplePanel(PanelBase):
 
     def on_keyChange(self, key, value, time, expired):
         if key == "sample/samples":
-            self.load_sample_data()
+            self.load_sample_data(value)
             self.update_tree_widget_data()
 
     def on_client_connected(self):
