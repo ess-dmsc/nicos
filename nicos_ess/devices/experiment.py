@@ -86,6 +86,9 @@ class EssExperiment(Experiment):
         except Exception as error:
             self.log.warning("proposal look-up not available: %s", error)
 
+    def doReadTitle(self):
+        return self.propinfo.get("title", "")
+
     def doReadUsers(self):
         return self.propinfo.get("users", [])
 
