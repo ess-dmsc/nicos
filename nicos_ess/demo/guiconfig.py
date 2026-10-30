@@ -27,6 +27,40 @@ main_window = vbox(
                             panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
                         (
+<<<<<<< HEAD
+=======
+                            "Live Data Panel",
+                            panel("nicos_ess.gui.panels.livedata.LiveDataPanel"),
+                        ),
+                        (
+                            "Chopper",
+                            panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
+                        ),
+                        (
+                            "X-ray",
+                            panel(
+                                "nicos_ess.gui.panels.xray.XrayPanel",
+                                status="status_r",
+                                beam_align="beam_align_r",
+                                xray="xray",
+                                voltage="voltage",
+                                voltage_r="voltage_r",
+                                current="current",
+                                current_r="current_r",
+                                focus="focus",
+                                vacuum="vacuum_r",
+                                temperature="temperature_r",
+                                align_x="align_x",
+                                align_y="align_y",
+                                camera="ad_sim_detector",
+                                collector="ad_sim_detector_area_detector_collector",
+                                source_motor="source_motor",
+                                flatpanel_motor="flatpanel_motor",
+                                setups="xray_setup",
+                            ),
+                        ),
+                        (
+>>>>>>> c4e2498843 (initial demo instrument from YMIR)
                             "Script Status",
                             panel(
                                 "nicos_ess.gui.panels.status.ScriptStatusPanel",
@@ -50,6 +84,13 @@ main_window = vbox(
             panel("nicos_ess.gui.panels.history.HistoryPanel"),
         ),
         (
+<<<<<<< HEAD
+=======
+            "History(TESTING)",
+            panel("nicos_ess.gui.panels.history_pyqt.HistoryPanel"),
+        ),
+        (
+>>>>>>> c4e2498843 (initial demo instrument from YMIR)
             "Logs",
             tabbed(
                 ("Errors", panel("nicos_ess.gui.panels.errors.ErrorPanel")),
