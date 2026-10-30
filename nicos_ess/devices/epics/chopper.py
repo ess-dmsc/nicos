@@ -410,11 +410,14 @@ class EssChopper(
     disc with::
 
         maw(disc, (14, 120))     # speed, then phase
-        maw(disc.speed, 14)      # Hz, as the speed PVs have it; 0 stops the disc
+        maw(disc.speed, 14)      # one of the speeds; 0 stops the disc
         maw(disc.phase, 120)     # degrees, written as ChopDly-S at the target speed
         maw(disc.position, 42)   # parks the stopped disc at a resolver position
         disc.park("ParkOpen")    # one of the IOC's park choices; then wait(disc)
         reset(disc)              # clears the drive's alarms
+
+    The timing system only knows the speeds in ``speeds``, so those exact
+    integers are the only values ever written to the speed setpoint.
 
     Set the speed before the phase: the phase is kept as a delay, so its value
     in degrees changes with the speed. A new speed or delay restarts the IOC's
@@ -437,6 +440,12 @@ class EssChopper(
             default=False,
             userparam=False,
         ),
+        "speeds": Param(
+            "The speeds in Hz the timing system supports, with the sign of the "
+            "speed PVs: the only values written to the speed setpoint",
+            type=listof(int),
+            mandatory=True,
+        ),
         "in_phase": Param(
             "Whether the IOC's last statistics evaluation found the disc in phase",
             type=str,
@@ -454,7 +463,12 @@ class EssChopper(
             type=EpicsEnumParam("park"),
             volatile=True,
         ),
-        "park_status": Param("Park state of the disc", type=str, volatile=True),
+        "park_status": Param(
+            "Park state as the drive reports it; some drives stay at Parking "
+            "once parked",
+            type=str,
+            volatile=True,
+        ),
         "last_message": Param(
             "Last message in the drive's log", type=str, volatile=True
         ),
@@ -740,6 +754,8 @@ class EssChopper(
         )
 
     def _speed_allowed(self, speed):
+        if speed not in self.speeds:
+            return False, f"the speed must be one of {self.speeds} Hz"
         if self._sim_intercept:
             return True, ""
         max_speed = self._read_channel_cached("max_speed", maxage=0)
@@ -760,13 +776,19 @@ class EssChopper(
         return True, ""
 
     def _start_speed(self, speed):
-        """Write the speed and Start, or Stop for 0, unless the disc already
-        runs steadily at that speed."""
+        """Write the speed, one of the speeds as the integer it is, and Start,
+        unless the disc already runs steadily at that speed. A drive stops by
+        itself on a speed setpoint of 0 and refuses a Stop then; send Stop only
+        to a drive that does not."""
+        speed = self.speeds[self.speeds.index(speed)]
         setpoint = self._read_channel_cached("speed_setpoint", maxage=0)
         if setpoint == speed and self._is_steady():
             return
         self._write_setpoint("speed_setpoint", speed)
-        self._put_command("command", "Start" if speed else "Stop")
+        if speed:
+            self._put_command("command", "Start")
+        elif not self._acknowledged("state", lambda state: state != "Rotating"):
+            self._put_command("command", "Stop")
 
     def _start_phase(self, phase):
         """Write the phase as ChopDly-S at the speed setpoint, unless the disc

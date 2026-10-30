@@ -58,6 +58,7 @@ DCU_STATES = [
 ]
 DCU_READY, DCU_PARKING = 2, 10
 T0_PARKS = ["Close", "Open", *(f"Window {i}" for i in range(1, 11))]
+SPEEDS = [-14, -7, 0, 7, 14]
 
 
 class Clock:
@@ -113,6 +114,7 @@ def backend(fake_epics_backend_factory):
 
     put = backend.put_pv_value
     backend.resets_statistics = True
+    backend.stops_on_zero_speed = True
 
     def put_like_the_ioc(pvname, value, wait=False):
         # evr_seq_calc >= 2.7.6: a new speed or delay drops InPhaseTS-R
@@ -121,6 +123,11 @@ def backend(fake_epics_backend_factory):
         resets = pvname in (f"{ROOT}{SPEED_SETPOINT}", f"{ROOT}ChopDly-S")
         if backend.resets_statistics and resets and changed:
             backend.emit_update(f"{ROOT}InPhaseTS-R", value=0)
+        # YMIR's drive stops by itself on a speed setpoint of 0
+        rotating = backend.values[f"{ROOT}ChopState_R"] == ROTATING
+        stops = backend.stops_on_zero_speed and rotating and value == 0
+        if pvname == f"{ROOT}{SPEED_SETPOINT}" and stops:
+            backend.emit_update(f"{ROOT}ChopState_R", value=STOPPING)
         # the drive takes a park command and sets its new target, as YMIR's did
         if pvname == f"{ROOT}C_Park":
             backend.emit_update(f"{ROOT}ParkCmd_RB", value=PARK_COMMANDS.index(value))
@@ -164,7 +171,7 @@ def disc(device_harness, backend, clock):
     daemon, _ = device_harness.create_pair(
         EssChopper,
         name="disc",
-        shared={"pv_root": ROOT, "chic_root": CHIC},
+        shared={"pv_root": ROOT, "chic_root": CHIC, "speeds": SPEEDS},
     )
     return daemon
 
@@ -223,9 +230,7 @@ def test_speed_zero_stops_the_disc_and_completes_when_ready(
     spin(backend, 14.0)
     run(device_harness, disc.speed.start, 0.0)
 
-    assert puts(backend) == [(SPEED_SETPOINT, 0.0), ("C_ExecuteUser", "Stop")]
-    emit(backend, SPEED_SETPOINT, 0.0)
-    emit(backend, "ChopState_R", STOPPING)
+    assert puts(backend) == [(SPEED_SETPOINT, 0)]
     assert not run(device_harness, disc.speed.isCompleted)
     emit(backend, "ChopState_R", READY)
     assert run(device_harness, disc.speed.isCompleted)
@@ -281,7 +286,31 @@ def test_moving_the_disc_to_speed_zero_only_stops_it(device_harness, backend, di
     spin(backend, 14.0)
     run(device_harness, disc.start, (0.0, 90.0))
 
-    assert puts(backend) == [(SPEED_SETPOINT, 0.0), ("C_ExecuteUser", "Stop")]
+    assert puts(backend) == [(SPEED_SETPOINT, 0)]
+
+
+def test_a_drive_that_keeps_turning_at_speed_zero_gets_stop(
+    device_harness, backend, disc
+):
+    backend.stops_on_zero_speed = False
+    spin(backend, 14.0)
+    run(device_harness, disc.speed.start, 0.0)
+
+    assert puts(backend) == [(SPEED_SETPOINT, 0), ("C_ExecuteUser", "Stop")]
+
+
+def test_only_the_speeds_are_written_as_their_integers(device_harness, backend, disc):
+    run(device_harness, disc.speed.start, 7.0)
+
+    assert puts(backend) == [(SPEED_SETPOINT, 7), ("C_ExecuteUser", "Start")]
+    assert type(puts(backend)[0][1]) is int
+    for speed in (6.99, 7.5, 20.0):
+        allowed, why = run(device_harness, disc.speed.isAllowed, speed)
+        assert not allowed
+        assert "[-14, -7, 0, 7, 14]" in why
+        with pytest.raises(LimitError):
+            run(device_harness, disc.speed.start, speed)
+    assert not run(device_harness, disc.isAllowed, (6.98, 200.0))[0]
 
 
 def test_the_disc_checks_speed_and_phase(device_harness, backend, disc):
@@ -429,11 +458,12 @@ def test_repeating_an_interrupted_move_completes(device_harness, backend, disc):
 
 
 def test_speed_above_the_maximum_is_refused(device_harness, backend, disc):
-    allowed, why = run(device_harness, disc.speed.isAllowed, -28.0)
-    assert run(device_harness, disc.speed.isAllowed, -14.0)[0]
+    emit(backend, "MaxSpd_R", 7.0)
+    allowed, why = run(device_harness, disc.speed.isAllowed, -14.0)
+    assert run(device_harness, disc.speed.isAllowed, -7.0)[0]
 
     assert not allowed
-    assert "14" in why
+    assert "maximum speed is 7.0" in why
 
 
 def test_phase_is_chopdly_at_the_target_speed(device_harness, backend, disc):
@@ -552,7 +582,12 @@ def test_the_unit_and_format_replace_older_cached_ones(device_harness, backend, 
 
     device_harness.run("daemon", cache_old_values)
     disc = device_harness.create(
-        "daemon", EssChopper, name="stale", pv_root=ROOT, chic_root=CHIC
+        "daemon",
+        EssChopper,
+        name="stale",
+        pv_root=ROOT,
+        chic_root=CHIC,
+        speeds=SPEEDS,
     )
 
     assert run(device_harness, lambda: disc.unit) == "Hz deg"
@@ -761,7 +796,9 @@ def resend_start(device_harness, backend, choices):
     backend.value_choices[f"{ROOT}C_ExecuteUser"] = choices
     backend.values[f"{ROOT}C_ExecuteUser"] = choices.index("Start")
     disc, _ = device_harness.create_pair(
-        EssChopper, name="disc", shared={"pv_root": ROOT, "chic_root": CHIC}
+        EssChopper,
+        name="disc",
+        shared={"pv_root": ROOT, "chic_root": CHIC, "speeds": SPEEDS},
     )
     run(device_harness, disc.speed.start, 14.0)
 
@@ -796,7 +833,9 @@ def test_park_refuses_a_turning_disc(device_harness, backend, disc):
 @pytest.fixture
 def t0(device_harness, backend, clock):
     daemon, _ = device_harness.create_pair(
-        EssT0Chopper, name="t0", shared={"pv_root": ROOT, "chic_root": CHIC}
+        EssT0Chopper,
+        name="t0",
+        shared={"pv_root": ROOT, "chic_root": CHIC, "speeds": SPEEDS},
     )
     return daemon
 
@@ -826,15 +865,20 @@ def test_t0_commands_and_parking(device_harness, backend, t0):
         ("Park_S", 42.0),
         (SPEED_SETPOINT, 14.0),
         ("C_Execute", "Start"),
-        (SPEED_SETPOINT, 0.0),
-        ("C_Execute", "Stop"),
+        (SPEED_SETPOINT, 0),
         ("C_Execute", "ClearAlarm"),
     ]
 
 
 def test_a_dry_run_does_not_touch_the_ioc(device_harness, backend, clock):
     disc = device_harness.create(
-        "daemon", EssChopper, name="dry", mode=SIMULATION, pv_root=ROOT, chic_root=CHIC
+        "daemon",
+        EssChopper,
+        name="dry",
+        mode=SIMULATION,
+        pv_root=ROOT,
+        chic_root=CHIC,
+        speeds=SPEEDS,
     )
     backend.get_calls.clear()
 

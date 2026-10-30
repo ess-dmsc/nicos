@@ -99,7 +99,7 @@ class ChopperDialog(QDialog):
 
         motion, grid = self._group("Speed and phase")
         self.speed = QLabel()
-        self.speed_target = self._number_edit("target (Hz)")
+        self.speed_target = self._choice("The speeds the timing system supports")
         self.btn_speed = self._button("Move")
         self.phase = QLabel()
         self.phase_target = self._number_edit("target (deg)")
@@ -153,7 +153,6 @@ class ChopperDialog(QDialog):
         self.dialog_layout.addLayout(buttons)
 
         self.btn_speed.clicked.connect(self._move_speed)
-        self.speed_target.returnPressed.connect(self._move_speed)
         self.btn_stop.clicked.connect(self._stop_disc)
         self.btn_phase.clicked.connect(self._move_phase)
         self.phase_target.returnPressed.connect(self._move_phase)
@@ -224,6 +223,11 @@ class ChopperDialog(QDialog):
         self.description.setText(self.params.get("description", ""))
         self.description.setVisible(bool(self.params.get("description")))
         self._fill_choices(self.park_choice, "park_command")
+        self.speed_target.clear()
+        self.speed_target.addItems(
+            [str(speed) for speed in self.params.get("speeds", ())]
+        )
+        self.speed_target.setCurrentIndex(-1)
         self.state.setText(str(self.params.get("state", "")))
         self._update_status(*self.devinfo.status)
         for param in READBACKS:
@@ -278,9 +282,8 @@ class ChopperDialog(QDialog):
             return None
 
     def _move_speed(self):
-        target = self._target(self.speed_target)
-        if target is not None:
-            self._exec(f"move({self.devrepr}.speed, {target!r})")
+        if self.speed_target.currentIndex() >= 0:
+            self._exec(f"move({self.devrepr}.speed, {self.speed_target.currentText()})")
 
     def _stop_disc(self):
         self._exec(f"move({self.devrepr}.speed, 0)")

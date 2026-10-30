@@ -29,6 +29,7 @@ def dialog(gui_window_factory, fake_daemon, qtbot):
                 "status": (200, "Rotating; Rotation: In Phase"),
                 "visibility": ("namespace", "devlist"),
                 "description": "The mini-chopper",
+                "speeds": [-14, -7, 0, 7, 14],
                 "in_phase": "In phase",
                 "total_delay": 17857142.86,
                 "park_status": "Not Parked",
@@ -99,7 +100,10 @@ def test_cache_updates_reach_the_dialog(dialog, fake_daemon, qtbot):
 
 
 def test_the_buttons_send_the_commands(dialog, fake_daemon, qtbot):
-    dialog.speed_target.setText("7")
+    assert [
+        dialog.speed_target.itemText(i) for i in range(dialog.speed_target.count())
+    ] == ["-14", "-7", "0", "7", "14"]
+    dialog.speed_target.setCurrentText("7")
     dialog.btn_speed.click()
     dialog.phase_target.setText("120.5")
     dialog.btn_phase.click()
@@ -111,7 +115,7 @@ def test_the_buttons_send_the_commands(dialog, fake_daemon, qtbot):
     dialog.btn_reset.click()
 
     expected = [
-        "move(mini_chopper.speed, 7.0)",
+        "move(mini_chopper.speed, 7)",
         "move(mini_chopper.phase, 120.5)",
         "move(mini_chopper.speed, 0)",
         "mini_chopper.park('ParkClosed')",
@@ -124,6 +128,7 @@ def test_the_buttons_send_the_commands(dialog, fake_daemon, qtbot):
 
 def test_nothing_is_sent_without_a_target_or_choice(dialog, fake_daemon):
     assert dialog.park_choice.currentIndex() == -1
+    assert dialog.speed_target.currentIndex() == -1
     dialog.btn_speed.click()
     dialog.btn_phase.click()
     dialog.btn_park.click()
