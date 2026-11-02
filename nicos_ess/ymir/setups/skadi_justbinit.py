@@ -11,7 +11,7 @@ devices = dict(
         input_schema="ev44",
         hist_type="2-D DET",
         det_width=160,
-        det_height=480,
+        det_height=160,
         det_range=(1, 25600),
     ),
     det_image1=device(
@@ -24,7 +24,7 @@ devices = dict(
         input_schema="ev44",
         hist_type="2-D DET",
         det_width=160,
-        det_height=480,
+        det_height=160,
         det_range=(25601, 51200),
     ),
     det_image2=device(
@@ -37,7 +37,7 @@ devices = dict(
         input_schema="ev44",
         hist_type="2-D DET",
         det_width=160,
-        det_height=480,
+        det_height=160,
         det_range=(51201, 76800),
     ),
     timer=device(
