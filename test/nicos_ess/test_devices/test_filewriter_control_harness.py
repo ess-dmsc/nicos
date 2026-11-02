@@ -45,6 +45,9 @@ def kafka_stubs(monkeypatch):
 def filewriter_control_sink_devices(device_harness, kafka_stubs):
     # kafka stubs not used directly but needed to create filewriter devices
     del kafka_stubs
+
+    with device_harness.activate("daemon") as daemon_session:
+        daemon_session.experiment.propinfo["proposal"] = "123456"
     # attached filewriter status device
     device_harness.create_pair(
         file_writer.FileWriterStatus,
@@ -94,10 +97,8 @@ class TestFileWriterControlSinkHarness:
         messages = [(123, create_status_message(job_id_1))]
         daemon_device._attached_status.new_messages_callback(messages)
 
-        with device_harness.activate("daemon") as daemon_session:
-            daemon_session.experiment.propinfo["proposal"] = "123456"
-            with pytest.raises(AlreadyWritingException):
-                daemon_device.start_job()
+        with device_harness.activate("daemon"), pytest.raises(AlreadyWritingException):
+            daemon_device.start_job()
 
     def test_can_start_job_if_no_job_in_progress(
         self,
@@ -113,8 +114,7 @@ class TestFileWriterControlSinkHarness:
             "_generate_uuid",
             lambda self, file_num: job_id_1,
         )
-        with device_harness.activate("daemon") as daemon_session:
-            daemon_session.experiment.propinfo["proposal"] = "123456"
+        with device_harness.activate("daemon"):
             daemon_device.start_job()
 
         assert job_id_1 in daemon_device._attached_status.jobs_in_progress
@@ -142,8 +142,7 @@ class TestFileWriterControlSinkHarness:
             "_generate_uuid",
             lambda self, file_num: new_job_id,
         )
-        with device_harness.activate("daemon") as daemon_session:
-            daemon_session.experiment.propinfo["proposal"] = "123456"
+        with device_harness.activate("daemon"):
             daemon_device.start_job()
         assert new_job_id in daemon_device._attached_status.jobs_in_progress
 
@@ -202,8 +201,7 @@ class TestFileWriterControlSinkHarness:
             "_generate_uuid",
             lambda self, file_num: job_id_1,
         )
-        with device_harness.activate("daemon") as daemon_session:
-            daemon_session.experiment.propinfo["proposal"] = "123456"
+        with device_harness.activate("daemon"):
             daemon_device.start_job()
             assert job_id_1 in daemon_device.get_active_jobs()
             daemon_device.stop_job()
@@ -230,8 +228,7 @@ class TestFileWriterControlSinkHarness:
             "_generate_uuid",
             lambda self, file_num: job_id_1,
         )
-        with device_harness.activate("daemon") as daemon_session:
-            daemon_session.experiment.propinfo["proposal"] = "123456"
+        with device_harness.activate("daemon"):
             daemon_device.start_job()
             daemon_device.stop_job()
             daemon_device.stop_job()
@@ -347,8 +344,7 @@ class TestFileWriterControlSinkHarness:
             "_generate_uuid",
             lambda self, file_num: job_id_1,
         )
-        with device_harness.activate("daemon") as daemon_session:
-            daemon_session.experiment.propinfo["proposal"] = "123456"
+        with device_harness.activate("daemon"):
             daemon_device.start_job()
         status_message = [(123, create_status_message(job_id_1))]
         daemon_device._attached_status.new_messages_callback(status_message)
@@ -376,8 +372,7 @@ class TestFileWriterControlSinkHarness:
         monkeypatch.setattr(
             file_writer.FileWriterController, "request_stop", request_stop
         )
-        with device_harness.activate("daemon") as daemon_session:
-            daemon_session.experiment.propinfo["proposal"] = "123456"
+        with device_harness.activate("daemon"):
             daemon_device.start_job()
         status_message = [(123, create_status_message(job_id_1))]
         daemon_device._attached_status.new_messages_callback(status_message)
@@ -413,8 +408,7 @@ class TestFileWriterControlSinkHarness:
                 "not acknowledged",
             ),
         )
-        with device_harness.activate("daemon") as daemon_session:
-            daemon_session.experiment.propinfo["proposal"] = "123456"
+        with device_harness.activate("daemon"):
             daemon_device.start_job()
 
         assert job_id_1 in daemon_device._attached_status.jobs_in_progress
@@ -443,8 +437,7 @@ class TestFileWriterControlSinkHarness:
             "_generate_uuid",
             lambda self, file_num: job_id_1,
         )
-        with device_harness.activate("daemon") as daemon_session:
-            daemon_session.experiment.propinfo["proposal"] = "123456"
+        with device_harness.activate("daemon"):
             daemon_device.start_job()
 
         # First the file-writer sends a message to say it is writing
