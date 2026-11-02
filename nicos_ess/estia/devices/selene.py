@@ -748,14 +748,14 @@ class SeleneRobot(Moveable):
             )
             self.positions = pos
             self.log.info(
-                f"Updated stored position for screw ({self.current_position[0]}, {self.current_position[1]:02i}) to "
+                f"Updated stored position for screw ({self.current_position[0]}, {self.current_position[1]}) to "
                 f"({self.positions[self.current_position[0]][self.current_position[1]][0]:.2f}, "
                 f"{self.positions[self.current_position[0]][self.current_position[1]][1]:.2f})"
             )
 
     def update_rotation(self, angle):
         self.log.debug(
-            f"Storing rotation for position ({self.current_position[0]}, {self.current_position:02i})"
+            f"Storing rotation for position ({self.current_position[0]}, {self.current_position[1]})"
         )
 
         rotations = dict([(k, dict(v)) for k, v in self.rotations.items()])
@@ -829,7 +829,7 @@ class SeleneRobot(Moveable):
             for item in self.positions:
                 if self._confirmed[item][group]:
                     continue
-                self.log.info(f"  position ({item}, {group:02i})")
+                self.log.info(f"  position ({item}, {group})")
                 self.doStart((item, group))
                 self._attached_move_x.wait()
                 self._attached_move_z.wait()
