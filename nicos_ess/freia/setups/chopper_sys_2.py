@@ -2,6 +2,7 @@ description = "The wfm choppers for FREIA"
 
 pv_root_1 = "FREIA-ChpSy2:Chop-WFM-101:"
 pv_root_2 = "FREIA-ChpSy2:Chop-WFM-201:"
+pv_root_3 = "FREIA-ChpSy2:Chop-FOC-101:"
 chic_root = "FREIA-ChpSy2:Chop-CHIC-001:"
 
 
@@ -133,22 +134,22 @@ devices = dict(
     wfm2_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
-        readpv=f"{pv_root_1}ChopState_R",
+        readpv=f"{pv_root_2}ChopState_R",
         visibility=(),
     ),
     wfm2_chopper_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
-        readpv=f"{pv_root_1}C_ExecuteUser",
-        writepv=f"{pv_root_1}C_ExecuteUser",
+        readpv=f"{pv_root_2}C_ExecuteUser",
+        writepv=f"{pv_root_2}C_ExecuteUser",
         requires={"level": "admin"},
         visibility=(),
     ),
     wfm2_chopper_speed=device(
         "nicos_ess.devices.epics.chopper.EssChopperSpeed",
         description="The current speed.",
-        readpv=f"{pv_root_1}Spd_R",
-        writepv=f"{pv_root_1}Spd_S",
+        readpv=f"{pv_root_2}Spd_R",
+        writepv=f"{pv_root_2}Spd_S",
         precision=0.1,
         mapping={"0": 0, "56": 56},
         in_phase="wfm2_chopper_phased",
@@ -157,8 +158,8 @@ devices = dict(
     wfm2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
-        readpv=f"{pv_root_1}ChopDly-S",
-        writepv=f"{pv_root_1}ChopDly-S",
+        readpv=f"{pv_root_2}ChopDly-S",
+        writepv=f"{pv_root_2}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
     wfm2_chopper_total_delay=device(
@@ -168,7 +169,7 @@ devices = dict(
             "The full delay that is applied on proton on target event for "
             "the driving signal of the chopper."
         ),
-        readpv=f"{pv_root_1}TotDly",
+        readpv=f"{pv_root_2}TotDly",
         visibility=("metadata", "namespace"),
     ),
     wfm2_chopper_phase=device(
@@ -182,7 +183,7 @@ devices = dict(
     wfm2_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
-        readpv=f"{pv_root_1}DiffTSSamples",
+        readpv=f"{pv_root_2}DiffTSSamples",
         unit="ns",
         visibility=(
             "metadata",
@@ -192,26 +193,26 @@ devices = dict(
     wfm2_chopper_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
-        readpv=f"{pv_root_1}InPhaseTS-R",
+        readpv=f"{pv_root_2}InPhaseTS-R",
     ),
     wfm2_chopper_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
-        readpv=f"{pv_root_1}Pos_R",
-        writepv=f"{pv_root_1}Park_S",
+        readpv=f"{pv_root_2}Pos_R",
+        writepv=f"{pv_root_2}Park_S",
         precision=0.5,
         visibility=(),
     ),
     wfm2_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The park status for the chopper.",
-        readpv=f"{pv_root_1}ParkStatus_R",
+        readpv=f"{pv_root_2}ParkStatus_R",
     ),
     wfm2_chopper_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the chopper.",
-        readpv=f"{pv_root_1}C_Park",
-        writepv=f"{pv_root_1}C_Park",
+        readpv=f"{pv_root_2}C_Park",
+        writepv=f"{pv_root_2}C_Park",
     ),
     wfm2_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -223,7 +224,7 @@ devices = dict(
     wfm2_chopper_alarms=device(
         "nicos_ess.devices.epics.chopper.NewChopperAlarms",
         description="The chopper alarms",
-        pv_root=pv_root_1,
+        pv_root=pv_root_2,
         visibility=(),
     ),
     wfm2_chopper=device(
@@ -252,6 +253,130 @@ devices = dict(
         resolver_sign=1,
         tdc_resolver_position=0,
         distance=7.3095,
+        legacy_spd_sign=True,
+    ),
+    foc1_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv=f"{pv_root_3}ChopState_R",
+        visibility=(),
+    ),
+    foc1_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Used to start and stop the chopper.",
+        readpv=f"{pv_root_3}C_ExecuteUser",
+        writepv=f"{pv_root_3}C_ExecuteUser",
+        requires={"level": "admin"},
+        visibility=(),
+    ),
+    foc1_speed=device(
+        "nicos_ess.devices.epics.chopper.EssChopperSpeed",
+        description="The current speed.",
+        readpv=f"{pv_root_3}Spd_R",
+        writepv=f"{pv_root_3}Spd_S",
+        precision=0.1,
+        mapping={"14": 14, "7": 7, "4⅔": 4.666666667, "0": 0},
+        in_phase="foc1_phased",
+        state="foc1_status",
+    ),
+    foc1_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The current delay.",
+        readpv=f"{pv_root_3}ChopDly-S",
+        writepv=f"{pv_root_3}ChopDly-S",
+        abslimits=(0.0, 0.0),
+    ),
+    foc1_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{pv_root_3}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
+    foc1_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="foc1_delay",
+        mapped_speed_dev="foc1_speed",
+        offset=0,
+        unit="degrees",
+    ),
+    foc1_delay_errors=device(
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
+        description="The current delay.",
+        readpv=f"{pv_root_3}DiffTSSamples",
+        unit="ns",
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
+    foc1_phased=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper is in phase.",
+        readpv=f"{pv_root_3}InPhaseTS-R",
+    ),
+    foc1_park_angle=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
+        readpv=f"{pv_root_3}Pos_R",
+        writepv=f"{pv_root_3}Park_S",
+        precision=0.5,
+        visibility=(),
+    ),
+    foc1_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the foc11 chopper.",
+        readpv=f"{pv_root_3}ParkStatus_R",
+    ),
+    foc1_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the foc1 chopper.",
+        readpv=f"{pv_root_3}C_Park",
+        writepv=f"{pv_root_3}C_Park",
+    ),
+    foc1_chic=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The status of the CHIC connection.",
+        readpv=f"{chic_root}ConnectedR",
+        visibility=(),
+        pva=True,
+    ),
+    foc1_alarms=device(
+        "nicos_ess.devices.epics.chopper.NewChopperAlarms",
+        description="The chopper alarms",
+        pv_root=pv_root_3,
+        visibility=(),
+    ),
+    foc1=device(
+        "nicos_ess.devices.epics.chopper.NewEssChopperController",
+        description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
+        state="foc1_status",
+        command="foc1_control",
+        speed="foc1_speed",
+        total_delay="foc1_total_delay",
+        park_angle="foc1_park_angle",
+        delay_errors="foc1_delay_errors",
+        chic_conn="foc1_chic",
+        alarms="foc1_alarms",
+        slit_edges=[
+            [0.0, 12.79],
+            [56.68, 70.04],
+            [110.27, 125.81],
+            [161.66, 178.04],
+            [210.63, 228.48],
+            [257.06, 276.46],
+            [301.26, 322.19],
+        ],
+        beam_position=180,
+        resolver_sign=1,
+        tdc_resolver_position=0,
+        distance=8.377,
         legacy_spd_sign=True,
     ),
 )
