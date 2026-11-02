@@ -5,12 +5,13 @@ from logging import WARNING
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel, showPanel
 from nicos.clients.gui.utils import ScriptExecQuestion, dialogFromUi, loadUi
-from nicos.core.status import BUSY, ERROR, OK, UNKNOWN
+from nicos.core.status import BUSY, ERROR, OK, UNKNOWN, WARN
 from nicos.guisupport.qt import (
     QByteArray,
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QIcon,
     QInputDialog,
     QLabel,
     QMenu,
@@ -572,6 +573,21 @@ class DevicesPanel(Panel):
             devinfo.classes = set(cache_load(value))
         elif subkey == "description":
             devitem.setToolTip(self.col_index["NAME"], cache_load(value or "''"))
+
+        if {
+            "nicos.devices.sample.Sample",
+            "nicos_ess.devices.sample.EssSample",
+        }.intersection(devinfo.classes):
+            no_sample = not str(devinfo.value or "").strip()
+            value_column = self.col_index["VALUE"]
+            devitem.setIcon(
+                value_column, self.statusIcon[WARN] if no_sample else QIcon()
+            )
+            devitem.setToolTip(value_column, "No sample selected" if no_sample else "")
+            devitem.setText(
+                value_column,
+                "No sample selected" if no_sample else devinfo.fmtValUnit(),
+            )
 
         if subkey in self.param_display.get(ldevname, ()):
             if not devinfo.params:

@@ -8,6 +8,7 @@ from nicos.guisupport.qt import (
     Qt,
     pyqtSignal,
 )
+from nicos.protocols.cache import OP_TELL, cache_load
 from nicos.utils import findResource
 from nicos_ess.gui.panels.utils import (
     attach_status_resources,
@@ -111,6 +112,20 @@ class SampleDialog(QDialog):
             key_item.setEditable(False)
             value_item.setEditable(False)
             self.metadata_model.appendRow([key_item, value_item])
+
+    def on_cache_params(self, subkey, value):
+        if subkey != "samples" or not value:
+            return
+        # keep a pick the user has not applied yet
+        pending = self.samples_CB.currentData()
+        self._set_samples(cache_load(value))
+        self._show_sample(self.current_sample_number)
+        if pending in self.samples:
+            self.samples_CB.setCurrentIndex(self.samples_CB.findData(pending))
+
+    def on_cache(self, time, subkey, op, value):
+        if op == OP_TELL and value and subkey == "samplenumber":
+            self._show_sample(cache_load(value))
 
     def on_btn_close_pressed(self):
         self.close()
