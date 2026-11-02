@@ -1,0 +1,32 @@
+description = "MOXA box controlled lights"
+
+group = "plugplay"
+
+pv_root = "SE-NURF:SE-E1241-001:"
+
+extended = dict(
+    presence_signal=f"pva://{pv_root}AO3",
+)
+
+devices = dict(
+    light_ch_0=device(
+        "nicos_ess.devices.epics.manual_switch.ManualSwitch",
+        description="Large box shutter",
+        writepv=f"{pv_root}AO0Set",
+        pollinterval=0.5,
+        monitor=True,
+        pva=True,
+        states=["Close", "Open"],
+        mapping={"Close": 0, "Open": 5},
+        # abslimits=(0,5),
+        # userlimits=(0,5),
+    ),
+    light_ch_3=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Small LED",
+        readpv=f"{pv_root}AO3",
+        writepv=f"{pv_root}AO3Set",
+        abslimits=(0, 5),
+        userlimits=(0, 5),
+    ),
+)

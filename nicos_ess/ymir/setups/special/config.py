@@ -8,3 +8,5 @@ KAFKA_BROKERS = [
     "10.100.5.29:8093",
     "10.100.5.31:8093",
 ]
+
+SAMPLE_ENV_TOPIC = "ymir_sample_env"

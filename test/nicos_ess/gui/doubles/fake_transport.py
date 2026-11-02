@@ -95,6 +95,7 @@ class SetupSpec:
     group: str = "optional"
     display_order: int = 50
     devices: list[str] = field(default_factory=list)
+    alias_config: dict = field(default_factory=dict)
 
 
 class FakeDaemon:
@@ -182,7 +183,7 @@ class FakeDaemon:
                 "includes": [],
                 "excludes": [],
                 "modules": [],
-                "alias_config": {},
+                "alias_config": setup.alias_config,
                 "startupcode": "",
                 "sysconfig": {},
                 "extended": {},

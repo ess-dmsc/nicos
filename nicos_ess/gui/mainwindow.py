@@ -63,7 +63,6 @@ from nicos.utils import (
 )
 from nicos_ess.gui.dialogs.auth import ConnectionDialog
 from nicos_ess.gui.dialogs.settings import SettingsDialog
-from nicos_ess.gui.panels.setups import SetupsPanel
 from nicos_ess.gui.utils import get_icon
 
 try:
@@ -177,7 +176,6 @@ class MainWindow(DlgUtils, QMainWindow):
         self.client.cache.connect(self.on_client_cache)
         self.client.showhelp.connect(self.on_client_showhelp)
         self.client.clientexec.connect(self.on_client_clientexec)
-        self.client.plugplay.connect(self.on_client_plugplay)
         self.client.watchdog.connect(self.on_client_watchdog)
         self.client.prompt.connect(self.on_client_prompt)
 
@@ -621,16 +619,6 @@ class MainWindow(DlgUtils, QMainWindow):
                 "Error during clientexec:\n%s",
                 "\n".join(traceback.format_tb(sys.exc_info()[2])),
             )
-
-    def on_client_plugplay(self, data):
-        hide = data[0] != "added"
-        name = data[1]
-
-        for panel in self.panels:
-            if isinstance(panel, SetupsPanel):
-                setups_panel = panel
-                setups_panel.toggle_pnp_setup_visibility(name, hide)
-                break
 
     def on_client_watchdog(self, data):
         if self.watchdogWindow is None:

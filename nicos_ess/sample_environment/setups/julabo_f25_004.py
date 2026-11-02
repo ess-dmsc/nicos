@@ -1,0 +1,165 @@
+description = "Julabo F25HL"
+
+group = "plugplay"
+
+includes = ["alias_T"]
+
+pv_root = "SE-SEE:SE-JULABO-004:"
+
+extended = dict(
+    presence_signal=f"pva://{pv_root}Temperature-R",
+)
+
+devices = dict(
+    julabo_004_T=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The temperature",
+        readpv=f"{pv_root}Temperature-R",
+        writepv=f"{pv_root}TemperatureSP1-S",
+        targetpv=f"{pv_root}TemperatureSP1-R",
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_mode=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The status",
+        readpv=f"{pv_root}Mode-R",
+        writepv=f"{pv_root}Mode-S",
+    ),
+    julabo_004_external_T=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The external sensor temperature",
+        readpv=f"{pv_root}TempExtSensor-R",
+    ),
+    julabo_004_external_enabled=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Use external or internal sensor",
+        readpv=f"{pv_root}ExternalSensor-R",
+        writepv=f"{pv_root}ExternalSensor-S",
+    ),
+    julabo_004_internal_P=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The internal P value",
+        readpv=f"{pv_root}IntP-R",
+        writepv=f"{pv_root}IntP-S",
+        visibility=(),
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_internal_I=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The internal I value",
+        readpv=f"{pv_root}IntI-R",
+        writepv=f"{pv_root}IntI-S",
+        visibility=(),
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_internal_D=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The internal D value",
+        readpv=f"{pv_root}IntD-S",
+        writepv=f"{pv_root}IntD-S",
+        visibility=(),
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_safety=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The safety sensor temperature",
+        readpv=f"{pv_root}TempSafetySensor-R",
+        visibility=(),
+    ),
+    julabo_004_max_cooling=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The maximum cooling power %",
+        readpv=f"{pv_root}MaxCoolPower-R",
+        writepv=f"{pv_root}MaxCoolPower-S",
+        visibility=(),
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_max_heating=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The maximum heating power %",
+        readpv=f"{pv_root}MaxHeatPower-R",
+        writepv=f"{pv_root}MaxHeatPower-S",
+        visibility=(),
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_heating_power=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The heating power being used %",
+        readpv=f"{pv_root}Power-R",
+        visibility=(),
+    ),
+    julabo_004_internal_slope=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The internal slope",
+        readpv=f"{pv_root}InternalSlope-R",
+        visibility=(),
+    ),
+    julabo_004_external_P=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The internal P value",
+        readpv=f"{pv_root}ExtP-R",
+        writepv=f"{pv_root}ExtP-S",
+        visibility=(),
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_external_I=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The internal I value",
+        readpv=f"{pv_root}ExtI-R",
+        writepv=f"{pv_root}ExtI-S",
+        visibility=(),
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_external_D=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The internal D value",
+        readpv=f"{pv_root}ExtD-R",
+        writepv=f"{pv_root}ExtD-S",
+        visibility=(),
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_high_limit=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The high temp warning limit",
+        readpv=f"{pv_root}TempHighLimit-R",
+        writepv=f"{pv_root}TempHighLimit-S",
+        visibility=(),
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_low_limit=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The low temp warning limit",
+        readpv=f"{pv_root}TempLowLimit-R",
+        writepv=f"{pv_root}TempLowLimit-S",
+        visibility=(),
+        abslimits=(-1e308, 1e308),
+    ),
+    julabo_004_status=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The status",
+        readpv=f"{pv_root}StatusNumber-R",
+        visibility=(),
+    ),
+    julabo_004_version=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The software version",
+        readpv=f"{pv_root}Version-R",
+        visibility=(),
+    ),
+    julabo_004_online=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="Whether it is responsive",
+        readpv=f"{pv_root}Online-R",
+        visibility=(),
+    ),
+    julabo_004_barcode=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The unique model number",
+        readpv=f"{pv_root}Barcode-R",
+        visibility=(),
+    ),
+)
+
+alias_config = {
+    "T": {"julabo_004_T": 100},
+}
