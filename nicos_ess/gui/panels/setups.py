@@ -8,6 +8,7 @@ from nicos.guisupport.qt import (
     Qt,
     pyqtSlot,
 )
+from nicos.protocols.cache import cache_load
 from nicos.utils import findResource
 
 
@@ -28,7 +29,12 @@ def clearCheckedComponents(listwidget):
 
 
 class SetupsPanel(Panel):
-    """Provides a dialog to select and load the basic and optional setups."""
+    """Provides a dialog to select and load the basic and optional setups.
+
+    Setups in group ``plugplay`` are only listed while they are loaded or
+    while the presence device (option ``presence_device``, default
+    ``se_presence``) reports their equipment as present.
+    """
 
     panelName = "Setup selection"
 
@@ -45,6 +51,8 @@ class SetupsPanel(Panel):
         self._loaded_basic = None
         self._prev_aliases = {}
         self._prev_alias_config = None
+        self._presence_device = options.get("presence_device", "se_presence").lower()
+        self._present = set()
 
         if client.isconnected:
             self.on_client_connected()
@@ -53,6 +61,7 @@ class SetupsPanel(Panel):
         client.connected.connect(self.on_client_connected)
         client.setup.connect(self.on_client_connected)
         client.disconnected.connect(self.on_client_disconnected)
+        client.cache.connect(self.on_client_cache)
 
     def on_client_connected(self):
         # fill setups
@@ -62,6 +71,9 @@ class SetupsPanel(Panel):
             "{d.name: d.alias for d in session.devices.values() "
             'if "alias" in d.parameters}',
             {},
+        )
+        self._present = set(
+            self.client.getDeviceParam(self._presence_device, "value") or ()
         )
         self._loaded = set()
         self._loaded_basic = None
@@ -107,9 +119,8 @@ class SetupsPanel(Panel):
                         if name in all_loaded
                         else Qt.CheckState.Unchecked
                     )
-                    if name not in all_loaded:
-                        item.setHidden(True)
 
+        self._update_pnp_visibility()
         self.basicSetup.setCurrentItem(keep)
         self._prev_alias_config = self._alias_config
         self.setViewOnly(self.client.viewonly)
@@ -145,6 +156,14 @@ class SetupsPanel(Panel):
         self.showSetupInfo(item.text())
         self.updateAliasList()
 
+    def on_pnpSetups_currentItemChanged(self, item, old):
+        if item:
+            self.showSetupInfo(item.text())
+
+    def on_pnpSetups_itemClicked(self, item):
+        self.showSetupInfo(item.text())
+        self.updateAliasList()
+
     @pyqtSlot()
     def on_btn_reload_clicked(self):
         if self.client.run("NewSetup()", noqueue=True) is None:
@@ -172,11 +191,21 @@ class SetupsPanel(Panel):
             f"<b>{setup}</b><br/>{info['description']}<br/><br/>Devices: {devs}<br/>"
         )
 
-    def toggle_pnp_setup_visibility(self, name, hide):
+    def on_client_cache(self, data):
+        _, key, _, value = data
+        if key != f"{self._presence_device}/value":
+            return
+        self._present = set(cache_load(value)) if value else set()
+        self._update_pnp_visibility()
+
+    def _update_pnp_visibility(self):
         for i in range(self.pnpSetups.count()):
             item = self.pnpSetups.item(i)
-            if item.text() == name:
-                item.setHidden(hide)
+            item.setHidden(
+                item.text() not in self._loaded
+                and item.text() not in self._present
+                and item.checkState() != Qt.CheckState.Checked
+            )
 
     def _calculateSetups(self):
         cur = self.basicSetup.currentItem()

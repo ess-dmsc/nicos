@@ -7,3 +7,5 @@ KAFKA_BROKERS = [
     "10.100.5.17:8093",
     "10.100.6.19:8093",
 ]
+
+SAMPLE_ENV_TOPIC = "tbl_sample_env"

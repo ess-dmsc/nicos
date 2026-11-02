@@ -3,6 +3,8 @@ description = "system setup"
 
 group = "lowlevel"
 
+includes = ["sample_environment_presence"]
+
 sysconfig = dict(
     cache="localhost",
     instrument="BIFROST",
@@ -31,11 +33,6 @@ devices = dict(
         dataroot="/opt/nicos-data",
         sample="Sample",
         cache_filepath="/opt/nicos-data/cached_proposals.json",
-    ),
-    pnp_listener=device(
-        "nicos_ess.devices.pnp_listener.UDPHeartbeatsManager",
-        description="Listens for PnP heartbeats",
-        port=24601,
     ),
     conssink=device("nicos_ess.devices.datasinks.console_scan_sink.ConsoleScanSink"),
     daemonsink=device("nicos.devices.datasinks.DaemonSink"),
