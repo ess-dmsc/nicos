@@ -522,7 +522,7 @@ class SeleneRobot(Moveable):
             smessage += "        "
 
         if self.driver in [1, 2]:
-            smessage += f"D{self.driver}: {self._adjust():.1f°}"
+            smessage += f"D{self.driver}: {self._adjust():.1f}°"
         if len(motor_messages) > 0:
             smessage += " - " + ";".join(motor_messages)
         return (sout, smessage)
@@ -551,7 +551,7 @@ class SeleneRobot(Moveable):
                     f"Moving z to position-backlash, {(z - self.cart_backlash):.2f}"
                 )
                 self._attached_move_z.maw(z - self.cart_backlash)
-                self.log.debug(f"Moving z to requested position, {z:%.2f}")
+                self.log.debug(f"Moving z to requested position, {z:.2f}")
                 self._attached_move_z.maw(z)
             except Exception as e:
                 if i == retry:
@@ -627,10 +627,7 @@ class SeleneRobot(Moveable):
         x_start = self._attached_move_x()
         z_start = self._attached_move_z()
 
-        self.log.info(
-            f"Searching for screw near {x_start:.2f}, {z_start:.2f}"
-            % (x_start, z_start)
-        )
+        self.log.info(f"Searching for screw near {x_start:.2f}, {z_start:.2f}")
 
         found_screw = False
 
@@ -777,13 +774,12 @@ class SeleneRobot(Moveable):
             self.log.warning("Screw driver not inserted correctly, aborting")
             return False
         self.log.debug(
-            "Adjusting to position-play/2-backlash, %.2f"
-            % (angle - self.adjuster_play / 2.0 - self.adjuster_backlash)
+            f"Adjusting to position-play/2-backlash, {(angle - self.adjuster_play / 2.0 - self.adjuster_backlash):.2f}"
         )
         self._move_angle(angle - self.adjuster_play / 2.0 - self.adjuster_backlash)
         # always overshoot with the expected play
         self.log.debug(
-            "Adjusting to position+play/2, %.2f" % (angle + self.adjuster_play / 2.0)
+            f"Adjusting to position+play/2, {(angle + self.adjuster_play / 2.0):.2f}"
         )
         self._move_angle(angle + self.adjuster_play / 2.0)
         # move back to desired angle for extractoin
@@ -868,7 +864,7 @@ class SeleneRobot(Moveable):
         except Exception as e:
             self.log.info(f"Moving to negative: {e}")
         lpos = self._adjust()
-        self.log.info(f"   screw stopped moving at {lpos:.1f°}")
+        self.log.info(f"   screw stopped moving at {lpos:.1f}°")
         lpos_partial = (lpos + 180) % 360 - 180  # partial rotation of this position
         dest = self.rotations[self.current_position[0]][self.current_position[1]]
         if dest < (-nrot0 * 360):
