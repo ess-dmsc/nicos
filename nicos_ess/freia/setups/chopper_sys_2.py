@@ -275,7 +275,7 @@ devices = dict(
         readpv=f"{pv_root_3}Spd_R",
         writepv=f"{pv_root_3}Spd_S",
         precision=0.1,
-        mapping={"14": 14, "7": 7, "4⅔": 4.666666667, "0": 0},
+        mapping={"0": 0, "56": 56},
         in_phase="foc1_phased",
         state="foc1_status",
     ),
