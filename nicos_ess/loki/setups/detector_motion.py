@@ -1,6 +1,6 @@
 description = "Detector carriage motor"
 
-includes = ["power_supply_hv"]
+includes = ["detector_power_supply_hv"]
 
 pv_root = "LOKI-DtCar1:"
 

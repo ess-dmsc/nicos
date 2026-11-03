@@ -17,7 +17,6 @@ QMenuBar {
 MainWindow > QSplitter::hover {
     background: transparent;
 }
-
 /* ----- QMessageBox ------------------------------------------------ */
 
 QMessageBox QLabel {
@@ -36,7 +35,6 @@ QMenuBar::item:pressed {
     background: white ;
     color:black;
 }
-
 /* -------------------- QToolBar -------------------- */
 
 QToolBar {
@@ -239,6 +237,10 @@ Panel QToolBar > QComboBox::drop-down {
 Panel QToolBar > QMenu,
 Panel QToolBar > QCheckBox {
     border-radius: 5px;
+}
+
+Dashboard > QFrame {
+    color: white;
 }
 
 /* QTabBar::tab  ------------------------------------------------
@@ -484,7 +486,6 @@ QPushButton:checked:pressed {
     color: #0094ca;
     background-color: white;
 }
-
 /* -------------------- QDialog ------------------------ */
 /* At the end, so that it overrides QTab*/
 
@@ -582,3 +583,34 @@ QCheckBox:disabled {
 
 /* Remove icons from built-in Qt dialogs. */
 QDialogButtonBox { dialogbuttonbox-buttons-have-icons: 0; }
+
+/*-----------------Class Properties-------------------------*/
+
+.loginButton{
+    background-color: #1f5366;
+    border-color: white;
+    color: white;
+}
+
+.loginButton:!checked:hover {
+    border-color: #0094ca;
+    background-color: #0094ca;
+    color: white;
+}
+
+.loginButton:focus {
+    background-color: #1f5366;
+    border-color: white;
+    color: white;
+}
+
+.stopButton:Enabled{
+    color:white;
+    font-weight:bold;
+    background-color: red;
+    border-color:red;
+}
+
+.stopButton:Disabled{
+    background-color:white;
+}
