@@ -6,7 +6,7 @@ sysconfig = dict(
     cache="localhost",
     instrument="ESTIA",
     experiment="Exp",
-    datasinks=["conssink", "daemonsink", "liveview"],
+    datasinks=["conssink", "daemonsink", "liveview", "scanlog"],
 )
 
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
@@ -37,6 +37,11 @@ devices = dict(
     ),
     daemonsink=device(
         "nicos.devices.datasinks.DaemonSink",
+    ),
+    scanlog=device(
+        "nicos_ess.devices.datasinks.scan_log.ScanLogSink",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        topic="estia_nicos_devices",
     ),
     Space=device(
         "nicos.devices.generic.FreeSpace",

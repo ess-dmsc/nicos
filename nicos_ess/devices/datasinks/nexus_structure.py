@@ -15,6 +15,7 @@ from nicos.core import (
     relative_path,
 )
 from nicos.core.device import DeviceAlias
+from nicos_ess.devices.datasinks.scan_log import ScanLogSink
 from nicos_ess.devices.mixins import HasNexusConfig
 from nicos_ess.nexus.converter import NexusTemplateConverter
 from nicos_ess.utilities.json_utils import (
@@ -256,6 +257,11 @@ class NexusStructureJsonFile(NexusStructureProvider):
             by_path["/entry/instrument"]["component_tracker"] = generate_group_json(
                 "component_tracker", "NXcollection", groups
             )
+        for sink in session.datasinks:
+            if isinstance(sink, ScanLogSink):
+                by_path["/entry"]["scan_log"] = generate_group_json(
+                    "scan_log", "NXcollection", sink.nexus_logs()
+                )
 
         for path, groups in sorted(by_path.items()):
             for name, node in groups.items():

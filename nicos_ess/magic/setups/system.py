@@ -7,7 +7,7 @@ sysconfig = dict(
     cache="localhost",
     instrument="magic",
     experiment="Exp",
-    datasinks=["conssink", "liveview", "daemonsink"],
+    datasinks=["conssink", "liveview", "daemonsink", "scanlog"],
 )
 
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
@@ -37,6 +37,11 @@ devices = dict(
     ),
     liveview=device(
         "nicos.devices.datasinks.LiveViewSink",
+    ),
+    scanlog=device(
+        "nicos_ess.devices.datasinks.scan_log.ScanLogSink",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        topic="magic_nicos_devices",
     ),
     KafkaForwarder=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
