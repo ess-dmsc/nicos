@@ -536,6 +536,8 @@ class LiveDataCollector(Detector):
         self._status_consumer = None
         self._status_thread = None
         self._producer = None
+        # Written by the status thread, read by channel status calls
+        self._jobs_lock = threading.Lock()
         self._jobs: dict[str, _JobHealth] = {}
         self._seen_sources = set()
         self._heartbeat_started = time.monotonic()
@@ -623,14 +625,15 @@ class LiveDataCollector(Detector):
         if self._status_consumer is None or not workflow_id:
             return (status.OK, "")
         now = time.monotonic()
-        awaiting_heartbeat = (workflow_id, source_name) not in self._seen_sources
-        live = [
-            job
-            for job in self._jobs.values()
-            if job.workflow_id == workflow_id
-            and job.source_name == source_name
-            and job.expected_at + self.status_timeout > now
-        ]
+        with self._jobs_lock:
+            awaiting_heartbeat = (workflow_id, source_name) not in self._seen_sources
+            live = [
+                job
+                for job in self._jobs.values()
+                if job.workflow_id == workflow_id
+                and job.source_name == source_name
+                and job.expected_at + self.status_timeout > now
+            ]
         if not live:
             if (
                 awaiting_heartbeat
@@ -669,11 +672,12 @@ class LiveDataCollector(Detector):
                     self.log.warning(f"Could not decode heartbeat: {exc}")
             # Runs on every pass, so a workflow that stops heartbeating expires.
             now = time.monotonic()
-            self._jobs = {
-                key: job
-                for key, job in self._jobs.items()
-                if job.expected_at + self.status_timeout > now
-            }
+            with self._jobs_lock:
+                self._jobs = {
+                    key: job
+                    for key, job in self._jobs.items()
+                    if job.expected_at + self.status_timeout > now
+                }
             self._publish_health_changes()
 
     def _publish_health_changes(self):
@@ -704,22 +708,23 @@ class LiveDataCollector(Detector):
         job = message["job_id"]
         key = f"{job['source_name']}/{job['job_number']}"
         state = message["state"]
-        self._seen_sources.add((message["workflow_id"], job["source_name"]))
-        if state == "stopped":
-            self._jobs.pop(key, None)
-            return
-        code = int(payload["status"])
-        if code == status.UNKNOWN:
-            code = status.ERROR
-        self._jobs[key] = _JobHealth(
-            workflow_id=message["workflow_id"],
-            source_name=job["source_name"],
-            code=code,
-            text=""
-            if code == status.OK
-            else (message.get("error") or message.get("warning") or f"Job {state}"),
-            expected_at=time.monotonic() + max(1, int(st.update_interval // 1000)),
-        )
+        with self._jobs_lock:
+            self._seen_sources.add((message["workflow_id"], job["source_name"]))
+            if state == "stopped":
+                self._jobs.pop(key, None)
+                return
+            code = int(payload["status"])
+            if code == status.UNKNOWN:
+                code = status.ERROR
+            self._jobs[key] = _JobHealth(
+                workflow_id=message["workflow_id"],
+                source_name=job["source_name"],
+                code=code,
+                text=""
+                if code == status.OK
+                else (message.get("error") or message.get("warning") or f"Job {state}"),
+                expected_at=time.monotonic() + max(1, int(st.update_interval // 1000)),
+            )
 
     def _dispatch_to_channels(self, timestamp_ns: int, da):
         if not da.source_name:
