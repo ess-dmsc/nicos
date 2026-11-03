@@ -7,7 +7,7 @@ style:
 - harness-based device tests
 - GUI harness tests
 - full fixture/setup tests
-- smoke tests (Not yet implemented)
+- smoke tests (`integration_test/smoke`)
 - integration tests (Not yet implemented)
 
 The goal is to keep tests fast and reliable while still covering real NICOS
@@ -521,16 +521,16 @@ interfaces change.
 
 From the workspace, prefer uv commands that install all workspace packages.
 GUI tests also need the root `gui` extra, which provides the Qt binding used by
-`nicos.guisupport.qt`.
+`nicos.guisupport.qt`, and the `gui-test` group, which provides pytest-qt.
 
 ```bash
-uv run --frozen --all-packages --extra gui pytest -q test/nicos_ess
+uv run --frozen --all-packages --extra gui --group gui-test pytest -q test/nicos_ess
 ```
 
 Targeted runs:
 
 ```bash
-uv run --frozen --all-packages --extra gui pytest -q test/nicos_ess/gui
+uv run --frozen --all-packages --extra gui --group gui-test pytest -q test/nicos_ess/gui
 uv run --frozen --all-packages pytest -q test/nicos_ess/test_devices/epics_devices/
 uv run --frozen --all-packages pytest -q test/nicos_ess/test_devices/test_forwarder.py
 ```
