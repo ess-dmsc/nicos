@@ -147,14 +147,14 @@ devices = dict(
         writepv=f"{pv_root}LoadGain-SP",
         targetpv=f"{pv_root}LoadGain-SP",
     ),
-    rig_PID_compression_setpoint=device(
+    rig_PID_load_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Stroke low limit",
         readpv=f"{pv_root}PidSetpoint1-RB",
         writepv=f"{pv_root}PidSetpoint1-SP",
         targetpv=f"{pv_root}PidSetpoint1-SP",
     ),
-    rig_PID_tension_setpoint=device(
+    rig_PID_stroke_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Stroke low limit",
         readpv=f"{pv_root}PidSetpoint2-RB",
@@ -199,6 +199,13 @@ devices = dict(
         description="Move PID parameters to selected values",
         readpv=f"{pv_root}PidParam-Cmd",
         writepv=f"{pv_root}PidParam-Cmd",
+        mapping={"Set values": 1},
+    ),
+    rig_PID_load_stroke_control=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="Move PID stroke and load parameters to selected values",
+        readpv=f"{pv_root}PidSetpoint-Cmd",
+        writepv=f"{pv_root}PidSetpoint-Cmd",
         mapping={"Set values": 1},
     ),
     rig_profile_mode=device(
