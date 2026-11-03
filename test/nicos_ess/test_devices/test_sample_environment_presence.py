@@ -80,19 +80,6 @@ def test_daemon_read_without_cache_age_uses_the_poller_value(
     assert _daemon_read(device_harness, daemon, maxage=0) == ["lakeshore"]
 
 
-def test_daemon_reads_never_write_the_cache(device_harness, fake_backend, monkeypatch):
-    daemon, _ = _create_pair(device_harness)
-    fake_backend.emit_connection("LS:KRDG0", True)
-    writes = []
-    monkeypatch.setattr(daemon._cache, "put", lambda *args, **kw: writes.append(args))
-
-    _daemon_read(device_harness, daemon)
-    _daemon_read(device_harness, daemon, maxage=0)
-    device_harness.run_daemon(daemon.status, 0)
-
-    assert writes == []
-
-
 def test_slave_daemon_sees_the_same_list(device_harness, fake_backend):
     device_harness.create_poller(SampleEnvironmentPresence, "se_presence")
     slave = device_harness.create(

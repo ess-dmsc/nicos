@@ -4,7 +4,6 @@ import threading
 
 from nicos import session
 from nicos.core import POLLER, SIMULATION, Override, Readable, listof, status
-from nicos.utils import currenttime
 from nicos_ess.devices.epics.pva.epics_common import create_wrapper
 
 PVA_SCHEME = "pva://"
@@ -67,14 +66,10 @@ class SampleEnvironmentPresence(Readable):
             self._epics.close_subscription(monitor)
         self._monitors = []
 
-    def _getFromCache(self, name, func, maxage=None):
-        if session.sessiontype == POLLER:
-            return Readable._getFromCache(self, name, func, maxage)
-        # like CacheReader: other sessions never write the poller's value back
-        default = [] if name == "value" else (status.UNKNOWN, "no poller value")
-        return self._cache.get(self, name, default) if self._cache else default
-
     def doRead(self, maxage=0):
+        if self._cache and session.sessiontype != POLLER:
+            # only the poller monitors the signals, other sessions use its value
+            return self._cache.get(self, "value", [])
         with self._lock:
             return sorted(self._present)
 
@@ -89,4 +84,4 @@ class SampleEnvironmentPresence(Readable):
                 self._present.discard(setup)
             present = sorted(self._present)
         if self._cache:
-            self._cache.put(self, "value", present, currenttime(), self.maxage)
+            self._cache.put(self, "value", present)
