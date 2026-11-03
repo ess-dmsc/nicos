@@ -33,6 +33,7 @@ def test_start_clears_previous_charge(counter, fake_backend):
     fake_backend.emit_update(READ_PV, value=7.5)
     counter.finish()
     assert counter.read() == [7.5]
+    counter.prepare()
     counter.start()
     assert counter.read() == [0.0]
 
@@ -41,6 +42,7 @@ def test_old_charge_before_reset_completes_is_not_counted(counter, fake_backend)
     # ioc has some old value at t=0, monitor callback is in flight
     fake_backend.values[READ_PV] = 100.0
     # we start the counter, which will reset the charge counter in the IOC
+    counter.prepare()
     counter.start()
     # the monitor callback is called with the old value, but we should ignore it
     fake_backend.emit_update(READ_PV)
