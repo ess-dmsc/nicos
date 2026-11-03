@@ -59,11 +59,13 @@ services:
       - NICOS_SMOKE_KAFKA_BOOTSTRAP=kafka:9092
       - NICOS_SMOKE_KAFKA_SASL_BOOTSTRAP=kafka:9094
       - NICOS_SMOKE_ARTIFACT_ROOT=/workspace/smoke-artifacts
+      - COVERAGE_FILE=/workspace/smoke-artifacts/coverage/smoke.coverage
       - PYTHONUNBUFFERED=1
     command:
       - sh
       - -lc
       - >
-        mkdir -p /workspace/smoke-artifacts &&
+        mkdir -p /workspace/smoke-artifacts/coverage &&
         uv run pytest -q integration_test/smoke/test_smoke.py
+        --cov --cov-report=
         --junitxml=/workspace/smoke-artifacts/smoke-junit.xml
