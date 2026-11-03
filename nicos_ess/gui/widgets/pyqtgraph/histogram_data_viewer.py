@@ -21,11 +21,6 @@ pg.setConfigOption("foreground", "k")
 pg.setConfigOptions(antialias=True)
 
 
-class TimeAxisItem(pg.AxisItem):
-    def tickStrings(self, values, scale, spacing):
-        return [str(datetime.fromtimestamp(value)) for value in values]
-
-
 class HistogramDataViewer(QWidget):
     """
     A widget to display histogram data.
@@ -171,7 +166,7 @@ class TrendViewer(QWidget):
         self.left_view = pg.ViewBox()
         self.plot_widget = pg.PlotWidget(
             viewBox=self.left_view,
-            axisItems={"bottom": TimeAxisItem(orientation="bottom", units="")},
+            axisItems={"bottom": pg.DateAxisItem(orientation="bottom")},
         )
         self.plot_widget.showGrid(x=True, y=True)
         legend = self.plot_widget.addLegend(
@@ -193,7 +188,7 @@ class TrendViewer(QWidget):
 
         self.plot_widget.scene().addItem(self.right_view)
         self.plot_widget.getAxis("right").linkToView(self.right_view)
-        self.right_view.setYRange(0, 100)
+        self.right_view.enableAutoRange(axis=pg.ViewBox.YAxis)
 
         self.mean_curve = self.plot_widget.plot(pen=mkPen("b", width=1), name="Mean")
         self.std_curve = pg.PlotCurveItem(
@@ -218,10 +213,6 @@ class TrendViewer(QWidget):
         self.time_window_spinbox.valueChanged.connect(self.update_plot)
 
     def setup_connections(self):
-        self.plot_widget.getViewBox().sigRangeChanged.connect(
-            self.on_view_range_changed
-        )
-        self.right_view.sigRangeChanged.connect(self.on_view_range_changed)
         self.plot_widget.getViewBox().sigResized.connect(self.update_views)
         self.move_proxy = pg.SignalProxy(
             self.plot_widget.scene().sigMouseMoved, rateLimit=60, slot=self.mouseMoved
@@ -300,48 +291,6 @@ class TrendViewer(QWidget):
         self.fwhm_curve.setData(timestamps, fwhm_data)
 
         self.plot_widget.setXRange(cutoff_time, current_time)
-
-        self.align_right_axis()
-
-    def on_view_range_changed(self):
-        """Slot to handle the view range changing"""
-        self.align_right_axis()
-
-    def align_right_axis(self):
-        """Align the ticks of the right y-axis with those of the left y-axis"""
-        if self.plot_widget.geometry().height() == 0:
-            return
-
-        left_axis = self.plot_widget.getAxis("left")
-
-        left_y_range = self.plot_widget.getViewBox().viewRange()[1]
-        left_y_min, left_y_max = left_y_range
-
-        axis_size = left_axis.geometry().height()
-
-        left_ticks = left_axis.tickValues(left_y_min, left_y_max, axis_size)
-
-        major_ticks = []
-        for ticks in left_ticks:
-            major_ticks.extend(ticks[1])
-        left_tick_positions = [tick for tick in major_ticks]
-
-        right_y_range = self.right_view.viewRange()[1]
-        right_y_min, right_y_max = right_y_range
-
-        right_tick_positions = []
-        for y_left in left_tick_positions:
-            y_ratio = (y_left - left_y_min) / (left_y_max - left_y_min)
-            y_right = right_y_min + y_ratio * (right_y_max - right_y_min)
-            right_tick_positions.append(y_right)
-
-        right_tick_labels = [f"{y:.2f}" for y in right_tick_positions]
-
-        right_axis = self.plot_widget.getAxis("right")
-        right_ticks = [
-            (pos, label) for pos, label in zip(right_tick_positions, right_tick_labels)
-        ]
-        right_axis.setTicks([right_ticks])
 
     def receive_data(self, timestamp, mean, std, fwhm):
         self.timestamps = timestamp

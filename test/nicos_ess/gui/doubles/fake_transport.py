@@ -194,6 +194,10 @@ class FakeDaemon:
             "{d.name: d.alias for d in session.devices.values() "
             'if "alias" in d.parameters}'
         ] = {}
+        self.evals[
+            "{name: dev.get_chopper_gui_info() for name, dev in session.devices.items()"
+            " if hasattr(dev, 'get_chopper_gui_info')}"
+        ] = {}
 
     def attach(self, transport):
         self._transports.append(transport)

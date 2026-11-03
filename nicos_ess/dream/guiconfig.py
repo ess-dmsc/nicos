@@ -1,6 +1,7 @@
 """NICOS GUI default configuration."""
 
-main_window = docked(
+main_window = vbox(
+    panel("nicos_ess.gui.panels.dashboard.Dashboard"),
     tabbed(
         ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
         ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
@@ -31,11 +32,7 @@ main_window = docked(
                         ),
                         (
                             "Choppers",
-                            panel(
-                                "nicos_ess.gui.panels.chopper.ChopperPanel",
-                                guide_pos="DOWN",
-                                slit_direction="CCW",
-                            ),
+                            panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
                         ),
                         (
                             "Script Status",
@@ -54,7 +51,7 @@ main_window = docked(
         ),
         (
             "Scripting",
-            panel("nicos.clients.flowui.panels.editor.EditorPanel", tools=None),
+            panel("nicos_ess.gui.panels.remote_editor.EditorPanel", tools=None),
         ),
         (
             "History",

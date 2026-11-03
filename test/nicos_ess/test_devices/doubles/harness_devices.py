@@ -39,6 +39,13 @@ class HarnessReadable(Readable):
             mandatory=False,
             userparam=False,
         ),
+        "busy": Param(
+            "Report BUSY instead of OK",
+            type=bool,
+            default=False,
+            settable=True,
+            userparam=False,
+        ),
     }
 
     def doRead(self, maxage=0):
@@ -47,7 +54,7 @@ class HarnessReadable(Readable):
 
     def doStatus(self, maxage=0):
         del maxage
-        return status.OK, ""
+        return (status.BUSY, "busy") if self.busy else (status.OK, "")
 
 
 class HarnessMoveable(Moveable):

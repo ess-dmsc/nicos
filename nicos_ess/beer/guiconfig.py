@@ -1,4 +1,5 @@
-main_window = docked(
+main_window = vbox(
+    panel("nicos_ess.gui.panels.dashboard.Dashboard"),
     tabbed(
         (
             "Experiment",
@@ -47,7 +48,7 @@ main_window = docked(
         ),
         (
             "Scripting",
-            panel("nicos_ess.gui.panels.editor.EditorPanel", tools=None),
+            panel("nicos_ess.gui.panels.remote_editor.EditorPanel", tools=None),
         ),
         (
             "History",

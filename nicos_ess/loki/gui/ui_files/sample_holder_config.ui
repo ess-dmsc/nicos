@@ -890,7 +890,7 @@
      <item>
       <widget class="QLabel" name="labelWarning">
        <property name="text">
-        <string>Cell-holder device not loaded</string>
+        <string>Sample changer setup not loaded</string>
        </property>
       </widget>
      </item>

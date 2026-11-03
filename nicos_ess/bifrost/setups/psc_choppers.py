@@ -37,7 +37,7 @@ devices = dict(
             "112": 112,
             "126": 126,
         },
-        in_phase="psc1_chopper_phase",
+        in_phase="psc1_chopper_phased",
         state="psc1_chopper_status",
     ),
     psc1_chopper_delay=device(
@@ -46,6 +46,16 @@ devices = dict(
         readpv=f"{pv_root_1}ChopDly-S",
         writepv=f"{pv_root_1}ChopDly-S",
         abslimits=(0.0, 0.0),
+    ),
+    psc1_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{pv_root_1}TotDly",
+        visibility=("metadata", "namespace"),
     ),
     psc1_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
@@ -71,17 +81,12 @@ devices = dict(
         readpv=f"{pv_root_1}InPhaseTS-R",
     ),
     psc1_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{pv_root_1}Pos_R",
         writepv=f"{pv_root_1}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     psc1_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -115,10 +120,17 @@ devices = dict(
         state="psc1_chopper_status",
         command="psc1_chopper_control",
         speed="psc1_chopper_speed",
+        total_delay="psc1_chopper_total_delay",
+        park_angle="psc1_chopper_park_angle",
+        delay_errors="psc1_chopper_delay_errors",
         chic_conn="psc1_chopper_chic",
         alarms="psc1_chopper_alarms",
-        slit_edges=[[0, 170.0]],
-        resolver_offset=-110.0,
+        slit_edges=[[0.0, 170.0]],
+        beam_position=298.3,
+        resolver_sign=-1,
+        tdc_resolver_position=341.7,
+        distance=6.3247,
+        legacy_spd_sign=True,
     ),
     psc2_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -162,6 +174,16 @@ devices = dict(
         writepv=f"{pv_root_2}ChopDly-S",
         abslimits=(0.0, 0.0),
     ),
+    psc2_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description=(
+            "The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). "
+            "The full delay that is applied on proton on target event for "
+            "the driving signal of the chopper."
+        ),
+        readpv=f"{pv_root_2}TotDly",
+        visibility=("metadata", "namespace"),
+    ),
     psc2_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -186,17 +208,12 @@ devices = dict(
         readpv=f"{pv_root_2}InPhaseTS-R",
     ),
     psc2_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="The chopper's park angle.",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Park angle: rotor position (Pos_R), park setpoint (Park_S).",
         readpv=f"{pv_root_2}Pos_R",
         writepv=f"{pv_root_2}Park_S",
+        precision=0.5,
         visibility=(),
-        mapping={
-            "park pos 0": 0,
-            "park pos 1": 45,
-            "park pos 2": 90,
-            "park pos 3": 180,
-        },
     ),
     psc2_chopper_park_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -229,9 +246,16 @@ devices = dict(
         state="psc2_chopper_status",
         command="psc2_chopper_control",
         speed="psc2_chopper_speed",
+        total_delay="psc2_chopper_total_delay",
+        park_angle="psc2_chopper_park_angle",
+        delay_errors="psc2_chopper_delay_errors",
         chic_conn="psc2_chopper_chic",
         alarms="psc2_chopper_alarms",
         slit_edges=[[0.0, 170.0]],
-        resolver_offset=-110.0,
+        beam_position=232.5,
+        resolver_sign=1,
+        tdc_resolver_position=342.5,
+        distance=6.3737,
+        legacy_spd_sign=True,
     ),
 )
