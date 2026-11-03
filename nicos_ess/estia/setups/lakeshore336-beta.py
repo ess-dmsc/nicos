@@ -1,4 +1,7 @@
-description = "Sample Environment Flow-Cryo. Each Device controls one Input"
+description = (
+    "Sample Environment Flow-Cryo. Each Device controls one Input"
+    "NOTE: NICOS device still in testing"
+)
 
 pv_root = "ESTIA-SES:Cryo-TC-001:"
 devices = dict(
