@@ -56,6 +56,11 @@ class SampleDialog(QDialog):
                     [QStandardItem(str(key)), QStandardItem(str(value))]
                 )
 
+        table = self.metadataTable
+        empty = self.metadata_model.rowCount() == 0
+        table.setMinimumHeight(2 * table.minimumSizeHint().height() if empty else 0)
+        table.resizeColumnToContents(0)
+
     @pyqtSlot()
     def on_set_btn_clicked(self):
         sample_number = self.samples_CB.currentData()
@@ -63,7 +68,14 @@ class SampleDialog(QDialog):
             self.devices_panel.exec_command(f"{self.devname}.select({sample_number!r})")
 
     @pyqtSlot()
-    def on_btn_close_clicked(self):
+    def on_clear_sample_btn_clicked(self):
+        dev = self.devname
+        self.devices_panel.exec_command(
+            f"{dev}.samplenumber = None; {dev}.samplename = ''; {dev}.poll()"
+        )
+
+    @pyqtSlot()
+    def on_close_btn_clicked(self):
         self.close()
 
     def on_cache_params(self, subkey, value):

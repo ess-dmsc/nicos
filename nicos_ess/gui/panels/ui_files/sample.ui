@@ -13,55 +13,44 @@
   <property name="windowTitle">
    <string>Sample</string>
   </property>
-  <layout class="QVBoxLayout" name="main_layout" stretch="0,100,1,0">
-   <property name="leftMargin">
-    <number>8</number>
-   </property>
-   <property name="topMargin">
-    <number>8</number>
-   </property>
-   <property name="rightMargin">
-    <number>8</number>
-   </property>
-   <property name="bottomMargin">
-    <number>12</number>
-   </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <property name="bottomMargin">
-      <number>10</number>
+    <widget class="QLabel" name="title">
+     <property name="font">
+      <font>
+       <bold>true</bold>
+      </font>
      </property>
-     <item>
-      <widget class="QLabel" name="title">
-       <property name="font">
-        <font>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>Current sample:</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="sampleName">
-       <property name="styleSheet">
-        <string notr="true">font: bold 16pt;</string>
-       </property>
-       <property name="font">
-        <font>
-         <bold>true</bold>
-        </font>
-       </property>
-       <property name="text">
-        <string>None</string>
-       </property>
-       <property name="wordWrap">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+     <property name="text">
+      <string>Current sample:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="sampleName">
+     <property name="font">
+      <font>
+       <pointsize>16</pointsize>
+       <italic>false</italic>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font: bold 16pt;</string>
+     </property>
+     <property name="text">
+      <string>None</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="margin">
+      <number>3</number>
+     </property>
+     <property name="indent">
+      <number>5</number>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QTableView" name="metadataTable">
@@ -72,22 +61,22 @@
       </sizepolicy>
      </property>
      <property name="sizeAdjustPolicy">
-      <enum>QAbstractScrollArea::AdjustToContents</enum>
+      <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContents</enum>
      </property>
      <property name="editTriggers">
-      <set>QAbstractItemView::NoEditTriggers</set>
+      <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
      </property>
      <property name="alternatingRowColors">
       <bool>true</bool>
      </property>
      <property name="selectionMode">
-      <enum>QAbstractItemView::SingleSelection</enum>
+      <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
      </property>
      <property name="selectionBehavior">
-      <enum>QAbstractItemView::SelectRows</enum>
+      <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
      </property>
      <property name="textElideMode">
-      <enum>Qt::ElideMiddle</enum>
+      <enum>Qt::TextElideMode::ElideMiddle</enum>
      </property>
      <property name="wordWrap">
       <bool>false</bool>
@@ -107,6 +96,24 @@
      <attribute name="verticalHeaderDefaultSectionSize">
       <number>24</number>
      </attribute>
+    </widget>
+   </item>
+   <item>
+    <widget class="Line" name="line">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+      </font>
+     </property>
+     <property name="lineWidth">
+      <number>1</number>
+     </property>
+     <property name="midLineWidth">
+      <number>0</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
     </widget>
    </item>
    <item>
@@ -130,7 +137,7 @@
       <item>
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>Set new sample:</string>
+         <string>Set sample:</string>
         </property>
        </widget>
       </item>
@@ -180,6 +187,13 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
+      <widget class="QPushButton" name="clear_sample_btn">
+       <property name="text">
+        <string>Clear sample</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Orientation::Horizontal</enum>
@@ -193,7 +207,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="btn_close">
+      <widget class="QPushButton" name="close_btn">
        <property name="enabled">
         <bool>true</bool>
        </property>
