@@ -9,6 +9,7 @@ The tests make the protocol boundaries explicit:
 """
 
 import json
+import sys
 import time
 from types import SimpleNamespace
 
@@ -537,6 +538,25 @@ class TestWorkflowHealth:
         collector._note_job_heartbeat(_job_heartbeat("stopped", status.OK))
 
         assert channel.status(0)[0] == status.WARN
+
+    def test_heartbeats_and_the_status_thread_do_not_race(
+        self, daemon_device_harness, livedata_stubs
+    ):
+        # Expire jobs in the status thread while heartbeats arrive and status is read.
+        channel, collector = self._setup(daemon_device_harness)
+        interval = sys.getswitchinterval()
+        sys.setswitchinterval(1e-6)
+        try:
+            for n in range(1000):
+                collector._note_job_heartbeat(
+                    _job_heartbeat("active", status.OK, source_name=f"monitor{n}")
+                )
+                assert f"monitor{n}/job-1" in collector._jobs
+                channel.status(0)
+        finally:
+            sys.setswitchinterval(interval)
+
+        assert collector._status_thread.is_alive()
 
     def test_heartbeat_expires_after_the_grace_period(
         self, daemon_device_harness, livedata_stubs, monkeypatch
