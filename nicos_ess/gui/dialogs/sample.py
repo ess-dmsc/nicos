@@ -1,117 +1,70 @@
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
-    QAbstractItemView,
     QDialog,
     QHeaderView,
     QStandardItem,
     QStandardItemModel,
-    Qt,
     pyqtSignal,
+    pyqtSlot,
 )
 from nicos.protocols.cache import OP_TELL, cache_load
 from nicos.utils import findResource
-from nicos_ess.gui.panels.utils import (
-    attach_status_resources,
-)
 
 
 class SampleDialog(QDialog):
-    """Dialog opened to control and view details for a sample device."""
+    """Dialog to view the current sample and select another one."""
 
     closed = pyqtSignal(object)
 
     def __init__(self, parent, devname, devinfo, devitem, log, expert):
         super().__init__(parent)
+        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/sample.ui"))
 
-        attach_status_resources(self)
-        loadUi(
-            self,
-            findResource("nicos_ess/gui/panels/ui_files/sample.ui"),
-        )
-
-        self.log = log
         self.devices_panel = parent
-        self.client = parent.client
         self.devname = devname
-        self.devinfo = devinfo
-
         self.samples = {}
-        self.title.setText("Current sample: ")
-        self.sampleName.setText("")
-        self.load_samples()
-        self.set_up_metadata_table()
+        self.current_sample_number = None
 
-    def set_up_metadata_table(self):
-        """QTableView setup"""
-        table = self.metadataTable
         self.metadata_model = QStandardItemModel(0, 2, self)
         self.metadata_model.setHorizontalHeaderLabels(["Parameter", "Value"])
-        table.setModel(self.metadata_model)
-
-        font = table.font()
-        font.setPointSizeF(max(font.pointSizeF() * 0.8, 7))
-        table.setFont(font)  # headers inherit this
-
-        vh = table.verticalHeader()
-        vh.hide()
-        vh.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-        vh.setDefaultSectionSize(table.fontMetrics().height() + 4)
-
-        hh = table.horizontalHeader()
-        hh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        hh.setStretchLastSection(True)
-        hh.setHighlightSections(False)
-
-        table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        table.setAlternatingRowColors(True)
-        table.setTextElideMode(Qt.TextElideMode.ElideMiddle)
-        table.setWordWrap(False)
-
-    def load_samples(self):
-        """Initial load of available samples from the experiment session"""
-
-        raw_samples = self.client.eval(
-            "session.experiment.sample.samples",
-            {},
-        )
-        samples = (
-            raw_samples.items()
-            if isinstance(raw_samples, dict)
-            else enumerate(raw_samples or [])
+        self.metadataTable.setModel(self.metadata_model)
+        self.metadataTable.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.ResizeToContents
         )
 
-        self.samples = {
-            number: sample for number, sample in samples if "name" in sample
-        }
+        params = parent.client.getDeviceParams(devname)
+        self._set_samples(params.get("samples", {}))
+        self._show_sample(params.get("samplenumber"))
+        self.resize(self.width(), self.sizeHint().height())
 
+    def _set_samples(self, samples):
+        self.samples = {n: s for n, s in (samples or {}).items() if "name" in s}
         self.samples_CB.clear()
         for number, sample in self.samples.items():
             self.samples_CB.addItem(f"{number} : {sample['name']}", number)
 
-    def on_set_btn_pressed(self):
-        sample_number = self.samples_CB.currentData()
-        self.update_current_sample(sample_number)
-
-    def update_current_sample(self, sample_number):
-        """Update sample name and metadata table"""
-
-        sample = self.samples.get(sample_number)
-        self.sampleName.setText(sample["name"] if sample else "")
+    def _show_sample(self, sample_number):
+        self.current_sample_number = sample_number
+        sample = self.samples.get(sample_number, {})
+        self.sampleName.setText(sample.get("name", ""))
+        self.samples_CB.setCurrentIndex(self.samples_CB.findData(sample_number))
 
         self.metadata_model.removeRows(0, self.metadata_model.rowCount())
-        if not sample:
-            return
-
         for key, value in sample.items():
-            if key == "name":
-                continue
-            key_item = QStandardItem(str(key))
-            value_item = QStandardItem(str(value))
-            key_item.setEditable(False)
-            value_item.setEditable(False)
-            self.metadata_model.appendRow([key_item, value_item])
+            if key != "name":
+                self.metadata_model.appendRow(
+                    [QStandardItem(str(key)), QStandardItem(str(value))]
+                )
+
+    @pyqtSlot()
+    def on_set_btn_clicked(self):
+        sample_number = self.samples_CB.currentData()
+        if sample_number is not None:
+            self.devices_panel.exec_command(f"{self.devname}.select({sample_number!r})")
+
+    @pyqtSlot()
+    def on_btn_close_clicked(self):
+        self.close()
 
     def on_cache_params(self, subkey, value):
         if subkey != "samples" or not value:
@@ -127,6 +80,6 @@ class SampleDialog(QDialog):
         if op == OP_TELL and value and subkey == "samplenumber":
             self._show_sample(cache_load(value))
 
-    def on_btn_close_pressed(self):
-        self.close()
-        self.closed.emit(self)
+    def closeEvent(self, event):
+        event.accept()
+        self.closed.emit(self.devname.lower())
