@@ -149,12 +149,25 @@ dev = [
 
 [tool.coverage.run]
 # ESS code: nicos_ess plus the ESS-only modules that live in nicos/.
-source_pkgs = [
+# Directories, not packages: coverage re-imports source_pkgs whenever sys.path
+# changes and then drops every module imported meanwhile, also by other threads.
+source_dirs = [
     "nicos_ess",
-    "nicos.devices.epics.mixins",
-    "nicos.devices.epics.pva",
-    "nicos.services.cache.database.redis",
-    "nicos.services.cache.endpoints",
+    "nicos/devices/epics",
+    "nicos/services/cache/database",
+    "nicos/services/cache/endpoints",
+]
+# The non-ESS files in those directories. A leading * keeps the patterns valid
+# in subprocesses that run in another directory.
+omit = [
+    "*/nicos/devices/epics/__init__.py",
+    "*/nicos/devices/epics/status.py",
+    "*/nicos/services/cache/database/__init__.py",
+    "*/nicos/services/cache/database/base.py",
+    "*/nicos/services/cache/database/flatfile.py",
+    "*/nicos/services/cache/database/influxdb.py",
+    "*/nicos/services/cache/database/kafka.py",
+    "*/nicos/services/cache/database/memory.py",
 ]
 # Measure the cache, daemon, poller etc. started as subprocesses by the tests.
 patch = ["subprocess"]
