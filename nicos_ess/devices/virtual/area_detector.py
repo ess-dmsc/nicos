@@ -335,7 +335,6 @@ class AreaDetector(ImageChannelMixin, Measurable):
     def on_image_callback(self):
         status, message = self._ad_simulator._status
         self._update_status(status, message)
-        self.log.info("Image acquired")
         if time.monotonic() - self._last_update > self._plot_update_delay:
             _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
 
