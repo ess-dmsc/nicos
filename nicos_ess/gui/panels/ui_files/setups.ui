@@ -200,6 +200,14 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>basicSetup</tabstop>
+  <tabstop>optSetups</tabstop>
+  <tabstop>btn_clear</tabstop>
+  <tabstop>pnpSetups</tabstop>
+  <tabstop>btn_reload</tabstop>
+  <tabstop>btn_apply</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
