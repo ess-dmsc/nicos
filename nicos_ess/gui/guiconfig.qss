@@ -486,6 +486,7 @@ QPushButton:checked:pressed {
     color: #0094ca;
     background-color: white;
 }
+
 /* -------------------- QDialog ------------------------ */
 /* At the end, so that it overrides QTab*/
 
@@ -496,10 +497,6 @@ QMessageBox > QLabel {
 }
 
 /* ----------------------------------------- */
-Panel[panel='DevicesPanel'] QComboBox {
-    background-color: white;
-}
-
 Panel[panel='ExpPanel'] QLineEdit::focus,
 Panel[panel='ExpPanel'] QPlainTextEdit::focus {
     border: 1px solid #0094ca;
@@ -548,7 +545,6 @@ CommandLineEdit[state="BUSY"] {
     background-color: #ffdddd;
 }
 
-
 LiveWidgetWrapper:title {
     subcontrol-origin: margin;
     subcontrol-position: top center;
@@ -564,12 +560,6 @@ LiveWidgetWrapper[state="SELECTED"] {
 LiveWidgetWrapper[state="UNSELECTED"] {
     border: 5px solid white;
     border-radius: 5px;
-}
-
-/* For Auth Dialog */
-QDialog QComboBox {
-    color: black;
-    background-color: white;
 }
 
 QLineEdit:disabled, QComboBox:disabled {
