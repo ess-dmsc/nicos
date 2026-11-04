@@ -45,6 +45,13 @@ def monkeypatch_increment_filecounter(monkeypatch):
 
 
 @pytest.fixture
+def controller_request_stop_mock(monkeypatch):
+    request_stop = Mock()
+    monkeypatch.setattr(file_writer.FileWriterController, "request_stop", request_stop)
+    return request_stop
+
+
+@pytest.fixture
 def kafka_stubs(monkeypatch):
     monkeypatch.setattr(status_handler, "KafkaSubscriber", StubKafkaSubscriber)
     monkeypatch.setattr(
@@ -177,35 +184,29 @@ class TestFileWriterControlSinkHarness:
     def test_stop_job_ignored_if_no_job_in_progress(
         self,
         monkeypatch,
+        controller_request_stop_mock,
         filewriter_control_sink_devices,
     ):
         daemon_device, poller_device = filewriter_control_sink_devices
-        request_stop = Mock()
-        monkeypatch.setattr(
-            file_writer.FileWriterController, "request_stop", request_stop
-        )
         daemon_device.stop_job()
 
-        request_stop.assert_not_called()
+        controller_request_stop_mock.assert_not_called()
 
     def test_can_stop_running_job(
         self,
         monkeypatch,
+        controller_request_stop_mock,
         device_harness,
         filewriter_control_sink_devices,
     ):
         daemon_device, poller_device = filewriter_control_sink_devices
         job_id_1 = "job id 1"
-        request_stop = Mock()
-        monkeypatch.setattr(
-            file_writer.FileWriterController, "request_stop", request_stop
-        )
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
             assert job_id_1 in daemon_device.get_active_jobs()
             daemon_device.stop_job()
-        request_stop.assert_called_once()
+        controller_request_stop_mock.assert_called_once()
 
         assert job_id_1 not in daemon_device.get_active_jobs()
         assert job_id_1 in daemon_device._attached_status.marked_for_stop
@@ -213,26 +214,24 @@ class TestFileWriterControlSinkHarness:
     def test_stop_job_ignored_if_existing_job_is_already_stopping(
         self,
         monkeypatch,
+        controller_request_stop_mock,
         device_harness,
         filewriter_control_sink_devices,
     ):
         daemon_device, poller_device = filewriter_control_sink_devices
         job_id_1 = "job id 1"
-        request_stop = Mock()
-        monkeypatch.setattr(
-            file_writer.FileWriterController, "request_stop", request_stop
-        )
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
             daemon_device.stop_job()
             daemon_device.stop_job()
 
-        request_stop.assert_called_once()
+        controller_request_stop_mock.assert_called_once()
 
     def test_stop_job_ignored_if_job_id_does_not_match(
         self,
         monkeypatch,
+        controller_request_stop_mock,
         filewriter_control_sink_devices,
     ):
         daemon_device, poller_device = filewriter_control_sink_devices
@@ -242,17 +241,14 @@ class TestFileWriterControlSinkHarness:
         daemon_device._attached_status.add_job(job)
         status_message = [(123, create_status_message(job_id_1))]
         daemon_device._attached_status.new_messages_callback(status_message)
-        request_stop = Mock()
-        monkeypatch.setattr(
-            file_writer.FileWriterController, "request_stop", request_stop
-        )
         daemon_device.stop_job(job_number="does not match")
 
-        request_stop.assert_not_called()
+        controller_request_stop_mock.assert_not_called()
 
     def test_can_stop_job_if_job_id_matches(
         self,
         monkeypatch,
+        controller_request_stop_mock,
         filewriter_control_sink_devices,
     ):
         daemon_device, poller_device = filewriter_control_sink_devices
@@ -262,17 +258,14 @@ class TestFileWriterControlSinkHarness:
         daemon_device._attached_status.add_job(job)
         status_message = [(123, create_status_message(job_id_1))]
         daemon_device._attached_status.new_messages_callback(status_message)
-        request_stop = Mock()
-        monkeypatch.setattr(
-            file_writer.FileWriterController, "request_stop", request_stop
-        )
         daemon_device.stop_job(job_number=job_number)
 
-        request_stop.assert_called_once()
+        controller_request_stop_mock.assert_called_once()
 
     def test_with_multiple_jobs_no_jobs_stopped_if_job_id_not_supplied(
         self,
         monkeypatch,
+        controller_request_stop_mock,
         filewriter_control_sink_devices,
     ):
         daemon_device, poller_device = filewriter_control_sink_devices
@@ -287,17 +280,14 @@ class TestFileWriterControlSinkHarness:
             (234, create_status_message(job_id_2)),
         ]
         daemon_device._attached_status.new_messages_callback(status_messages)
-        request_stop = Mock()
-        monkeypatch.setattr(
-            file_writer.FileWriterController, "request_stop", request_stop
-        )
         daemon_device.stop_job()
 
-        request_stop.assert_not_called()
+        controller_request_stop_mock.assert_not_called()
 
     def test_with_multiple_jobs_specified_job_is_stopped(
         self,
         monkeypatch,
+        controller_request_stop_mock,
         filewriter_control_sink_devices,
     ):
         daemon_device, poller_device = filewriter_control_sink_devices
@@ -314,13 +304,9 @@ class TestFileWriterControlSinkHarness:
             (234, create_status_message(job_id_2)),
         ]
         daemon_device._attached_status.new_messages_callback(status_messages)
-        request_stop = Mock()
-        monkeypatch.setattr(
-            file_writer.FileWriterController, "request_stop", request_stop
-        )
         daemon_device.stop_job(job_number=job_number_1)
 
-        request_stop.assert_called_once()
+        controller_request_stop_mock.assert_called_once()
         assert job_id_1 in daemon_device._attached_status.marked_for_stop
         assert job_id_2 in daemon_device.get_active_jobs()
 
@@ -346,6 +332,7 @@ class TestFileWriterControlSinkHarness:
     def test_can_stop_writing_even_if_job_lost(
         self,
         monkeypatch,
+        controller_request_stop_mock,
         device_harness,
         filewriter_control_sink_devices,
     ):
@@ -353,10 +340,6 @@ class TestFileWriterControlSinkHarness:
         # Simulate a file-writer crash by forcing the job to time out.
         job_id_1 = "job id 1"
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
-        request_stop = Mock()
-        monkeypatch.setattr(
-            file_writer.FileWriterController, "request_stop", request_stop
-        )
         with device_harness.activate("daemon"):
             daemon_device.start_job()
         status_message = [(123, create_status_message(job_id_1))]
