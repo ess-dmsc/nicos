@@ -1,7 +1,7 @@
 # pylint: skip-file
 
 # test: subdirs = demo
-# test: setups = alignment_stack, choppers, motion_cabinet_1, motion_cabinet_2, just-bin-it
+# test: setups = area_detector
 # test: needs = streaming_data_types
 # test: needs = confluent_kafka
 # test: needs = yuos_query
