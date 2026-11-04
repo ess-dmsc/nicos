@@ -30,6 +30,15 @@ class HarnessNexusStructureProvider(NexusStructureJsonFile):
         return "{}"
 
 
+def monkeypatch_generated_job_id(monkeypatch, job_id):
+    """Use a specific job id instead of a generated uuid for easy test assertion"""
+    monkeypatch.setattr(
+        file_writer.FileWriterController,
+        "_generate_uuid",
+        lambda self, file_num: job_id,
+    )
+
+
 @pytest.fixture
 def kafka_stubs(monkeypatch):
     monkeypatch.setattr(status_handler, "KafkaSubscriber", StubKafkaSubscriber)
@@ -109,11 +118,7 @@ class TestFileWriterControlSinkHarness:
         daemon_device, poller_device = filewriter_control_sink_devices
         job_id_1 = "job id 1"
         monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
-        monkeypatch.setattr(
-            file_writer.FileWriterController,
-            "_generate_uuid",
-            lambda self, file_num: job_id_1,
-        )
+        monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
 
@@ -137,11 +142,7 @@ class TestFileWriterControlSinkHarness:
 
         new_job_id = "job id 2"
         monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
-        monkeypatch.setattr(
-            file_writer.FileWriterController,
-            "_generate_uuid",
-            lambda self, file_num: new_job_id,
-        )
+        monkeypatch_generated_job_id(monkeypatch, new_job_id)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
         assert new_job_id in daemon_device._attached_status.jobs_in_progress
@@ -196,11 +197,7 @@ class TestFileWriterControlSinkHarness:
             file_writer.FileWriterController, "request_stop", request_stop
         )
         monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
-        monkeypatch.setattr(
-            file_writer.FileWriterController,
-            "_generate_uuid",
-            lambda self, file_num: job_id_1,
-        )
+        monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
             assert job_id_1 in daemon_device.get_active_jobs()
@@ -223,11 +220,7 @@ class TestFileWriterControlSinkHarness:
             file_writer.FileWriterController, "request_stop", request_stop
         )
         monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
-        monkeypatch.setattr(
-            file_writer.FileWriterController,
-            "_generate_uuid",
-            lambda self, file_num: job_id_1,
-        )
+        monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
             daemon_device.stop_job()
@@ -339,11 +332,7 @@ class TestFileWriterControlSinkHarness:
         # Simulate a file-writer crash by forcing the job to time out.
         job_id_1 = "job id 1"
         monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
-        monkeypatch.setattr(
-            file_writer.FileWriterController,
-            "_generate_uuid",
-            lambda self, file_num: job_id_1,
-        )
+        monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
         status_message = [(123, create_status_message(job_id_1))]
@@ -363,11 +352,7 @@ class TestFileWriterControlSinkHarness:
         # Simulate a file-writer crash by forcing the job to time out.
         job_id_1 = "job id 1"
         monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
-        monkeypatch.setattr(
-            file_writer.FileWriterController,
-            "_generate_uuid",
-            lambda self, file_num: job_id_1,
-        )
+        monkeypatch_generated_job_id(monkeypatch, job_id_1)
         request_stop = Mock()
         monkeypatch.setattr(
             file_writer.FileWriterController, "request_stop", request_stop
@@ -395,11 +380,7 @@ class TestFileWriterControlSinkHarness:
         # For example: all file-writers are busy
         job_id_1 = "job id 1"
         monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
-        monkeypatch.setattr(
-            file_writer.FileWriterController,
-            "_generate_uuid",
-            lambda self, file_num: job_id_1,
-        )
+        monkeypatch_generated_job_id(monkeypatch, job_id_1)
         monkeypatch.setattr(
             file_writer.FileWriterController,
             "request_start",
@@ -432,11 +413,7 @@ class TestFileWriterControlSinkHarness:
             ),
         )
         monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
-        monkeypatch.setattr(
-            file_writer.FileWriterController,
-            "_generate_uuid",
-            lambda self, file_num: job_id_1,
-        )
+        monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
 
