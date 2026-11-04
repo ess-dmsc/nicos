@@ -9,6 +9,4 @@
 read()
 status()
 
-SetDetectors(det)
-with nexusfile_open("test title"):
-    scan(mX, 0, 10, 11)
+SetDetectors(area_detector)
