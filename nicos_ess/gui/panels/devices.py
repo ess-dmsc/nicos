@@ -574,10 +574,10 @@ class DevicesPanel(Panel):
         elif subkey == "description":
             devitem.setToolTip(self.col_index["NAME"], cache_load(value or "''"))
 
-        if {
-            "nicos.devices.sample.Sample",
-            "nicos_ess.devices.sample.EssSample",
-        }.intersection(devinfo.classes):
+        if (
+            "nicos_ess.devices.sample.EssSample" in devinfo.classes
+            and subkey == "value"
+        ):
             no_sample = not str(devinfo.value or "").strip()
             value_column = self.col_index["VALUE"]
             devitem.setIcon(
