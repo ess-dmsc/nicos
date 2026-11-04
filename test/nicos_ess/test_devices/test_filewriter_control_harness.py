@@ -39,6 +39,11 @@ def monkeypatch_generated_job_id(monkeypatch, job_id):
     )
 
 
+@pytest.fixture(autouse=True)
+def monkeypatch_increment_filecounter(monkeypatch):
+    monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
+
+
 @pytest.fixture
 def kafka_stubs(monkeypatch):
     monkeypatch.setattr(status_handler, "KafkaSubscriber", StubKafkaSubscriber)
@@ -117,7 +122,6 @@ class TestFileWriterControlSinkHarness:
     ):
         daemon_device, poller_device = filewriter_control_sink_devices
         job_id_1 = "job id 1"
-        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
@@ -141,7 +145,7 @@ class TestFileWriterControlSinkHarness:
         assert stopping_job_id not in daemon_device.get_active_jobs()
 
         new_job_id = "job id 2"
-        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
+
         monkeypatch_generated_job_id(monkeypatch, new_job_id)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
@@ -196,7 +200,6 @@ class TestFileWriterControlSinkHarness:
         monkeypatch.setattr(
             file_writer.FileWriterController, "request_stop", request_stop
         )
-        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
@@ -219,7 +222,6 @@ class TestFileWriterControlSinkHarness:
         monkeypatch.setattr(
             file_writer.FileWriterController, "request_stop", request_stop
         )
-        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
@@ -331,7 +333,6 @@ class TestFileWriterControlSinkHarness:
         daemon_device, poller_device = filewriter_control_sink_devices
         # Simulate a file-writer crash by forcing the job to time out.
         job_id_1 = "job id 1"
-        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
@@ -351,7 +352,6 @@ class TestFileWriterControlSinkHarness:
         daemon_device, poller_device = filewriter_control_sink_devices
         # Simulate a file-writer crash by forcing the job to time out.
         job_id_1 = "job id 1"
-        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
         request_stop = Mock()
         monkeypatch.setattr(
@@ -379,7 +379,6 @@ class TestFileWriterControlSinkHarness:
         daemon_device, poller_device = filewriter_control_sink_devices
         # For example: all file-writers are busy
         job_id_1 = "job id 1"
-        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
         monkeypatch.setattr(
             file_writer.FileWriterController,
@@ -412,7 +411,6 @@ class TestFileWriterControlSinkHarness:
                 "",
             ),
         )
-        monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
