@@ -5,12 +5,13 @@ from logging import WARNING
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel, showPanel
 from nicos.clients.gui.utils import ScriptExecQuestion, dialogFromUi, loadUi
-from nicos.core.status import BUSY, ERROR, OK, UNKNOWN
+from nicos.core.status import BUSY, ERROR, OK, UNKNOWN, WARN
 from nicos.guisupport.qt import (
     QByteArray,
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QIcon,
     QInputDialog,
     QLabel,
     QMenu,
@@ -34,6 +35,7 @@ from nicos.utils import AttrDict, findResource
 from nicos_ess.gui.dialogs.cetoni_pump import CetoniLinkedDialog
 from nicos_ess.gui.dialogs.homing_check import HomingCheckDialog
 from nicos_ess.gui.dialogs.motor import MotorDialog
+from nicos_ess.gui.dialogs.sample import SampleDialog
 from nicos_ess.gui.panels.parameters_table import ParametersTable
 from nicos_ess.gui.panels.utils import (
     attach_status_resources,
@@ -572,6 +574,21 @@ class DevicesPanel(Panel):
         elif subkey == "description":
             devitem.setToolTip(self.col_index["NAME"], cache_load(value or "''"))
 
+        if (
+            "nicos_ess.devices.sample.EssSample" in devinfo.classes
+            and subkey == "value"
+        ):
+            no_sample = not str(devinfo.value or "").strip()
+            value_column = self.col_index["VALUE"]
+            devitem.setIcon(
+                value_column, self.statusIcon[WARN] if no_sample else QIcon()
+            )
+            devitem.setToolTip(value_column, "No sample selected" if no_sample else "")
+            devitem.setText(
+                value_column,
+                "No sample selected" if no_sample else devinfo.fmtValUnit(),
+            )
+
         if subkey in self.param_display.get(ldevname, ()):
             if not devinfo.params:
                 devinfo.params = self.client.getDeviceParamInfo(devinfo.name)
@@ -732,6 +749,10 @@ class DevicesPanel(Panel):
             and classes[0] == "nicos_ess.loki.devices.cetoni_pump.CetoniPumpLinkedMode"
         ):
             dlg = CetoniLinkedDialog(
+                self, devname, devinfo, item, self.log, self._show_lowlevel
+            )
+        elif classes and classes[0] == "nicos_ess.devices.sample.EssSample":
+            dlg = SampleDialog(
                 self, devname, devinfo, item, self.log, self._show_lowlevel
             )
         else:
