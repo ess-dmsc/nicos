@@ -543,10 +543,9 @@ class AreaDetectorCollector(Detector):
         pass
 
     def duringMeasureHook(self, elapsed):
-        if self.liveinterval is not None:
-            if elapsed > self._last_live + self.liveinterval:
-                self._last_live = elapsed
-                return LIVE
+        if self.liveinterval is not None and elapsed > self._last_live + self.liveinterval:
+            self._last_live = elapsed
+            return LIVE
         return None
 
     def arrayInfo(self):
