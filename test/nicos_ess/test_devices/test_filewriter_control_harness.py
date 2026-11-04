@@ -1,6 +1,5 @@
 from datetime import datetime
 from unittest import mock
-from unittest.mock import Mock
 
 import pytest
 
@@ -57,7 +56,7 @@ def monkeypatch_increment_filecounter(monkeypatch):
 
 @pytest.fixture
 def controller_request_stop_mock(monkeypatch):
-    request_stop = Mock()
+    request_stop = mock.Mock()
     monkeypatch.setattr(file_writer.FileWriterController, "request_stop", request_stop)
     return request_stop
 
