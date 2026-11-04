@@ -39,6 +39,17 @@ def monkeypatch_generated_job_id(monkeypatch, job_id):
     )
 
 
+def monkeypatch_request_start(monkeypatch, a_job_id, response_msg):
+    monkeypatch.setattr(
+        file_writer.FileWriterController,
+        "request_start",
+        lambda self, filename, structure, start_time, stop_time, job_id: (
+            a_job_id,
+            response_msg,
+        ),
+    )
+
+
 @pytest.fixture(autouse=True)
 def monkeypatch_increment_filecounter(monkeypatch):
     monkeypatch.setattr(file_writer, "incrementFileCounter", lambda: 42)
@@ -363,14 +374,7 @@ class TestFileWriterControlSinkHarness:
         # For example: all file-writers are busy
         job_id_1 = "job id 1"
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
-        monkeypatch.setattr(
-            file_writer.FileWriterController,
-            "request_start",
-            lambda self, filename, structure, start_time, stop_time, job_id: (
-                job_id_1,
-                "not acknowledged",
-            ),
-        )
+        monkeypatch_request_start(monkeypatch, job_id_1, "not acknowledged")
         with device_harness.activate("daemon"):
             daemon_device.start_job()
 
@@ -386,14 +390,7 @@ class TestFileWriterControlSinkHarness:
         # If the topics containing the data do not exist then the file-writer
         # will stop writing almost immediately.
         job_id_1 = "job id 1"
-        monkeypatch.setattr(
-            file_writer.FileWriterController,
-            "request_start",
-            lambda self, filename, structure, start_time, stop_time, job_id: (
-                job_id_1,
-                "",
-            ),
-        )
+        monkeypatch_request_start(monkeypatch, job_id_1, "")
         monkeypatch_generated_job_id(monkeypatch, job_id_1)
         with device_harness.activate("daemon"):
             daemon_device.start_job()
