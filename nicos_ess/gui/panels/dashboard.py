@@ -67,12 +67,20 @@ class DashboardItem:
         "data_source": "session.experiment.run_title",
         "stringify": False,
     }
+    SAMPLE = {
+        "name": "sample",
+        "location": "row_2",
+        "label": "     Sample",
+        "data_source": "session.experiment.sample.samplename or 'None'",
+        "stringify": False,
+    }
 
 
 ALL_DASHBOARD_ITEMS = [
     DashboardItem.INSTRUMENT,
     DashboardItem.PROPOSAL_ID,
     DashboardItem.RUN_NUMBER,
+    DashboardItem.SAMPLE,
     DashboardItem.RUN_TITLE,
     # DashboardItem.EXPERIMENT,
 ]
@@ -238,7 +246,9 @@ class Dashboard(Panel):
             self.setStatus("paused   ")
 
     def on_client_cache(self, data):
-        pass
+        _time, key, _op, _value = data
+        if key == "sample/value" and self.current_status != "disconnected":
+            self.update_text(DashboardItem.SAMPLE)
 
     def on_client_disconnected(self):
         self.setStatus("disconnected")
