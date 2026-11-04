@@ -25,6 +25,7 @@ QTextEdit:focus,
 QLineEdit:focus,
 QComboBox:focus,
 QListView:focus,
+QListWidget:focus,
 QAbstractButton:focus {
     border: 1px solid lightblue;
 }
