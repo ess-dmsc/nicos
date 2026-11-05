@@ -32,6 +32,7 @@ from nicos.guisupport.typedvalue import (
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
 from nicos_ess.gui.dialogs.cetoni_pump import CetoniLinkedDialog
+from nicos_ess.gui.dialogs.chopper import ChopperDialog
 from nicos_ess.gui.dialogs.homing_check import HomingCheckDialog
 from nicos_ess.gui.dialogs.motor import MotorDialog
 from nicos_ess.gui.panels.parameters_table import ParametersTable
@@ -725,6 +726,13 @@ class DevicesPanel(Panel):
         # The first class is the "real" class, classes can be empty for some devices
         if classes and classes[0] == "nicos_ess.devices.epics.pva.motor.EpicsMotor":
             dlg = MotorDialog(
+                self, devname, devinfo, item, self.log, self._show_lowlevel
+            )
+        elif classes and classes[0] in (
+            "nicos_ess.devices.epics.chopper.EssChopper",
+            "nicos_ess.devices.epics.chopper.EssT0Chopper",
+        ):
+            dlg = ChopperDialog(
                 self, devname, devinfo, item, self.log, self._show_lowlevel
             )
         elif (

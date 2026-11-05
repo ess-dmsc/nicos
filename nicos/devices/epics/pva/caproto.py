@@ -83,6 +83,9 @@ STATUS_TO_MESSAGE = {
 # Same context can be shared across all devices.
 _Context = Context()
 
+# What pvget shows for an enum index that is not among the choices
+UNDEFINED = "<undefined>"
+
 
 @hiddenusercommand
 @helparglist("name[, timeout]")
@@ -154,7 +157,11 @@ class CaprotoWrapper:
         if len(raw_value.data) == 1:
             value = raw_value.data[0]
             if pvname in self._choices:
-                return self._choices[pvname][value] if as_string else value
+                if not as_string:
+                    return value
+                choices = self._choices[pvname]
+                # an IOC can post an index that is not among its choices
+                return choices[value] if 0 <= value < len(choices) else UNDEFINED
             elif isinstance(value, bytes):
                 return value.decode()
             return str(value) if as_string else value
@@ -162,7 +169,7 @@ class CaprotoWrapper:
         # waveforms and arrays are ndarrays
         if isinstance(raw_value.data, np.ndarray):
             val_type = FTYPE_TO_TYPE[self._pvs[pvname].channel.native_data_type]
-            if val_type == bytes or as_string:
+            if val_type is bytes or as_string:
                 return raw_value.data.tobytes().decode()
 
         return str(raw_value.data) if as_string else raw_value.data
