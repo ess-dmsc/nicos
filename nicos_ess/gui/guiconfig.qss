@@ -17,13 +17,26 @@ QMenuBar {
 MainWindow > QSplitter::hover {
     background: transparent;
 }
-/* ----- QMessageBox ------------------------------------------------ */
+
+/* ----- Input widgets ----- */
+/* Behave consistently when responding to tab focus */
+QAbstractSpinBox:focus,
+QTextEdit:focus,
+QLineEdit:focus,
+QComboBox:focus,
+QListView:focus,
+QListWidget:focus,
+QAbstractButton:focus {
+    border: 1px solid lightblue;
+}
+
+/* ----- QMessageBox ----- */
 
 QMessageBox QLabel {
     color: white;
 }
 
-/* ----- QMenuBar -- OK ------------------------------------------------ */
+/* ----- QMenuBar ----- */
 
 QMenuBar::item:selected {
     background-color: white;
@@ -35,7 +48,7 @@ QMenuBar::item:pressed {
     background: white ;
     color:black;
 }
-/* -------------------- QToolBar -------------------- */
+/* ----- QToolBar ----- */
 
 QToolBar {
     background-color: transparent;
@@ -126,7 +139,7 @@ QToolBar#toolBarMain QWidget {
     background: transparent; /* Maintain transparency for background */
 }
 
-/* -------------------- QTabWidget -------------------- */
+/* ----- QTabWidget ----- */
 
 QTabWidget {
     border: 0px;
@@ -136,7 +149,7 @@ QTabWidget QMainWindow {
     background: white;
 }
 
-/* -------------------- Panel -------------------- */
+/* ----- Panel ----- */
 
 Panel QToolBar {
     background: #d9d9d9;
@@ -243,15 +256,7 @@ Dashboard > QFrame {
     color: white;
 }
 
-/* QTabBar::tab  ------------------------------------------------
-
-https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qtabwidget-and-qtabbar
-
---------------------------------------------------------------------------- */
-QTabBar::tab {
-  /* !selected and disabled ----------------------------------------- */
-  /* selected ------------------------------------------------------- */
-}
+/* ----- QTabBar::tab  ----- */
 
 QTabBar::tab:left {
     color: white;
@@ -324,7 +329,7 @@ QTabBar {
     qproperty-drawBase:0;
 }
 
-/* -------------------- QSplitter ------------------------ */
+/* ----- QSplitter ----- */
 
 QSplitter {
     background-color: white;
@@ -347,7 +352,7 @@ QSplitter::handle:vertical{
     image: url(:/splitterh);
 }
 
-/* --------- QCheckBox ----------------------- */
+/* ----- QCheckBox ----- */
 
 QCheckBox {
     color: black;
@@ -425,17 +430,17 @@ QHeaderView {
     border-radius: 5px;
 }
 
-/* -------------------- QPlainTextEdit --------------------- */
+/* ----- QPlainTextEdit ----- */
 
 QPlainTextEdit {
     background-color: white;
     color: black;
 }
 
-/* -------------------- QPushButton ------------------------ */
+/* ----- QPushButton ----- */
 
 QPushButton {
-    background-color: white;
+    background-color: whitesmoke;
     border: 1px solid darkgrey;
     color: black;
     border-radius: 5px;
@@ -451,11 +456,6 @@ QPushButton:disabled {
 }
 
 QPushButton:default {
-    border: 1px solid lightblue;
-    background-color: #f3f8fB;
-}
-
-QPushButton:focus {
     border: 1px solid lightblue;
     background-color: #f3f8fB;
 }
@@ -487,7 +487,7 @@ QPushButton:checked:pressed {
     background-color: white;
 }
 
-/* -------------------- QDialog ------------------------ */
+/* ------ QDialog ----- */
 /* At the end, so that it overrides QTab*/
 
 QDialog,
@@ -496,7 +496,7 @@ QMessageBox > QLabel {
     color: black;
 }
 
-/* ----------------------------------------- */
+/* ----- Panels ----- */
 Panel[panel='ExpPanel'] QLineEdit::focus,
 Panel[panel='ExpPanel'] QPlainTextEdit::focus {
     border: 1px solid #0094ca;
@@ -574,7 +574,7 @@ QCheckBox:disabled {
 /* Remove icons from built-in Qt dialogs. */
 QDialogButtonBox { dialogbuttonbox-buttons-have-icons: 0; }
 
-/*-----------------Class Properties-------------------------*/
+/* ----- Class Properties -----*/
 
 .loginButton{
     background-color: #1f5366;
