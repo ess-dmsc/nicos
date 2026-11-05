@@ -261,6 +261,21 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>comboTransOrder</tabstop>
+  <tabstop>sbSansTimes</tabstop>
+  <tabstop>sbTransTimes</tabstop>
+  <tabstop>comboTransDurationType</tabstop>
+  <tabstop>comboSansDurationType</tabstop>
+  <tabstop>comboMonitor</tabstop>
+  <tabstop>chkShowTempColumn</tabstop>
+  <tabstop>chkShowPreCommand</tabstop>
+  <tabstop>chkShowPostCommand</tabstop>
+  <tabstop>generateScriptButton</tabstop>
+  <tabstop>tableView</tabstop>
+  <tabstop>txtValue</tabstop>
+  <tabstop>bulkUpdateButton</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
