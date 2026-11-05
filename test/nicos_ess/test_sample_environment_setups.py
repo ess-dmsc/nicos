@@ -77,3 +77,11 @@ def test_instrument_does_not_shadow_a_shared_setup(instrument, shared_setups):
 def test_instrument_watches_equipment_presence(instrument, instrument_setups):
     system = instrument_setups[instrument]["system"]
     assert "sample_environment_presence" in system["includes"]
+
+
+@pytest.mark.parametrize("instrument", INSTRUMENTS)
+def test_poller_always_watches_equipment_presence(instrument, instrument_setups):
+    # the daemon only tells the poller its setups once one is loaded as master,
+    # so the presence would not be watched after a fresh start without this
+    _, config = instrument_setups[instrument]["poller"]["devices"]["Poller"]
+    assert "sample_environment_presence" in config["alwayspoll"]
