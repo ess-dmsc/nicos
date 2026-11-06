@@ -1,13 +1,15 @@
 import threading
 
+import pytest
+
 from nicos.core import status
-from nicos_ess.estia.devices import flow_cryo_control
+from nicos_ess.estia.devices.flow_cryo_control import FlowCryoInput
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsComponent
 
-session_setup = None
+session_setup = "estia_flowcryo"
 
 
-class FakeEstiaFlowCryo(flow_cryo_control):
+class FakeEstiaFlowCryo(FlowCryoInput):
     @classmethod
     def _initial_record_fields(cls):
         return {
@@ -39,5 +41,17 @@ class FakeEstiaFlowCryo(flow_cryo_control):
     def _read_channel_cached(self, field, as_string=None, maxage=None):
         return self._epics_channels[field]
 
-    def doReadUnit(self, maxage=None):
-        return self._epics_channels["unit"]
+    def doRead(self, maxage=None):
+        return self._epics.get_channel_value("value")
+
+
+class TestEstiaFlowCryo:
+    flowcryo = None
+
+    @pytest.fixture(autouse=True)
+    def prepare(self, session):
+        self.session = session
+        self.flowcryo = self.session.getDevice("lakeshore_A", {})
+
+    def test_limits_update(self):
+        assert self.flowcryo.abslimits == (-1, 990)
