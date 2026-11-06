@@ -58,21 +58,7 @@ You can also install NICOS into the uv managed tools to have its commands availa
 
 The resulting source tarball and wheel files will be located in the `dist` directory.
 
-## Configure NICOS
-
-Place the NICOS configuration file (`nicos.conf`) for your choice of instrument into one of the following locations, searched in order:
-
-- in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf` on GNU/Linux, or
-- the `nicos` directory in your standard user configuration path, i.e. on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`.
-
-Both these paths can be modified by setting the `XDG_CONFIG_DIRS` or `XDG_CONFIG_HOME` environment variable, respectively, to point to a different location.
-See [the corresponding XDG variable documentation](https://platformdirs.readthedocs.io/en/latest/parameters.html#xdg-env-vars) for reference.
-
-For backwards compatibility, the `nicos_root` folder (i.e. the root of the repository) will be searched first.
-When NICOS has been deployed as package, this path would most likely not point to a suitable location.
-Therefore, prefer the XDG standard directories as place for `nicos.conf`
-
-## Installing the Server Locally
+## Installing the Server Locally {#localserver}
 
 To set up the NICOS server on your local machine, follow these steps.
 
@@ -92,12 +78,12 @@ mkdir /opt/nicos-data
 
 ### Step 3: Select an Instrument Configuration
 
-Link the configuration file for your chosen instrument or copy it at the location described in the section "Configure NICOS" above:
+Link the configuration file for your chosen instrument or copy it at the location described in the [section "Configure NICOS"](#nicosconf). If you are using the default location on a Linux-based system, this would be:
 ```bash
 ln -s nicos_ess/<instrument>/nicos.conf ~/.config/nicos/nicos.conf
 ```
 
-A good starting instrument is `ymir`, which is a test instrument.
+A good starting instrument is `ymir`, which is our physical test instrument in B02.
 
 ### Step 4: Start the Cache
 
@@ -106,7 +92,7 @@ Start the NICOS cache server:
 nicos-cache
 ```
 
-To configure what cache database to use, see section [Configure Cache Database](#configure-cache-database).
+To configure what cache database to use, see section [Configure Cache Database](#configurecache).
 
 ### Step 5: Start the Poller
 
@@ -142,26 +128,45 @@ Start the NICOS client with your selected instrument's configuration:
 nicos-gui -c nicos_ess/<instrument>/guiconfig.py
 ```
 
-### Step 3: Run with QT6 (For Mac Silicon)
+### Step 3: Run with QT6 (Needed for Mac Silicon)
 
-If you prefer QT6, use the following command (not required on macOS with silicon architecture):
+If you prefer QT6 or use macOS with silicon architecture, use the following commands:
 ```bash
+uv sync --all-packages --extra gui_qt6
 NICOS_QT=6 ./bin/nicos-gui -c nicos_ess/<instrument>/guiconfig.py
 ```
-## Configure Cache Database
+
+The first one has to be only run once (and is not necessary on macOS as it is picked as default).
+
+
+## Configure NICOS {#nicosconf}
+
+Place the NICOS configuration file (`nicos.conf`) for your choice of instrument into one of the following locations, searched in order:
+
+- in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf` on GNU/Linux, or
+- the `nicos` directory in your standard user configuration path, i.e. on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`.
+
+Both these paths can be modified by setting the `XDG_CONFIG_DIRS` or `XDG_CONFIG_HOME` environment variable, respectively, to point to a different location.
+See [the corresponding XDG variable documentation](https://platformdirs.readthedocs.io/en/latest/parameters.html#xdg-env-vars) for reference.
+
+For backwards compatibility, the `nicos_root` folder (i.e. the root of the repository) will be searched first.
+When NICOS has been deployed as package, this path would most likely not point to a suitable location.
+Therefore, prefer the XDG standard directories as place for `nicos.conf`
+
+### Configure Cache Database {#configurecache}
 
 NICOS supports different cache databases. You can use `MemoryCacheDatabase`, `FlatfileCacheDatabase`, or `RedisCacheDatabase`. For local development, `MemoryCacheDatabase` or `FlatfileCacheDatabase` are easiest to set up.
 
-### Step 1: Selecting the Cache Database
+#### Step 1: Selecting the Cache Database
 
 Edit the `cache.py` setup file to choose your cache database:
 ```bash
 vim nicos_ess/<instrument>/setups/special/cache.py
 ```
 
-### Step 2: Configuration Options
+#### Step 2: Configuration Options
 
-#### Option 1: MemoryCacheDatabase (Default)
+##### Option 1: MemoryCacheDatabase (Default)
 No changes needed if you are using the default `MemoryCacheDatabase`:
 ```python
 DB=device(
@@ -170,7 +175,7 @@ DB=device(
 )
 ```
 
-#### Option 2: FlatfileCacheDatabase
+##### Option 2: FlatfileCacheDatabase
 To use `FlatfileCacheDatabase`, update the setup file as follows:
 ```python
 DB=device(
@@ -180,7 +185,7 @@ DB=device(
 )
 ```
 
-#### Option 3: RedisCacheDatabase
+##### Option 3: RedisCacheDatabase
 For Redis-based caching, `RedisCacheDatabase`, configure as follows:
 ```python
 DB=device(
@@ -212,188 +217,16 @@ When arbitrary history is disabled, its old history keys are removed the next
 time that value is reported. Each report with a new timestamp is archived even
 if its value is unchanged.
 
-In the case of `RedisCacheDatabase`, you need to set up Redis and RedisTimeSeries. See section [Redis Setup](#redis-setup) for instructions.
+In the case of `RedisCacheDatabase`, you need to set up Redis and RedisTimeSeries.
+
 
 ## Developer Setup
 
-### Step 1: Install Development Requirements
-
-To set up your environment for development, install the additional required packages:
-```bash
-pip install -r requirements-dev.txt
-```
-
-### Step 2: Install Pre-Commit Hook
+### Install Pre-Commit Hook
 
 Install the pre-commit hook to ensure code quality:
 ```bash
 pre-commit install
 ```
 
-# Redis Setup
-
-This section guides you through installing Redis, an in-memory data store, and RedisTimeSeries, a module for time-series data processing.
-With Redis versions lower than version 8, the RedisTimeSeries module is mandatory.
-
-The instructions are for Linux systems (tested on ubuntu 22.04 and CentOS 7). For other operating systems, refer to the Redis and RedisTimeSeries documentation.
-
-## Installing Redis
-
-### Step 1: Download and Extract Redis
-
-Download and extract the Redis package:
-```bash
-wget http://download.redis.io/releases/redis-6.2.14.tar.gz
-tar xzf redis-6.2.14.tar.gz
-cd redis-6.2.14
-```
-
-### Step 2: Compile Redis
-
-Compile the Redis source code:
-```bash
-make
-```
-> *Optional but recommended: Run tests to ensure Redis is functioning correctly.*
-```bash
-make test
-```
-Install Redis on your system:
-```bash
-sudo make install
-```
-
-### Step 3: Configuration File Setup
-
-Create a directory for the Redis configuration file:
-```bash
-sudo mkdir /etc/redis
-```
-Copy the default configuration file:
-```bash
-sudo cp redis.conf /etc/redis/redis.conf
-```
-
-### Step 4: Edit the Redis Configuration
-
-Open the configuration file to apply necessary settings:
-```bash
-sudo vim /etc/redis/redis.conf
-```
-> **IMPORTANT:** Ensure Redis is bound to localhost for security:
-```bash
-bind 127.0.0.1 ::1
-protected-mode yes
-supervised systemd
-dir /var/lib/redis
-```
-
-### Step 5: Create a Systemd Service File for Redis
-
-Create a service file to manage Redis with systemd:
-```bash
-sudo vim /etc/systemd/system/redis.service
-```
-Paste the following configuration, replacing `nicos` with your username (on the nicosservers, it's `nicos`):
-```ini
-[Unit]
-Description=Redis In-Memory Data Store
-After=network.target
-
-[Service]
-User=nicos
-Group=nicos
-ExecStart=/usr/local/bin/redis-server /etc/redis/redis.conf
-ExecStop=/usr/local/bin/redis-cli shutdown
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### Step 6: Prepare the Redis Data Directory
-
-Create and set permissions for the Redis data directory:
-```bash
-sudo mkdir /var/lib/redis
-sudo chown nicos:nicos /var/lib/redis
-sudo chmod 770 /var/lib/redis
-```
-
-### Step 7: Enable and Start the Redis Service
-
-Enable and start the Redis service:
-```bash
-sudo systemctl enable redis
-sudo systemctl start redis
-```
-> *Optionally, check the status to ensure Redis is running smoothly:*
-```bash
-sudo systemctl status redis
-```
-
-### Step 8: Configure the System PATH
-
-Find the Redis CLI tool:
-```bash
-sudo find / -name redis-cli
-```
-Add Redis binaries to your system PATH:
-```bash
-vim ~/.bashrc
-export PATH=$PATH:/usr/local/bin
-source ~/.bashrc
-```
-
-### Step 9: Verify Redis Installation
-
-Test that Redis is installed and running correctly:
-```bash
-redis-cli ping
-```
-
-## Installing RedisTimeSeries
-
-*Note:* Starting with Redis 8, the Time Series data structure is integral to Redis.
-If you have installed a Redis version equal or higher to 8, you don't need
-to install this module separately.
-
-### Step 1: Clone and Set Up RedisTimeSeries
-
-Clone the RedisTimeSeries repository:
-```bash
-git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git -b v1.8.10
-cd RedisTimeSeries
-```
-Set up the environment and build the module:
-```bash
-./sbin/setup
-bash -l
-make
-```
-
-### Step 2: Install RedisTimeSeries Module
-
-Copy the RedisTimeSeries module to the appropriate directory:
-```bash
-cp RedisTimeSeries/bin/linux-x64-release/redistimeseries.so /etc/redis/redistimeseries.so
-```
-
-### Step 3: Load RedisTimeSeries Module in Redis
-
-To load the RedisTimeSeries module, add this line to `redis.conf`:
-```bash
-loadmodule /etc/redis/redistimeseries.so
-```
-Restart Redis to apply changes:
-```bash
-sudo systemctl restart redis
-```
-
-### Step 4: Verify Module Installation
-
-Check that the RedisTimeSeries module is loaded correctly:
-```bash
-redis-cli MODULE LIST
-```
 ---
