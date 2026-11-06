@@ -13,5 +13,6 @@ guiconfig_paths = list(ess_root.rglob("guiconfig.py"))
     "path", guiconfig_paths, ids=lambda path: path.relative_to(ess_root).as_posix()
 )
 def test_guiconfig_contains_mainwindow_and_uses_ess_mainwindow_class(path):
-    config = processGuiConfig(path.read_text(encoding="utf-8"))
+    source = path.read_text(encoding="utf-8")
+    config = processGuiConfig(compile(source, str(path), "exec"))
     assert config.options["mainwindow_class"] == "nicos_ess.gui.mainwindow.MainWindow"
