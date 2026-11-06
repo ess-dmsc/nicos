@@ -435,7 +435,6 @@ class DevicesPanel(Panel):
             catitem.setToolTip(
                 self.col_index["NAME"], self._setupinfo[cat].get("description", "")
             )
-        self._clear_sample_fields()
 
     def on_client_device(self, data):
         (action, devlist) = data
@@ -748,24 +747,6 @@ class DevicesPanel(Panel):
         dlg = self._control_dialogs.pop(ldevname, None)
         if dlg:
             dlg.deleteLater()
-
-    def _clear_sample_fields(self):
-        state = self.client.ask("getstatus")
-        if not state:
-            return
-        sample_params = (
-            self.client.getDeviceParams("Sample")
-            if "Sample" in state["devices"]
-            else {}
-        )
-        curr_devs = self.client.getDeviceList()
-        if curr_devs:
-            clear_fields = [
-                field
-                for field in ("temperature", "electric_field", "magnetic_field")
-                if sample_params.get(field) and sample_params[field] not in curr_devs
-            ]
-            self.client.eval(f"session.clearSampleFields({clear_fields!r})")
 
     # API shared with ControlDialog
     def exec_command(self, command, ask_queue=True, immediate=False):
