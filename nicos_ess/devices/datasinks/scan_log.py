@@ -90,6 +90,7 @@ class ScanLogSink(DataSink):
         self._producer = None
         self._lock = threading.Lock()
         self._values = {SCAN: 0, POINT: 0}
+        self._prev_values = {}
         self._last_ns = {SCAN: 0, POINT: 0}
         self._stopping = threading.Event()
         self._thread = None
@@ -134,6 +135,10 @@ class ScanLogSink(DataSink):
         """Send one value; its time never goes back from the last one sent."""
         if self._producer is None:
             return
+        if number == self._prev_values.get(settype):
+            return
+        self._prev_values[settype] = number
+
         source = self._source_name(settype)
         timestamp_ns = max(int(timestamp * 1e9), self._last_ns[settype])
         self._last_ns[settype] = timestamp_ns
