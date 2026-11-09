@@ -1003,9 +1003,7 @@ class EditorPanel(Panel):
 
         def _open_remote():
             command = (
-                "read_commands_file"
-                if is_inst_script
-                else "read_user_script_file"
+                "read_commands_file" if is_inst_script else "read_user_script_file"
             )
             return self.client.eval(
                 f"session.experiment.{command}('{fn}')",
