@@ -70,6 +70,5 @@ main_window = vbox(
 windows = []
 
 options = {
-    "facility": "ess",
     "mainwindow_class": "nicos_ess.gui.mainwindow.MainWindow",
 }
