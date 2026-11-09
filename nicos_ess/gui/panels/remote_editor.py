@@ -1048,7 +1048,7 @@ class EditorPanel(Panel):
             and not self.is_admin_account()
         ):
             QMessageBox.warning(
-                self, "Error", "Only an admin account can save instrument scripts"
+                self, "Error", "Only an admin account can save instrument commands"
             )
             return False
         return True
