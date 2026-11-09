@@ -410,8 +410,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 class JustBinItDetector(Detector, KafkaStatusHandler):
     """A detector whose image channels are histograms made by just-bin-it.
 
-    All attached images must be JustBinItImage channels; timers, monitors and
-    counters work as in any Detector.
+    JustBinItImage channels are configured from just-bin-it; all other
+    channels, including other image channels, work as in any Detector.
 
     A count with a time preset sends a start/stop window, so just-bin-it ends
     the job by itself. Counts that end before it are ended with a stop command.
@@ -485,6 +485,11 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     def doPreinit(self, mode):
         self._stop_lock = threading.Lock()
         Detector.doPreinit(self, mode)
+        self._jbi_images = [
+            image
+            for image in self._attached_images
+            if isinstance(image, JustBinItImage)
+        ]
 
         if mode == SIMULATION:
             return
@@ -497,7 +502,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._response_consumer = KafkaConsumer.create(self.brokers)
         self._response_consumer.subscribe([self.response_topic])
         if session.sessiontype != POLLER:
-            topics = sorted({image.hist_topic for image in self._attached_images})
+            topics = sorted({image.hist_topic for image in self._jbi_images})
             self._hist_subscriber = KafkaSubscriber(self.brokers)
             self._hist_subscriber.subscribe(topics, self._on_histogram_messages)
 
@@ -509,7 +514,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
                 self.log.warning("could not decode histogram message: %s", err)
                 continue
             if decoded:
-                for image in self._attached_images:
+                for image in self._jbi_images:
                     image.on_histogram(*decoded)
 
     def doPrepare(self):
@@ -604,7 +609,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     def _create_config(self, identifier):
         histograms = [
             image.get_configuration(f"{identifier}-{image.name}")
-            for image in self._attached_images
+            for image in self._jbi_images
         ]
         start_ms = int(time.time() * 1000)
         config_base = {
@@ -656,7 +661,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         Detector.doFinish(self)
 
     def _wait_for_final_histograms(self):
-        channels = self._attached_images
+        channels = self._jbi_images
         deadline = time.monotonic() + self.finish_timeout
         for channel in channels:
             remaining = deadline - time.monotonic()

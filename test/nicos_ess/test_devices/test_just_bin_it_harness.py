@@ -15,7 +15,8 @@ import numpy as np
 import pytest
 from streaming_data_types import serialise_hs01
 
-from nicos.core import status
+from nicos.core import FINAL, status
+from nicos.devices.generic import VirtualImage
 from nicos_ess.devices.datasources import just_bin_it
 from nicos_ess.devices.kafka import status_handler
 from nicos_ess.devices.timer import TimerChannel
@@ -110,7 +111,7 @@ def _send_histogram(detector, unique_id, state, total, num_bins=4):
     detector._hist_subscriber.emit_messages([(0, message)])
 
 
-def _create_detector(daemon_device_harness, *, statustopic=None):
+def _create_detector(daemon_device_harness, *, statustopic=None, images=("image_1",)):
     """Build the smallest complete just-bin-it detector graph used in tests."""
     daemon_device_harness.create_master(
         TimerChannel,
@@ -134,7 +135,7 @@ def _create_detector(daemon_device_harness, *, statustopic=None):
         command_topic="jbi_command",
         response_topic="jbi_response",
         statustopic=statustopic or [],
-        images=["image_1"],
+        images=list(images),
         timers=["timer"],
         finish_timeout=0.5,
     )
@@ -414,6 +415,23 @@ class TestJustBinItFinalHistograms:
         detector.start()
         detector.finish()
         assert "did not acknowledge" in caplog.text
+
+    def test_other_image_channels_count_alongside(
+        self, daemon_device_harness, recording_kafka
+    ):
+        daemon_device_harness.create_master(VirtualImage, name="camera", size=(4, 4))
+        detector = _create_detector(daemon_device_harness, images=("image_1", "camera"))
+        image = detector._attached_images[0]
+        detector.setPreset(t=0.01)
+        detector.prepare()
+        detector.start()
+        assert wait_until(detector.isCompleted)
+        _send_histogram(detector, image._unique_id, "FINISHED", 3)
+        detector.finish()
+        (config,) = _commands(recording_kafka)
+        assert [h["id"].rsplit("-", 1)[-1] for h in config["histograms"]] == ["image_1"]
+        assert image.read()[0] == 3
+        assert len(detector.readArrays(FINAL)) == 2
 
     def test_shutdown_closes_heartbeat_subscriber(
         self, daemon_device_harness, recording_kafka
