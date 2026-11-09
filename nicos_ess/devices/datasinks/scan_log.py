@@ -89,9 +89,8 @@ class ScanLogSink(DataSink):
     def doInit(self, mode):
         self._producer = None
         self._lock = threading.Lock()
-        self._values = {SCAN: 0, POINT: 0}
-        self._prev_values = {}
-        self._last_ns = {SCAN: 0, POINT: 0}
+        now_ns = int(currenttime() * 1e9)
+        self._current = {SCAN: (0, now_ns), POINT: (0, now_ns)}
         self._stopping = threading.Event()
         self._thread = None
         self._failing = False
@@ -118,8 +117,10 @@ class ScanLogSink(DataSink):
 
     def _set(self, settype, number, timestamp):
         with self._lock:
-            self._values[settype] = number
-            self._publish(settype, number, timestamp)
+            last_ns = self._current[settype][1]
+            timestamp_ns = max(int(timestamp * 1e9), last_ns)
+            self._current[settype] = (number, timestamp_ns)
+            self._publish(settype, number, timestamp_ns)
 
     def _repeat(self):
         while not self._stopping.wait(self.update_interval):
@@ -127,25 +128,18 @@ class ScanLogSink(DataSink):
 
     def _publish_current(self):
         with self._lock:
-            now = currenttime()
-            for settype, number in self._values.items():
-                self._publish(settype, number, now)
+            for settype, (number, timestamp_ns) in self._current.items():
+                self._publish(settype, number, timestamp_ns)
 
-    def _publish(self, settype, number, timestamp):
-        """Send one value; its time never goes back from the last one sent."""
+    def _publish(self, settype, number, timestamp_ns):
         if self._producer is None:
             return
-        if number == self._prev_values.get(settype):
-            return
-        self._prev_values[settype] = number
-
         source = self._source_name(settype)
-        timestamp_ns = max(int(timestamp * 1e9), self._last_ns[settype])
-        self._last_ns[settype] = timestamp_ns
         try:
             self._producer.produce(
                 self.topic,
                 serialise_f144(source, number, timestamp_ns),
+                key=source.encode(),
                 on_delivery_callback=self._on_delivery,
                 auto_flush=False,
             )

@@ -52,6 +52,17 @@ def values(sink, source):
     return [value for name, value, _ in published(sink) if name == source]
 
 
+def file_rows(sink, source):
+    """The values kafka-to-nexus writes: it drops a time equal to the last."""
+    rows = []
+    last = None
+    for name, value, timestamp in published(sink):
+        if name == source and timestamp != last:
+            rows.append(value)
+            last = timestamp
+    return rows
+
+
 def run_scan(npoints, *, before_end=lambda point: None):
     dataman = session.experiment.data
     dataman.beginScan()
@@ -163,20 +174,19 @@ class TestScanLogSink:
 
         assert values(sink, "scanlog/point") == [1, 0]
 
-    def test_repeats_the_current_numbers(self, sink):
+    def test_repeats_add_no_rows_to_the_file(self, sink):
+        def count(point):
+            sink._publish_current()
+            start_counting(point)
+            sink._publish_current()
+            sink._publish_current()
+
         sink._publish_current()
-        dataman = session.experiment.data
-        dataman.beginScan()
-        point = dataman.beginPoint()
-        start_counting(point)
-        sink._publish_current()
-        dataman.finishPoint()
-        sink._publish_current()
-        dataman.finishScan()
+        run_scan(4, before_end=count)
         sink._publish_current()
 
-        assert values(sink, "scanlog/scan") == [0, 1, 1, 1, 0, 0]
-        assert values(sink, "scanlog/point") == [0, 1, 1, 0, 0, 0]
+        assert file_rows(sink, "scanlog/scan") == [0, 1, 0]
+        assert file_rows(sink, "scanlog/point") == [0, 1, 0, 2, 0, 3, 0, 4, 0]
 
     def test_time_never_goes_back_on_a_source(self, sink):
         def late_end(point):
@@ -207,7 +217,15 @@ class TestScanLogSink:
         assert len(published(device)) >= 6
         assert not device._thread.is_alive()
         assert device._producer.flushes == 1
+        assert len(set(published(device))) == 2
         assert {value for _, value, _ in published(device)} == {0}
+
+    def test_messages_are_keyed_by_source(self, sink):
+        run_scan(1, before_end=start_counting)
+
+        for message in sink._producer.messages:
+            source = deserialise_f144(message["message"]).source_name
+            assert message["key"] == source.encode()
 
     def test_count_outside_scan_logs_only_a_point(self, sink):
         session.experiment.data.beginPoint()
@@ -265,6 +283,20 @@ class TestScanLogSink:
         monkeypatch.setattr(sink._producer, "produce", fail)
         sink._publish_current()
         assert len(warnings()) == 2
+
+    def test_failed_delivery_warns_once(self, sink, monkeypatch, caplog):
+        def undelivered(*args, on_delivery_callback, **kwargs):
+            on_delivery_callback("broker down", None)
+
+        monkeypatch.setattr(sink._producer, "produce", undelivered)
+        run_scan(2)
+
+        warnings = [
+            r.getMessage()
+            for r in caplog.records
+            if r.levelname == "WARNING" and r.name.endswith("ScanLog")
+        ]
+        assert warnings == [f"could not publish to {TOPIC}: broker down"]
 
     def test_nexus_logs_hold_both_numbers_as_int64(self, sink):
         logs = {log["name"]: log for log in sink.nexus_logs()}
