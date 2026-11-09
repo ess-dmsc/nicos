@@ -291,133 +291,6 @@ class EssExperiment(Device):
         self.new(0, "Service mode")
         self.sample.set_samples({})
 
-    @property
-    def instrument_scripts_directory(self) -> str:
-        instrument = session.instrument.name.lower()
-        return os.path.join(self.scripts_directory, instrument, "instrument")
-
-    @property
-    def user_scripts_directory(self) -> str:
-        instrument = session.instrument.name.lower()
-        return os.path.join(self.scripts_directory, instrument, "user")
-
-    def _sanitise_path(self, root, path) -> Path:
-        root = Path(root).resolve()
-
-        candidate = Path(path)
-        if candidate.is_absolute():
-            raise ValueError("Absolute paths are not allowed")
-
-        target = (root / candidate).resolve()
-
-        if not target.is_relative_to(root):
-            raise ValueError("Path is outside the allowed scripts directory")
-
-        return target
-
-    def list_instrument_scripts_directory(self) -> (str, list[str]):
-        """Fetches a list of files in the instrument scripts directory.
-
-        Note: currently it should only be at most one file (commands.py).
-
-        Returns: (the directory path, a list of files)
-        """
-        directory = self.instrument_scripts_directory
-        # Ignore any directories as we don't support directories for
-        # instrument scripts.
-        (files, _) = self._list_directory_files(directory, extension=".py")
-        return files, []
-
-    def list_user_scripts_directory(self, directory="") -> (str, list[str]):
-        """Fetches a list of files in the specified user scripts directory.
-
-        Args:
-            directory: the sub-directory of the user scripts directory.
-
-        Returns: (the directory path, a list of files, a list of sub-directories)
-        """
-        directory = os.path.join(self.user_scripts_directory, directory)
-        return self._list_directory_files(directory, extension=".py")
-
-    def _list_directory_files(self, directory, extension=""):
-        files = []
-        directories = []
-        for file in os.listdir(directory):
-            path = os.path.join(directory, file)
-            if os.path.isfile(path) and path.endswith(extension):
-                last_modified = int(os.path.getmtime(path))
-                files.append((file, last_modified))
-            elif os.path.isdir(path):
-                directories.append(file)
-        return files, directories
-
-    def read_user_script_file(self, path) -> str | None:
-        """Reads the specified file from the server and returns it."""
-        path = self._sanitise_path(self.user_scripts_directory, path)
-
-        with open(path, encoding="utf-8") as f:
-            return f.read()
-
-    def write_user_script_file(self, path, contents):
-        """Write the contents to the specified file."""
-        path = self._sanitise_path(self.user_scripts_directory, path)
-
-        with open(path, "w", encoding="utf-8") as f:
-            # NOTE: contents are received as bytes, so must be decoded!
-            f.write(contents.decode())
-
-    def create_user_script_directory(self, path):
-        """Creates the specified user script directory."""
-        path = self._sanitise_path(self.user_scripts_directory, path)
-
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-    def delete_user_script_file(self, path):
-        """Deletes the specified file"""
-        path = self._sanitise_path(self.user_scripts_directory, path)
-
-        if os.path.exists(path):
-            os.remove(path)
-
-    def delete_user_script_directory(self, path):
-        """Deletes the specified directory and contents"""
-        path = self._sanitise_path(self.user_scripts_directory, path)
-        parent = Path(self.user_scripts_directory)
-        if path == parent:
-            raise ValueError("Cannot delete top-level directory")
-
-        if os.path.exists(path):
-            shutil.rmtree(path, ignore_errors=True)
-
-    def rename_user_script_file(self, old, new):
-        """Renames the file/directory to the new name"""
-        old = self._sanitise_path(self.user_scripts_directory, old)
-        new = self._sanitise_path(self.user_scripts_directory, new)
-
-        if os.path.exists(old):
-            os.rename(old, new)
-
-    def user_script_file_exists(self, path):
-        """Does the specified file exist?"""
-        path = self._sanitise_path(self.user_scripts_directory, path)
-
-        return os.path.exists(path)
-
-    def read_instrument_script_file(self, path) -> str | None:
-        """Reads the specified file from the server and returns it."""
-        path = self._sanitise_path(self.instrument_scripts_directory, path)
-
-        with open(path, encoding="utf-8") as f:
-            return f.read()
-
-    def write_instrument_script_file(self, path, contents):
-        """Write the contents to the specified file."""
-        path = self._sanitise_path(self.instrument_scripts_directory, path)
-        with open(path, "w", encoding="utf-8") as f:
-            # NOTE: contents are received as bytes, so must be decoded!
-            f.write(contents.decode())
-
     def _canQueryProposals(self):
         return self._yuos_client is not None
 
@@ -608,3 +481,130 @@ class EssExperiment(Device):
 
     def doUpdateEnvlist(self, devices):
         self._envlist = None  # clear list of actual devices
+
+    @property
+    def commands_directory(self) -> str:
+        instrument = session.instrument.name.lower()
+        return os.path.join(self.scripts_directory, instrument, "commands")
+
+    @property
+    def user_scripts_directory(self) -> str:
+        instrument = session.instrument.name.lower()
+        return os.path.join(self.scripts_directory, instrument, "user")
+
+    def _sanitise_path(self, root, path) -> Path:
+        root = Path(root).resolve()
+
+        candidate = Path(path)
+        if candidate.is_absolute():
+            raise ValueError("Absolute paths are not allowed")
+
+        target = (root / candidate).resolve()
+
+        if not target.is_relative_to(root):
+            raise ValueError("Path is outside the allowed scripts directory")
+
+        return target
+
+    def list_commands_directory(self) -> (str, list[str]):
+        """Fetches a list of files in the commands directory.
+
+        Note: currently it should only be at most one file (commands.py).
+
+        Returns: (the directory path, a list of files)
+        """
+        directory = self.commands_directory
+        # Ignore any directories as we don't support directories for
+        # instrument scripts.
+        (files, _) = self._list_directory_files(directory, extension=".py")
+        return files, []
+
+    def list_user_scripts_directory(self, directory="") -> (str, list[str]):
+        """Fetches a list of files in the specified user scripts directory.
+
+        Args:
+            directory: the sub-directory of the user scripts directory.
+
+        Returns: (the directory path, a list of files, a list of sub-directories)
+        """
+        directory = os.path.join(self.user_scripts_directory, directory)
+        return self._list_directory_files(directory, extension=".py")
+
+    def _list_directory_files(self, directory, extension=""):
+        files = []
+        directories = []
+        for file in os.listdir(directory):
+            path = os.path.join(directory, file)
+            if os.path.isfile(path) and path.endswith(extension):
+                last_modified = int(os.path.getmtime(path))
+                files.append((file, last_modified))
+            elif os.path.isdir(path):
+                directories.append(file)
+        return files, directories
+
+    def read_user_script_file(self, path) -> str | None:
+        """Reads the specified file from the server and returns it."""
+        path = self._sanitise_path(self.user_scripts_directory, path)
+
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    def write_user_script_file(self, path, contents):
+        """Write the contents to the specified file."""
+        path = self._sanitise_path(self.user_scripts_directory, path)
+
+        with open(path, "w", encoding="utf-8") as f:
+            # NOTE: contents are received as bytes, so must be decoded!
+            f.write(contents.decode())
+
+    def create_user_script_directory(self, path):
+        """Creates the specified user script directory."""
+        path = self._sanitise_path(self.user_scripts_directory, path)
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+    def delete_user_script_file(self, path):
+        """Deletes the specified file"""
+        path = self._sanitise_path(self.user_scripts_directory, path)
+
+        if os.path.exists(path):
+            os.remove(path)
+
+    def delete_user_script_directory(self, path):
+        """Deletes the specified directory and contents"""
+        path = self._sanitise_path(self.user_scripts_directory, path)
+        parent = Path(self.user_scripts_directory)
+        if path == parent:
+            raise ValueError("Cannot delete top-level directory")
+
+        if os.path.exists(path):
+            shutil.rmtree(path, ignore_errors=True)
+
+    def rename_user_script_file(self, old, new):
+        """Renames the file/directory to the new name"""
+        old = self._sanitise_path(self.user_scripts_directory, old)
+        new = self._sanitise_path(self.user_scripts_directory, new)
+
+        if os.path.exists(old):
+            os.rename(old, new)
+
+    def user_script_file_exists(self, path):
+        """Does the specified file exist?"""
+        path = self._sanitise_path(self.user_scripts_directory, path)
+
+        return os.path.exists(path)
+
+    def read_commands_file(self, path) -> str | None:
+        """Reads the specified file from the server and returns it."""
+        path = self._sanitise_path(self.commands_directory, path)
+
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    def write_commands_file(self, path, contents):
+        """Write the contents to the specified file."""
+        path = self._sanitise_path(self.commands_directory, path)
+        with open(path, "w", encoding="utf-8") as f:
+            # NOTE: contents are received as bytes, so must be decoded!
+            f.write(contents.decode())

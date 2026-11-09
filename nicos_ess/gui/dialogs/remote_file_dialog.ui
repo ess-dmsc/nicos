@@ -84,11 +84,6 @@
        </item>
        <item>
         <property name="text">
-         <string>Instrument script</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
          <string>Instrument commands</string>
         </property>
        </item>

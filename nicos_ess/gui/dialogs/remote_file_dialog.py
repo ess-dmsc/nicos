@@ -233,7 +233,7 @@ class RemoteFileDialog(QDialog):
 
     def _show_context_menu(self, point):
         if self.is_inst_script:
-            # Disallow deleting and renaming the instrument commands file.
+            # Disallow deleting and renaming the commands file.
             return
 
         row = self.file_table.indexAt(point).row()
@@ -315,7 +315,7 @@ class RemoteFileDialog(QDialog):
     def _update_files_list(self, directory=""):
         if self.is_inst_script:
             files_info, directories = self.call_eval(
-                "session.experiment.list_instrument_scripts_directory()", (None, None)
+                "session.experiment.list_commands_directory()", (None, None)
             )
         else:
             files_info, directories = self.call_eval(

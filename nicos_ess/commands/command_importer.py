@@ -36,7 +36,7 @@ def import_instrument_commands():
     be called if the commands are edited.
     """
     file = os.path.join(
-        session.experiment.instrument_scripts_directory,
+        session.experiment.commands_directory,
         FILENAME,
     )
     if not os.path.isfile(file):

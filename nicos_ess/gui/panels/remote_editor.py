@@ -1003,7 +1003,7 @@ class EditorPanel(Panel):
 
         def _open_remote():
             command = (
-                "read_instrument_script_file"
+                "read_commands_file"
                 if is_inst_script
                 else "read_user_script_file"
             )
@@ -1089,7 +1089,7 @@ class EditorPanel(Panel):
         # containing \n, \t, etc.
         content = editor.text().encode()
         command = (
-            "write_instrument_script_file"
+            "write_commands_file"
             if self.is_instrument_script[editor]
             else "write_user_script_file"
         )
