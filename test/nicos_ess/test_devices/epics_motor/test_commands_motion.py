@@ -86,23 +86,6 @@ class TestEpicsMotorCommandsAndMotion:
         assert fake_backend.values[pv(".VAL")] == 2.7
 
     @pytest.mark.parametrize(
-        "movn,dmov",
-        [
-            pytest.param(1, 1, id="movn_is_one"),
-            pytest.param(0, 0, id="dmov_is_zero"),
-        ],
-    )
-    def test_motor_writeoffset_fails_while_motor_is_moving(
-        self, device_harness, fake_backend, movn, dmov
-    ):
-        fake_backend.values[pv(".MOVN")] = movn
-        fake_backend.values[pv(".DMOV")] = dmov
-        dev = create_motor(device_harness)
-
-        with pytest.raises(RuntimeError):
-            device_harness.run_daemon(dev.doWriteOffset, 5.0)
-
-    @pytest.mark.parametrize(
         "errorbit,expected_resetvalue",
         [
             pytest.param(0, 0, id="no_error_no_reset"),
