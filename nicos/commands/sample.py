@@ -33,6 +33,9 @@ from numpy import arcsin, degrees, pi, radians, sin, sqrt
 from nicos import session
 from nicos.commands import helparglist, parallel_safe, usercommand
 from nicos.commands.analyze import CommandLineFitResult
+from nicos.commands.output import (
+    printinfo,
+)
 from nicos.core import ConfigurationError, UsageError
 from nicos.devices.tas.spacegroups import can_reflect, get_spacegroup
 from nicos.utils import printTable
