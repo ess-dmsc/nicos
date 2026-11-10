@@ -269,7 +269,7 @@ class ComparisonPanel(LiveDataPanel):
         item = self.fileList.currentItem()
         if self._is_item_snapshot(item):
             new_name, ok = QInputDialog.getText(
-                self, "Rename", "", QLineEdit.Normal, item.text()
+                self, "Rename", "", QLineEdit.EchoMode.Normal, item.text()
             )
             if ok and new_name:
                 item.setText(new_name)
