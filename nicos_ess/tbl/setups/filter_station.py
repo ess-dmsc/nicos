@@ -39,8 +39,8 @@ devices = dict(
         description="Filter bank 2 discrete positions",
         controlled_device="bank_2_axis",
         mapping={
-            "Bi: ⌀50 x 25 mm (1)": 23.91,
-            "Bi: ⌀50 x 25 mm (2)": 98.91,
+            "Bi: ⌀50 x 25 mm": 23.91,
+            "Be: ⌀50 x 40 mm": 98.91,
             "Si: ⌀40 x 50 mm": 173.91,
             "Blank": 295,
         },
