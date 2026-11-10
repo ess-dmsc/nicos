@@ -47,7 +47,6 @@ from nicos.core import (
     UsageError,
     requires,
     status,
-    secret,
     usermethod,
 )
 from nicos.core.sessions.utils import MAINTENANCE
@@ -173,12 +172,6 @@ class Dev4(Device):
                              internal=True, userparam=True),
         'explicit': Param('non-internal parameter with explicit userparam '
                           'setting', userparam=False),
-    }
-
-
-class DevSecret(Device):
-    parameters = {
-        'verysecretval': Param('a secret param', type=secret),
     }
 
 
