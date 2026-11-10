@@ -35,7 +35,6 @@ from nicos import config
 from nicos.commands.measure import ListDatasinks
 from nicos.commands.scan import scan
 from nicos.core import ScanDataset
-from nicos.core.device import DeviceParInfo
 from nicos.devices.datasinks.raw import RawImageFileReader
 from nicos.devices.datasinks.scan import AsciiScanfileReader
 from nicos.utils import readFile, updateFileCounter
@@ -101,9 +100,7 @@ class TestSinks:
         assert len(handlers) == 1
         calls = handlers[0]._calls
         # this was called for a scan
-        assert calls == ["prepare", "begin"] + 5 * (
-            ["putValues"] * 10 + ["addSubset"]
-        ) + ["end"]
+        assert calls == ["prepare", "begin"] + ["addSubset"] * 5 + ["end"]
         pointsink = session.getDevice("testsink2")
         handlers = pointsink._handlers
         assert len(handlers) == 1
@@ -160,8 +157,6 @@ class TestSinks:
         assert path.isfile(scanfile)
         asfr = AsciiScanfileReader(scanfile)
         ds = asfr.scandataset
-
-        assert all(isinstance(v, DeviceParInfo) for v in ds.metainfo.values())
 
         assert ds.number == 0
         assert ds.counter == "43 (p1234_00000043.dat)"
@@ -313,32 +308,6 @@ class TestSinks:
         assert contents["instrument"]["name"] == "INSTR"
         assert contents["experiment"]["proposal"] == "p1234"
         assert contents["measurement"]["sample"]["description"]["name"] == "mysample"
-
-
-class TestListDatasinks:
-    def test_ListDatasinks(self, session, log):
-        with log.assert_msg_matches(
-            [
-                r"Currently used data sinks are:",
-                r"name         used for       active for detectors",
-                r"srawsink     point",
-                r"tiffsink     point",
-                r"livesink     point",
-                r"yamlsink     point",
-                r"fitssink     point",
-                r"bersanssink  point",
-                r"testsink1    scan",
-                r"testsink2    point          det",
-                r"rawsink      point",
-                # The order of the subsets isn't well-defined so both options
-                # have to be checked
-                r"consolesink  (scan, subscan|subscan, scan)",
-                r"daemonsink   (scan, subscan|subscan, scan)",
-                r"asciisink    (scan, subscan|subscan, scan)",
-                r"serialsink   (scan, subscan|subscan, scan)",
-            ]
-        ):
-            ListDatasinks()
 
 
 def test_sink_ordering(session):

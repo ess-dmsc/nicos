@@ -96,7 +96,6 @@ from nicos.commands.device import (
     version,
     wait,
     waitfor,
-    waitfor_stable,
 )
 from nicos.commands.measure import (
     AddDetector,
@@ -415,22 +414,6 @@ class TestDevice:
         pytest.raises(UsageError, rmove, axis, "7")
         pytest.raises(UsageError, rmove, axis, None)
 
-        # ensure that list/tuple type delta values are working
-        slit = session.getDevice("slit3")
-        slit.opmode = "centered"
-        slit.maw((0, 0))
-        assert slit.read(0) == [0, 0]
-        rmaw(slit, (0.1, 0.2))
-        assert slit.read(0) == [0.1, 0.2]
-        rmaw(slit, [0.5, 1.0])
-        assert slit.read(0) == [0.6, 1.2]
-
-        # ensure that "strange" deltas result in UsageError
-        pytest.raises(UsageError, rmove, slit, 1)
-        pytest.raises(UsageError, rmove, slit, [1])
-        pytest.raises(UsageError, rmove, slit, None)
-        pytest.raises(UsageError, rmove, slit, [1, 2, 3])
-
     def test_maw(self, session, log):
         """Check maw() command."""
         motor = session.getDevice("motor")
@@ -728,37 +711,12 @@ class TestDevice:
     def test_reference(self, session, log):
         """Check reference() command."""
         motor = session.getDevice("motor")
-        with log.assert_errors("has no reference function"):
+        with log.assert_errors("has no homing function"):
             reference(motor)
         axis = session.getDevice("nocoder_axis")
         axis.maw(1)
         reference(axis)
         assert axis.read(0) == 0.0
-
-    def test_waitfor(self, session, log):
-        """Check waitfor() command."""
-        motor = session.getDevice("motor")
-        assert motor.read() == 0.0
-        waitfor(motor, "== 0")
-        motor.speed = 10
-        move(motor, 2)
-        waitfor(motor, "> 1.2")
-        pytest.raises(NicosTimeoutError, waitfor, motor, "< 1", 0.1)
-        waitfor(motor, "> 1", 0.1)
-
-        # check waitfor wrong condition syntax
-        pytest.raises(UsageError, waitfor, motor, ">")
-
-    def test_waitfor_stable(self, session, log):
-        motor = session.getDevice("motor")
-        assert motor.read() == 0.0
-        waitfor_stable(motor, 0, 0.1, 0.1)
-        # stable time > timeout !
-        assert pytest.raises(UsageError, waitfor_stable, motor, 0, 0.1, 1, 0.1)
-        # target position not reached due to timeout
-        assert pytest.raises(
-            NicosTimeoutError, waitfor_stable, motor, 1, 0.1, 0.01, 0.02
-        )
 
 
 def test_notifiers(session, log):

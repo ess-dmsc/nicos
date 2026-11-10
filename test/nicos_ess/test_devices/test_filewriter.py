@@ -29,7 +29,7 @@ class TestFilewriter:
                 "facility_user_id": "johndoe",
             }
         ]
-        samples = {0: {"name": "SampleA", "description": "A test sample"}}
+        samples = {0: {"samplename": "SampleA", "description": "A test sample"}}
         samplename = "SampleA"
         motor_pos = 10
         exp = self.session.getDevice("Exp")
