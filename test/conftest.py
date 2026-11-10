@@ -57,7 +57,7 @@ def _safe_kill(proc):
     except Exception as err:
         name = getattr(proc, "nicos_name", "<unknown>")
         pid = getattr(proc, "pid", "<unknown>")
-        sys.stderr.write("Failed to terminate %s process %s: %s\n" % (name, pid, err))
+        sys.stderr.write(f"Failed to terminate {name} process {pid}: {err}\n")
 
 
 # This fixture will run during the entire test suite.  Therefore, the special
@@ -104,7 +104,7 @@ def session(request):
     # pylint: disable=unnecessary-dunder-call
     nicos_session.__init__(request.module.__name__)
     # override the sessionid: test module, and a finer resolved timestamp
-    nicos_session.sessionid = "%s-%s" % (request.module.__name__, time.time())
+    nicos_session.sessionid = f"{request.module.__name__}-{time.time()}"
     nicos_session.setMode(getattr(request.module, "session_mode", MASTER))
     if request.module.session_setup:
         nicos_session.unloadSetup()
@@ -133,7 +133,7 @@ def dataroot(request, session):
 
     exp._setROParam("dataroot", dataroot)
     exp.new(1234, user="testuser")
-    exp.sample.new({"name": "mysample"})
+    exp.sample.new({"samplename": "mysample"})
 
     return dataroot
 

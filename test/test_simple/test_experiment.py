@@ -141,20 +141,16 @@ def test_experiment(session, cleanup):
     # has the zip file been created?
     assert path.isfile(datapath("p999", "p999.zip"))
 
-    exp.addUser("A User")
+    exp.addUser('A User')
 
-    assert exp.users == "A User"
-    exp.addUser("Another User", "another.user@experiment.com")
-    assert exp.users == "A User, Another User"
-    exp.addUser(
-        "Athird User",
-        "athird.user@experiment.com",
-        "An Institute, Anywhere street, 12345 Anywhere",
-    )
-    assert (
-        exp.users == "A User, Another User, Athird User "
-        "(An Institute, Anywhere street, 12345 Anywhere)"
-    )
+    assert exp.users == 'A User'
+    exp.addUser('Another User', 'another.user@experiment.com')
+    assert exp.users == 'A User; Another User <another.user@experiment.com>'
+    exp.addUser('Athird User', 'athird.user@experiment.com',
+                'An Institute, Anywhere street, 12345 Anywhere')
+    assert exp.users == 'A User; Another User <another.user@experiment.com>; ' \
+        'Athird User <athird.user@experiment.com> ' \
+        '(An Institute, Anywhere street, 12345 Anywhere)'
 
     exp.update(users=[{"name": "Jülich"}])
 
