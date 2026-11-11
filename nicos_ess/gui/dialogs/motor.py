@@ -260,22 +260,20 @@ class MotorDialog(QDialog):
             "Adjust offset", f"Redefine current position of {self.devname}"
         )
         if val is not None:
-            self.devices_panel.exec_command("adjust(%s, %r)" % (self.devrepr, val))
+            self.devices_panel.exec_command(f"adjust({self.devrepr}, {val!r})")
 
     @pyqtSlot()
     def on_actionSetPosition_triggered(self):
         val = self._get_new_value(
-            "Set hardware position", "Set hardware position of %s:" % self.devname
+            "Set hardware position", f"Set hardware position of {self.devname}:"
         )
         if val is not None:
             if self.devrepr != self.devname:
-                cmd = "CreateDevice(%s); %s.setPosition(%r)" % (
-                    self.devrepr,
-                    self.devname,
-                    val,
+                cmd = (
+                    f"CreateDevice({self.devrepr}); {self.devname}.setPosition({val!r})"
                 )
             else:
-                cmd = "%s.setPosition(%r)" % (self.devname, val)
+                cmd = f"{self.devname}.setPosition({val!r})"
             self.devices_panel.exec_command(cmd)
 
     @pyqtSlot()
@@ -286,33 +284,33 @@ class MotorDialog(QDialog):
             if not qwindow.exec():
                 return
 
-        self.devices_panel.exec_command("home(%s)" % self.devrepr)
+        self.devices_panel.exec_command(f"home({self.devrepr})")
 
     @pyqtSlot()
     def on_actionFix_triggered(self):
         reason, ok = QInputDialog.getText(
-            self, "Fix", "Please enter the reason for fixing %s:" % self.devname
+            self, "Fix", f"Please enter the reason for fixing {self.devname}:"
         )
         if not ok:
             return
-        self.devices_panel.exec_command("fix(%s, %r)" % (self.devrepr, reason))
+        self.devices_panel.exec_command(f"fix({self.devrepr}, {reason!r})")
 
     @pyqtSlot()
     def on_actionRelease_triggered(self):
-        self.devices_panel.exec_command("release(%s)" % self.devrepr)
+        self.devices_panel.exec_command(f"release({self.devrepr})")
 
     @pyqtSlot()
     def on_actionEnable_triggered(self):
-        self.devices_panel.exec_command("enable(%s)" % self.devrepr)
+        self.devices_panel.exec_command(f"enable({self.devrepr})")
 
     @pyqtSlot()
     def on_actionDisable_triggered(self):
-        self.devices_panel.exec_command("disable(%s)" % self.devrepr)
+        self.devices_panel.exec_command(f"disable({self.devrepr})")
 
     @pyqtSlot()
     def on_setAliasBtn_clicked(self):
         self.devices_panel.exec_command(
-            'set(%s, "alias", %r)' % (self.devrepr, self.aliasTarget.currentText())
+            f'set({self.devrepr}, "alias", {self.aliasTarget.currentText()!r})'
         )
 
     @pyqtSlot()
@@ -409,10 +407,7 @@ class MotorDialog(QDialog):
                 return
             self._reinit()
         elif subkey == "unit":
-            if not value:
-                value = ""
-            else:
-                value = cache_load(value)
+            value = "" if not value else cache_load(value)
             self.update_units(value)
         elif subkey == "speed":
             if not value:
