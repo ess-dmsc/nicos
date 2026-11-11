@@ -246,9 +246,7 @@ class Dashboard(Panel):
             self.setStatus("paused   ")
 
     def on_client_cache(self, data):
-        _time, key, _op, _value = data
-        if key == "sample/value" and self.current_status != "disconnected":
-            self.update_text(DashboardItem.SAMPLE)
+        pass
 
     def on_client_disconnected(self):
         self.setStatus("disconnected")
