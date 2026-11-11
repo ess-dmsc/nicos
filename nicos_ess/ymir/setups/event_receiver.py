@@ -17,7 +17,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The difference between the Utgård EVR and the NTP client",
         readpv="LABS-VIP:time-fs725-01:NSDiffNTPEVR",
-        unit="ns",
     ),
     EFU_stat=device(
         "nicos_ess.devices.efu_status.EFUStatus",

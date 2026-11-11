@@ -25,4 +25,7 @@ class ChopperDelayError(EpicsReadable):
         time_stamp = time.time()
         mean_value = np.mean(update.value)
         self._cache.put(self._name, "raw_errors", update.value, time_stamp)
-        super()._on_channel_update(replace(update, value=mean_value))
+        super()._on_channel_update(replace(update, value=mean_value, units="ns"))
+
+    def doReadUnit(self):
+        return "ns"

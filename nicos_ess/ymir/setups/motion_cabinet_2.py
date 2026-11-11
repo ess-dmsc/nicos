@@ -67,7 +67,6 @@ devices = dict(
                 "dataset_type": "nx_log",
             },
         ],
-        monitor_deadband=0.01,
     ),
     rotation_stage=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -111,13 +110,11 @@ devices = dict(
                 "dataset_type": "nx_log",
             },
         ],
-        monitor_deadband=0.01,
     ),
     sample_changer_axis=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Sample changer",
         motorpv="YMIR-SpChg:MC-LinY-01:Mtr",
-        monitor_deadband=0.01,
     ),
     sample_changer_controller=device(
         "nicos_ess.devices.mapped_controller.MappedController",
@@ -129,49 +126,41 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Slit Y+",
         motorpv="YMIR-DivSl2:MC-SlYp-01:Mtr",
-        monitor_deadband=0.01,
     ),
     slit_y_minus=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Slit Y-",
         motorpv="YMIR-DivSl2:MC-SlYm-01:Mtr",
-        monitor_deadband=0.01,
     ),
     slit_z_plus=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Slit Z+",
         motorpv="YMIR-DivSl2:MC-SlZp-01:Mtr",
-        monitor_deadband=0.01,
     ),
     slit_z_minus=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Slit Z-",
         motorpv="YMIR-DivSl2:MC-SlZm-01:Mtr",
-        monitor_deadband=0.01,
     ),
     slit_y_center=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Slit Y center",
         motorpv="YMIR-DivSl2:MC-SlYc-01:Mtr",
-        monitor_deadband=0.01,
     ),
     slit_y_gap=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Slit Y gap",
         motorpv="YMIR-DivSl2:MC-SlYg-01:Mtr",
-        monitor_deadband=0.01,
     ),
     slit_z_center=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Slit Z center",
         motorpv="YMIR-DivSl2:MC-SlZc-01:Mtr",
-        monitor_deadband=0.01,
     ),
     slit_z_gap=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Slit Z gap",
         motorpv="YMIR-DivSl2:MC-SlZg-01:Mtr",
-        monitor_deadband=0.01,
     ),
     cabinet_2_status=device(
         "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",

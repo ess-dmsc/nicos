@@ -206,8 +206,6 @@ def analog_moveable_config():
     return {
         "readpv": "SIM:M1.RBV",
         "writepv": "SIM:M1.VAL",
-        "unit": "mm",
-        "abslimits": (-120.0, 120.0),
     }
 
 
@@ -215,7 +213,6 @@ def string_moveable_config():
     return {
         "readpv": "SIM:SEL.RBV",
         "writepv": "SIM:SEL.VAL",
-        "unit": "",
     }
 
 
@@ -224,5 +221,4 @@ def mapped_config():
         "readpv": "SIM:MAP.RBV",
         "writepv": "SIM:MAP.VAL",
         "mapping": {"OFF": 0, "ON": 1},
-        "unit": "",
     }

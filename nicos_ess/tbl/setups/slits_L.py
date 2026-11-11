@@ -31,5 +31,4 @@ for virtual_axis in virtual_axes:
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description=f"{virtual_axis['description']}",
         motorpv=f"{motorpv_prefix}{virtual_axis['motorpv_suffix']}",
-        monitor_deadband=0.01,
     )
