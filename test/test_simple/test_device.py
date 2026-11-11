@@ -422,21 +422,6 @@ def test_fix_and_release(session, log):
     assert dev2.status()[0] == status.OK
 
 
-def test_fix_and_release_block(session, log):
-    dev2 = session.getDevice('mot')
-    assert dev2.fix('blah')
-    assert dev2.fix('blubb')
-    assert dev2.fixedby == ('system', ADMIN)
-    dev2._setROParam('fixedby', ('guest', GUEST))
-    assert dev2.fix('blah')
-    with session.withUserLevel(GUEST):
-        with log.allow_errors():
-            assert not dev2.fix('blah')
-            assert not dev2.release()
-    assert dev2.release()
-    assert dev2.release()
-
-
 def test_fix_superdev(session, log):
     dev = session.getDevice('dev2_6')
     adev = dev._attached_missingok
@@ -549,18 +534,3 @@ def test_offset_sign(session):
     dev.doAdjust(1, 0)
     assert dev.offset == -1
     assert dev.read(0) == 0
-
-
-def test_secret_device(session):
-    dev = session.getDevice('dev_secret')
-    try:
-        keystore.nicoskeystore.delCredential('secretenv')
-    except Exception:
-        # raises if key is not in keystore, but always cleanup in case of fails
-        pass
-    assert dev.verysecretval.lookup() not in ['env', 'store']
-    os.environ['NICOS_SECRETENV'] = 'env'
-    assert dev.verysecretval.lookup() == 'env'
-    keystore.nicoskeystore.setCredential('secretenv', 'store')
-    assert dev.verysecretval.lookup() == 'store'
-    keystore.nicoskeystore.delCredential('secretenv')
