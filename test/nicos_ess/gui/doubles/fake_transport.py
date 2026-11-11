@@ -97,6 +97,12 @@ class SetupSpec:
     devices: list[str] = field(default_factory=list)
 
 
+def _call_argument(node):
+    if isinstance(node, ast.Name):
+        return node.id
+    return ast.literal_eval(node)
+
+
 class FakeDaemon:
     """In-memory daemon model for GUI client tests.
 
@@ -220,6 +226,7 @@ class FakeDaemon:
             "value"
         )
         self.evals[f"session.getDevice({device.name!r}).valuetype"] = device.valuetype
+        self.evals[f"session.getDevice({device.name!r}).valueInfo()"] = None
         self.evals[
             "dict((pn, pi.serialize()) for (pn, pi) in "
             f"session.getDevice({device.name!r}).parameters.items())"
@@ -249,7 +256,7 @@ class FakeDaemon:
 
         if command == "authenticate":
             return True, {"user_level": self.user_level}
-        if command in {"eventmask", "eventunmask", "keepalive", "quit"}:
+        if command in {"eventmask", "eventunmask", "exec", "keepalive", "quit"}:
             return True, None
         if command in {"queue", "start"}:
             request_id = self._next_request_id
@@ -292,6 +299,22 @@ class FakeDaemon:
 
         self.unknown_commands.append(command)
         return False, f"unexpected command: {command}"
+
+    def sent_scripts(self, command="queue"):
+        """Script source the GUI sent with ``queue`` or ``exec``."""
+        index = 1 if command == "queue" else 0
+        return [args[index] for name, args in self.command_log if name == command]
+
+    def sent_calls(self, command="queue"):
+        """Calls in the sent scripts as ``(function, *arguments)``.
+
+        Device names come back as strings, other arguments as Python values.
+        """
+        return [
+            (ast.unparse(call.func), *(_call_argument(arg) for arg in call.args))
+            for script in self.sent_scripts(command)
+            for call in (statement.value for statement in ast.parse(script).body)
+        ]
 
     def _device_list_eval(self, expr):
         """Handle NicosClient.getDeviceList() eval strings."""

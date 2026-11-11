@@ -4,7 +4,6 @@ from nicos.guisupport.qt import (
     QDoubleValidator,
     QInputDialog,
     QMenu,
-    QMessageBox,
     QSizePolicy,
     QSpacerItem,
     pyqtSignal,
@@ -86,8 +85,8 @@ class MotorDialog(QDialog):
             else self.devname
         )
 
-        self.deviceName.setText("Device: %s" % self.devname)
-        self.setWindowTitle("Control %s" % self.devname)
+        self.deviceName.setText(f"Device: {self.devname}")
+        self.setWindowTitle(f"Control {self.devname}")
 
         double_validator = QDoubleValidator()
         self.txt_target.setValidator(double_validator)
@@ -102,7 +101,7 @@ class MotorDialog(QDialog):
         self.update_value()
         self.update_status(self.devinfo.status[0], self.devinfo.status[1])
         self.update_user_limits(params["userlimits"])
-        self.update_abs_limits(params["abslimits"])
+        self.update_hw_limits(params["hwuserlimits"])
         self.update_units(params["unit"])
         self.txt_target.setText(str(params["target"]))
         self.txt_speed.setText(str(params["speed"]))
@@ -126,7 +125,7 @@ class MotorDialog(QDialog):
 
     def update_params(self):
         # Trigger parameter poll
-        self.client.eval("%s.pollParams()" % self.devname, None)
+        self.client.eval(f"{self.devname}.pollParams()", None)
 
         # Get parameter information from daemon
         # paramvalues contains the name and the value.
@@ -142,18 +141,18 @@ class MotorDialog(QDialog):
         step_size = self.txt_rmove.text()
         if step_size:
             target = self.devinfo.value + direction * float(step_size)
-            self.devices_panel.exec_command("maw(%s, %r)" % (self.devrepr, target))
+            self.devices_panel.exec_command(f"maw({self.devrepr}, {target!r})")
 
     def move(self):
         target = self.txt_target.text()
         if target:
-            self.devices_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
+            self.devices_panel.exec_command(f"move({self.devrepr}, {target!r})")
 
     def reset(self):
-        self.devices_panel.exec_command("reset(%s)" % self.devrepr)
+        self.devices_panel.exec_command(f"reset({self.devrepr})")
 
     def stop(self):
-        self.devices_panel.exec_command("stop(%s)" % self.devrepr, immediate=True)
+        self.devices_panel.exec_command(f"stop({self.devrepr})", immediate=True)
 
     @pyqtSlot()
     def on_btn_reset_pressed(self):
@@ -184,7 +183,7 @@ class MotorDialog(QDialog):
         dlg = dialogFromUi(
             self, findResource("nicos_ess/gui/panels/ui_files/devices_limits.ui")
         )
-        dlg.descLabel.setText("Adjust user limits of %s:" % self.devname)
+        dlg.descLabel.setText(f"Adjust user limits of {self.devname}:")
 
         userlimits = self.client.getDeviceParam(self.devname, "userlimits")
         dlg.limitMin.setText(
@@ -194,41 +193,30 @@ class MotorDialog(QDialog):
             convert_limit_to_string(userlimits[1], self.devinfo.fmtstr)
         )
 
-        abslimits = self.client.getDeviceParam(self.devname, "abslimits")
-        offset = self.client.getDeviceParam(self.devname, "offset")
-        if offset is not None:
-            abslimits = abslimits[0] - offset, abslimits[1] - offset
+        hwlimits = self.client.getDeviceParam(self.devname, "hwuserlimits")
         dlg.limitMinAbs.setText(
-            convert_limit_to_string(abslimits[0], self.devinfo.fmtstr)
+            convert_limit_to_string(hwlimits[0], self.devinfo.fmtstr)
         )
         dlg.limitMaxAbs.setText(
-            convert_limit_to_string(abslimits[1], self.devinfo.fmtstr)
+            convert_limit_to_string(hwlimits[1], self.devinfo.fmtstr)
         )
 
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
         target.setClient(self.client)
 
         def callback():
-            self.devices_panel.exec_command("resetlimits(%s)" % self.devrepr)
+            hwlimits = self.client.getDeviceParam(self.devname, "hwuserlimits")
+            self.devices_panel.exec_command(
+                f'set({self.devrepr}, "userlimits", {tuple(hwlimits)})'
+            )
             dlg.reject()
 
         dlg.btn_reset.clicked.connect(callback)
         dlg.targetLayout.addWidget(target)
-        res = dlg.exec()
-        if res != QDialog.DialogCode.Accepted:
-            return
-        newlimits = target.getValue()
-        if newlimits[0] < abslimits[0] or newlimits[1] > abslimits[1]:
-            QMessageBox.warning(
-                self,
-                "Error",
-                "The entered limits are not within the absolute limits for the device.",
-            )
-            # retry
-            self.on_actionSetLimits_triggered()
+        if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         self.devices_panel.exec_command(
-            'set(%s, "userlimits", %s)' % (self.devrepr, newlimits)
+            f'set({self.devrepr}, "userlimits", {target.getValue()})'
         )
 
     def _get_new_value(self, window_title, desc):
@@ -250,25 +238,23 @@ class MotorDialog(QDialog):
     @pyqtSlot()
     def on_btn_set_offset_clicked(self):
         val = self._get_new_value(
-            "Adjust offset", "Redefine current position of %s" % self.devname
+            "Adjust offset", f"Redefine current position of {self.devname}"
         )
         if val is not None:
-            self.devices_panel.exec_command("adjust(%s, %r)" % (self.devrepr, val))
+            self.devices_panel.exec_command(f"adjust({self.devrepr}, {val!r})")
 
     @pyqtSlot()
     def on_actionSetPosition_triggered(self):
         val = self._get_new_value(
-            "Set hardware position", "Set hardware position of %s:" % self.devname
+            "Set hardware position", f"Set hardware position of {self.devname}:"
         )
         if val is not None:
             if self.devrepr != self.devname:
-                cmd = "CreateDevice(%s); %s.setPosition(%r)" % (
-                    self.devrepr,
-                    self.devname,
-                    val,
+                cmd = (
+                    f"CreateDevice({self.devrepr}); {self.devname}.setPosition({val!r})"
                 )
             else:
-                cmd = "%s.setPosition(%r)" % (self.devname, val)
+                cmd = f"{self.devname}.setPosition({val!r})"
             self.devices_panel.exec_command(cmd)
 
     @pyqtSlot()
@@ -279,33 +265,33 @@ class MotorDialog(QDialog):
             if not qwindow.exec():
                 return
 
-        self.devices_panel.exec_command("home(%s)" % self.devrepr)
+        self.devices_panel.exec_command(f"home({self.devrepr})")
 
     @pyqtSlot()
     def on_actionFix_triggered(self):
         reason, ok = QInputDialog.getText(
-            self, "Fix", "Please enter the reason for fixing %s:" % self.devname
+            self, "Fix", f"Please enter the reason for fixing {self.devname}:"
         )
         if not ok:
             return
-        self.devices_panel.exec_command("fix(%s, %r)" % (self.devrepr, reason))
+        self.devices_panel.exec_command(f"fix({self.devrepr}, {reason!r})")
 
     @pyqtSlot()
     def on_actionRelease_triggered(self):
-        self.devices_panel.exec_command("release(%s)" % self.devrepr)
+        self.devices_panel.exec_command(f"release({self.devrepr})")
 
     @pyqtSlot()
     def on_actionEnable_triggered(self):
-        self.devices_panel.exec_command("enable(%s)" % self.devrepr)
+        self.devices_panel.exec_command(f"enable({self.devrepr})")
 
     @pyqtSlot()
     def on_actionDisable_triggered(self):
-        self.devices_panel.exec_command("disable(%s)" % self.devrepr)
+        self.devices_panel.exec_command(f"disable({self.devrepr})")
 
     @pyqtSlot()
     def on_setAliasBtn_clicked(self):
         self.devices_panel.exec_command(
-            'set(%s, "alias", %r)' % (self.devrepr, self.aliasTarget.currentText())
+            f'set({self.devrepr}, "alias", {self.aliasTarget.currentText()!r})'
         )
 
     @pyqtSlot()
@@ -337,7 +323,7 @@ class MotorDialog(QDialog):
             convert_limit_to_string(limits[1], self.devinfo.fmtstr)
         )
 
-    def update_abs_limits(self, limits):
+    def update_hw_limits(self, limits):
         self.txt_hw_limits_from.setText(
             convert_limit_to_string(limits[0], self.devinfo.fmtstr)
         )
@@ -392,20 +378,17 @@ class MotorDialog(QDialog):
                 return
             value = cache_load(value)
             self.update_user_limits(value)
-        elif subkey == "abslimits":
+        elif subkey == "hwuserlimits":
             if not value:
                 return
             value = cache_load(value)
-            self.update_abs_limits(value)
+            self.update_hw_limits(value)
         elif subkey == "alias":
             if not value:
                 return
             self._reinit()
         elif subkey == "unit":
-            if not value:
-                value = ""
-            else:
-                value = cache_load(value)
+            value = cache_load(value) if value else ""
             self.update_units(value)
         elif subkey == "speed":
             if not value:
