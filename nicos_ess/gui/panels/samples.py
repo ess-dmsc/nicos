@@ -155,7 +155,6 @@ class SamplePanel(PanelBase):
         self.table.setRowCount(100)
         self.table.setColumnCount(2)
         self.table.setHorizontalHeaderLabels(["Property", "Value"])
-        self.btn_edit = QPushButton("Edit")
         self.btn_save = QPushButton("Apply changes")
         self.btn_cancel = QPushButton("Discard changes")
 
@@ -175,15 +174,14 @@ class SamplePanel(PanelBase):
         table_header_layout.addWidget(self.sample_label)
         table_header_layout.addWidget(self.sample_edit)
         table_btn_layout = QHBoxLayout()
-        table_btn_layout.addWidget(self.btn_edit)
+        table_btn_layout.addStretch()
         table_btn_layout.addWidget(self.btn_save)
         table_btn_layout.addWidget(self.btn_cancel)
-        table_btn_layout.addStretch()
-        table_btn_layout.addWidget(self.changes_label)
         self.table_layout = QVBoxLayout()
         self.table_layout.addLayout(table_header_layout)
         self.table_layout.addWidget(self.metadata_label)
         self.table_layout.addWidget(self.table)
+        self.table_layout.addWidget(self.changes_label)
         self.table_layout.addLayout(table_btn_layout)
 
         self.layout = QHBoxLayout()
@@ -204,6 +202,9 @@ class SamplePanel(PanelBase):
         QTimer.singleShot(0, _initial_label_column_width)
         self.tree.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.changes_label.setStyleSheet("color: red; font-weight: bold;")
+        self.changes_label.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
         self.sample_label.setStyleSheet("font-weight: bold;")
         self.metadata_label.setStyleSheet("font-weight: bold;")
         self.tree_layout.setContentsMargins(0, 0, 20, 0)
