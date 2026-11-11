@@ -530,7 +530,7 @@ class SeleneRobot(Moveable):
     def _move_x(self, x, retry=2):
         for i in range(retry + 1):
             try:
-                self.log.debug(
+                self.log.info(
                     f"Moving x to position-backlash, {(x - self.cart_backlash):.2f}"
                 )
                 self._attached_move_x.maw(x - self.cart_backlash)
@@ -547,7 +547,7 @@ class SeleneRobot(Moveable):
     def _move_z(self, z, retry=2):
         for i in range(retry + 1):
             try:
-                self.log.debug(
+                self.log.info(
                     f"Moving z to position-backlash, {(z - self.cart_backlash):.2f}"
                 )
                 self._attached_move_z.maw(z - self.cart_backlash)
@@ -564,7 +564,7 @@ class SeleneRobot(Moveable):
     def _move_xz(self, x, z, retry=2):
         for i in range(retry + 1):
             try:
-                self.log.debug(
+                self.log.info(
                     f"Moving x,z to position-backlash, {(x - self.cart_backlash):.2f}, {(z - self.cart_backlash):.2f}"
                 )
                 self._attached_move_x.move(x - self.cart_backlash)
@@ -675,7 +675,7 @@ class SeleneRobot(Moveable):
             self._move_angle(angle + step)
             self._engage_retry()
             if self._hex_state() == "HexScrewInserted":
-                self._move_angle(angle + step - self.adjuster_play / 2.0)
+                self._move_angle(angle + step - self.adjuster_play)
                 self.log.info(f"    Screw found at rotation {self._adjust()}")
                 self.update_rotation(self._adjust())
                 break
