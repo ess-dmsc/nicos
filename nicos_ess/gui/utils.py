@@ -2,7 +2,7 @@ from enum import Enum
 from os import path
 
 from nicos import config
-from nicos.guisupport.qt import QIcon, pyqtProperty
+from nicos.guisupport.qt import QEvent, QIcon, QObject, pyqtProperty
 
 root_path = config.nicos_root
 icons_path = path.join(root_path, "resources", "material", "icons")
@@ -41,3 +41,16 @@ def refresh_widget(widget):
     widget.style().unpolish(widget)
     widget.style().polish(widget)
     widget.update()
+
+
+class KeyIgnorer(QObject):
+    def __init__(self, parent, keys_to_ignore):
+        QObject.__init__(self, parent)
+        self._parent = parent
+        self.keys_to_ignore = set(keys_to_ignore)
+
+    def eventFilter(self, source, event):
+        if event.type() == QEvent.Type.KeyPress and event.key() in self.keys_to_ignore:
+            # Ignore key press
+            return True
+        return QObject.eventFilter(self, source, event)
