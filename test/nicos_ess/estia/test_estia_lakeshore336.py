@@ -37,6 +37,8 @@ def fake_backend(monkeypatch):
     backend.values[f"{PV_ROOT}RampStatus0-RB"] = 0
     backend.values[f"{PV_ROOT}RampStatus0-SP"] = 0
     backend.value_choices[f"{PV_ROOT}RampStatus0-RB"] = ["On", "Off"]
+    backend.values[f"{PV_ROOT}Setp0-RB"] = 0
+    backend.values[f"{PV_ROOT}Setp0-SP"] = 0
 
 
 class FakeEstiaFlowCryo(FlowCryoInput):
