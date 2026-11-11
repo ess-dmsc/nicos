@@ -499,15 +499,17 @@ class NexusStructureJsonFile(NexusStructureProvider):
         current_position = metainfo.get(("sample_changer", "value"))[0]
         for sample in samples[0].values():
             if sample["position"] == current_position:
-                return sample["name"]
+                return sample.get("samplename", None)
         else:
             return None
 
     def _get_sample_info(self, samples, sample_name):
         sample_info = None
         for sample in samples[0].values():
-            if sample["name"] == sample_name:
+            if sample.get("samplename", None) == sample_name:
                 sample_info = sample.copy()
+                # translate keys between NICOS's 'samplename' and 'name' in NeXuS
+                sample_info["name"] = sample_info.pop("samplename")
                 break
         if sample_info and "position" in sample_info:
             del sample_info["position"]
