@@ -2,11 +2,13 @@ from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.guisupport.qt import (
     QDialog,
     QDoubleValidator,
+    QEvent,
     QInputDialog,
     QMenu,
     QMessageBox,
     QSizePolicy,
     QSpacerItem,
+    Qt,
     pyqtSignal,
     pyqtSlot,
     sip,
@@ -51,6 +53,7 @@ class MotorDialog(QDialog):
         self._reinit()
 
         self.txt_target.setFocus()
+        self.txt_rmove.installEventFilter(self)
 
         if expert:
             self.main_layout.insertWidget(
@@ -64,6 +67,16 @@ class MotorDialog(QDialog):
         sz = self.size()
         sz.setHeight(self.sizeHint().height())
         self.resize(sz)
+
+    def eventFilter(self, source, event):
+        if (
+            event.type() == QEvent.Type.KeyPress
+            and event.key() in (Qt.Key_Enter, Qt.Key_Return)
+            and source == self.txt_rmove
+        ):
+            # Ignore return/enter press on relative move text box, so as not to trigger a move accidently.
+            return True
+        return super().eventFilter(source, event)
 
     def _reinit(self):
         if sip.isdeleted(self.devitem):
@@ -165,6 +178,7 @@ class MotorDialog(QDialog):
 
     @pyqtSlot()
     def on_btn_move_pressed(self):
+        print("move")
         self.move()
 
     @pyqtSlot()
