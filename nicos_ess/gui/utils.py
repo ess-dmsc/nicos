@@ -46,7 +46,6 @@ def refresh_widget(widget):
 class KeyIgnorer(QObject):
     def __init__(self, parent, keys_to_ignore):
         QObject.__init__(self, parent)
-        self._parent = parent
         self.keys_to_ignore = set(keys_to_ignore)
 
     def eventFilter(self, source, event):

@@ -56,7 +56,7 @@ class MotorDialog(QDialog):
 
         self.txt_target.setFocus()
 
-        # Ignore return/enter press on relative move text box, so as not to trigger a move accidently.
+        # Ignore return/enter press on relative move text box, so as not to trigger a move accidentally.
         self.txt_rmove.installEventFilter(
             KeyIgnorer(self, {Qt.Key_Enter, Qt.Key_Return})
         )
