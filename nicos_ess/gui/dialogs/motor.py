@@ -2,11 +2,9 @@ from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.guisupport.qt import (
     QDialog,
     QDoubleValidator,
-    QEvent,
     QInputDialog,
     QMenu,
     QMessageBox,
-    QObject,
     QSizePolicy,
     QSpacerItem,
     Qt,
@@ -95,8 +93,8 @@ class MotorDialog(QDialog):
             else self.devname
         )
 
-        self.deviceName.setText("Device: %s" % self.devname)
-        self.setWindowTitle("Control %s" % self.devname)
+        self.deviceName.setText(f"Device: {self.devname}")
+        self.setWindowTitle(f"Control {self.devname}")
 
         double_validator = QDoubleValidator()
         self.txt_target.setValidator(double_validator)
@@ -135,7 +133,7 @@ class MotorDialog(QDialog):
 
     def update_params(self):
         # Trigger parameter poll
-        self.client.eval("%s.pollParams()" % self.devname, None)
+        self.client.eval(f"{self.devname}.pollParams()", None)
 
         # Get parameter information from daemon
         # paramvalues contains the name and the value.
@@ -151,18 +149,18 @@ class MotorDialog(QDialog):
         step_size = self.txt_rmove.text()
         if step_size:
             target = self.devinfo.value + direction * float(step_size)
-            self.devices_panel.exec_command("maw(%s, %r)" % (self.devrepr, target))
+            self.devices_panel.exec_command(f"maw({self.devrepr}, {target!r})")
 
     def move(self):
         target = self.txt_target.text()
         if target:
-            self.devices_panel.exec_command("move(%s, %r)" % (self.devrepr, target))
+            self.devices_panel.exec_command(f"move({self.devrepr}, {target!r})")
 
     def reset(self):
-        self.devices_panel.exec_command("reset(%s)" % self.devrepr)
+        self.devices_panel.exec_command(f"reset({self.devrepr}))")
 
     def stop(self):
-        self.devices_panel.exec_command("stop(%s)" % self.devrepr, immediate=True)
+        self.devices_panel.exec_command("stop({self.devrepr})", immediate=True)
 
     @pyqtSlot()
     def on_btn_reset_pressed(self):
@@ -193,7 +191,7 @@ class MotorDialog(QDialog):
         dlg = dialogFromUi(
             self, findResource("nicos_ess/gui/panels/ui_files/devices_limits.ui")
         )
-        dlg.descLabel.setText("Adjust user limits of %s:" % self.devname)
+        dlg.descLabel.setText(f"Adjust user limits of {self.devname}:")
 
         userlimits = self.client.getDeviceParam(self.devname, "userlimits")
         dlg.limitMin.setText(
@@ -218,7 +216,7 @@ class MotorDialog(QDialog):
         target.setClient(self.client)
 
         def callback():
-            self.devices_panel.exec_command("resetlimits(%s)" % self.devrepr)
+            self.devices_panel.exec_command(f"resetlimits({self.devrepr})")
             dlg.reject()
 
         dlg.btn_reset.clicked.connect(callback)
@@ -237,7 +235,7 @@ class MotorDialog(QDialog):
             self.on_actionSetLimits_triggered()
             return
         self.devices_panel.exec_command(
-            'set(%s, "userlimits", %s)' % (self.devrepr, newlimits)
+            f'set({self.devrepr}, "userlimits", {newlimits})'
         )
 
     def _get_new_value(self, window_title, desc):
@@ -259,7 +257,7 @@ class MotorDialog(QDialog):
     @pyqtSlot()
     def on_btn_set_offset_clicked(self):
         val = self._get_new_value(
-            "Adjust offset", "Redefine current position of %s" % self.devname
+            "Adjust offset", f"Redefine current position of {self.devname}"
         )
         if val is not None:
             self.devices_panel.exec_command("adjust(%s, %r)" % (self.devrepr, val))
