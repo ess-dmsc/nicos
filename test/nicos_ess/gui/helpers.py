@@ -7,11 +7,13 @@ single-panel config strings become too cumbersome.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-from nicos.guisupport.qt import QApplication
+from nicos.guisupport.qt import QApplication, QDialog
+from nicos.guisupport.typedvalue import DeviceValueEdit
 from nicos.protocols.daemon import STATUS_IDLE, STATUS_RUNNING
 from nicos.utils import importString
 
@@ -276,3 +278,25 @@ def assert_panel_survives_minimal_status_transitions(
     QApplication.processEvents()
 
     _assert_no_unexpected_nicos_logs(caplog)
+
+
+def answer_dialogs(monkeypatch, fill=None, accept=True):
+    """Answer every modal ``QDialog.exec()`` without showing it.
+
+    ``fill(dialog)`` runs first and can read or fill in the dialog.
+    """
+
+    def fake_exec(dialog):
+        if fill is not None:
+            fill(dialog)
+        if accept:
+            return QDialog.DialogCode.Accepted
+        return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(QDialog, "exec", fake_exec)
+
+
+def set_device_value(dialog, value):
+    """Set the value in the only device value editor of ``dialog``."""
+    [editor] = dialog.findChildren(DeviceValueEdit)
+    editor.setValue(value)

@@ -65,10 +65,6 @@ def dialog(gui_window_factory, fake_daemon, qtbot):
     dialog.close()
 
 
-def scripts(fake_daemon):
-    return [args[1] for command, args in fake_daemon.command_log if command == "queue"]
-
-
 def test_the_disc_opens_a_chopper_dialog(dialog):
     assert isinstance(dialog, ChopperDialog)
     assert dialog.state.text() == "Rotating"
@@ -122,8 +118,10 @@ def test_the_buttons_send_the_commands(dialog, fake_daemon, qtbot):
         "move(mini_chopper.position, 42.0)",
         "reset(mini_chopper)",
     ]
-    qtbot.waitUntil(lambda: len(scripts(fake_daemon)) == len(expected), timeout=2000)
-    assert scripts(fake_daemon) == expected
+    qtbot.waitUntil(
+        lambda: len(fake_daemon.sent_scripts()) == len(expected), timeout=2000
+    )
+    assert fake_daemon.sent_scripts() == expected
 
 
 def test_nothing_is_sent_without_a_target_or_choice(dialog, fake_daemon):
@@ -134,4 +132,4 @@ def test_nothing_is_sent_without_a_target_or_choice(dialog, fake_daemon):
     dialog.btn_park.click()
     dialog.btn_park_angle.click()
 
-    assert scripts(fake_daemon) == []
+    assert fake_daemon.sent_scripts() == []
