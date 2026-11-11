@@ -6,6 +6,7 @@ import numpy as np
 from streaming_data_types import deserialise_hs00, deserialise_hs01
 from streaming_data_types.utils import get_schema
 
+from nicos import session
 from nicos.core import (
     ArrayDesc,
     Override,
@@ -18,7 +19,7 @@ from nicos.core import (
     status,
     tupleof,
 )
-from nicos.core.constants import MASTER, SIMULATION
+from nicos.core.constants import MASTER, POLLER, SIMULATION
 from nicos.devices.generic import Detector, ImageChannelMixin, PassiveChannel
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
@@ -154,6 +155,14 @@ deserialiser_by_schema = {
 input_schemas = ("ev42", "ev44", "da00")
 
 
+def decode_histogram(message):
+    deserialiser = deserialiser_by_schema.get(get_schema(message))
+    if not deserialiser:
+        return None
+    hist = deserialiser(message)
+    return hist, json.loads(hist["info"])
+
+
 class JustBinItImage(ImageChannelMixin, PassiveChannel):
     arraydesc = ArrayDesc("", shape=(0,), dtype=np.float64)
 
@@ -265,16 +274,14 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         "pollinterval": Override(default=None, userparam=False, settable=False),
     }
 
-    _kafka_subscriber = None
-
     def doPreinit(self, mode):
         self._unique_id = None
         self._current_status = (status.OK, "")
+        self._finished = threading.Event()
+        self._last_state = None
         if mode == SIMULATION:
             return
         self._update_status(status.OK, "")
-        # Set up the data consumer
-        self._kafka_subscriber = KafkaSubscriber(self.brokers)
 
     def doInit(self, mode):
         self._hist_sum = 0
@@ -291,47 +298,48 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         return self.arraydesc
 
     def doPrepare(self):
-        self._update_status(status.BUSY, "Preparing")
+        self._unique_id = None
         self._zero_data()
         self._hist_edges = np.array([])
         self._hist_sum = 0
-        self.event_rate = 0.0
-        try:
-            self._kafka_subscriber.subscribe(
-                [self.hist_topic], self.new_messages_callback
-            )
-        except Exception as error:
-            self._update_status(status.ERROR, str(error))
-            raise
+        self._finished.clear()
+        self._last_state = None
+        self._setROParam("event_rate", 0.0)
         self._update_status(status.OK, "")
 
-    def new_messages_callback(self, messages):
-        for _, message in messages:
-            deserialiser = deserialiser_by_schema.get(get_schema(message))
-            if not deserialiser:
-                continue
-            hist = deserialiser(message)
-            info = json.loads(hist["info"])
-            self.log.debug("received unique id = {}".format(info["id"]))
-            if info["id"] != self._unique_id:
-                continue
-            if info["state"] in ["COUNTING", "INITIALISED"]:
-                self._update_status(status.BUSY, "Counting")
-            elif info["state"] == "ERROR":
-                error_msg = info.get("error_message", "unknown error")
-                self._update_status(status.WARN, error_msg)
-            elif info["state"] == "FINISHED":
-                self._kafka_subscriber.stop_consuming()
-                self._update_status(status.OK, "")
-                break
+    @property
+    def finished(self):
+        return self._finished.is_set()
 
-            self.event_rate = info.get("rate", 0.0)
+    def wait_finished(self, timeout):
+        return self._finished.wait(timeout)
 
-            self._hist_data = hist_type_by_name[self.hist_type].transform_data(
-                hist["data"], rotation=self.rotation
-            )
-            self._hist_sum = self._hist_data.sum()
-            self._hist_edges = hist["dim_metadata"][0]["bin_boundaries"]
+    def on_histogram(self, hist, info):
+        if not self._unique_id or info.get("id") != self._unique_id:
+            return
+        state = info.get("state")
+        self._hist_data = hist_type_by_name[self.hist_type].transform_data(
+            hist["data"], rotation=self.rotation
+        )
+        self._hist_sum = self._hist_data.sum()
+        self._hist_edges = hist["dim_metadata"][0]["bin_boundaries"]
+        rate = info.get("rate")
+        if rate is not None and self._mode == MASTER:
+            self._setROParam("event_rate", rate)
+        if state == self._last_state:
+            return
+        self._last_state = state
+        if state == "ERROR":
+            # the histogram process has ended, no FINISHED will follow
+            error_msg = info.get("error_message", "unknown error")
+            self.log.warning("just-bin-it failed: %s", error_msg)
+            self._update_status(status.WARN, error_msg)
+            self._finished.set()
+        elif state == "FINISHED":
+            self._update_status(status.OK, "")
+            self._finished.set()
+        else:
+            self._update_status(status.BUSY, "Counting")
 
     def _update_status(self, new_status, message):
         self._current_status = new_status, message
@@ -349,15 +357,20 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
     def doStart(self):
         self._update_status(status.BUSY, "Waiting to start...")
 
+    def doFinish(self):
+        self._unique_id = None
+        if not self._finished.is_set():
+            self._update_status(status.OK, "")
+
     def doStop(self):
+        self._unique_id = None
         self._update_status(status.OK, "")
 
     def doStatus(self, maxage=0):
         return self._current_status
 
-    def get_configuration(self):
-        # Generate a unique-ish id
-        self._unique_id = f"nicos-{self.name}-{int(time.time())}"
+    def get_configuration(self, unique_id):
+        self._unique_id = unique_id
 
         config = {
             "type": hist_type_by_name[self.hist_type].name,
@@ -391,15 +404,17 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         return result
 
     def doShutdown(self):
-        if self._kafka_subscriber:
-            self._kafka_subscriber.close()
         self._update_status(status.OK, "")
 
 
 class JustBinItDetector(Detector, KafkaStatusHandler):
-    """A "detector" that reads image data from just-bin-it.
+    """A detector whose image channels are histograms made by just-bin-it.
 
-    Note: it only uses image channels.
+    JustBinItImage channels are configured from just-bin-it; all other
+    channels, including other image channels, work as in any Detector.
+
+    A count with a time preset sends a start/stop window, so just-bin-it ends
+    the job by itself. Counts that end before it are ended with a stop command.
     """
 
     parameters = {
@@ -439,6 +454,14 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             userparam=False,
             settable=True,
         ),
+        "finish_timeout": Param(
+            "How long finish() waits for the final histograms of a count",
+            type=floatrange(0),
+            default=10,
+            unit="s",
+            userparam=False,
+            settable=True,
+        ),
     }
 
     parameter_overrides = {
@@ -455,11 +478,18 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     _stop_lock = None
     _command_sender = None
     _response_consumer = None
+    _hist_subscriber = None
+    _acknowledged = False
     hardware_access = True
 
     def doPreinit(self, mode):
         self._stop_lock = threading.Lock()
         Detector.doPreinit(self, mode)
+        self._jbi_images = [
+            image
+            for image in self._attached_images
+            if isinstance(image, JustBinItImage)
+        ]
 
         if mode == SIMULATION:
             return
@@ -471,9 +501,25 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         # Set up the response message consumer
         self._response_consumer = KafkaConsumer.create(self.brokers)
         self._response_consumer.subscribe([self.response_topic])
+        if session.sessiontype != POLLER:
+            topics = sorted({image.hist_topic for image in self._jbi_images})
+            self._hist_subscriber = KafkaSubscriber(self.brokers)
+            self._hist_subscriber.subscribe(topics, self._on_histogram_messages)
+
+    def _on_histogram_messages(self, messages):
+        for _, message in messages:
+            try:
+                decoded = decode_histogram(message)
+            except Exception as err:
+                self.log.warning("could not decode histogram message: %s", err)
+                continue
+            if decoded:
+                for image in self._jbi_images:
+                    image.on_histogram(*decoded)
 
     def doPrepare(self):
         self._exit_thread = False
+        self._acknowledged = False
         self._ack_thread = None
         self._stop_sent = False
         self._stop_lock = threading.Lock()
@@ -482,8 +528,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         Detector.doPrepare(self)
 
     def doStart(self):
-        # Generate a unique-ish id
-        unique_id = f"nicos-{self.name}-{int(time.time())}"
+        unique_id = f"nicos-{self.name}-{time.time_ns()}"
         self.log.debug("set unique id = %s", unique_id)
 
         config = self._create_config(unique_id)
@@ -497,6 +542,13 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._ack_thread = createThread(
             "jbi-ack", self._check_for_ack, (unique_id, self.ack_timeout)
         )
+
+    def _timer_preset(self):
+        for timer in self._attached_timers:
+            for name, value in self._channel_presets.get(timer, ()):
+                if float(value) > 0:
+                    return timer, name, float(value)
+        return None, None, None
 
     def _check_for_ack(self, identifier, timeout_duration):
         timeout = int(time.time()) + timeout_duration
@@ -522,6 +574,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
                 else:
                     if "msg_id" in msg and msg["msg_id"] == identifier:
                         acknowledged = self._handle_message(msg)
+                        self._acknowledged = acknowledged
                         break
             # Check for timeout
             if not acknowledged and int(time.time()) > timeout:
@@ -532,10 +585,8 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
                 )
                 self.log.error(err_msg)
                 self._cache.put(self, "status", (status.ERROR, err_msg), time.time())
+                self._send_stop_once()
                 break
-        if not acknowledged:
-            self._send_stop_once()
-            return
 
     def _handle_message(self, msg):
         if "response" in msg and msg["response"] == "ACK":
@@ -556,19 +607,22 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             self._command_sender.produce(topic, message)
 
     def _create_config(self, identifier):
-        histograms = []
-
-        for image_channel in self._attached_images:
-            histograms.append(image_channel.get_configuration())
-
+        histograms = [
+            image.get_configuration(f"{identifier}-{image.name}")
+            for image in self._jbi_images
+        ]
+        start_ms = int(time.time() * 1000)
         config_base = {
             "cmd": "config",
             "msg_id": identifier,
             "input_schema": self.event_schema,
             "output_schema": self.hist_schema,
             "histograms": histograms,
-            "start": int(time.time()) * 1000,
+            "start": start_ms,
         }
+        _, _, seconds = self._timer_preset()
+        if seconds:
+            config_base["stop"] = start_ms + round(seconds * 1000)
         return config_base
 
     def _send_stop_once(self):
@@ -580,16 +634,47 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     def doShutdown(self):
         self._do_stop()
+        if self._hist_subscriber is not None:
+            self._hist_subscriber.close()
         if self._response_consumer is not None:
             self._response_consumer.close()
+        KafkaStatusHandler.doShutdown(self)
 
     def doStop(self):
         self._do_stop()
         Detector.doStop(self)
 
     def doFinish(self):
-        self._do_stop()
+        self._stop_job_threads()
+        timer, name, seconds = self._timer_preset()
+        if seconds and timer.presetReached(name, seconds, 0):
+            self._wait_for_final_histograms()
+        else:
+            # just-bin-it keeps counting for seconds after a stop, so its
+            # FINISHED histograms overshoot: keep the last update instead
+            self._send_stop_once()
+            if not self._acknowledged:
+                self.log.warning(
+                    "just-bin-it did not acknowledge the count before it ended: "
+                    "the values do not cover the count"
+                )
         Detector.doFinish(self)
+
+    def _wait_for_final_histograms(self):
+        channels = self._jbi_images
+        deadline = time.monotonic() + self.finish_timeout
+        for channel in channels:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not channel.wait_finished(remaining):
+                break
+        missing = [channel.name for channel in channels if not channel.finished]
+        if missing:
+            self.log.warning(
+                "no final histogram from just-bin-it within %s s for %s: "
+                "the values are the last intermediate ones",
+                self.finish_timeout,
+                ", ".join(missing),
+            )
 
     def _do_stop(self):
         self._stop_job_threads()
