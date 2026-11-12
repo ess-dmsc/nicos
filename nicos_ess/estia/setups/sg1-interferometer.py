@@ -1,6 +1,6 @@
 description = "Prototype interferometer measurement"
 
-etalon_prefix = "ESTIA-Sel1:Mech-GU-001"
+etalon_prefix = "ESTIA-Sel1:Mech-GU-001:"
 
 # group = "lowlevel"
 
@@ -9,7 +9,6 @@ devices = dict(
         "nicos_ess.estia.devices.multiline.MultilineController",
         description="Multiline interferometer controller",
         pvprefix=etalon_prefix,
-        readpv=f"{etalon_prefix}:MeasState-R",
         epicstimeout=30.0,
         # pilot_laser='pilot_laser',
         # temperature='env_temperature',

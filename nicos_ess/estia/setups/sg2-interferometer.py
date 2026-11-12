@@ -1,6 +1,6 @@
 description = "Prototype interferometer measurement"
 
-etalon_prefix = "ESTIA-Sel1:Mech-GU-001"
+etalon_prefix = "ESTIA-Sel1:Mech-GU-001:"
 
 # group = "lowlevel"
 
