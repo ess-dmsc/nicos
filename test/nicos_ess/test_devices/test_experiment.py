@@ -54,8 +54,8 @@ class TestEssExperiment:
         # from ExpPanel._set_samples()
         samples = {}
         for index, sample in enumerate(result["samples"]):
-            if not sample.get("name", ""):
-                sample["name"] = f"sample {index + 1}"
+            if not sample.get("samplename", ""):
+                sample["samplename"] = f"sample {index + 1}"
             samples[index] = sample
         experiment.sample.set_samples(dict(samples))
 
@@ -77,16 +77,18 @@ class TestEssExperiment:
         ]
         assert experiment.get_samples() == [
             {
-                "name": "cathode coin cell (Charged)",
+                "samplename": "cathode coin cell (Charged)",
                 "temperature": "0",
                 "electric_field": "0",
                 "magnetic_field": "0",
+                "sampledescription": "",
             },
             {
-                "name": "cathode coin cell (Discharged)",
+                "samplename": "cathode coin cell (Discharged)",
                 "temperature": "0",
                 "electric_field": "0",
                 "magnetic_field": "0",
+                "sampledescription": "",
             },
         ]
 
@@ -254,8 +256,8 @@ class TestEssExperiment:
         # from ExpPanel._set_samples()
         samples = {}
         for index, sample in enumerate(result["samples"]):
-            if not sample.get("name", ""):
-                sample["name"] = f"sample {index + 1}"
+            if not sample.get("samplename", ""):
+                sample["samplename"] = f"sample {index + 1}"
             samples[index] = sample
         experiment.sample.set_samples(dict(samples))
         experiment.finish()
