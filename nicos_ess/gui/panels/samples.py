@@ -57,7 +57,7 @@ class SamplePanel(PanelBase):
             item = QTreeWidgetItem(self.tree, [sample["name"]])
             item.setData(0, Qt.ItemDataRole.UserRole, i)
 
-    def _show_item_data(self, data):
+    def _populate_table(self, data):
         print(data)
         data = deepcopy(data)
 
@@ -74,7 +74,7 @@ class SamplePanel(PanelBase):
         if selected_items:
             index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
             if index < len(self.samples):
-                self._show_item_data(self.samples[index])
+                self._populate_table(self.samples[index])
         # self._update_changes_label()
 
     def on_text_changed(self, row, col, text):
@@ -92,13 +92,15 @@ class SamplePanel(PanelBase):
     def _new_sample_btn_clicked(self):
         self.edit_ongoing = True
         self.changes_label.setText("Changes made to samples, save or cancel")
+
         new_sample_index = len(self.samples)
-        item = QTreeWidgetItem(self.tree, ["Sample"])
+        new_name = "untitled"
+        self.samples.append({"name": new_name})
+
+        item = QTreeWidgetItem(self.tree, [new_name])
         item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
         self.tree.setCurrentItem(item)
-        self.table.clearContents()
-        self.table.setItem(0, 0, QTableWidgetItem("name"))
-        self.table.setItem(0, 1, QTableWidgetItem("Sample"))
+        self._populate_table(self.samples[new_sample_index])
 
     def _duplicate_sample_btn_clicked(self):
         self.edit_ongoing = True
@@ -116,7 +118,7 @@ class SamplePanel(PanelBase):
         item = QTreeWidgetItem(self.tree, [new_name])
         item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
         self.tree.setCurrentItem(item)
-        self._show_item_data(self.samples[new_sample_index])
+        self._populate_table(self.samples[new_sample_index])
 
     def _save_btn_clicked(self):
         sample_data = self.samples
