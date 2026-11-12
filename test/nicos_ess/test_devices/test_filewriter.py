@@ -1,5 +1,6 @@
 import pytest
 
+from nicos.core import CommunicationError
 from nicos_ess.devices.datasinks.file_writer import generateMetainfo
 
 # Set to None because we load the setup after the mocks are in place.
@@ -63,3 +64,16 @@ class TestFilewriter:
             "mm",
             "general",
         )
+
+    def test_metainfo_skips_device_whose_info_fails(self, monkeypatch):
+        exp = self.session.getDevice("Exp")
+        self.motor1 = self.session.getDevice("motor1")
+
+        def broken_info(dev):
+            raise CommunicationError("timed out")
+
+        monkeypatch.setattr(type(self.motor1), "info", broken_info)
+        self.session.devices = {"Exp": exp, "motor1": self.motor1}
+        metainfo = generateMetainfo()
+        assert ("Exp", "title") in metainfo
+        assert not any(dev == "motor1" for dev, _ in metainfo)

@@ -20,7 +20,7 @@ from nicos.commands.measure import count
 from nicos.commands.scan import scan
 from nicos_ess.devices.datasources import just_bin_it
 from nicos_ess.devices.kafka import status_handler
-from test.nicos_ess.command_helpers import loaded_setup, set_detectors, wait_until
+from test.nicos_ess.command_helpers import loaded_setup, set_detectors
 from test.nicos_ess.test_devices.doubles import (
     StubKafkaConsumer,
     StubKafkaProducer,
@@ -34,46 +34,75 @@ COUNT_TIMER_PRESET_SECONDS = 0.02
 EXPLICIT_IMAGE_PRESET = 2
 
 
-def _command_names(producer):
-    """Return the ordered list of command names recorded by the stub producer."""
-    commands = []
-    for record in producer.messages:
-        try:
-            commands.append(json.loads(record["message"].decode("utf-8"))["cmd"])
-        except Exception:
-            continue
-    return commands
+def _commands(producer):
+    return [json.loads(r["message"].decode("utf-8")) for r in list(producer.messages)]
 
 
-def _publish_histogram_when_started(image, total):
-    """Publish one histogram update accepted by the started image channel.
-
-    The image only accepts histogram messages tagged with the unique id it put
-    into the just-bin-it config request, so the helper waits until that id has
-    been generated before publishing the fake histogram.
-    """
-    assert wait_until(lambda: image._unique_id is not None)
-    data = np.zeros(image.num_bins, dtype=np.float64)
-    # Put all counts into the first bin so `image.read()[0]` equals `total`.
+def _histogram(unique_id, state, total, num_bins):
+    data = np.zeros(num_bins, dtype=np.float64)
     data[0] = total
-    message = serialise_hs01(
+    return serialise_hs01(
         {
-            "source": image.hist_topic,
-            "timestamp": int(time.time() * 1e9),
-            "current_shape": [image.num_bins],
+            "source": "jbi",
+            "timestamp": 0,
+            "current_shape": [num_bins],
             "dim_metadata": [
                 {
-                    "length": image.num_bins,
-                    "bin_boundaries": np.arange(image.num_bins + 1, dtype=np.float64),
+                    "length": num_bins,
+                    "bin_boundaries": np.arange(num_bins + 1, dtype=np.float64),
                 }
             ],
             "data": data,
-            "info": json.dumps(
-                {"id": image._unique_id, "state": "COUNTING", "rate": 0.0}
-            ),
+            "info": json.dumps({"id": unique_id, "state": state}),
         }
     )
-    image.new_messages_callback([(int(time.time() * 1e9), message)])
+
+
+class JustBinItBackend(StubKafkaProducer):
+    """Answer the latest config like just-bin-it: COUNTING, then FINISHED once.
+
+    A job finishes when its stop time has passed or a stop command arrives.
+    `totals` maps image names to the counts their histograms report.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.subscribers = []
+        self.totals = {}
+        self.stop = threading.Event()
+
+    def subscribe(self, brokers):
+        subscriber = StubKafkaSubscriber(brokers)
+        self.subscribers.append(subscriber)
+        return subscriber
+
+    def run(self):
+        finished = set()
+        while not self.stop.wait(0.005):
+            commands = _commands(self)
+            configs = [c for c in commands if c["cmd"] == "config"]
+            if not configs or configs[-1]["msg_id"] in finished:
+                continue
+            config = configs[-1]
+            stopped = commands[commands.index(config) + 1 :] != []
+            done = stopped or time.time() * 1000 >= config.get("stop", float("inf"))
+            state = "FINISHED" if done else "COUNTING"
+            messages = [
+                (
+                    0,
+                    _histogram(
+                        hist["id"],
+                        state,
+                        self.totals.get(hist["id"].rsplit("-", 1)[-1], 1),
+                        hist["num_bins"],
+                    ),
+                )
+                for hist in config["histograms"]
+            ]
+            for subscriber in self.subscribers:
+                subscriber.emit_messages(messages)
+            if done:
+                finished.add(config["msg_id"])
 
 
 @pytest.fixture
@@ -84,73 +113,69 @@ def jbi_backend(monkeypatch):
     one ACK for each config command. That mirrors the protocol the detector is
     written against without hiding the command traffic from the test.
     """
-    producer = StubKafkaProducer()
+    backend = JustBinItBackend()
     acked_ids = set()
 
     def poll_hook(_consumer, timeout_ms=0):
         del timeout_ms
-        for record in producer.messages:
-            try:
-                payload = json.loads(record["message"].decode("utf-8"))
-            except Exception:
+        for command in _commands(backend):
+            if command["cmd"] != "config" or command["msg_id"] in acked_ids:
                 continue
-            if payload.get("cmd") != "config":
-                continue
-            msg_id = payload["msg_id"]
-            if msg_id in acked_ids:
-                continue
-            acked_ids.add(msg_id)
-            return json.dumps({"msg_id": msg_id, "response": "ACK"}).encode("utf-8")
+            acked_ids.add(command["msg_id"])
+            return json.dumps({"msg_id": command["msg_id"], "response": "ACK"}).encode(
+                "utf-8"
+            )
         return None
 
     consumer = StubKafkaConsumer(poll_hook=poll_hook)
-    monkeypatch.setattr(just_bin_it, "KafkaSubscriber", StubKafkaSubscriber)
-    monkeypatch.setattr(just_bin_it.KafkaProducer, "create", lambda *a, **k: producer)
+    monkeypatch.setattr(just_bin_it, "KafkaSubscriber", backend.subscribe)
+    monkeypatch.setattr(just_bin_it.KafkaProducer, "create", lambda *a, **k: backend)
     monkeypatch.setattr(just_bin_it.KafkaConsumer, "create", lambda *a, **k: consumer)
     monkeypatch.setattr(status_handler, "KafkaSubscriber", StubKafkaSubscriber)
-    return producer
+    publisher = threading.Thread(target=backend.run, daemon=True)
+    publisher.start()
+    try:
+        yield backend
+    finally:
+        backend.stop.set()
+        publisher.join(timeout=1)
+        assert not publisher.is_alive()
 
 
 def test_just_bin_it_count_with_timer_preset(session, jbi_backend):
-    """Timer-controlled counts should send one config and one stop command.
-
-    The simplified detector now starts just-bin-it in open-ended mode and lets
-    the generic NICOS timer controller stop it afterwards.
-    """
+    """A timer-only count sends a config with a stop time and no stop command."""
+    jbi_backend.totals = {"image_1": 7, "image_2": 3}
     with loaded_setup(session, "ess_just_bin_it_count_scan"):
         set_detectors(session, "jbi_detector")
         count(t=COUNT_TIMER_PRESET_SECONDS)
-        assert _command_names(jbi_backend) == ["config", "stop"]
+        (config,) = _commands(jbi_backend)
+        assert config["cmd"] == "config"
+        assert config["stop"] - config["start"] == int(
+            COUNT_TIMER_PRESET_SECONDS * 1000
+        )
+        assert session.getDevice("image_1").read()[0] == 7
+        assert session.getDevice("image_2").read()[0] == 3
 
 
 def test_just_bin_it_count_with_explicit_channel_preset(session, jbi_backend):
-    """A channel preset should make that image the soft controller.
-
-    Only `image_1` receives a histogram update here because `count(image_1=2)`
-    is specifically testing the branch-local behaviour where the generic
-    detector maps the preset to the matching image channel.
-    """
+    """A channel preset makes that image the soft controller; a stop ends the job."""
+    jbi_backend.totals = {"image_1": EXPLICIT_IMAGE_PRESET}
     with loaded_setup(session, "ess_just_bin_it_count_scan"):
         set_detectors(session, "jbi_detector")
-        image = session.getDevice("image_1")
-        publisher = threading.Thread(
-            target=_publish_histogram_when_started,
-            args=(image, EXPLICIT_IMAGE_PRESET),
-            daemon=True,
-        )
-        publisher.start()
         count(image_1=EXPLICIT_IMAGE_PRESET)
-        publisher.join(timeout=1)
-        assert not publisher.is_alive()
-        assert image.read()[0] == EXPLICIT_IMAGE_PRESET
-        assert _command_names(jbi_backend) == ["config", "stop"]
+        assert session.getDevice("image_1").read()[0] == EXPLICIT_IMAGE_PRESET
+        assert [c["cmd"] for c in _commands(jbi_backend)] == ["config", "stop"]
 
 
 def test_just_bin_it_scan_across_two_points(session, jbi_backend):
-    """A two-point scan should repeat the full config/start/stop cycle twice."""
+    """A two-point scan sends two configs with different ids and no stops."""
     with loaded_setup(session, "ess_just_bin_it_count_scan"):
         set_detectors(session, "jbi_detector")
         axis = session.getDevice("axis")
         scan(axis, 0, 1, 2, t=COUNT_TIMER_PRESET_SECONDS)
-        assert _command_names(jbi_backend).count("config") == 2
-        assert _command_names(jbi_backend).count("stop") == 2
+        configs = _commands(jbi_backend)
+        assert [c["cmd"] for c in configs] == ["config", "config"]
+        assert configs[0]["msg_id"] != configs[1]["msg_id"]
+        assert {h["id"] for h in configs[0]["histograms"]}.isdisjoint(
+            h["id"] for h in configs[1]["histograms"]
+        )

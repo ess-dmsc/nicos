@@ -3,7 +3,7 @@ description = "Pneumatic devices in the YMIR motion cabinet 1"
 devices = dict(
     heavy_shutter=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
-        description="Heaby Shutter",
+        description="Heavy Shutter",
         readpv="YMIR-HvSht:MC-Pne-01:ShtAuxBits07",
         writepv="YMIR-HvSht:MC-Pne-01:ShtOpen",
         statuspv="YMIR-HvSht:MC-Pne-01:ShtStatusCode",

@@ -739,8 +739,10 @@ class DevicesPanel(Panel):
 
         classes = self.client.eval(f"session.getDevice({devname!r}).classes", [])
 
-        # The first class is the "real" class, classes can be empty for some devices
-        if classes and classes[0] == "nicos_ess.devices.epics.pva.motor.EpicsMotor":
+        if (
+            "nicos_ess.devices.epics.pva.motor.EpicsMotor" in classes
+            and "nicos_ess.devices.epics.pva.motor.EpicsJogMotor" not in classes
+        ):
             dlg = MotorDialog(
                 self, devname, devinfo, item, self.log, self._show_lowlevel
             )

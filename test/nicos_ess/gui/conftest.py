@@ -112,6 +112,17 @@ def _stop_active_timers(widget) -> None:
 
 
 @pytest.fixture
+def c_locale():
+    """Parse and format numbers the same on every machine (``.`` as decimal point)."""
+    from nicos.guisupport.qt import QLocale
+
+    previous = QLocale()
+    QLocale.setDefault(QLocale.c())
+    yield
+    QLocale.setDefault(previous)
+
+
+@pytest.fixture
 def fake_daemon():
     return FakeDaemon()
 

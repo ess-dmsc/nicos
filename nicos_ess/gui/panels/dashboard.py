@@ -67,12 +67,20 @@ class DashboardItem:
         "data_source": "session.experiment.run_title",
         "stringify": False,
     }
+    SAMPLE = {
+        "name": "sample",
+        "location": "row_2",
+        "label": "     Sample",
+        "data_source": "session.experiment.sample.samplename or 'None'",
+        "stringify": False,
+    }
 
 
 ALL_DASHBOARD_ITEMS = [
     DashboardItem.INSTRUMENT,
     DashboardItem.PROPOSAL_ID,
     DashboardItem.RUN_NUMBER,
+    DashboardItem.SAMPLE,
     DashboardItem.RUN_TITLE,
     # DashboardItem.EXPERIMENT,
 ]

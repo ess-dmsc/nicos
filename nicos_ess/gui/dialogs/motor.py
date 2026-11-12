@@ -4,7 +4,6 @@ from nicos.guisupport.qt import (
     QDoubleValidator,
     QInputDialog,
     QMenu,
-    QMessageBox,
     QSizePolicy,
     QSpacerItem,
     Qt,
@@ -109,7 +108,7 @@ class MotorDialog(QDialog):
         self.update_value()
         self.update_status(self.devinfo.status[0], self.devinfo.status[1])
         self.update_user_limits(params["userlimits"])
-        self.update_abs_limits(params["abslimits"])
+        self.update_hw_limits(params["hwuserlimits"])
         self.update_units(params["unit"])
         self.txt_target.setText(str(params["target"]))
         self.txt_speed.setText(str(params["speed"]))
@@ -157,10 +156,10 @@ class MotorDialog(QDialog):
             self.devices_panel.exec_command(f"move({self.devrepr}, {target!r})")
 
     def reset(self):
-        self.devices_panel.exec_command(f"reset({self.devrepr}))")
+        self.devices_panel.exec_command(f"reset({self.devrepr})")
 
     def stop(self):
-        self.devices_panel.exec_command("stop({self.devrepr})", immediate=True)
+        self.devices_panel.exec_command(f"stop({self.devrepr})", immediate=True)
 
     @pyqtSlot()
     def on_btn_reset_pressed(self):
@@ -201,41 +200,30 @@ class MotorDialog(QDialog):
             convert_limit_to_string(userlimits[1], self.devinfo.fmtstr)
         )
 
-        abslimits = self.client.getDeviceParam(self.devname, "abslimits")
-        offset = self.client.getDeviceParam(self.devname, "offset")
-        if offset is not None:
-            abslimits = abslimits[0] - offset, abslimits[1] - offset
+        hwlimits = self.client.getDeviceParam(self.devname, "hwuserlimits")
         dlg.limitMinAbs.setText(
-            convert_limit_to_string(abslimits[0], self.devinfo.fmtstr)
+            convert_limit_to_string(hwlimits[0], self.devinfo.fmtstr)
         )
         dlg.limitMaxAbs.setText(
-            convert_limit_to_string(abslimits[1], self.devinfo.fmtstr)
+            convert_limit_to_string(hwlimits[1], self.devinfo.fmtstr)
         )
 
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
         target.setClient(self.client)
 
         def callback():
-            self.devices_panel.exec_command(f"resetlimits({self.devrepr})")
+            hwlimits = self.client.getDeviceParam(self.devname, "hwuserlimits")
+            self.devices_panel.exec_command(
+                f'set({self.devrepr}, "userlimits", {tuple(hwlimits)})'
+            )
             dlg.reject()
 
         dlg.btn_reset.clicked.connect(callback)
         dlg.targetLayout.addWidget(target)
-        res = dlg.exec()
-        if res != QDialog.DialogCode.Accepted:
-            return
-        newlimits = target.getValue()
-        if newlimits[0] < abslimits[0] or newlimits[1] > abslimits[1]:
-            QMessageBox.warning(
-                self,
-                "Error",
-                "The entered limits are not within the absolute limits for the device.",
-            )
-            # retry
-            self.on_actionSetLimits_triggered()
+        if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         self.devices_panel.exec_command(
-            f'set({self.devrepr}, "userlimits", {newlimits})'
+            f'set({self.devrepr}, "userlimits", {target.getValue()})'
         )
 
     def _get_new_value(self, window_title, desc):
@@ -342,7 +330,7 @@ class MotorDialog(QDialog):
             convert_limit_to_string(limits[1], self.devinfo.fmtstr)
         )
 
-    def update_abs_limits(self, limits):
+    def update_hw_limits(self, limits):
         self.txt_hw_limits_from.setText(
             convert_limit_to_string(limits[0], self.devinfo.fmtstr)
         )
@@ -397,17 +385,17 @@ class MotorDialog(QDialog):
                 return
             value = cache_load(value)
             self.update_user_limits(value)
-        elif subkey == "abslimits":
+        elif subkey == "hwuserlimits":
             if not value:
                 return
             value = cache_load(value)
-            self.update_abs_limits(value)
+            self.update_hw_limits(value)
         elif subkey == "alias":
             if not value:
                 return
             self._reinit()
         elif subkey == "unit":
-            value = "" if not value else cache_load(value)
+            value = cache_load(value) if value else ""
             self.update_units(value)
         elif subkey == "speed":
             if not value:
