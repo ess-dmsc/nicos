@@ -107,13 +107,15 @@ class SamplePanel(PanelBase):
         sample_to_duplicate = self.tree.selectedItems()[0]
         index = sample_to_duplicate.data(0, Qt.ItemDataRole.UserRole)
         name = sample_to_duplicate.text(0)
-
         new_sample_index = len(self.samples)
-        item = QTreeWidgetItem(self.tree, [name])
-        item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
-        self.tree.setCurrentItem(item)
 
         self.samples.append(deepcopy(self.samples[index]))
+        new_name = name + " copy"
+        self.samples[~0]["name"] = new_name
+
+        item = QTreeWidgetItem(self.tree, [new_name])
+        item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
+        self.tree.setCurrentItem(item)
         self._show_item_data(self.samples[new_sample_index])
 
     def _save_btn_clicked(self):
