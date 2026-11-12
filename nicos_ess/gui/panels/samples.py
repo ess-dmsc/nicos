@@ -25,6 +25,7 @@ class SamplePanel(PanelBase):
         self.samples = []
         self.edit_ongoing = False
         self._build_ui()
+        self.ignore_table_changes = False
         self._on_sample_selected()  # start with nothing selected
         self.initialise_connection_status_listeners()
 
@@ -58,7 +59,6 @@ class SamplePanel(PanelBase):
             item.setData(0, Qt.ItemDataRole.UserRole, i)
 
     def _populate_table(self, data):
-        print(data)
         data = deepcopy(data)
 
         sample = data.pop("name")
@@ -68,7 +68,7 @@ class SamplePanel(PanelBase):
             self.table.setItem(i, 1, QTableWidgetItem(str(value)))
 
     def _on_sample_selected(self):
-        print("Sample selected")
+        self.ignore_table_changes = True
         self.table.clearContents()
         selected_items = self.tree.selectedItems()
         if selected_items:
@@ -76,6 +76,7 @@ class SamplePanel(PanelBase):
             if index < len(self.samples):
                 self._populate_table(self.samples[index])
         # self._update_changes_label()
+        self.ignore_table_changes = False
 
     def on_text_changed(self, row, col, text):
         if self.edit_ongoing:
@@ -88,6 +89,12 @@ class SamplePanel(PanelBase):
         self.changes_label.setText("Changes made to samples, save or cancel")
         selected_item = self.tree.selectedItems()[0]
         selected_item.setText(0, text)
+
+    def on_table_item_changed(self, item):
+        if self.ignore_table_changes:
+            return
+        self.edit_ongoing = True
+        self.changes_label.setText("Changes made to samples, save or cancel")
 
     def _new_sample_btn_clicked(self):
         self.edit_ongoing = True
@@ -231,3 +238,4 @@ class SamplePanel(PanelBase):
         self.btn_save.clicked.connect(self._save_btn_clicked)
         self.btn_cancel.clicked.connect(self._cancel_changes_btn_clicked)
         self.sample_edit.textEdited.connect(self.on_sample_name_changed)
+        self.table.itemChanged.connect(self.on_table_item_changed)
