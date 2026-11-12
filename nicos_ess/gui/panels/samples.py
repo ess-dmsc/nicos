@@ -127,7 +127,7 @@ class SamplePanel(PanelBase):
         self.tree.setCurrentItem(item)
         self._populate_table(self.samples[new_sample_index])
 
-    def _save_btn_clicked(self):
+    def _apply_changes_btn_clicked(self):
         sample_data = self.samples
         edited_index = self.tree.currentItem().data(0, Qt.ItemDataRole.UserRole)
         table_data = self._get_table_data()
@@ -136,6 +136,8 @@ class SamplePanel(PanelBase):
         else:
             sample_data.append(table_data)
         self.save_sample_data(sample_data)
+        self.edit_ongoing = False
+        self.changes_label.setText("")
 
     def _get_table_data(self):
         table_data = {}
@@ -148,10 +150,20 @@ class SamplePanel(PanelBase):
             table_data[key] = val
         return table_data
 
-    def _cancel_changes_btn_clicked(self):
+    def _discard_changes_btn_clicked(self):
         self.edit_ongoing = False
         self.changes_label.setText("")
         self.update_tree_widget_data()
+
+    def _remove_sample_btn_clicked(self):
+        selected_items = self.tree.selectedItems()
+        if selected_items:
+            index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
+
+            del self.samples[index]
+            self.edit_ongoing = True
+            self.changes_label.setText("Changes made to samples, save or cancel")
+            self.update_tree_widget_data()
 
     def _build_ui(self):
         self._create_widgets()
@@ -173,13 +185,10 @@ class SamplePanel(PanelBase):
         self.table.setRowCount(100)
         self.table.setColumnCount(2)
         self.table.setHorizontalHeaderLabels(["Property", "Value"])
-        self.btn_save = QPushButton("Apply changes")
-        self.btn_cancel = QPushButton("Discard changes")
+        self.btn_apply_changes = QPushButton("Apply changes")
+        self.btn_discard_changes = QPushButton("Discard changes")
 
         self.changes_label = QLabel()
-
-    def _save_btn_clicked(self):
-        print("saved")
 
     def _set_layout(self):
         tree_btn_layout = QHBoxLayout()
@@ -196,8 +205,8 @@ class SamplePanel(PanelBase):
         table_header_layout.addWidget(self.sample_edit)
         table_btn_layout = QHBoxLayout()
         table_btn_layout.addStretch()
-        table_btn_layout.addWidget(self.btn_save)
-        table_btn_layout.addWidget(self.btn_cancel)
+        table_btn_layout.addWidget(self.btn_apply_changes)
+        table_btn_layout.addWidget(self.btn_discard_changes)
         self.table_layout = QVBoxLayout()
         self.table_layout.addLayout(table_header_layout)
         self.table_layout.addWidget(self.metadata_label)
@@ -235,7 +244,8 @@ class SamplePanel(PanelBase):
         # self.samples.updated.connect(self.update_tree_widget_data)
         self.btn_new.clicked.connect(self._new_sample_btn_clicked)
         self.btn_duplicate.clicked.connect(self._duplicate_sample_btn_clicked)
-        self.btn_save.clicked.connect(self._save_btn_clicked)
-        self.btn_cancel.clicked.connect(self._cancel_changes_btn_clicked)
+        self.btn_remove.clicked.connect(self._remove_sample_btn_clicked)
+        self.btn_apply_changes.clicked.connect(self._apply_changes_btn_clicked)
+        self.btn_discard_changes.clicked.connect(self._discard_changes_btn_clicked)
         self.sample_edit.textEdited.connect(self.on_sample_name_changed)
         self.table.itemChanged.connect(self.on_table_item_changed)
