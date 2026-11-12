@@ -1,7 +1,7 @@
 description = "The timepix in TBL"
 
 devices = dict(
-    timepix=device(
+    timepix3_camera=device(
         "nicos_ess.devices.epics.area_detector.TimepixDetector",
         description="TimePix3 detector.",
         pv_root="TBL-DtTPX:NDet-TPX3-001:cam1:",
@@ -19,7 +19,7 @@ devices = dict(
     timepix_area_detector_collector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
         description="Area detector collector",
-        images=["timepix"],
+        images=["timepix3_camera"],
         liveinterval=1,
         pollinterval=1,
         unit="",

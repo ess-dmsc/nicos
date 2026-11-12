@@ -3,63 +3,61 @@ description = "The livedata interface for tbl."
 excludes = ["just_bin_it"]
 
 devices = dict(
-    monitor_1_counts_total=device(
+    monitor_1=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="A TBL livedata channel",
+        description="Accumulated counts of beam monitor 1",
+        unit="ADC counts",
         device_name="monitor_1_counts_total",
         source_name="monitor_1",
         workflow_id="tbl/monitor_histogram/1",
-        type="counter",
+        type="monitor",
     ),
-    timepix3_detector_counts_total=device(
+    timepix3=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="A TBL livedata channel",
+        description="Accumulated counts of the Timepix3",
+        unit="counts",
         device_name="timepix3_detector_counts_total",
         source_name="timepix3_detector",
         workflow_id="tbl/tbl_detector_timepix3/1",
         type="counter",
     ),
-    multiblade_detector_counts_total=device(
+    multiblade=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="A TBL livedata channel",
+        description="Accumulated counts of the Multi-Blade",
+        unit="counts",
         device_name="multiblade_detector_counts_total",
         source_name="multiblade_detector",
         workflow_id="tbl/multiblade_detector_view/1",
         type="counter",
     ),
-    he3_detector_bank0_counts_total=device(
+    he3_bank_0=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="A TBL livedata channel",
+        description="Accumulated counts of He-3 bank 0",
+        unit="counts",
         device_name="he3_detector_bank0_counts_total",
         source_name="he3_detector_bank0",
         workflow_id="tbl/he3_detector_view/1",
         type="counter",
     ),
-    he3_detector_bank1_counts_total=device(
+    he3_bank_1=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="A TBL livedata channel",
+        description="Accumulated counts of He-3 bank 1",
+        unit="counts",
         device_name="he3_detector_bank1_counts_total",
         source_name="he3_detector_bank1",
         workflow_id="tbl/he3_detector_view/1",
         type="counter",
     ),
-    ngem_detector_counts_total=device(
+    ngem=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="A TBL livedata channel",
+        description="Accumulated counts of the nGEM",
+        unit="counts",
         device_name="ngem_detector_counts_total",
         source_name="ngem_detector",
         workflow_id="tbl/ngem_detector_view/1",
         type="counter",
     ),
-    orca_detector_counts_total=device(
-        "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="A TBL livedata channel",
-        device_name="orca_detector_counts_total",
-        source_name="orca_detector",
-        workflow_id="tbl/tbl_area_detector_orca/1",
-        type="counter",
-    ),
-    channel_collector=device(
+    livedata_detector=device(
         "nicos_ess.devices.datasources.livedata.LiveDataCollector",
         description="The livedata histogrammer",
         brokers=configdata("config.KAFKA_BROKERS"),
@@ -67,13 +65,12 @@ devices = dict(
         commands_topic="tbl_livedata_commands",
         status_topics=["tbl_livedata_heartbeat"],
         others=[
-            "monitor_1_counts_total",
-            "timepix3_detector_counts_total",
-            "multiblade_detector_counts_total",
-            "he3_detector_bank0_counts_total",
-            "he3_detector_bank1_counts_total",
-            "ngem_detector_counts_total",
-            "orca_detector_counts_total",
+            "monitor_1",
+            "timepix3",
+            "multiblade",
+            "he3_bank_0",
+            "he3_bank_1",
+            "ngem",
         ],
         timers=["timer"],
     ),
