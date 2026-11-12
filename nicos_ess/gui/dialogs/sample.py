@@ -26,10 +26,11 @@ class SampleDialog(QDialog):
         self.current_sample_number = None
 
         self.metadata_model = QStandardItemModel(0, 2, self)
-        self.metadata_model.setHorizontalHeaderLabels(["Parameter", "Value"])
+        self.metadata_model.setHorizontalHeaderLabels(["Property", "Value"])
         self.metadata_table.setModel(self.metadata_model)
+        self.metadata_table.setColumnWidth(0, 150)
         self.metadata_table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.ResizeToContents
+            0, QHeaderView.ResizeMode.Interactive
         )
 
         params = parent.client.getDeviceParams(devname)
@@ -59,7 +60,6 @@ class SampleDialog(QDialog):
         table = self.metadata_table
         empty = self.metadata_model.rowCount() == 0
         table.setMinimumHeight(2 * table.minimumSizeHint().height() if empty else 0)
-        table.resizeColumnToContents(0)
 
     @pyqtSlot()
     def on_set_btn_clicked(self):
