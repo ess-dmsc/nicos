@@ -12,7 +12,15 @@ from nicos.core import (
     pvname,
     status,
 )
-from nicos.devices.epics.pva.epics_devices import EpicsStringReadable
+from nicos.devices.epics.status import SEVERITY_TO_STATUS
+from nicos_ess.devices.epics.pva.epics_common import (
+    EpicsDeviceBase,
+    enum_readback_channel,
+    enum_setpoint_channel,
+    readback_channel,
+    setpoint_channel,
+    status_channel,
+)
 
 STAT_TO_STATUS = {
     0: "",  # NO_ALARM
@@ -45,7 +53,7 @@ EnvironmentalParameters = namedtuple(
 )
 
 
-class MultilineController(EpicsStringReadable, Waitable):
+class MultilineController(EpicsDeviceBase, Waitable):
     parameters = {
         "pvprefix": Param(
             "Name of the record PV.",
@@ -74,7 +82,7 @@ class MultilineController(EpicsStringReadable, Waitable):
         ),
         "alignment_process": Param(
             "Start/stop the process to align the channels.",
-            type=int,
+            type=str,
             settable=True,
             internal=True,
         ),
@@ -125,50 +133,157 @@ class MultilineController(EpicsStringReadable, Waitable):
         "unit": Override(mandatory=False),
     }
 
+    valuetype = str
+
     attached_devices = {}
 
-    _record_fields = {
-        "readpv": "MeasState-R",
-        "front_end_splitter": "FrontEndSplitter-S",
-        "fes_option": "FESOption-S",
-        "start_measurement": "MeasStart-S",
-        "alignment_process": "AlignmentStart-S",
-        "current_task": "CurrentTask-R",
-        # 'ioc_connect': 'ConnectIOCtoServer-S',
-        "num_channels": "NumChannels-R",
-        "is_grouped": "IsGrouped-R",
-        "polling_counter": "PollingCounter-R",
-        "available_channels": "SelectedChannels-R",
-        "measurement_channels": "MeasEnableChannel-S",
-        "measurement_counter": "MeasCounter-R",
-        "measurement_preshots": "MeasPreshot-S",
-        "measurement_lengths": "DataLenLength-R",
-        "measurement_gains": "Gains-R",
-        "align_min": "AlignDataMin-R",
-        "align_max": "AlignDataMax-R",
-        # channel error information
-        "error_analysis": "DataLenAnErr-R",
-        "error_interuption": "DataLenBeamInt-R",
-        "error_temperature": "DataLenTempErr-R",
-        "error_movement": "DataLenMoveErr-R",
-        "error_intensity": "DataLenIntensErr-R",
-        "error_usb": "DataLenUSBErr-R",
-        "error_dll": "DataLenDLLErr-R",
-        "error_laser_speed": "DataLenLSpeedErr-R",
-        "error_laser_temperature": "DataLenLTempErr-R",
-        "error_daq": "DataLenDAQErr-R",
-    }
+    _default_pv_prefix_attr = "pvprefix"
+    _primary_channel = "readpv"
 
-    _cache_relations = {
-        "polling_counter": "polling_counter",
-        "current_task": "current_task",
-        "measurement_lengths": "measurement_lengths",
-        "available_channels": "selected_channels",
-        "align_min": "align_min",
-        "align_max": "align_max",
-        "measurement_gains": "measurement_gains",
-        "measurement_channels": "measurement_channels",
-        "measurement_counter": "measurement_counter",
+    _epics_channels = {
+        "readpv": enum_readback_channel(
+            "MeasState-R",
+            cache_key="readpv",
+            primary=True,
+        ),
+        "readpv_severity": readback_channel(
+            "MeasState-R.SEVR",
+            cache_key="readpv_severity",
+        ),
+        "front_end_splitter": enum_setpoint_channel(
+            "FrontEndSplitter-S",
+            refresh_status=True,
+            cache_key="front_end_splitter",
+            as_string=True,
+        ),
+        "fes_option": enum_setpoint_channel(
+            "FESOption-S",
+            refresh_status=True,
+            cache_key="fes_option",
+            as_string=True,
+        ),
+        "start_measurement": enum_setpoint_channel(
+            "MeasStart-S",
+            refresh_status=True,
+            cache_key="start_measurement",
+            as_string=True,
+        ),
+        "alignment_process": enum_setpoint_channel(
+            "AlignmentStart-S",
+            refresh_status=True,
+            cache_key="alignment_process",
+        ),
+        "current_task": enum_readback_channel(
+            "CurrentTask-R",
+            refresh_status=True,
+            cache_key="current_task",
+            as_string=True,
+        ),
+        # 'ioc_connect': 'ConnectIOCtoServer-S',
+        "num_channels": readback_channel(
+            "NumChannels-R",
+            refresh_status=True,
+            cache_key="num_channels",
+        ),
+        "is_grouped": enum_readback_channel(
+            "IsGrouped-R", refresh_status=True, cache_key="is_grouped", as_string=True
+        ),
+        "polling_counter": readback_channel(
+            "PollingCounter-R",
+            refresh_status=True,
+            cache_key="polling_counter",
+        ),
+        "available_channels": readback_channel(
+            "SelectedChannels-R",
+            refresh_status=True,
+            cache_key="selected_channels",
+        ),
+        "measurement_channels": setpoint_channel(
+            "MeasEnableChannel-S",
+            refresh_status=True,
+            cache_key="measurement_channels",
+        ),
+        "measurement_counter": readback_channel(
+            "MeasCounter-R",
+            refresh_status=True,
+            cache_key="measurement_counter",
+        ),
+        "measurement_preshots": setpoint_channel(
+            "MeasPreshot-S",
+            refresh_status=True,
+            cache_key="measurement_preshots",
+        ),
+        "measurement_lengths": readback_channel(
+            "DataLenLength-R",
+            refresh_status=True,
+            cache_key="measurement_lengths",
+        ),
+        "measurement_gains": readback_channel(
+            "Gains-R",
+            refresh_status=True,
+            cache_key="measurement_gains",
+        ),
+        "align_min": readback_channel(
+            "AlignDataMin-R",
+            refresh_status=True,
+            cache_key="align_min",
+        ),
+        "align_max": readback_channel(
+            "AlignDataMax-R",
+            refresh_status=True,
+            cache_key="align_max",
+        ),
+        # channel error information
+        "error_analysis": status_channel(
+            "DataLenAnErr-R",
+            refresh_status=True,
+            cache_key="error_analysis",
+        ),
+        "error_interuption": status_channel(
+            "DataLenBeamInt-R",
+            refresh_status=True,
+            cache_key="error_interuption",
+        ),
+        "error_temperature": status_channel(
+            "DataLenTempErr-R",
+            refresh_status=True,
+            cache_key="error_temperature",
+        ),
+        "error_movement": status_channel(
+            "DataLenMoveErr-R",
+            refresh_status=True,
+            cache_key="error_movement",
+        ),
+        "error_intensity": status_channel(
+            "DataLenIntensErr-R",
+            refresh_status=True,
+            cache_key="error_intensity",
+        ),
+        "error_usb": status_channel(
+            "DataLenUSBErr-R",
+            refresh_status=True,
+            cache_key="error_usb",
+        ),
+        "error_dll": status_channel(
+            "DataLenDLLErr-R",
+            refresh_status=True,
+            cache_key="error_dll",
+        ),
+        "error_laser_speed": status_channel(
+            "DataLenLSpeedErr-R",
+            refresh_status=True,
+            cache_key="error_laser_speed",
+        ),
+        "error_laser_temperature": status_channel(
+            "DataLenLTempErr-R",
+            refresh_status=True,
+            cache_key="error_laser_temperature",
+        ),
+        "error_daq": status_channel(
+            "DataLenDAQErr-R",
+            refresh_status=True,
+            cache_key="error_daq",
+        ),
     }
 
     _error_flag_list = [
@@ -184,9 +299,6 @@ class MultilineController(EpicsStringReadable, Waitable):
         "error_daq",
     ]
 
-    def doInit(self, mode):
-        self.valuetype = str
-
     _value_codes = {
         0: "Idle",
         1: "Requested",
@@ -194,15 +306,6 @@ class MultilineController(EpicsStringReadable, Waitable):
         3: "Processing",
         4: "Error",
     }
-
-    def doRead(self, maxage=0):
-        self._pollParam("current_task")
-        self._pollParam("measurement_errors")
-        value = EpicsStringReadable.doRead(self, maxage)
-        if isinstance(value, str):
-            return value
-        else:
-            return self._value_codes[int(value)]
 
     def _get_pv_parameters(self):
         parameters = set(self._record_fields.keys())
@@ -215,8 +318,10 @@ class MultilineController(EpicsStringReadable, Waitable):
             return ":".join((record_prefix, field))
         return getattr(self, pvparam)
 
-    def doStatus(self, maxage=0):
-        readpv_status, readpv_message = EpicsStringReadable.doStatus(self, maxage)
+    def _compute_status(self, maxage=0):
+        readpv_severity = self._read_channel_cached("readpv_severity", maxage=maxage)
+        readpv_status = SEVERITY_TO_STATUS.get(readpv_severity, status.UNKNOWN)
+        readpv_message = self._read_channel_cached("readpv", maxage=maxage)
 
         if readpv_status > status.OK:
             return readpv_status, readpv_message
@@ -239,7 +344,7 @@ class MultilineController(EpicsStringReadable, Waitable):
         return [int(chi) for chi in available_channels if chi > 0]
 
     def doReadSelected_Channels(self, maxage=0):
-        return self._epics_wrapper.get_pv_value(self._get_pv_name("available_channels"))
+        return self._read_channel_cached("available_channels")
 
     def measure(self, channels=None):
         if channels is None:
@@ -250,49 +355,42 @@ class MultilineController(EpicsStringReadable, Waitable):
             if hasattr(chi, "channel"):
                 channels[i] = chi.channel
 
-        all_channels = self._epics_wrapper.get_pv_value(
-            self._get_pv_name("available_channels")
-        )
+        all_channels = self._read_channel_cached("available_channels")
         selected_channels = [1 if chi in channels else 0 for chi in all_channels]
         self.measurement_channels = selected_channels
-        last_preshot = self._epics_wrapper.get_pv_value(
-            self._get_pv_name("measurement_preshots")
-        )
-        last_lengths = self._epics_wrapper.get_pv_value(
-            self._get_pv_name("measurement_lengths")
-        )
-        new_preshot = [
-            max(last_lengths[i], 50.0) if selected_channels[i] else max(lpi, 50.0)
-            for i, lpi in enumerate(last_preshot)
-        ]
-        self._epics_wrapper.put_pv_value(
-            self._get_pv_name("measurement_preshots"), new_preshot
-        )
-        self._epics_wrapper.put_pv_value(self._get_pv_name("start_measurement"), 1)
+        # TODO: Temporarily deactivated until we figure out what preshots do
+        # last_preshot = self._read_channel_cached("measurement_preshots")
+        # last_lengths = self._read_channel_cached("measurement_lengths")
+        # new_preshot = [
+        #     max(last_lengths[i], 50.0) if selected_channels[i] else max(lpi, 50.0)
+        #     for i, lpi in enumerate(last_preshot)
+        # ]
+        # self._epics_wrapper.put_pv_value(
+        #     self._get_pv_name("measurement_preshots"), new_preshot
+        # )
+        self._epics.put_channel_value("start_measurement", 1)
 
     def doReadMeasurement_Lengths(self):
-        return self._epics_wrapper.get_pv_value(
-            self._get_pv_name("measurement_lengths")
-        )
+        return self._read_channel_cached("measurement_lengths")
 
     def doReadAlign_Min(self):
-        return self._epics_wrapper.get_pv_value(self._get_pv_name("align_min"))
+        return self._read_channel_cached("align_min")
 
     def doReadAlign_Max(self):
-        return self._epics_wrapper.get_pv_value(self._get_pv_name("align_max"))
+        return self._read_channel_cached("align_max")
 
     def doReadMeasurement_Gains(self):
-        return self._epics_wrapper.get_pv_value(self._get_pv_name("measurement_gains"))
+        return self._read_channel_cached("measurement_gains")
 
     def doReadMeasurement_Errors(self):
         output = np.array([0 for i in self.measurement_lengths])
         for i, error in enumerate(self._error_flag_list):
             # create bit-flag for each error
-            output += 2**i * self._epics_wrapper.get_pv_value(self._get_pv_name(error))
+            output += 2**i * self._read_channel_cached(error)
         return output
 
     def doReadPolling_Counter(self):
-        return self._epics_wrapper.get_pv_value(self._get_pv_name("polling_counter"))
+        return self._read_channel_cached("polling_counter")
 
     _task_codes = {
         0: "Idle",
@@ -303,67 +401,51 @@ class MultilineController(EpicsStringReadable, Waitable):
     }
 
     def doReadCurrent_Task(self):
-        value = self._epics_wrapper.get_pv_value(
-            self._get_pv_name("current_task"), as_string=True
-        )
+        value = self._read_channel_cached("current_task")
         if isinstance(value, str):
             return value
         else:
             return self._task_codes[int(value)]
 
     def doReadFront_End_Splitter(self):
-        return self._epics_wrapper.get_pv_value(
-            self._get_pv_name("front_end_splitter"), as_string=True
-        )
+        return self._read_channel_cached("front_end_splitter")
 
     def doWriteFront_End_Splitter(self, value):
-        self._epics_wrapper.put_pv_value(self._get_pv_name("front_end_splitter"), value)
+        self._epics.put_channel_value("front_end_splitter", value)
 
     def doReadMeasurement_Counter(self):
-        return self._epics_wrapper.get_pv_value(
-            self._get_pv_name("measurement_counter")
-        )
+        return self._read_channel_cached("measurement_counter")
 
     def doReadFes_Option(self):
-        return self._epics_wrapper.get_pv_value(
-            self._get_pv_name("fes_option"), as_string=True
-        )
+        return self._read_channel_cached("fes_option")
 
     def doWriteFes_Option(self, value):
-        self._epics_wrapper.put_pv_value(self._get_pv_name("fes_option"), value)
+        self._epics.put_channel_value("fes_option", value)
 
     def doReadStart_Measurement(self):
-        return self._epics_wrapper.get_pv_value(
-            self._get_pv_name("start_measurement"), as_string=True
-        )
+        return self._read_channel_cached("start_measurement")
 
     def doWriteStart_Measurement(self, value):
-        self._epics_wrapper.put_pv_value(self._get_pv_name("start_measurement"), value)
+        self._epics.put_channel_value("start_measurement", value)
 
     def doReadMeasurement_Channels(self):
-        return self._epics_wrapper.get_pv_value(
-            self._get_pv_name("measurement_channels")
-        )
+        return self._read_channel_cached("measurement_channels")
 
     def doWriteMeasurement_Channels(self, value):
-        self._epics_wrapper.put_pv_value(
-            self._get_pv_name("measurement_channels"), value
-        )
+        self._epics.put_channel_value("measurement_channels", value)
 
     def doReadAlignment_Process(self):
-        return self._epics_wrapper.get_pv_value(self._get_pv_name("alignment_process"))
+        return self._read_channel_cached("alignment_process")
 
     def doWriteAlignment_Process(self, value):
-        self._epics_wrapper.put_pv_value(self._get_pv_name("alignment_process"), value)
+        self._epics.put_channel_value("alignment_process", value)
         self._cache.invalidate(self, "status")
 
     def doReadIs_Grouped(self):
-        return self._epics_wrapper.get_pv_value(
-            self._get_pv_name("is_grouped"), as_string=True
-        )
+        return self._read_channel_cached("is_grouped")
 
     def doReadNum_Channels(self):
-        return self._epics_wrapper.get_pv_value(self._get_pv_name("num_channels"))
+        return self._read_channel_cached("num_channels")
 
 
 ML_ERROR_MESSAGES = {
