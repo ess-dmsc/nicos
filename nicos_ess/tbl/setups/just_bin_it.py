@@ -1,5 +1,7 @@
 description = "The just-bin-it histogrammer."
 
+excludes = ["livedata"]
+
 devices = dict(
     jbi_detector=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItDetector",

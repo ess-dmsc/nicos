@@ -1,5 +1,7 @@
 description = "The livedata interface for tbl."
 
+excludes = ["just_bin_it"]
+
 devices = dict(
     monitor_1_counts_total=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
@@ -73,5 +75,12 @@ devices = dict(
             "ngem_detector_counts_total",
             "orca_detector_counts_total",
         ],
+        timers=["timer"],
+    ),
+    timer=device(
+        "nicos_ess.devices.timer.TimerChannel",
+        description="Timer",
+        fmtstr="%.2f",
+        unit="s",
     ),
 )
