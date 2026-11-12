@@ -7,7 +7,6 @@ from nicos.guisupport.qt import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QStyledItemDelegate,
     Qt,
     QTableWidget,
     QTableWidgetItem,
@@ -26,6 +25,7 @@ class SamplePanel(PanelBase):
         self.samples = []
         self.edit_ongoing = False
         self._build_ui()
+        self._on_sample_selected()  # start with nothing selected
         self.initialise_connection_status_listeners()
 
     def load_sample_data(self, data=None):
@@ -57,8 +57,10 @@ class SamplePanel(PanelBase):
             item = QTreeWidgetItem(self.tree, [sample["name"]])
             item.setData(0, Qt.ItemDataRole.UserRole, i)
 
-    def _add_table_data(self, data):
+    def _show_item_data(self, data):
+        print(data)
         data = deepcopy(data)
+
         sample = data.pop("name")
         self.sample_edit.setText(str(sample))
         for i, (key, value) in enumerate(data.items()):
@@ -66,14 +68,14 @@ class SamplePanel(PanelBase):
             self.table.setItem(i, 1, QTableWidgetItem(str(value)))
 
     def _on_sample_selected(self):
+        print("Sample selected")
         self.table.clearContents()
         selected_items = self.tree.selectedItems()
-        if not selected_items:
-            return
-
-        index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
-        if index < len(self.samples):
-            self._add_table_data(self.samples[index])
+        if selected_items:
+            index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
+            if index < len(self.samples):
+                self._show_item_data(self.samples[index])
+        # self._update_changes_label()
 
     def on_text_changed(self, row, col, text):
         if self.edit_ongoing:
@@ -101,14 +103,18 @@ class SamplePanel(PanelBase):
     def _duplicate_sample_btn_clicked(self):
         self.edit_ongoing = True
         self.changes_label.setText("Changes made to samples, save or cancel")
+
         sample_to_duplicate = self.tree.selectedItems()[0]
         index = sample_to_duplicate.data(0, Qt.ItemDataRole.UserRole)
         name = sample_to_duplicate.text(0)
+
         new_sample_index = len(self.samples)
         item = QTreeWidgetItem(self.tree, [name])
         item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
         self.tree.setCurrentItem(item)
-        self._add_table_data(self.samples[index])
+
+        self.samples.append(deepcopy(self.samples[index]))
+        self._show_item_data(self.samples[new_sample_index])
 
     def _save_btn_clicked(self):
         sample_data = self.samples
@@ -126,7 +132,8 @@ class SamplePanel(PanelBase):
             if self.table.item(row, 0) is None:
                 continue
             key = self.table.item(row, 0).text()
-            val = self.table.item(row, 1).text()
+            val_item = self.table.item(row, 1)
+            val = val_item.text() if val_item else ""
             table_data[key] = val
         return table_data
 
@@ -159,6 +166,9 @@ class SamplePanel(PanelBase):
         self.btn_cancel = QPushButton("Discard changes")
 
         self.changes_label = QLabel()
+
+    def _save_btn_clicked(self):
+        print("saved")
 
     def _set_layout(self):
         tree_btn_layout = QHBoxLayout()
@@ -216,19 +226,4 @@ class SamplePanel(PanelBase):
         self.btn_duplicate.clicked.connect(self._duplicate_sample_btn_clicked)
         self.btn_save.clicked.connect(self._save_btn_clicked)
         self.btn_cancel.clicked.connect(self._cancel_changes_btn_clicked)
-        self.table_live_edit = LiveEditDelegate(self.on_text_changed, self.table)
-        self.table.setItemDelegate(self.table_live_edit)
         self.sample_edit.textEdited.connect(self.on_sample_name_changed)
-
-
-class LiveEditDelegate(QStyledItemDelegate):
-    def __init__(self, callback, parent=None):
-        super().__init__(parent)
-        self.callback = callback
-
-    def createEditor(self, parent, option, index):
-        editor = super().createEditor(parent, option, index)
-        editor.textChanged.connect(
-            lambda text: self.callback(index.row(), index.column(), text)
-        )
-        return editor
