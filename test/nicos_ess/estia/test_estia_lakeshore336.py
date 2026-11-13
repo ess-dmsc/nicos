@@ -1,15 +1,15 @@
-import threading
-
 import pytest
 
-from nicos.core import status
 from nicos_ess.devices.epics.pva import epics_common
 from nicos_ess.estia.devices.flow_cryo_control import FlowCryoInput
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
-from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsComponent
 
 session_setup = "estia_flowcryo"
 PV_ROOT = "SIM:LS:"
+ALARM_SUMMARY = [
+    "No Alarm",
+    "Alarm",
+]
 ALARM_CHOICES = [
     "NO_ALARM",
     "MINOR",
@@ -21,8 +21,10 @@ RANGE_CHOICES = [
     "Range1/Low",
     "Range2/Medium",
     "Range3/High",
-    "Range4",
-    "Range5",
+]
+STATE = [
+    "On",
+    "Off",
 ]
 
 
@@ -35,67 +37,26 @@ def fake_backend(monkeypatch):
     backend.values[f"{PV_ROOT}TempA-Kelvin-R"] = 100
     backend.values[f"{PV_ROOT}TempA-Kelvin-R.LOW"] = 0
     backend.values[f"{PV_ROOT}TempA-Kelvin-R.HIGH"] = 999
-    backend.values[f"{PV_ROOT}AlarmA-Summary"] = 0
-    backend.value_choices[f"{PV_ROOT}AlarmA-Summary"] = ["No Alarm", "Alarm"]
-    backend.values[f"{PV_ROOT}AlarmA-Summary.SEVR"] = 0
+    backend.values[f"{PV_ROOT}AlarmA-Summary"] = ALARM_SUMMARY.index("No Alarm")
+    backend.value_choices[f"{PV_ROOT}AlarmA-Summary"] = ALARM_SUMMARY
+    backend.values[f"{PV_ROOT}AlarmA-Summary.SEVR"] = ALARM_CHOICES.index("NO_ALARM")
     backend.value_choices[f"{PV_ROOT}AlarmA-Summary.SEVR"] = ALARM_CHOICES
-    backend.values[f"{PV_ROOT}Range0-RB"] = 0
+    backend.values[f"{PV_ROOT}Range0-RB"] = RANGE_CHOICES.index("Off")
     backend.value_choices[f"{PV_ROOT}Range0-RB"] = RANGE_CHOICES
-    backend.values[f"{PV_ROOT}Range0-SP"] = 0
+    backend.values[f"{PV_ROOT}Range0-SP"] = RANGE_CHOICES.index("Off")
     backend.value_choices[f"{PV_ROOT}Range0-SP"] = RANGE_CHOICES
     backend.values[f"{PV_ROOT}Ramp0-RB"] = 0
     backend.values[f"{PV_ROOT}Ramp0-SP"] = 0
-    backend.values[f"{PV_ROOT}RampStatus0-RB"] = 0
-    backend.value_choices[f"{PV_ROOT}RampStatus0-RB"] = ["On", "Off"]
-    backend.values[f"{PV_ROOT}RampStatus0-SP"] = 0
-    backend.value_choices[f"{PV_ROOT}RampStatus0-SP"] = ["On", "Off"]
+    backend.values[f"{PV_ROOT}RampStatus0-RB"] = STATE.index("Off")
+    backend.value_choices[f"{PV_ROOT}RampStatus0-RB"] = STATE
+    backend.values[f"{PV_ROOT}RampStatus0-SP"] = STATE.index("Off")
+    backend.value_choices[f"{PV_ROOT}RampStatus0-SP"] = STATE
     backend.values[f"{PV_ROOT}Setp0-RB"] = 0
     backend.values[f"{PV_ROOT}Setp0-SP"] = 0
     return backend
 
 
-class FakeEstiaFlowCryo(FlowCryoInput):
-    @classmethod
-    def _initial_record_fields(cls):
-        return {
-            "value": 190.0,
-            "highlimit": 990,
-            "lowlimit": -1,
-            "hwhighlimit": 990,
-            "hwlowlimit": -1,
-            "target": 0,
-            "target_rb": 0,
-            "range": 0,
-            "range_rb": 0,
-            "ramp": 0,
-            "ramp_rb": 0,
-            "ramp_ctrl_sp": 0,
-            "ramp_ctrl_rb": 0,
-            "polling": 0,
-        }
-
-    def doPreinit(self, mode):
-        self._lock = threading.Lock()
-        self._status = (status.OK, "")
-        self._epics_channels = self._initial_record_fields()
-        self._epics = FakeEpicsComponent(self._epics_channels)
-
-    def doInit(self, mode):
-        pass
-
-    def _read_channel_cached(self, field, as_string=None, maxage=None):
-        return self._epics_channels[field]
-
-    def doRead(self, maxage=None):
-        return self._epics.get_channel_value("value")
-
-
 class TestEstiaFlowCryo:
-    @pytest.fixture(autouse=True)
-    def prepare(self, session):
-        self.session = session
-        self.flowcryo = self.session.getDevice("lakeshore_A", {})
-
     def _create_pair(self, device_harness):
         return device_harness.create_pair(
             FlowCryoInput,
@@ -137,9 +98,19 @@ class TestEstiaFlowCryo:
 
         assert fake_backend.values[f"{PV_ROOT}Setp0-SP"] == 200
 
-    def test_range_enum_writes_to_pv(self, device_harness, fake_backend):
+    @pytest.mark.parametrize(
+        ("suffix", "par", "map_val", "map_enum"),
+        [
+            pytest.param("RampStatus0-SP", "ramp_map", "On", 1, id="turn on ramping"),
+            pytest.param("Range0-SP", "range", "Range1/Low", 1, id="set range to low"),
+            pytest.param(
+                "Range0-SP", "range", "Range3/High", 3, id="set range to high"
+            ),
+        ],
+    )
+    def test_enum_params_write_to_sp_pvs(
+        self, device_harness, fake_backend, suffix, par, map_val, map_enum
+    ):
         daemon_device, _poller_device = self._create_pair(device_harness)
-
-        daemon_device.range = "Range2/Medium"
-
-        assert fake_backend.values[f"{PV_ROOT}Range0-SP"] == 2
+        setattr(daemon_device, par, map_val)
+        assert fake_backend.values[f"{PV_ROOT}{suffix}"] == map_enum
