@@ -5,6 +5,7 @@ import pytest
 
 from nicos.core import MAIN, POLLER
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureJsonFile
+from nicos_ess.devices.datasinks.scan_log import ScanLogSink
 
 try:
     from unittest import TestCase, mock
@@ -33,7 +34,9 @@ def _minimal_metainfo(counter: int = 1) -> dict:
                     "facility_user_id": "johndoe",
                 }
             ],
-            "({'name': 'John Doe', 'email': '', 'affiliation': 'European Spallation Source ERIC (ESS)', 'facility_user_id': 'johndoe'})",
+            "({'name': 'John Doe', 'email': '', "
+            "'affiliation': 'European Spallation Source ERIC (ESS)', "
+            "'facility_user_id': 'johndoe'})",
             "",
             "experiment",
         ),
@@ -61,6 +64,7 @@ class TestNexusStructureJsonFile(TestCase):
         monkeypatch.chdir(repo_root)
 
         self.session = session
+        self.monkeypatch = monkeypatch
         self.session.sessiontype = POLLER
 
         # Start with a clean session, then load a setup that defines "NexusStructure".
@@ -79,6 +83,31 @@ class TestNexusStructureJsonFile(TestCase):
         # Teardown
         self.session.unloadSetup()
         self.session.sessiontype = MAIN
+
+    def test_scan_log_sink_adds_scan_log_to_entry(self):
+        log = {"name": "scan", "type": "group", "children": []}
+        sink = mock.Mock(spec=ScanLogSink)
+        sink.nexus_logs.return_value = [log]
+        self.monkeypatch.setattr(self.session, "_datasinks", [mock.Mock(), sink])
+
+        doc = json.loads(self.device.get_structure(_minimal_metainfo(), counter=1))
+
+        (scan_log,) = [
+            child
+            for child in doc["children"][0]["children"]
+            if child.get("name") == "scan_log"
+        ]
+        assert scan_log["attributes"][0]["values"] == "NXcollection"
+        assert scan_log["children"] == [log]
+
+    def test_no_scan_log_without_the_sink(self):
+        self.monkeypatch.setattr(self.session, "_datasinks", [])
+
+        doc = json.loads(self.device.get_structure(_minimal_metainfo(), counter=1))
+
+        assert not any(
+            child.get("name") == "scan_log" for child in doc["children"][0]["children"]
+        )
 
     def test_get_structure_smoke(self):
         """Basic smoke test: loads template, injects metadata & mdat, returns JSON string."""

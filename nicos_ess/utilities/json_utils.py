@@ -54,10 +54,9 @@ from typing import (
     Any,
     Literal,
     TypedDict,
-    Union,
 )
 
-Key = Union[str, int]
+Key = str | int
 IndexPath = list[Key]
 ConflictPolicy = Literal["first", "last", "list", "error"]
 Which = Literal["first", "last", "all", "index"]
@@ -74,6 +73,7 @@ def generate_nxlog_json(
     source: str,
     topic: str,
     units: str,
+    dtype: str = "double",
 ) -> dict[str, Any]:
     """Build a minimal NXlog group node.
 
@@ -83,6 +83,7 @@ def generate_nxlog_json(
         source: Message source string.
         topic: Message topic string.
         units: Units string for the produced values (stored as ``value_units``).
+        dtype: Element type the File Writer stores the values as.
 
     Returns:
         A dictionary representing an NXlog group with one child module.
@@ -97,7 +98,7 @@ def generate_nxlog_json(
                 "config": {
                     "source": source,
                     "topic": topic,
-                    "dtype": "double",
+                    "dtype": dtype,
                     "value_units": units,
                 },
             }
