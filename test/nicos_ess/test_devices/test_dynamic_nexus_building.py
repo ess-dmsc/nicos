@@ -610,3 +610,60 @@ class TestDynamicNexusBuilding(TestCase):
 
         with pytest.raises(ErrorLogged, match="forget to set a sample"):
             self.nexus.get_structure(metainfo, counter)
+
+    def _load_ngem_nexus(self):
+        self.session.loadSetup("ess_portable_nexus_group", {})
+        return self.session.getDevice("ngem_nexus")
+
+    def test_portable_group_is_added(self):
+        self._load_ngem_nexus()
+        with self.log.assert_warns("position not set"):
+            doc, path_map = self._get_structure_paths()
+        group = get_by_named_path(doc, path_map, "/entry/instrument/ngem")
+        assert group["attributes"][0]["values"] == "NXdetector"
+        [stream] = get_by_named_path(doc, path_map, "/entry/instrument/ngem/data")[
+            "children"
+        ]
+        assert stream["module"] == "ev44"
+        assert stream["config"] == {
+            "source": "ngem",
+            "topic": "test_detector_portable_ngem",
+        }
+        depends_on = get_by_named_path(
+            doc, path_map, "/entry/instrument/ngem/depends_on"
+        )
+        assert depends_on["config"]["values"] == "."
+        assert "/entry/instrument/ngem/transformations" not in path_map
+        for name in [
+            "detector_number",
+            "x_pixel_offset",
+            "y_pixel_offset",
+            "z_pixel_offset",
+        ]:
+            assert f"/entry/instrument/ngem/{name}" in path_map
+
+    def test_portable_group_position_is_written(self):
+        self._load_ngem_nexus().position = (3.0, 0.5, -0.1)
+        doc, path_map = self._get_structure_paths()
+        path = "/entry/instrument/ngem/transformations"
+        depends_on = get_by_named_path(
+            doc, path_map, "/entry/instrument/ngem/depends_on"
+        )
+        assert depends_on["config"]["values"] == f"{path}/distance"
+        for name, value, vector, next_ in [
+            ("distance", 3.0, [0.0, 0.0, 1.0], f"{path}/height"),
+            ("height", 0.5, [0.0, 1.0, 0.0], f"{path}/x_offset"),
+            ("x_offset", -0.1, [1.0, 0.0, 0.0], "."),
+        ]:
+            translation = get_by_named_path(doc, path_map, f"{path}/{name}")
+            attributes = {a["name"]: a["values"] for a in translation["attributes"]}
+            assert translation["config"]["values"] == value
+            assert attributes["vector"] == vector
+            assert attributes["depends_on"] == next_
+
+    def test_portable_group_already_in_template_is_refused(self):
+        ngem_nexus = self._load_ngem_nexus()
+        ngem_nexus.position = (1.0, 0.0, 0.0)
+        ngem_nexus._setROParam("group_name", "multiblade_detector")
+        with pytest.raises(ConfigurationError, match="already in the NeXus template"):
+            self.nexus.get_structure(_minimal_metainfo(), counter=1)
