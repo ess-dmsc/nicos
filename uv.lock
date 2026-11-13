@@ -1375,7 +1375,6 @@ dependencies = [
     { name = "redis" },
     { name = "rsa" },
     { name = "scipy" },
-    { name = "systemd-python", marker = "sys_platform == 'linux'" },
     { name = "toml" },
     { name = "urllib3" },
 ]
@@ -1400,6 +1399,9 @@ gui-qt6 = [
     { name = "pyqt6-webengine" },
     { name = "pyqt6-webengine-qt6" },
     { name = "pyqtgraph" },
+]
+systemd = [
+    { name = "systemd-python" },
 ]
 
 [package.dev-dependencies]
@@ -1464,11 +1466,11 @@ requires-dist = [
     { name = "redis", specifier = ">=5.0.4" },
     { name = "rsa", specifier = ">=3.1.2" },
     { name = "scipy", specifier = ">=0.9.0" },
-    { name = "systemd-python", marker = "sys_platform == 'linux'", specifier = ">=230" },
+    { name = "systemd-python", marker = "extra == 'systemd'", specifier = ">=230" },
     { name = "toml", specifier = ">=0.10" },
     { name = "urllib3", specifier = ">=1.26.20" },
 ]
-provides-extras = ["gui", "gui-qt6"]
+provides-extras = ["gui", "gui-qt6", "systemd"]
 
 [package.metadata.requires-dev]
 dev = [
