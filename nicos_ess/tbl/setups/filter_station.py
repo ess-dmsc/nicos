@@ -5,7 +5,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Filter bank 1 axis",
         motorpv="TBL-FilChg:MC-LinY-01:Mtr",
-        monitor_deadband=0.01,
     ),
     bank_1_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -27,7 +26,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Filter bank 2",
         motorpv="TBL-FilChg:MC-LinY-02:Mtr",
-        monitor_deadband=0.01,
     ),
     bank_2_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -39,8 +37,8 @@ devices = dict(
         description="Filter bank 2 discrete positions",
         controlled_device="bank_2_axis",
         mapping={
-            "Bi: ⌀50 x 25 mm (1)": 23.91,
-            "Bi: ⌀50 x 25 mm (2)": 98.91,
+            "Bi: ⌀50 x 25 mm": 23.91,
+            "Be: ⌀50 x 40 mm": 98.91,
             "Si: ⌀40 x 50 mm": 173.91,
             "Blank": 295,
         },
@@ -49,7 +47,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Filter bank 3",
         motorpv="TBL-FilChg:MC-LinY-03:Mtr",
-        monitor_deadband=0.01,
     ),
     bank_3_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

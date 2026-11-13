@@ -358,7 +358,12 @@ def generateMetainfo():
     for device in devices:
         if "metadata" not in device.visibility:
             continue
-        for key, value, strvalue, unit, category in device.info():
+        try:
+            info = device.info()
+        except Exception as err:
+            device.log.warning("could not collect metadata, skipping", exc=err)
+            continue
+        for key, value, strvalue, unit, category in info:
             metainfo[device.name, key] = (value, strvalue, unit, category)
     return metainfo
 

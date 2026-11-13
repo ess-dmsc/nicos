@@ -57,7 +57,6 @@ class EpicsMotor(
     """
 
     valuetype = float
-    limit_rel_tolerance = 1e-12
     errorstates = {**Motor.errorstates, status.UNKNOWN: MoveError}
 
     _primary_channel = "value"
@@ -193,7 +192,6 @@ class EpicsMotor(
     def _build_epics_channels(self):
         epics_channels = {
             "value": readback_channel(".RBV", cache_key="value", primary=True),
-            "dialvalue": readback_channel(".DRBV", subscribe=False),
             "target": setpoint_channel(".VAL", cache_key="target"),
             "stop": command_channel(".STOP"),
             "speed": readback_channel(".VELO"),
@@ -205,7 +203,6 @@ class EpicsMotor(
             "enable": status_channel(".CNEN"),
             "set": command_channel(".SET"),
             "foff": command_channel(".FOFF"),
-            "dir": readback_channel(".DIR"),
             "homeforward": readback_channel(".HOMF"),
             "homereverse": readback_channel(".HOMR"),
             "position_deadband": readback_channel(".RDBD"),
@@ -296,33 +293,10 @@ class EpicsMotor(
         return dial_min, dial_max
 
     def doReadHwuserlimits(self):
-        dial_min = self._epics.get_channel_value("diallowlimit")
-        dial_max = self._epics.get_channel_value("dialhighlimit")
-        if dial_min > dial_max:
-            raise ConfigurationError(
-                self,
-                f"dial lowlimit ({dial_min}) above dial highlimit ({dial_max})",
-            )
-        offset = self.offset
-        hw_user_min = self._epics.get_channel_value("lowlimit")
-        hw_user_max = self._epics.get_channel_value("highlimit")
-        if hw_user_min > hw_user_max:
-            raise ConfigurationError(
-                self,
-                f"hardware user lowlimit ({hw_user_min}) above hardware user "
-                f"highlimit ({hw_user_max})",
-            )
-        if not self._user_limits_fit_dial_window(
-            hw_user_min, hw_user_max, dial_min, dial_max, offset
-        ):
-            direction = self._epics.get_channel_value("dir", as_string=True)
-            raise ConfigurationError(
-                self,
-                f"hardware userlimits ({hw_user_min}, {hw_user_max}) are "
-                f"inconsistent with dial limits ({dial_min}, {dial_max}), "
-                f"offset ({offset}) and direction ({direction})",
-            )
-        return hw_user_min, hw_user_max
+        return (
+            self._epics.get_channel_value("lowlimit"),
+            self._epics.get_channel_value("highlimit"),
+        )
 
     def doReadUserlimits(self):
         return self._userlimits_from_hardware(self.hwuserlimits)
@@ -411,31 +385,8 @@ class EpicsMotor(
         deadband = value
         self._epics.put_channel_value("monitor_deadband", max(deadband, 0))
 
-    def doWriteOffset(self, new_off):
-        """Shift the user/dial offset via SET/FOFF."""
-        if self.offset == new_off:
-            return
-
-        if self._epics.get_channel_value("moving") or not self._epics.get_channel_value(
-            "donemoving"
-        ):
-            raise RuntimeError(f"{self}: cannot change OFF while motor is moving")
-
-        dir_sign = (
-            1 if self._epics.get_channel_value("dir", as_string=True) == "Pos" else -1
-        )
-        dial_now = self._epics.get_channel_value("dialvalue")
-        user_target = dial_now * dir_sign + new_off  # user = dial * DIR + OFF
-
-        # In SET mode with FOFF=0, writing VAL makes the record recalculate OFF.
-        self._epics.put_channel_value("set", 1)
-        try:
-            self._epics.put_channel_value("foff", 0)
-            self._epics.put_channel_value("target", user_target)
-        finally:
-            self._epics.put_channel_value("set", 0)
-        self._epics.wait_for("donemoving", 1)
-        self.log.info("Offset changed to %s", new_off)
+    def doWriteOffset(self, value):
+        self._epics.put_channel_value("offset", value)
 
     def doWriteUserlimits(self, value):
         self._checkLimits(value)
@@ -598,82 +549,24 @@ class EpicsMotor(
 
         return motor_stat, motor_msg
 
-    def _get_dir_sign(self):
-        return (
-            1 if self._epics.get_channel_value("dir", as_string=True) == "Pos" else -1
-        )
-
-    def _limit_margin(self, boundary_value):
-        return abs(boundary_value) * self.limit_rel_tolerance
-
-    def _user_limits_fit_dial_window(
-        self, hw_user_min, hw_user_max, dial_window_min, dial_window_max, offset
-    ):
-        dir_sign = self._get_dir_sign()
-        dial_from_user_low = self._user_to_dial(hw_user_min, offset)
-        dial_from_user_high = self._user_to_dial(hw_user_max, offset)
-        if dir_sign > 0:
-            dial_min = dial_from_user_low
-            dial_max = dial_from_user_high
-        else:
-            dial_min = dial_from_user_high
-            dial_max = dial_from_user_low
-        min_margin = self._limit_margin(dial_window_min)
-        max_margin = self._limit_margin(dial_window_max)
-        return (
-            dial_window_min - min_margin <= dial_min
-            and dial_max <= dial_window_max + max_margin
-        )
-
-    def _user_to_dial(self, val, offset=None):
-        """
-        Convert a user-coordinate value to dial (hardware) units.
-
-        user = dial * DIR + OFF; dial = (user - OFF) / DIR
-        """
-        if offset is None:
-            offset = self.offset
-        return (val - offset) / self._get_dir_sign()
-
     def _checkLimits(self, limits):
-        """
-        Validate that requested *user* limits lie inside the *dial* abs-limits.
+        """Check user limits against the record's user-coordinate window.
 
-        NICOS base version adds the offset; for EPICS we have to subtract it.
+        HLM/LLM already have DIR and OFF applied by the motor record.
         """
         umin, umax = limits
-        dial_window_min, dial_window_max = self.abslimits
-
-        if umin > umax:
+        hw_umin, hw_umax = self.hwuserlimits
+        if not umin <= umax:
             raise ConfigurationError(
-                self,
-                f"user minimum ({umin}) above user maximum ({umax})",
+                self, f"user minimum ({umin}) above user maximum ({umax})"
             )
-
-        dir_sign = self._get_dir_sign()
-        dial_from_user_low = self._user_to_dial(umin)
-        dial_from_user_high = self._user_to_dial(umax)
-        if dir_sign > 0:
-            umin_hw = dial_from_user_low
-            umax_hw = dial_from_user_high
-        else:
-            umin_hw = dial_from_user_high
-            umax_hw = dial_from_user_low
-
-        min_margin = self._limit_margin(dial_window_min)
-        max_margin = self._limit_margin(dial_window_max)
-
-        if umin_hw < dial_window_min - min_margin:
+        if not hw_umin <= umin:
             raise ConfigurationError(
-                self,
-                f"user minimum ({umin}, dial {umin_hw} with offset "
-                f"{self.offset}) below absolute minimum ({dial_window_min})",
+                self, f"user minimum ({umin}) below hardware minimum ({hw_umin})"
             )
-        if umax_hw > dial_window_max + max_margin:
+        if not umax <= hw_umax:
             raise ConfigurationError(
-                self,
-                f"user maximum ({umax}, dial {umax_hw} with offset "
-                f"{self.offset}) above absolute maximum ({dial_window_max})",
+                self, f"user maximum ({umax}) above hardware maximum ({hw_umax})"
             )
 
     def _check_in_range(self, curval, userlimits):

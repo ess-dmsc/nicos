@@ -8,7 +8,7 @@ sysconfig = dict(
     cache="localhost",
     instrument="CODA",
     experiment="Exp",
-    datasinks=["conssink", "daemonsink", "liveview"],
+    datasinks=["conssink", "daemonsink", "liveview", "scanlog"],
 )
 
 alias_config = {
@@ -54,6 +54,11 @@ devices = dict(
     ),
     liveview=device(
         "nicos.devices.datasinks.LiveViewSink",
+    ),
+    scanlog=device(
+        "nicos_ess.devices.datasinks.scan_log.ScanLogSink",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        topic="coda_nicos_devices",
     ),
     NexusStructure_loki=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",

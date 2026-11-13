@@ -894,8 +894,6 @@ def smoke_client_session(
 ) -> Iterator[SmokeClient]:
     """Start the full smoke stack and yield a connected daemon client."""
     _check_no_root_nicos_conf()
-    if sys.version_info < (3, 12):
-        raise RuntimeError("the frame probe of the smoke run needs Python 3.12+")
     manage_kafka = _env_flag("NICOS_SMOKE_MANAGE_KAFKA", default=True)
     kafka_default = (
         _endpoint("127.0.0.1", _free_tcp_port())
@@ -954,6 +952,7 @@ def smoke_client_session(
 
     client = SmokeClient()
     client.runtime_root = runtime.root
+    client.kafka_bootstrap = kafka_bootstrap
 
     try:
         print(f"[smoke] runtime root: {runtime.root}", flush=True)

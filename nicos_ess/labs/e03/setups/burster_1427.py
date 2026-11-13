@@ -8,7 +8,6 @@ devices = dict(
         description="The resistance?",
         readpv=f"{pv_root}value_RBV",
         writepv=f"{pv_root}value",
-        abslimits=(-1e308, 1e308),
     ),
     burster_function=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
@@ -31,7 +30,6 @@ devices = dict(
         description="The resistance",
         readpv=f"{pv_root}r0_RBV",
         writepv=f"{pv_root}r0",
-        abslimits=(-1e308, 1e308),
     ),
     burster_status=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
@@ -43,6 +41,5 @@ devices = dict(
         description="The resistance",
         readpv=f"{pv_root}terminal_RBV",
         writepv=f"{pv_root}terminal",
-        abslimits=(-1e308, 1e308),
     ),
 )

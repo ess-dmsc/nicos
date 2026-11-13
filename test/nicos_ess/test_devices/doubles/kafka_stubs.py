@@ -213,6 +213,7 @@ class StubKafkaProducer:
 
     def __init__(self):
         self.messages = []
+        self.flushes = 0
 
     @staticmethod
     def create(*args, **kwargs):
@@ -232,3 +233,8 @@ class StubKafkaProducer:
         callback = kwargs.get("on_delivery_callback")
         if callback:
             callback(None, _DeliveredMessage())
+
+    def flush(self, timeout=None):
+        del timeout
+        self.flushes += 1
+        return 0

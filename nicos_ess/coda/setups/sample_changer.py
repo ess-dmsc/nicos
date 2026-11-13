@@ -7,13 +7,11 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Linear sample changer - electrical axis 9 in motion cabinet 3",
         motorpv="LOKI-SpChg1:MC-LinY-01:Mtr",
-        monitor_deadband=0.01,
     ),
     sample_stack_z=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Sample stack linear z - electrical axis 1 in motion cabinet 4",
         motorpv="LOKI-SpSt1:MC-LinZ-01:Mtr",
-        monitor_deadband=0.01,
     ),
     sample_changer=device(
         "nicos_ess.loki.devices.thermostated_cellholder.ThermoStatedCellHolder",

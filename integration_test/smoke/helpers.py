@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import math
 import time
 from textwrap import dedent
+
+from confluent_kafka import OFFSET_BEGINNING, Consumer, TopicPartition
+from streaming_data_types import deserialise_f144, deserialise_pl72
 
 
 def read_counters(smoke_client) -> dict[str, int]:
@@ -167,3 +171,56 @@ def run_scan_with_filewriter_context(
             "__smoke_filewriter_jobs_after", default=[]
         ),
     }
+
+
+def read_topic(smoke_client, topic: str, timeout: float = 20.0) -> list[bytes]:
+    """Return every message on the single-partition *topic*, oldest first."""
+    consumer = Consumer(
+        {
+            "bootstrap.servers": smoke_client.kafka_bootstrap,
+            "group.id": f"nicos-smoke-reader-{time.monotonic_ns()}",
+            "enable.auto.commit": False,
+        }
+    )
+    try:
+        _, high = consumer.get_watermark_offsets(
+            TopicPartition(topic, 0), timeout=timeout
+        )
+        consumer.assign([TopicPartition(topic, 0, OFFSET_BEGINNING)])
+        values = []
+        deadline = time.monotonic() + timeout
+        offset = -1
+        while offset < high - 1:
+            if time.monotonic() > deadline:
+                raise TimeoutError(
+                    f"read {len(values)} of {high} messages from {topic}"
+                )
+            msg = consumer.poll(0.5)
+            if msg is None or msg.error():
+                continue
+            offset = msg.offset()
+            values.append(msg.value())
+        return values
+    finally:
+        consumer.close()
+
+
+def scan_log_messages(smoke_client, topic: str) -> dict[str, list[tuple[int, int]]]:
+    """Return {source: [(value, timestamp_ns), ...]} of the scan log sink.
+
+    Only changes are kept: the sink repeats its current values.
+    """
+    result = {"scanlog/scan": [], "scanlog/point": []}
+    for value in read_topic(smoke_client, topic):
+        if value[4:8] != b"f144":
+            continue
+        log = deserialise_f144(value)
+        changes = result.get(log.source_name)
+        if changes is not None and (not changes or changes[-1][0] != log.value):
+            changes.append((int(log.value), log.timestamp_unix_ns))
+    return result
+
+
+def last_start_structure(smoke_client, pool_topic: str) -> dict:
+    starts = [v for v in read_topic(smoke_client, pool_topic) if v[4:8] == b"pl72"]
+    return json.loads(deserialise_pl72(starts[-1]).nexus_structure)

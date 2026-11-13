@@ -7,7 +7,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motor changing laser mirror for alignment - electrical axis 5 in motion cabinet 3",
         motorpv="LOKI-InBmLM:MC-LinZ-01:Mtr",
-        monitor_deadband=0.01,
     ),
     alignment_laser_mirror_positioner=device(
         "nicos_ess.devices.mapped_controller.MappedController",

@@ -62,9 +62,26 @@ class TestEpicsMotorLegacyParity:
 
         device_harness.run_daemon(daemon_device.doAdjust, 0.0, 50.0)
 
-        assert fake_backend.values[pv(".VAL")] == 50.0
-        fake_backend.values[pv(".OFF")] = 50.0
+        assert fake_backend.values[pv(".OFF")] == 50.0
         assert device_harness.run_daemon(daemon_device.doReadOffset) == 50.0
+
+    def test_motor_write_offset_puts_off_exactly(self, device_harness, fake_backend):
+        # ECDC-6283: OFF must not pick up DRBV-DVAL drift from a SET-mode write,
+        # and the hardware limits must only be shifted by the record itself.
+        fake_backend.values[pv(".DRBV")] = 10.00001
+        fake_backend.values[pv(".VAL")] = 10.0
+        fake_backend.values[pv(".HLM")] = 70.0
+        fake_backend.values[pv(".LLM")] = -70.0
+        daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
+
+        device_harness.run_daemon(daemon_device.doWriteOffset, 5.0)
+        device_harness.run_daemon(daemon_device.doWriteOffset, 0.0)
+
+        assert fake_backend.values[pv(".OFF")] == 0.0
+        assert fake_backend.values[pv(".SET")] == 0
+        assert fake_backend.values[pv(".VAL")] == 10.0
+        assert fake_backend.values[pv(".HLM")] == 70.0
+        assert fake_backend.values[pv(".LLM")] == -70.0
 
     def test_derived_motor_can_extend_record_field_mapping(self, device_harness):
         dev = device_harness.create(
@@ -218,6 +235,11 @@ class TestEpicsMotorLimits:
                 "invalid value for parameter abslimits",
                 id="dial_limits_inverted",
             ),
+            pytest.param(
+                {".LLM": 10.0, ".HLM": -10.0},
+                "invalid value for parameter userlimits",
+                id="hardware_limits_inverted",
+            ),
         ],
     )
     def test_motor_creation_fails_for_invalid_epics_configuration(
@@ -230,111 +252,13 @@ class TestEpicsMotorLimits:
             create_motor_pair(device_harness, monitor=False)
 
     @pytest.mark.parametrize(
-        "pv_updates,error_match",
-        [
-            pytest.param(
-                {".LLM": 10.0, ".HLM": -10.0},
-                "hardware user lowlimit",
-                id="hardware_limits_inverted",
-            ),
-            pytest.param(
-                {".OFF": 10.0},
-                "hardware userlimits",
-                id="hardware_limits_inconsistent_with_offset",
-            ),
-        ],
-    )
-    def test_motor_limits_read_fails_for_invalid_epics_configuration(
-        self, device_harness, fake_backend, pv_updates, error_match
-    ):
-        for suffix, value in pv_updates.items():
-            fake_backend.values[pv(suffix)] = value
-
-        daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
-        with pytest.raises(ConfigurationError, match=error_match):
-            daemon_device.userlimits
-
-    def test_motor_limits_read_accepts_hardware_limits_within_relative_tolerance(
-        self, device_harness, fake_backend
-    ):
-        dial_min, dial_max = ASYMM_DIAL_LIMITS
-        tol_min = abs(dial_min) * EpicsMotor.limit_rel_tolerance
-        tol_max = abs(dial_max) * EpicsMotor.limit_rel_tolerance
-
-        fake_backend.values[pv(".DIR")] = "Pos"
-        fake_backend.values[pv(".OFF")] = 0.0
-        fake_backend.values[pv(".DLLM")] = dial_min
-        fake_backend.values[pv(".DHLM")] = dial_max
-        fake_backend.values[pv(".LLM")] = dial_min - tol_min * 0.5
-        fake_backend.values[pv(".HLM")] = dial_max + tol_max * 0.5
-
-        daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
-
-        assert daemon_device.hwuserlimits == pytest.approx(
-            (dial_min - tol_min * 0.5, dial_max + tol_max * 0.5)
-        )
-
-    def test_motor_limits_read_rejects_hardware_limits_outside_relative_tolerance(
-        self, device_harness, fake_backend
-    ):
-        dial_min, dial_max = ASYMM_DIAL_LIMITS
-        tol_min = abs(dial_min) * EpicsMotor.limit_rel_tolerance
-
-        fake_backend.values[pv(".DIR")] = "Pos"
-        fake_backend.values[pv(".OFF")] = 0.0
-        fake_backend.values[pv(".DLLM")] = dial_min
-        fake_backend.values[pv(".DHLM")] = dial_max
-        fake_backend.values[pv(".LLM")] = dial_min - tol_min * 2.0
-        fake_backend.values[pv(".HLM")] = dial_max
-
-        daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
-        with pytest.raises(ConfigurationError, match="hardware userlimits"):
-            daemon_device.userlimits
-
-    def test_motor_write_userlimits_accepts_boundaries_within_relative_tolerance(
-        self, device_harness, fake_backend
-    ):
-        dial_min, dial_max = ASYMM_DIAL_LIMITS
-        seed_limits(
-            fake_backend,
-            direction="Pos",
-            offset=0.0,
-            abs_dial_limits=ASYMM_DIAL_LIMITS,
-        )
-        daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
-
-        tol_min = abs(dial_min) * daemon_device.limit_rel_tolerance
-        tol_max = abs(dial_max) * daemon_device.limit_rel_tolerance
-        requested_limits = (dial_min - tol_min * 0.5, dial_max + tol_max * 0.5)
-
-        device_harness.run_daemon(daemon_device.doWriteUserlimits, requested_limits)
-
-        assert daemon_device.userlimits == pytest.approx(requested_limits)
-
-    def test_motor_write_userlimits_rejects_boundaries_outside_relative_tolerance(
-        self, device_harness, fake_backend
-    ):
-        dial_min, dial_max = ASYMM_DIAL_LIMITS
-        seed_limits(
-            fake_backend,
-            direction="Pos",
-            offset=0.0,
-            abs_dial_limits=ASYMM_DIAL_LIMITS,
-        )
-        daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
-
-        tol_min = abs(dial_min) * daemon_device.limit_rel_tolerance
-        requested_limits = (dial_min - tol_min * 2.0, dial_max)
-
-        with pytest.raises(ConfigurationError, match="below absolute minimum"):
-            device_harness.run_daemon(daemon_device.doWriteUserlimits, requested_limits)
-
-    @pytest.mark.parametrize(
         "requested_limits",
         [
             pytest.param((10.0, -10.0), id="user_min_above_user_max"),
             pytest.param((-130.0, 100.0), id="below_abs_min"),
             pytest.param((-100.0, 130.0), id="above_abs_max"),
+            pytest.param((float("nan"), 100.0), id="nan_min"),
+            pytest.param((-100.0, float("nan")), id="nan_max"),
         ],
     )
     def test_motor_write_userlimits_rejects_invalid_ranges(
