@@ -1,4 +1,3 @@
-import pdb
 import threading
 
 import pytest
@@ -11,6 +10,20 @@ from test.nicos_ess.test_devices.doubles.epics_pva_backend import FakeEpicsCompo
 
 session_setup = "estia_flowcryo"
 PV_ROOT = "SIM:LS:"
+ALARM_CHOICES = [
+    "NO_ALARM",
+    "MINOR",
+    "MAJOR",
+    "INVALID",
+]
+RANGE_CHOICES = [
+    "Off",
+    "Range1/Low",
+    "Range2/Medium",
+    "Range3/High",
+    "Range4",
+    "Range5",
+]
 
 
 @pytest.fixture
@@ -25,27 +38,17 @@ def fake_backend(monkeypatch):
     backend.values[f"{PV_ROOT}AlarmA-Summary"] = 0
     backend.value_choices[f"{PV_ROOT}AlarmA-Summary"] = ["No Alarm", "Alarm"]
     backend.values[f"{PV_ROOT}AlarmA-Summary.SEVR"] = 0
-    backend.value_choices[f"{PV_ROOT}AlarmA-Summary.SEVR"] = [
-        "NO_ALARM",
-        "MINOR",
-        "MAJOR",
-        "INVALID",
-    ]
+    backend.value_choices[f"{PV_ROOT}AlarmA-Summary.SEVR"] = ALARM_CHOICES
     backend.values[f"{PV_ROOT}Range0-RB"] = 0
+    backend.value_choices[f"{PV_ROOT}Range0-RB"] = RANGE_CHOICES
     backend.values[f"{PV_ROOT}Range0-SP"] = 0
-    backend.value_choices[f"{PV_ROOT}Range0-RB"] = [
-        "Off",
-        "Range1/Low",
-        "Range2/Medium",
-        "Range3/High",
-        "Range4",
-        "Range5",
-    ]
+    backend.value_choices[f"{PV_ROOT}Range0-SP"] = RANGE_CHOICES
     backend.values[f"{PV_ROOT}Ramp0-RB"] = 0
     backend.values[f"{PV_ROOT}Ramp0-SP"] = 0
     backend.values[f"{PV_ROOT}RampStatus0-RB"] = 0
-    backend.values[f"{PV_ROOT}RampStatus0-SP"] = 0
     backend.value_choices[f"{PV_ROOT}RampStatus0-RB"] = ["On", "Off"]
+    backend.values[f"{PV_ROOT}RampStatus0-SP"] = 0
+    backend.value_choices[f"{PV_ROOT}RampStatus0-SP"] = ["On", "Off"]
     backend.values[f"{PV_ROOT}Setp0-RB"] = 0
     backend.values[f"{PV_ROOT}Setp0-SP"] = 0
     return backend
@@ -124,5 +127,19 @@ class TestEstiaFlowCryo:
         daemon_device, _poller_device = self._create_pair(device_harness)
         fake_backend.emit_update(f"{PV_ROOT}TempA-Kelvin-R.LOW", value=absmin)
         fake_backend.emit_update(f"{PV_ROOT}TempA-Kelvin-R.HIGH", value=absmax)
-        pdb.set_trace()
+
         assert daemon_device.abslimits == (absmin, absmax)
+
+    def test_start_writes_to_target_pv(self, device_harness, fake_backend):
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        daemon_device.start(200)
+
+        assert fake_backend.values[f"{PV_ROOT}Setp0-SP"] == 200
+
+    def test_range_enum_writes_to_pv(self, device_harness, fake_backend):
+        daemon_device, _poller_device = self._create_pair(device_harness)
+
+        daemon_device.range = "Range2/Medium"
+
+        assert fake_backend.values[f"{PV_ROOT}Range0-SP"] == 2
