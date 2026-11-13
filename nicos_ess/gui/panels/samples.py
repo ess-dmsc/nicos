@@ -123,8 +123,6 @@ class SamplePanel(PanelBase):
         item = QTreeWidgetItem(self.tree, [new_name])
         item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
         self.tree.setCurrentItem(item)
-        self._populate_table(self.pending_samples[new_sample_index])
-        self._update_reminder_label()
 
     def _duplicate_sample_btn_clicked(self):
         sample_to_duplicate = self.tree.selectedItems()[0]
@@ -139,8 +137,6 @@ class SamplePanel(PanelBase):
         item = QTreeWidgetItem(self.tree, [new_name])
         item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
         self.tree.setCurrentItem(item)
-        self._populate_table(self.pending_samples[new_sample_index])
-        self._update_reminder_label()
 
     def _apply_changes_btn_clicked(self):
         self.save_sample_data(self.pending_samples)
@@ -159,18 +155,15 @@ class SamplePanel(PanelBase):
     def _discard_changes_btn_clicked(self):
         self.pending_samples = deepcopy(self.applied_samples)
         self.update_tree_widget_data()
-        self._update_reminder_label()
 
     def _remove_sample_btn_clicked(self):
-        selected_items = self.tree.selectedItems()
-        if selected_items:
-            index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
+        selected_item = self.tree.selectedItems()[0]
+        index = selected_item.data(0, Qt.ItemDataRole.UserRole)
 
-            del self.pending_samples[index]
-            self.update_tree_widget_data()
-            new_index = max(index - 1, 0)
-            self.tree.setCurrentItem(self.tree.topLevelItem(new_index))
-            self._update_reminder_label()
+        del self.pending_samples[index]
+        self.update_tree_widget_data()
+        new_index = max(index - 1, 0)
+        self.tree.setCurrentItem(self.tree.topLevelItem(new_index))
 
     def _build_ui(self):
         self._create_widgets()
@@ -248,7 +241,6 @@ class SamplePanel(PanelBase):
 
     def _add_signals(self):
         self.tree.itemSelectionChanged.connect(self._on_sample_selected)
-        # self.samples.updated.connect(self.update_tree_widget_data)
         self.btn_new.clicked.connect(self._new_sample_btn_clicked)
         self.btn_duplicate.clicked.connect(self._duplicate_sample_btn_clicked)
         self.btn_remove.clicked.connect(self._remove_sample_btn_clicked)
