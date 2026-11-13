@@ -17,7 +17,6 @@ from contextlib import suppress
 from copy import copy
 from dataclasses import dataclass, replace
 from enum import Enum
-from typing import Optional
 
 from nicos import session
 from nicos.core import (
@@ -70,7 +69,7 @@ class EpicsChannelKind(Enum):
 @dataclass(frozen=True)
 class EpicsChannelInfo:
     # "" means "cache under the channel name"; None means "do not cache".
-    cache_key: Optional[str]
+    cache_key: str | None
     pv_suffix: str
     kind: EpicsChannelKind
     as_string: bool = False
@@ -81,13 +80,13 @@ class EpicsChannelInfo:
     refresh_status_on_update: bool = False
     # PV source. Default is device._default_pv_prefix_attr + pv_suffix.
     # pv_prefix_attr overrides the root; pv_name_attr names a complete PV.
-    pv_prefix_attr: Optional[str] = None
-    pv_name_attr: Optional[str] = None
+    pv_prefix_attr: str | None = None
+    pv_name_attr: str | None = None
     allow_missing_pv: bool = False
     connect_on_startup: bool = True
     # Cache key for the display limits delivered with updates on this
     # channel (e.g. "abslimits" on a write channel).
-    limits_cache_key: Optional[str] = None
+    limits_cache_key: str | None = None
     # True for EPICS enum PVs. Readbacks are delivered as choice strings.
     is_enum: bool = False
 
@@ -116,11 +115,11 @@ class ChannelUpdate:
     channel: str
     value: object
     units: str = ""
-    limits: Optional[tuple] = None
+    limits: tuple | None = None
     severity: int = status.OK
     message: str = ""
     pv_name: str = ""
-    source_id: Optional[str] = None
+    source_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -128,7 +127,7 @@ class ConnectionUpdate:
     channel: str
     is_connected: bool
     pv_name: str = ""
-    source_id: Optional[str] = None
+    source_id: str | None = None
 
 
 class EpicsEnumParam(oneof):
@@ -952,6 +951,12 @@ class EpicsDeviceBase(EpicsParameters):
             self.log.warning("%s disconnected!", change.pv_name)
             self._disconnected.add(key)
         self._refresh_status(time.time())
+
+    def _getFromCache(self, name, func, maxage=None):
+        # only the poller publishes: a fresh read can finish after a newer monitor update
+        if maxage == 0 and self.monitor and session.sessiontype != POLLER:
+            return func(0)
+        return super()._getFromCache(name, func, maxage)
 
     def _refresh_status(self, ts):
         self._cache.put(self._name, "status", self._status_snapshot(maxage=None), ts)

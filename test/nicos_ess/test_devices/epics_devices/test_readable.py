@@ -167,6 +167,38 @@ class TestEpicsReadable:
 
         assert device_harness.run("daemon", daemon_device.read) == pytest.approx(8.25)
 
+    def test_daemon_fresh_read_does_not_overwrite_a_newer_monitor_value(
+        self, device_harness, fake_backend
+    ):
+        readpv = "SIM:READ.RBV"
+        fake_backend.values[readpv] = 1.0
+
+        daemon_device = device_harness.create(
+            "daemon",
+            EpicsReadable,
+            name="readable",
+            readpv=readpv,
+        )
+        device_harness.create(
+            "poller",
+            EpicsReadable,
+            name="readable",
+            readpv=readpv,
+        )
+
+        get_pv_value = fake_backend.get_pv_value
+
+        def get_then_monitor_update(pvname, as_string=False):
+            value = get_pv_value(pvname, as_string)
+            # the PV changes while the daemon's get is on its way back
+            fake_backend.emit_update(readpv, value=2.0)
+            return value
+
+        fake_backend.get_pv_value = get_then_monitor_update
+
+        assert device_harness.run("daemon", daemon_device.read, 0) == 1.0
+        assert device_harness.run("daemon", daemon_device.read) == 2.0
+
     def test_daemon_readable_positive_maxage_rejects_stale_poller_value(
         self, device_harness, fake_backend
     ):
