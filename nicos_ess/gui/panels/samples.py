@@ -168,6 +168,8 @@ class SamplePanel(PanelBase):
 
             del self.pending_samples[index]
             self.update_tree_widget_data()
+            new_index = max(index - 1, 0)
+            self.tree.setCurrentItem(self.tree.topLevelItem(new_index))
             self._update_reminder_label()
 
     def _build_ui(self):
