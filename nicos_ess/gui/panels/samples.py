@@ -22,8 +22,8 @@ class SamplePanel(PanelBase):
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
 
-        self.samples = []
-        self.edit_ongoing = False
+        self.applied_samples = []
+        self.pending_samples = []
         self._build_ui()
         self.ignore_table_changes = False
         self._on_sample_selected()  # start with nothing selected
@@ -31,9 +31,10 @@ class SamplePanel(PanelBase):
 
     def load_sample_data(self, data=None):
         if data is not None:
-            self.samples = [dict(x) for x in data.values()]
+            self.applied_samples = [dict(x) for x in data.values()]
         else:
-            self.samples = self.client.eval("session.experiment.get_samples()")
+            self.applied_samples = self.client.eval("session.experiment.get_samples()")
+        self.pending_samples = deepcopy(self.applied_samples)
 
     def save_sample_data(self, samples):
         self.client.run(f"Exp.set_samples({samples})")
@@ -52,9 +53,20 @@ class SamplePanel(PanelBase):
         self.load_sample_data()
         self.update_tree_widget_data()
 
+    def has_changes(self):
+        return self.pending_samples != self.applied_samples
+
+    def _update_reminder_label(self):
+        if self.has_changes():
+            self.apply_reminder_label.setText(
+                "Changes have been made, remember to apply or discard"
+            )
+        else:
+            self.apply_reminder_label.setText("")
+
     def update_tree_widget_data(self):
         self.tree.clear()
-        for i, sample in enumerate(self.samples):
+        for i, sample in enumerate(self.pending_samples):
             item = QTreeWidgetItem(self.tree, [sample["name"]])
             item.setData(0, Qt.ItemDataRole.UserRole, i)
 
@@ -73,71 +85,55 @@ class SamplePanel(PanelBase):
         selected_items = self.tree.selectedItems()
         if selected_items:
             index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
-            if index < len(self.samples):
-                self._populate_table(self.samples[index])
-        # self._update_changes_label()
+            if index < len(self.pending_samples):
+                self._populate_table(self.pending_samples[index])
+        self._update_reminder_label()
         self.ignore_table_changes = False
 
-    def on_text_changed(self, row, col, text):
-        if self.edit_ongoing:
-            self.changes_label.setText("Changes made to samples, save or cancel")
-            if row == 0 and col == 1:
-                selected_item = self.tree.selectedItems()[0]
-                selected_item.setText(0, text)
-
     def on_sample_name_changed(self, text):
-        self.changes_label.setText("Changes made to samples, save or cancel")
         selected_item = self.tree.selectedItems()[0]
         selected_item.setText(0, text)
+        index = selected_item.data(0, Qt.ItemDataRole.UserRole)
+        self.pending_samples[index]["name"] = text
+        self._update_reminder_label()
 
     def on_table_item_changed(self, item):
         if self.ignore_table_changes:
             return
-        self.edit_ongoing = True
-        self.changes_label.setText("Changes made to samples, save or cancel")
+        index = self.tree.currentItem().data(0, Qt.ItemDataRole.UserRole)
+        name = self.pending_samples[index]["name"]
+        self.pending_samples[index] = {"name": name, **self._get_table_data()}
+        self._update_reminder_label()
 
     def _new_sample_btn_clicked(self):
-        self.edit_ongoing = True
-        self.changes_label.setText("Changes made to samples, save or cancel")
-
-        new_sample_index = len(self.samples)
+        new_sample_index = len(self.pending_samples)
         new_name = "untitled"
-        self.samples.append({"name": new_name})
+        self.pending_samples.append({"name": new_name})
 
         item = QTreeWidgetItem(self.tree, [new_name])
         item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
         self.tree.setCurrentItem(item)
-        self._populate_table(self.samples[new_sample_index])
+        self._populate_table(self.pending_samples[new_sample_index])
+        self._update_reminder_label()
 
     def _duplicate_sample_btn_clicked(self):
-        self.edit_ongoing = True
-        self.changes_label.setText("Changes made to samples, save or cancel")
-
         sample_to_duplicate = self.tree.selectedItems()[0]
         index = sample_to_duplicate.data(0, Qt.ItemDataRole.UserRole)
         name = sample_to_duplicate.text(0)
-        new_sample_index = len(self.samples)
+        new_sample_index = len(self.pending_samples)
 
-        self.samples.append(deepcopy(self.samples[index]))
+        self.pending_samples.append(deepcopy(self.pending_samples[index]))
         new_name = name + " copy"
-        self.samples[~0]["name"] = new_name
+        self.pending_samples[~0]["name"] = new_name
 
         item = QTreeWidgetItem(self.tree, [new_name])
         item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
         self.tree.setCurrentItem(item)
-        self._populate_table(self.samples[new_sample_index])
+        self._populate_table(self.pending_samples[new_sample_index])
+        self._update_reminder_label()
 
     def _apply_changes_btn_clicked(self):
-        sample_data = self.samples
-        edited_index = self.tree.currentItem().data(0, Qt.ItemDataRole.UserRole)
-        table_data = self._get_table_data()
-        if edited_index < len(self.samples):
-            sample_data[edited_index] = table_data
-        else:
-            sample_data.append(table_data)
-        self.save_sample_data(sample_data)
-        self.edit_ongoing = False
-        self.changes_label.setText("")
+        self.save_sample_data(self.pending_samples)
 
     def _get_table_data(self):
         table_data = {}
@@ -151,19 +147,18 @@ class SamplePanel(PanelBase):
         return table_data
 
     def _discard_changes_btn_clicked(self):
-        self.edit_ongoing = False
-        self.changes_label.setText("")
+        self.pending_samples = deepcopy(self.applied_samples)
         self.update_tree_widget_data()
+        self._update_reminder_label()
 
     def _remove_sample_btn_clicked(self):
         selected_items = self.tree.selectedItems()
         if selected_items:
             index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
 
-            del self.samples[index]
-            self.edit_ongoing = True
-            self.changes_label.setText("Changes made to samples, save or cancel")
+            del self.pending_samples[index]
             self.update_tree_widget_data()
+            self._update_reminder_label()
 
     def _build_ui(self):
         self._create_widgets()
@@ -188,7 +183,7 @@ class SamplePanel(PanelBase):
         self.btn_apply_changes = QPushButton("Apply changes")
         self.btn_discard_changes = QPushButton("Discard changes")
 
-        self.changes_label = QLabel()
+        self.apply_reminder_label = QLabel()
 
     def _set_layout(self):
         tree_btn_layout = QHBoxLayout()
@@ -211,7 +206,7 @@ class SamplePanel(PanelBase):
         self.table_layout.addLayout(table_header_layout)
         self.table_layout.addWidget(self.metadata_label)
         self.table_layout.addWidget(self.table)
-        self.table_layout.addWidget(self.changes_label)
+        self.table_layout.addWidget(self.apply_reminder_label)
         self.table_layout.addLayout(table_btn_layout)
 
         self.layout = QHBoxLayout()
@@ -231,8 +226,8 @@ class SamplePanel(PanelBase):
         )
         QTimer.singleShot(0, _initial_label_column_width)
         self.tree.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        self.changes_label.setStyleSheet("color: red; font-weight: bold;")
-        self.changes_label.setAlignment(
+        self.apply_reminder_label.setStyleSheet("color: red; font-weight: bold;")
+        self.apply_reminder_label.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
         self.sample_label.setStyleSheet("font-weight: bold;")
