@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
+from yuos_query.yuos_client import YuosCacheClient
 
 from nicos.commands.measure import count
 from nicos.commands.scan import scan
@@ -112,6 +113,52 @@ class TestEssExperiment:
             {
                 "name": "John Doe",
                 "email": "",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "johndoe",
+            },
+        ]
+
+    def test_users_from_cache_without_email(self, experiment):
+        experiment._yuos_client = YuosCacheClient.create(
+            "test/nicos_ess/test_devices/data/cached_proposals/"
+            "cached_proposals_1.json"
+        )
+        experiment._yuos_client.update_cache()
+        result = experiment._queryProposals(kwds={"admin": True})[0]
+
+        assert result["users"] == [
+            {
+                "name": "Jane Doe",
+                "email": "",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "janedoe",
+            },
+            {
+                "name": "John Doe",
+                "email": "",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "johndoe",
+            },
+        ]
+
+    def test_users_from_cache_with_email(self, experiment):
+        experiment._yuos_client = YuosCacheClient.create(
+            "test/nicos_ess/test_devices/data/cached_proposals/"
+            "cached_proposals_with_email.json"
+        )
+        experiment._yuos_client.update_cache()
+        result = experiment._queryProposals(kwds={"admin": True})[0]
+
+        assert result["users"] == [
+            {
+                "name": "Jane Doe",
+                "email": "jane.doe@ess.eu",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "janedoe",
+            },
+            {
+                "name": "John Doe",
+                "email": "john.doe@ess.eu",
                 "affiliation": "European Spallation Source ERIC (ESS)",
                 "facility_user_id": "johndoe",
             },

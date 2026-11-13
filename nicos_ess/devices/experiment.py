@@ -376,13 +376,20 @@ class EssExperiment(Experiment):
         return samples
 
     def _extract_users(self, query_result):
-        users = []
-        for first, last, fed_id, org in query_result.users:
-            users.append(self._create_user(f"{first} {last}", "", org, fed_id))
+        users = [self._user_from_cache(user) for user in query_result.users]
         if query_result.proposer:
-            first, last, fed_id, org = query_result.proposer
-            users.append(self._create_user(f"{first} {last}", "", org, fed_id))
+            users.append(self._user_from_cache(query_result.proposer))
         return users
+
+    def _user_from_cache(self, user):
+        if len(user) == 5:
+            first, last, fed_id, org, email = user
+        else:
+            # TODO: remove this branch once the yuos_query version that
+            # writes the email to the cache is released.
+            first, last, fed_id, org = user
+            email = ""
+        return self._create_user(f"{first} {last}", email, org, fed_id)
 
     def _create_user(self, name, email, affiliation, fed_id):
         return {
