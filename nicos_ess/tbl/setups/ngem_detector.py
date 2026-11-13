@@ -1,7 +1,7 @@
 description = "TBL Bee Beans NGEM"
 
 devices = dict(
-    ngem=device(
+    ngem_area_detector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetector",
         description="nGEM detector.",
         pv_root="TBL-DtGEM:NDet-nGem-001:",
@@ -36,8 +36,8 @@ devices = dict(
     ),
     ngem_area_detector_collector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
-        description="Area detector collector",
-        images=["ngem"],
+        description="nGEM area detector collector",
+        images=["ngem_area_detector"],
         liveinterval=1,
         pollinterval=1,
         unit="",
