@@ -64,11 +64,19 @@ class SamplePanel(PanelBase):
         else:
             self.apply_reminder_label.setText("")
 
+    def _update_enabled_widgets(self):
+        has_selection = bool(self.tree.selectedItems())
+        self.sample_edit.setEnabled(has_selection)
+        self.table.setEnabled(has_selection)
+        self.btn_duplicate.setEnabled(has_selection)
+        self.btn_remove.setEnabled(has_selection)
+
     def update_tree_widget_data(self):
         self.tree.clear()
         for i, sample in enumerate(self.pending_samples):
             item = QTreeWidgetItem(self.tree, [sample["name"]])
             item.setData(0, Qt.ItemDataRole.UserRole, i)
+        self._on_sample_selected()
 
     def _populate_table(self, data):
         data = deepcopy(data)
@@ -82,12 +90,14 @@ class SamplePanel(PanelBase):
     def _on_sample_selected(self):
         self.ignore_table_changes = True
         self.table.clearContents()
+        self.sample_edit.clear()
         selected_items = self.tree.selectedItems()
         if selected_items:
             index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
             if index < len(self.pending_samples):
                 self._populate_table(self.pending_samples[index])
         self._update_reminder_label()
+        self._update_enabled_widgets()
         self.ignore_table_changes = False
 
     def on_sample_name_changed(self, text):
