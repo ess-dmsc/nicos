@@ -33,7 +33,6 @@ devices = dict(
         description="The current delay.",
         readpv=f"{pv_root_1}ChopDly-S",
         writepv=f"{pv_root_1}ChopDly-S",
-        abslimits=(0.0, 0.0),
     ),
     wls2a_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
@@ -47,7 +46,6 @@ devices = dict(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv=f"{pv_root_1}DiffTSSamples",
-        unit="ns",
         visibility=(
             "metadata",
             "namespace",
