@@ -1,4 +1,4 @@
-description = "TBL Bee Beans NGEM"
+description = "Bunker vacuum gauge"
 
 devices = dict(
     vacuum_gauge=device(

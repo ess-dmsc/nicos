@@ -22,6 +22,7 @@ devices = dict(
         readpv=f"{water_cooler_pv_root}Temperature-R",
         writepv=f"{water_cooler_pv_root}TemperatureSP0-S",
         targetpv=f"{water_cooler_pv_root}TemperatureSP0-R",
+        precision=0.5,  # degC; the bath never sits exactly on the setpoint
         visibility=(),
     ),
     orca_camera=device(
@@ -50,7 +51,7 @@ devices = dict(
     ),
     orca_area_detector_collector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
-        description="Area detector collector",
+        description="ORCA camera collector",
         images=["orca_camera"],
         liveinterval=1,
         pollinterval=1,

@@ -24,13 +24,13 @@ collimator_map = {
     "3,L,5": (74.14, 3, 34.8),
     "3,L,10": (74.14, 3, 0),
     "10,M,5": (4.14, 103, 105.1),
-    "10,M,1": (4.14, 103, 70.1),
+    "10,M,10": (4.14, 103, 70.1),
     "10,M,N": (4.14, 103, 0),
     "10,L,5": (4.14, 66, 105.1),
-    "10,L,1": (4.14, 66, 70.1),
+    "10,L,10": (4.14, 66, 70.1),
     "10,L,N": (4.14, 66, 0),
     "10,N,5": (4.14, 0, 105.1),
-    "10,N,1": (4.14, 0, 70.1),
+    "10,N,10": (4.14, 0, 70.1),
     "10,N,N": (4.14, 0, 0),
 }
 
@@ -57,7 +57,7 @@ devices = dict(
     ),
     axis_vertical=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimator horizontal",
+        description="Collimator vertical",
         motorpv="TBL-PinLif:MC-LinZ-01:Mtr",
     ),
     axis_vertical_temp=device(
@@ -82,7 +82,7 @@ devices = dict(
             "axis_attenuator_changer",
             "axis_pinhole_changer",
         ],
-        description="No description available.",
+        description="Collimator, attenuator and pinhole as one configuration",
         mapping=collimator_map,
     ),
     mapping_composer=device(
@@ -94,7 +94,7 @@ devices = dict(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
         composer="mapping_composer",
         idx=0,
-        description="No description available.",
+        description="Collimator channel",
         mapping={
             "Large collimator": "L",
             "3 mm collimator": "3",
@@ -105,7 +105,7 @@ devices = dict(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
         composer="mapping_composer",
         idx=1,
-        description="No description available.",
+        description="Attenuator",
         mapping={
             "No attenuator": "N",
             "Small attenuator": "S",
@@ -117,7 +117,7 @@ devices = dict(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
         composer="mapping_composer",
         idx=2,
-        description="No description available.",
+        description="Pinhole",
         mapping={
             "No pinhole": "N",
             "1 mm pinhole": "1",
