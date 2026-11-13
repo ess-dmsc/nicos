@@ -5,8 +5,11 @@ from nicos.core import (
     Param,
     oneof,
     pvname,
+    status,
 )
+from nicos.core.errors import CommunicationError
 from nicos.core.mixins import CanDisable, HasLimits
+from nicos.devices.epics.status import SEVERITY_TO_STATUS
 from nicos_ess.devices.epics.pva.epics_common import (
     EpicsDeviceBase,
     readback_channel,
@@ -149,10 +152,19 @@ class FlowCryoInput(HasLimits, EpicsDeviceBase, CanDisable, Moveable):
         self._epics.put_channel_value("target", curval)
 
     def _compute_status(self, maxage=0):
-        # TODO: No proper alarm summary enabled in epics. Catch where the
-        # error is coming from here (for now...)
+        # EPICS alarm is either No Alarm, or Alarm
+        try:
+            return self._compute_status_from_pvs(maxage)
+        except (TimeoutError, CommunicationError):
+            return status.UNKNOWN, "lost connection to EPICS"
+        except KeyError as err:
+            return status.ERROR, f"error reading motor status: {err}"
+
+    def _compute_status_from_pvs(self, maxage):
         msg = self._read_channel_cached("alarm")
-        severity = self._read_channel_cached("alarm_severity")
+        alarm = self._read_channel_cached("alarm_severity")
+
+        severity = SEVERITY_TO_STATUS(alarm)
         return severity, msg
 
     def _mapReadValue(self, value, mapping):

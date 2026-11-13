@@ -1,3 +1,4 @@
+import pdb
 import threading
 
 import pytest
@@ -18,10 +19,18 @@ def fake_backend(monkeypatch):
     monkeypatch.setattr(
         epics_common, "create_wrapper", lambda timeout, use_pva: backend
     )
+    backend.values[f"{PV_ROOT}TempA-Kelvin-R"] = 100
     backend.values[f"{PV_ROOT}TempA-Kelvin-R.LOW"] = 0
-    backend.values[f"{PV_ROOT}TempA-Kelvin-R.HIGH"] = 0
-    backend.values[f"{PV_ROOT}AlarmA-Summary"] = "No Alarm"
+    backend.values[f"{PV_ROOT}TempA-Kelvin-R.HIGH"] = 999
+    backend.values[f"{PV_ROOT}AlarmA-Summary"] = 0
     backend.value_choices[f"{PV_ROOT}AlarmA-Summary"] = ["No Alarm", "Alarm"]
+    backend.values[f"{PV_ROOT}AlarmA-Summary.SEVR"] = 0
+    backend.value_choices[f"{PV_ROOT}AlarmA-Summary.SEVR"] = [
+        "NO_ALARM",
+        "MINOR",
+        "MAJOR",
+        "INVALID",
+    ]
     backend.values[f"{PV_ROOT}Range0-RB"] = 0
     backend.values[f"{PV_ROOT}Range0-SP"] = 0
     backend.value_choices[f"{PV_ROOT}Range0-RB"] = [
@@ -39,6 +48,7 @@ def fake_backend(monkeypatch):
     backend.value_choices[f"{PV_ROOT}RampStatus0-RB"] = ["On", "Off"]
     backend.values[f"{PV_ROOT}Setp0-RB"] = 0
     backend.values[f"{PV_ROOT}Setp0-SP"] = 0
+    return backend
 
 
 class FakeEstiaFlowCryo(FlowCryoInput):
@@ -101,7 +111,18 @@ class TestEstiaFlowCryo:
         assert daemon_device is not None
         assert poller_device is not None
 
-    def test_limits_update(self):
-        low, high = self.flowcryo.abslimits
-
-        assert (low, high) == self.flowcryo.abslimits
+    @pytest.mark.parametrize(
+        ("absmin", "absmax"),
+        [
+            pytest.param(0, 999, id="baseline"),
+            pytest.param(-50, 20, id="shift limits"),
+        ],
+    )
+    def test_abslimits_read_from_pvs(
+        self, device_harness, fake_backend, absmin, absmax
+    ):
+        daemon_device, _poller_device = self._create_pair(device_harness)
+        fake_backend.emit_update(f"{PV_ROOT}TempA-Kelvin-R.LOW", value=absmin)
+        fake_backend.emit_update(f"{PV_ROOT}TempA-Kelvin-R.HIGH", value=absmax)
+        pdb.set_trace()
+        assert daemon_device.abslimits == (absmin, absmax)
