@@ -6,6 +6,8 @@ excludes = ["just-bin-it"]
 INSTRUMENT = "bifrost"
 SOURCE_NAME = "ngem"
 DATA_TOPIC = f"{INSTRUMENT}_detector_portable_ngem"
+PV_PREFIX = "MOBILE:"
+DRIVER = f"{PV_PREFIX}NDet-nGem-001:"
 
 devices = dict(
     ngem_nexus=device(
@@ -62,5 +64,34 @@ devices = dict(
         description="Timer for the nGEM",
         fmtstr="%.2f",
         unit="s",
+    ),
+    # Starts and stops the nGEM by hand; not a channel of ngem_detector.
+    ngem_controller=device(
+        "nicos_ess.devices.epics.area_detector.AreaDetector",
+        description="nGEM detector control",
+        pv_root=DRIVER,
+        image_pv=f"{PV_PREFIX}image1:ArrayData",
+        unit="images",
+        pollinterval=None,
+        pva=True,
+        monitor=True,
+    ),
+    ngem_unidentified_event_counter=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="nGEM unidentified event counter",
+        readpv=f"{DRIVER}BadEventIDs-R",
+        visibility=("namespace",),
+    ),
+    ngem_failed_transfers=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="nGEM failed transfer counter",
+        readpv=f"{DRIVER}FailedTransfers-R",
+        visibility=("namespace",),
+    ),
+    ngem_failed_pushes=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="nGEM failed push counter",
+        readpv=f"{DRIVER}FailedPushes-R",
+        visibility=("namespace",),
     ),
 )
