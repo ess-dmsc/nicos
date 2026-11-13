@@ -15,6 +15,7 @@ from nicos.core import (
     relative_path,
 )
 from nicos.core.device import DeviceAlias
+from nicos_ess.devices.datasinks.portable_nexus_group import PortableNexusGroup
 from nicos_ess.devices.mixins import HasNexusConfig
 from nicos_ess.nexus.converter import NexusTemplateConverter
 from nicos_ess.utilities.json_utils import (
@@ -251,6 +252,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return structure
 
     def _insert_extra_devices(self, structure):
+        self._insert_portable_groups(structure)
         by_path = self._nexus_config_groups()
         if tracker := self._check_for_device("component_tracking"):
             groups = build_json(tracker._generate_json_configs_groups())
@@ -287,6 +289,20 @@ class NexusStructureJsonFile(NexusStructureProvider):
                         "NeXus path '%s' not found in template; skipping.", path
                     )
         return structure
+
+    def _insert_portable_groups(self, structure):
+        for dev in session.devices.values():
+            if not isinstance(dev, PortableNexusGroup):
+                continue
+            node = dev.get_nexus_group()
+            group_path = f"/entry/instrument/{node['name']}"
+            if group_path in self._path_map:
+                raise ConfigurationError(
+                    self, f"{dev}: '{group_path}' is already in the NeXus template"
+                )
+            _, self._path_map = append_group_under(
+                structure, self._path_map, "/entry/instrument", node, refresh_map=True
+            )
 
     def _nexus_config_groups(self):
         """Build {nexus_path: {group_name: group node}} from all nexus_configs."""
