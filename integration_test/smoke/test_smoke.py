@@ -2,12 +2,17 @@ import math
 
 from integration_test.smoke.helpers import (
     filewriter_jobs,
+    last_start_structure,
     read_counters,
     run_scan_with_filewriter_context,
+    scan_log_messages,
     wait_for_counter_increment,
     wait_for_filewriter_job_state,
     wait_for_moveable_readback,
 )
+from integration_test.smoke.run_smoke_stack import SMOKE_FILEWRITER_POOL_TOPIC
+
+SCAN_LOG_TOPIC = "test_smoke_nicos_devices"
 
 
 def test_full_experiment_workflow_with_filewriter_scan(smoke_client) -> None:
@@ -90,3 +95,42 @@ def test_full_experiment_workflow_with_filewriter_scan(smoke_client) -> None:
     assert lastscan >= scan_before + 1
     assert run_number >= file_before + 1
     assert status("FileWriterStatus", 0) is not None
+
+    lastpoint = int(smoke_client.eval("session.experiment.lastpoint", default=0))
+    assert counters_after.get("point", 0) == lastpoint
+    scan_log = scan_log_messages(smoke_client, SCAN_LOG_TOPIC)
+    scans = scan_log["scanlog/scan"][-2:]
+    points = scan_log["scanlog/point"][-6:]
+    assert [value for value, _ in scans] == [lastscan, 0]
+    assert [value for value, _ in points] == [
+        lastpoint - 2,
+        0,
+        lastpoint - 1,
+        0,
+        lastpoint,
+        0,
+    ]
+    point_times = [timestamp for _, timestamp in points]
+    assert point_times == sorted(point_times)
+    assert scans[0][1] <= point_times[0]
+    assert point_times[-1] <= scans[1][1]
+    # Each point counts for the scan's timer=2.0.
+    for start, end in zip(point_times[::2], point_times[1::2], strict=True):
+        assert 1.5e9 < end - start < 10e9
+
+    structure = last_start_structure(smoke_client, SMOKE_FILEWRITER_POOL_TOPIC)
+    entry = structure["children"][0]
+    (scan_log_group,) = [
+        child for child in entry["children"] if child.get("name") == "scan_log"
+    ]
+    assert {
+        log["name"]: log["children"][0]["config"] for log in scan_log_group["children"]
+    } == {
+        settype: {
+            "source": f"scanlog/{settype}",
+            "topic": SCAN_LOG_TOPIC,
+            "dtype": "int64",
+            "value_units": "",
+        }
+        for settype in ("scan", "point")
+    }
