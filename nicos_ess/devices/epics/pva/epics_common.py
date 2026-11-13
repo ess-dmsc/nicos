@@ -1014,7 +1014,11 @@ class EpicsDeviceBase(EpicsParameters):
         )
 
     def doReadUnit(self):
-        return self._epics.get_channel_units(self._primary_channel)
+        try:
+            return self._epics.get_channel_units(self._primary_channel)
+        except (TimeoutError, CommunicationError):
+            # an unreachable PV must not fail every count and file start
+            return self._params.get("unit", "")
 
     def _log_alarm_once(self, name, severity, message):
         if not hasattr(self, "_alarm_state"):
