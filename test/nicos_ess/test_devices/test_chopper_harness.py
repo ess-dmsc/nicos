@@ -204,7 +204,6 @@ def ess_chopper_config(**overrides):
         "park_angle": "ess_park_angle",
         "delay_errors": "ess_delay_errors",
         "chic_conn": "ess_chic_conn",
-        "mapping": {"stop": "stop", "start": "start"},
         "slit_edges": [[0.0, 90.0]],
         "beam_position": 75.0,
         "resolver_sign": 1,

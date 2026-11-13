@@ -7,7 +7,7 @@ sysconfig = dict(
     cache="localhost",
     instrument="DREAM",
     experiment="Exp",
-    datasinks=["conssink", "daemonsink", "liveview"],
+    datasinks=["conssink", "daemonsink", "liveview", "scanlog"],
 )
 
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
@@ -40,6 +40,11 @@ devices = dict(
         statustopic=["dream_forwarder_dynamic_status"],
         config_topic="dream_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
+    ),
+    scanlog=device(
+        "nicos_ess.devices.datasinks.scan_log.ScanLogSink",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        topic="dream_nicos_devices",
     ),
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",

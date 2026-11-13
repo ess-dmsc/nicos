@@ -20,7 +20,6 @@ devices = dict(
         description="Small LED",
         readpv=f"{pv_root}AO3",
         writepv=f"{pv_root}AO3Set",
-        abslimits=(0, 5),
         userlimits=(0, 5),
     ),
 )

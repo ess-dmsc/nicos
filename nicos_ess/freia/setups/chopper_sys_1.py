@@ -36,7 +36,6 @@ devices = dict(
         description="The current delay.",
         readpv=f"{pv_root_1}ChopDly-S",
         writepv=f"{pv_root_1}ChopDly-S",
-        abslimits=(0.0, 0.0),
     ),
     wbc1_chopper_total_delay=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -60,7 +59,6 @@ devices = dict(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv=f"{pv_root_1}DiffTSSamples",
-        unit="ns",
         visibility=(
             "metadata",
             "namespace",
@@ -152,7 +150,6 @@ devices = dict(
         description="The current delay.",
         readpv=f"{pv_root_2}ChopDly-S",
         writepv=f"{pv_root_2}ChopDly-S",
-        abslimits=(0.0, 0.0),
     ),
     wbc2_chopper_total_delay=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -176,7 +173,6 @@ devices = dict(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv=f"{pv_root_2}DiffTSSamples",
-        unit="ns",
         visibility=(
             "metadata",
             "namespace",
@@ -268,7 +264,6 @@ devices = dict(
         description="The current delay.",
         readpv=f"{pv_root_3}ChopDly-S",
         writepv=f"{pv_root_3}ChopDly-S",
-        abslimits=(0.0, 0.0),
     ),
     foc2_total_delay=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -292,7 +287,6 @@ devices = dict(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv=f"{pv_root_3}DiffTSSamples",
-        unit="ns",
         visibility=(
             "metadata",
             "namespace",

@@ -6,7 +6,7 @@ sysconfig = dict(
     cache="localhost",
     instrument="FREIA",
     experiment="Exp",
-    datasinks=["conssink", "daemonsink"],
+    datasinks=["conssink", "daemonsink", "scanlog"],
 )
 
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
@@ -37,6 +37,11 @@ devices = dict(
     ),
     daemonsink=device(
         "nicos.devices.datasinks.DaemonSink",
+    ),
+    scanlog=device(
+        "nicos_ess.devices.datasinks.scan_log.ScanLogSink",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        topic="freia_nicos_devices",
     ),
     Space=device(
         "nicos.devices.generic.FreeSpace",

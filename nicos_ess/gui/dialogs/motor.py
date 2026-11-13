@@ -6,6 +6,7 @@ from nicos.guisupport.qt import (
     QMenu,
     QSizePolicy,
     QSpacerItem,
+    Qt,
     pyqtSignal,
     pyqtSlot,
     sip,
@@ -24,6 +25,7 @@ from nicos_ess.gui.panels.utils import (
     setBackgroundBrush,
     setForegroundBrush,
 )
+from nicos_ess.gui.utils import KeyIgnorer
 
 
 class MotorDialog(QDialog):
@@ -50,6 +52,11 @@ class MotorDialog(QDialog):
         self._reinit()
 
         self.txt_target.setFocus()
+
+        # Ignore return/enter press on relative move text box, so as not to trigger a move accidentally.
+        self.txt_rmove.installEventFilter(
+            KeyIgnorer(self, {Qt.Key.Key_Enter, Qt.Key.Key_Return})
+        )
 
         if expert:
             self.main_layout.insertWidget(

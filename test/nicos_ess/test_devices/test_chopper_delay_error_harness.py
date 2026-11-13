@@ -54,3 +54,23 @@ class TestChopperDelayErrorHarness:
 
         assert daemon_device is not None
         assert poller_device is not None
+
+    def test_waveform_update_caches_mean_as_value_and_raw_errors(
+        self, device_harness, fake_backend
+    ):
+        _daemon, poller = device_harness.create_pair(
+            chopper_delay_error.ChopperDelayError,
+            name="chopper_delay_error",
+            shared={
+                "readpv": "SIM:CHOP:DELAY",
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        fake_backend.emit_update("SIM:CHOP:DELAY", value=[2.0, 4.0, 9.0])
+
+        assert device_harness.run("poller", poller._cache.get, poller, "value") == 5.0
+        assert device_harness.run(
+            "poller", poller._cache.get, poller, "raw_errors"
+        ) == [2.0, 4.0, 9.0]

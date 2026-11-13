@@ -7,7 +7,7 @@ sysconfig = dict(
     cache="localhost",
     instrument="LoKI",
     experiment="Exp",
-    datasinks=["conssink", "liveview", "daemonsink"],
+    datasinks=["conssink", "liveview", "daemonsink", "scanlog"],
 )
 
 modules = [
@@ -40,6 +40,11 @@ devices = dict(
     ),
     liveview=device(
         "nicos.devices.datasinks.LiveViewSink",
+    ),
+    scanlog=device(
+        "nicos_ess.devices.datasinks.scan_log.ScanLogSink",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        topic="loki_nicos_devices",
     ),
     KafkaForwarder=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
