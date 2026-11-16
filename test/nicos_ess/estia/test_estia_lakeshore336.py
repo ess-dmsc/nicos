@@ -6,7 +6,7 @@ from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 session_setup = "estia_flowcryo"
 PV_ROOT = "SIM:LS:"
-ALARM_SUMMARY = [
+ALARM_MSG = [
     "No Alarm",
     "Alarm",
 ]
@@ -37,8 +37,8 @@ def fake_backend(monkeypatch):
     backend.values[f"{PV_ROOT}TempA-Kelvin-R"] = 100
     backend.values[f"{PV_ROOT}TempA-Kelvin-R.LOW"] = 0
     backend.values[f"{PV_ROOT}TempA-Kelvin-R.HIGH"] = 999
-    backend.values[f"{PV_ROOT}AlarmA-Summary"] = ALARM_SUMMARY.index("No Alarm")
-    backend.value_choices[f"{PV_ROOT}AlarmA-Summary"] = ALARM_SUMMARY
+    backend.values[f"{PV_ROOT}AlarmA-Summary"] = ALARM_MSG.index("No Alarm")
+    backend.value_choices[f"{PV_ROOT}AlarmA-Summary"] = ALARM_MSG
     backend.values[f"{PV_ROOT}AlarmA-Summary.SEVR"] = ALARM_CHOICES.index("NO_ALARM")
     backend.value_choices[f"{PV_ROOT}AlarmA-Summary.SEVR"] = ALARM_CHOICES
     backend.values[f"{PV_ROOT}Range0-RB"] = RANGE_CHOICES.index("Off")
