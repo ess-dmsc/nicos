@@ -1048,10 +1048,7 @@ class EditorPanel(Panel):
         self.setDirty(editor, is_import)
 
     def check_okay_to_save(self):
-        if (
-            self.is_command_script[self.currentEditor]
-            and not self.is_admin_account()
-        ):
+        if self.is_command_script[self.currentEditor] and not self.is_admin_account():
             QMessageBox.warning(
                 self, "Error", "Only an admin account can save instrument commands"
             )
