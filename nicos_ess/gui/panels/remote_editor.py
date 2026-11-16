@@ -573,7 +573,7 @@ class EditorPanel(Panel):
             editor = self.editors[index]
             # Enable save only if modified
             self.actionSave.setEnabled(editor.isModified())
-            # Disable the following for commands
+            # Disable the following for commands file.
             self.actionSaveAs.setEnabled(not self.is_command_script[editor])
             self.actionRun.setEnabled(not self.is_command_script[editor])
             self.actionSimulate.setEnabled(not self.is_command_script[editor])
