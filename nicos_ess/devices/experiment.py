@@ -378,7 +378,13 @@ class EssExperiment(Experiment):
     def _extract_users(self, query_result):
         users = [self._user_from_cache(user) for user in query_result.users]
         if query_result.proposer:
-            users.append(self._user_from_cache(query_result.proposer))
+            proposer = self._user_from_cache(query_result.proposer)
+            is_proposer_on_the_list = any(
+                user["facility_user_id"] == proposer["facility_user_id"]
+                for user in users
+            )
+            if not is_proposer_on_the_list:
+                users.append(proposer)
         return users
 
     def _user_from_cache(self, user):

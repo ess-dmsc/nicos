@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
@@ -161,6 +162,30 @@ class TestEssExperiment:
                 "affiliation": "European Spallation Source ERIC (ESS)",
                 "facility_user_id": "johndoe",
             },
+        ]
+
+    def test_proposer_who_is_also_a_visitor_is_listed_once(self, experiment):
+        jane = ("Jane", "Doe", "janedoe", "ESS", "jane.doe@ess.eu")
+        john = ("John", "Doe", "johndoe", "ESS", "john.doe@ess.eu")
+        query_result = SimpleNamespace(proposer=jane, users=[jane, john])
+
+        users = experiment._extract_users(query_result)
+
+        assert [user["facility_user_id"] for user in users] == [
+            "janedoe",
+            "johndoe",
+        ]
+
+    def test_proposer_who_is_not_a_visitor_is_added(self, experiment):
+        jane = ("Jane", "Doe", "janedoe", "ESS", "jane.doe@ess.eu")
+        john = ("John", "Doe", "johndoe", "ESS", "john.doe@ess.eu")
+        query_result = SimpleNamespace(proposer=john, users=[jane])
+
+        users = experiment._extract_users(query_result)
+
+        assert [user["facility_user_id"] for user in users] == [
+            "janedoe",
+            "johndoe",
         ]
 
     def test_no_proposals_using_unknown_fed_id(self, experiment):
