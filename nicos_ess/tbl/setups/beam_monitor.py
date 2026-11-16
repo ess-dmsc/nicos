@@ -8,7 +8,6 @@ devices = dict(
         description="The high voltage of the monitor detector",
         readpv=f"{pv_root}HighVoltage-R",
         writepv=f"{pv_root}HighVoltage-S",
-        userlimits=(0, 800),
         precision=100.0,  # The readback of the high voltage has a lot of error, 100V should be safe
         requires={"level": "admin"},
     ),

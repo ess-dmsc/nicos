@@ -8,7 +8,6 @@ devices = dict(
         description="The high voltage of the monitor detector",
         readpv=f"{pv_root}HighVoltage-R",
         writepv=f"{pv_root}HighVoltage-S",
-        userlimits=(0, 800),
     ),
     monitor_3_high_voltage_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
