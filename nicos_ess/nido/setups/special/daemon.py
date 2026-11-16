@@ -17,7 +17,6 @@ devices = dict(
         uri=[
             "esss.lu.se",
         ],
-        userbasedn="dc=esss,dc=lu,dc=se",
         grouproles={
             "ECDC": "admin",
         },

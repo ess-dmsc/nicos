@@ -1,18 +1,39 @@
 import ldap3
 
-from nicos.core import GUEST, Override, User
+from nicos.core import GUEST, Override, User, listof, Param
 from nicos.services.daemon.auth import AuthenticationError
 from nicos.services.daemon.auth.ldap import Authenticator as LDAPAuthenticator
 
 
 class Authenticator(LDAPAuthenticator):
+    parameters = {
+        "org_units": Param(
+            "The org units to look in for the user in order",
+            type=listof(str),
+            settable=False,
+            userparam=False,
+            mandatory=False,
+            default=[
+                "OU=Science Users,OU=ESS Users,DC=esss,DC=lu,DC=se",
+                "OU=Employees,OU=ESS Users,DC=esss,DC=lu,DC=se",
+            ],
+        ),
+    }
     parameter_overrides = {
         "groupbasedn": Override(mandatory=False),
+        "userbasedn": Override(mandatory=False),
     }
 
     def authenticate(self, username, password):
         connection = self._connect_to_server(username, password)
-        group = self._get_user_group(connection, username)
+        group = None
+        for org_unit in self.org_units:
+            group = self._get_user_group(connection, org_unit, username)
+            if group is not None:
+                break
+
+        if group is None:
+            raise AuthenticationError("Could not authenticate account")
 
         user_level = self._check_explicit_rights(username, GUEST)
         user_level = self._check_group_rights(group, user_level)
@@ -46,23 +67,23 @@ class Authenticator(LDAPAuthenticator):
             raise AuthenticationError(f"LDAP connection failed ({error})")
         return connection
 
-    def _get_user_group(self, connection, username):
+    def _get_user_group(self, connection, org_unit, username):
         try:
             if (
                 not connection.search(
-                    self.userbasedn,
+                    org_unit,
                     f"(sAMAccountName={username})",
                     attributes=["department"],
                 )
                 or len(connection.entries) == 0
             ):
-                raise AuthenticationError("Could not get user details from LDAP")
+                return None
             if len(connection.entries) == 1:
                 group = connection.entries[0].department.value
                 return group
 
-            raise AuthenticationError("Could not get unique user details from LDAP")
+            return None
         except AuthenticationError:
-            raise
-        except Exception as err:
-            raise AuthenticationError(f"LDAP connection failed ({err})") from None
+            return None
+        except Exception:
+            return None
