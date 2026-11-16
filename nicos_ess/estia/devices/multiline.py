@@ -358,16 +358,13 @@ class MultilineController(EpicsDeviceBase, Waitable):
         all_channels = self._read_channel_cached("available_channels")
         selected_channels = [1 if chi in channels else 0 for chi in all_channels]
         self.measurement_channels = selected_channels
-        # TODO: Temporarily deactivated until we figure out what preshots do
-        # last_preshot = self._read_channel_cached("measurement_preshots")
-        # last_lengths = self._read_channel_cached("measurement_lengths")
-        # new_preshot = [
-        #     max(last_lengths[i], 50.0) if selected_channels[i] else max(lpi, 50.0)
-        #     for i, lpi in enumerate(last_preshot)
-        # ]
-        # self._epics_wrapper.put_pv_value(
-        #     self._get_pv_name("measurement_preshots"), new_preshot
-        # )
+        last_preshot = self._read_channel_cached("measurement_preshots")
+        last_lengths = self._read_channel_cached("measurement_lengths")
+        new_preshot = [
+            max(last_lengths[i], 50.0) if selected_channels[i] else max(lpi, 50.0)
+            for i, lpi in enumerate(last_preshot)
+        ]
+        self._epics.put_channel_value("measurement_preshots", new_preshot)
         self._epics.put_channel_value("start_measurement", 1)
 
     def doReadMeasurement_Lengths(self):
