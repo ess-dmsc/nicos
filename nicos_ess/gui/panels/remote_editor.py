@@ -374,7 +374,7 @@ class EditorPanel(Panel):
 
         self.editors = []  # tab index -> editor
         self.filenames = {}  # editor -> filename
-        self.is_instrument_script = defaultdict(lambda: False)  # editor -> bool
+        self.is_command_script = defaultdict(lambda: False)  # editor -> bool
         self.is_imported_script = defaultdict(lambda: False)  # editor -> bool
         self.currentEditor = None
 
@@ -573,8 +573,11 @@ class EditorPanel(Panel):
             editor = self.editors[index]
             # Enable save only if modified
             self.actionSave.setEnabled(editor.isModified())
-            # Disable save as if it is an instrument script
-            self.actionSaveAs.setEnabled(not self.is_instrument_script[editor])
+            # Disable the following for commands
+            self.actionSaveAs.setEnabled(not self.is_command_script[editor])
+            self.actionRun.setEnabled(not self.is_command_script[editor])
+            self.actionSimulate.setEnabled(not self.is_command_script[editor])
+            self.actionUpdate.setEnabled(not self.is_command_script[editor])
 
     def on_codeGenerated(self, code):
         if self.currentEditor:
@@ -866,6 +869,8 @@ class EditorPanel(Panel):
         script = self.validateScript()
         if script is None:
             return
+        if self.is_command_script[self.currentEditor]:
+            return
         if not self.checkDirty(self.currentEditor, askonly=True):
             return
         if self.current_status != "idle" and not self.askQuestion(
@@ -879,6 +884,8 @@ class EditorPanel(Panel):
     def on_actionSimulate_triggered(self):
         script = self.validateScript()
         if script is None:
+            return
+        if self.is_command_script[self.currentEditor]:
             return
         if not self.checkDirty(self.currentEditor, askonly=True):
             return
@@ -973,11 +980,11 @@ class EditorPanel(Panel):
 
     @pyqtSlot()
     def on_actionOpen_triggered(self):
-        file, is_inst_script = RemoteFileDialog.get_file(
+        file, is_command_file = RemoteFileDialog.get_file(
             self, self.client, admin=self.is_admin_account()
         )
         if file:
-            self.openFile(file, is_inst_script)
+            self.openFile(file, is_command_file)
 
     @pyqtSlot()
     def on_actionReload_triggered(self):
@@ -994,7 +1001,7 @@ class EditorPanel(Panel):
         self.currentEditor.setText(text)
         self.simFrame.clear()
 
-    def openFile(self, fn, is_inst_script=False, is_import=False):
+    def openFile(self, fn, is_command_file=False, is_import=False):
         def _open_local():
             with open(
                 fn.encode(sys.getfilesystemencoding()), encoding=LOCALE_ENCODING
@@ -1003,7 +1010,7 @@ class EditorPanel(Panel):
 
         def _open_remote():
             command = (
-                "read_commands_file" if is_inst_script else "read_user_script_file"
+                "read_commands_file" if is_command_file else "read_user_script_file"
             )
             return self.client.eval(
                 f"session.experiment.{command}('{fn}')",
@@ -1028,7 +1035,7 @@ class EditorPanel(Panel):
 
         self.editors.append(editor)
         self.filenames[editor] = fn
-        self.is_instrument_script[editor] = is_inst_script
+        self.is_command_script[editor] = is_command_file
         self.is_imported_script[editor] = is_import
         self.tabber.addTab(editor, os.path.basename(fn))
         self.tabber.setCurrentWidget(editor)
@@ -1042,7 +1049,7 @@ class EditorPanel(Panel):
 
     def check_okay_to_save(self):
         if (
-            self.is_instrument_script[self.currentEditor]
+            self.is_command_script[self.currentEditor]
             and not self.is_admin_account()
         ):
             QMessageBox.warning(
@@ -1064,7 +1071,7 @@ class EditorPanel(Panel):
     def saveFile(self, editor):
         filename = self.filenames[editor]
 
-        if self.is_instrument_script[editor]:
+        if self.is_command_script[editor]:
             pass
         elif not filename:
             # It is a new file
@@ -1088,7 +1095,7 @@ class EditorPanel(Panel):
         content = editor.text().encode()
         command = (
             "write_commands_file"
-            if self.is_instrument_script[editor]
+            if self.is_command_script[editor]
             else "write_user_script_file"
         )
         try:
@@ -1101,7 +1108,7 @@ class EditorPanel(Panel):
 
         editor.setModified(False)
 
-        if self.is_instrument_script[editor]:
+        if self.is_command_script[editor]:
             message = "Run 'import_instrument_commands()' to import changes."
             QMessageBox.information(
                 self, "Script Editor", message, QMessageBox.StandardButton.Ok
