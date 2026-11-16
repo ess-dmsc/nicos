@@ -1,6 +1,6 @@
 import ldap3
 
-from nicos.core import GUEST, Override, User, listof, Param
+from nicos.core import GUEST, Override, Param, User, listof
 from nicos.services.daemon.auth import AuthenticationError
 from nicos.services.daemon.auth.ldap import Authenticator as LDAPAuthenticator
 
