@@ -46,8 +46,11 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
                 update.value,
                 time_stamp,
             )
-            total = self.total + update.value
-            self._setROParam("total", total)
+            # If the beam is off we can get random noise which could
+            # be negative (though very small).
+            if update.value > 0:
+                total = self.total + update.value
+                self._setROParam("total", total)
         self._refresh_status(time_stamp)
 
     def _publish_state(self, value=Ellipsis):
