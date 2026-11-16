@@ -241,6 +241,7 @@ class SamplePanel(PanelBase):
         )
         QTimer.singleShot(0, _initial_label_column_width)
         self.tree.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.btn_apply_changes.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.apply_reminder_label.setStyleSheet("color: red; font-weight: bold;")
         self.apply_reminder_label.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
