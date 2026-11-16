@@ -10,11 +10,6 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
     """Counter channel for reading the acculumulated charge current from EPICS."""
 
     parameters = {
-        "reset_count_pv": Param(
-            "PV for resetting charge count to zero.",
-            type=pvname,
-            mandatory=True,
-        ),
         "total": Param(
             "The total amount summed so far", type=float, settable=True, internal=True
         ),
@@ -31,11 +26,6 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         "monitor": Override(default=True, settable=False, type=oneof(True)),
         "type": Override(default="counter", settable=False, mandatory=False),
     }
-
-    def _build_epics_channels(self):
-        channels = dict(super()._build_epics_channels())
-        channels["reset_count"] = command_channel("", pv_name_attr="reset_count_pv")
-        return channels
 
     def _on_channel_update(self, update):
         if update.channel != "read":
@@ -56,7 +46,8 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
                 update.value,
                 time_stamp,
             )
-            self._setROParam("total", update.value)
+            total = self.total + update.value
+            self._setROParam("total", total)
         self._refresh_status(time_stamp)
 
     def _publish_state(self, value=Ellipsis):
@@ -70,7 +61,6 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         self._publish_state(0)
 
     def doStart(self):
-        self._epics.put_channel_value("reset_count", 1)
         self.started = True
         self._publish_state(0)
 
