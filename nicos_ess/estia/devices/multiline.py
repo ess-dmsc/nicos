@@ -98,6 +98,12 @@ class MultilineController(EpicsDeviceBase, Waitable):
             settable=False,
             internal=True,
         ),
+        "last_measurement_lengths": Param(
+            "Last measurement length array",
+            type=listof(float),
+            settable=False,
+            internal=True,
+        ),
         "align_min": Param("", type=listof(float), settable=False, internal=True),
         "align_max": Param("", type=listof(float), settable=False, internal=True),
         "measurement_errors": Param(
@@ -215,6 +221,11 @@ class MultilineController(EpicsDeviceBase, Waitable):
         ),
         "measurement_lengths": readback_channel(
             "DataLenLength-R",
+            refresh_status=True,
+            cache_key="measurement_lengths",
+        ),
+        "last_measurement_lengths": readback_channel(
+            "LstVldDataLenLength-R",
             refresh_status=True,
             cache_key="measurement_lengths",
         ),
@@ -359,7 +370,7 @@ class MultilineController(EpicsDeviceBase, Waitable):
         selected_channels = [1 if chi in channels else 0 for chi in all_channels]
         self.measurement_channels = selected_channels
         last_preshot = self._read_channel_cached("measurement_preshots")
-        last_lengths = self._read_channel_cached("measurement_lengths")
+        last_lengths = self._read_channel_cached("last_measurement_lengths")
         new_preshot = [
             max(last_lengths[i], 50.0) if selected_channels[i] else max(lpi, 50.0)
             for i, lpi in enumerate(last_preshot)

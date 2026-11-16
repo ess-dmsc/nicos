@@ -30,7 +30,7 @@ devices = dict(
         description="Metrology Cart device",
         device="meas_cart_position1",
         lock="meas_cart_approach1",
-        unlockvalue=60.0,
+        unlockvalue=30.0,
         lockvalue=180.0,
     ),
     measurement_clutch1=device(
