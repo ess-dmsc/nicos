@@ -94,7 +94,7 @@ class TestEssExperiment:
 
     def test_new_experiment_from_cached_proposal_with_fed_id(self, experiment):
         experiment._yuos_client.update_cache()
-        result = experiment._queryProposals(kwds={"fed_id": "janedoe"})[0]
+        result = experiment._queryProposals(kwds={"fed_id": "johndoe"})[0]
         exp_args = {
             "proposal": result["proposal"],
             "title": result["title"],
@@ -120,6 +120,9 @@ class TestEssExperiment:
         ]
 
     def test_users_from_cache_without_email(self, experiment):
+        # TODO: delete this test once the yuos_query version that writes the
+        # email to the cache is released, together with the no-email branch
+        # in EssExperiment._user_from_cache.
         experiment._yuos_client = YuosCacheClient.create(
             "test/nicos_ess/test_devices/data/cached_proposals/cached_proposals_1.json"
         )
