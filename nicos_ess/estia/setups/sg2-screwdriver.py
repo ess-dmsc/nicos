@@ -30,7 +30,7 @@ devices = dict(
         description="Engage/disengage approach",
         controlled_device="sg2_screwdriver_approach_1",
         mapping={
-            "Disengage": -29.0,
+            "Disengage": -28.1,
             "Engage": 0.0,
         },
     ),
