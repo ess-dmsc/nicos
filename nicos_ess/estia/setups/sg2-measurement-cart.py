@@ -30,8 +30,8 @@ devices = dict(
         description="Metrology Cart device",
         device="meas_cart_position2",
         lock="meas_cart_approach2",
-        unlockvalue=60.0,
-        lockvalue=180.0,
+        unlockvalue=30.0,
+        lockvalue=210.0,
     ),
     measurement_clutch2=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
