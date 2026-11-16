@@ -139,7 +139,17 @@ class SamplePanel(PanelBase):
         self.tree.setCurrentItem(item)
 
     def _apply_changes_btn_clicked(self):
+        if self._has_duplicate_property_names():
+            self.apply_reminder_label.setText(
+                "Please make sure no metadata has the same property name"
+            )
+            return
         self.save_sample_data(self.pending_samples)
+
+    def _has_duplicate_property_names(self):
+        cells = [self.table.item(row, 0) for row in range(self.table.rowCount())]
+        names = [cell.text() for cell in cells if cell is not None]
+        return len(names) != len(set(names))
 
     def _get_table_data(self):
         table_data = {}
