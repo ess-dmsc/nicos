@@ -8,13 +8,16 @@ from test.nicos_ess.test_devices.doubles import HarnessLinearAxis
 
 class TestVirtualSourceAndLaserHarness:
     # laser and virtual source are tested together since they share motors
+    adevs = ("left", "right", "bottom", "top", "rot")
 
     def test_opmode_change_on_vs_syncs_slit(self, estia_virtual_source_setup):
         devices = estia_virtual_source_setup
 
         assert devices["slit"].opmode == devices["virtual_source"].opmode
+
         set(devices["virtual_source"], "opmode", "4blades_opposite")
         assert devices["virtual_source"].opmode == "4blades_opposite"
+
         devices["virtual_source"]._syncOpmode(
             devices["slit"].opmode, devices["virtual_source"].opmode
         )
@@ -24,13 +27,52 @@ class TestVirtualSourceAndLaserHarness:
         devices = estia_virtual_source_setup
 
         assert devices["slit"].opmode == devices["virtual_source"].opmode
+
         set(devices["slit"], "opmode", "4blades_opposite")
         assert devices["slit"].opmode == "4blades_opposite"
+
         devices["virtual_source"]._syncOpmode(
             devices["slit"].opmode, devices["virtual_source"].opmode
         )
         assert devices["virtual_source"].opmode == "4blades"
         assert devices["slit"].opmode == "4blades"
+
+    @pytest.mark.parametrize(
+        "limits",
+        [
+            pytest.param(
+                {
+                    "left": (-25.5, -0.5),
+                    "right": (0.5, 25.5),
+                    "bottom": (-12.5, 12.5),
+                    "top": (-12.5, 12.5),
+                    "rot": (-1.5, 16),
+                },
+                id="initial limits are equivalent",
+            ),
+            pytest.param(
+                {
+                    "left": (-10, -5),
+                    "right": (5, 10),
+                    "bottom": (-5, 5),
+                    "top": (-3, 3),
+                    "rot": (0, 3),
+                },
+                id="change limits on vs change blade limits",
+            ),
+        ],
+    )
+    def test_vs_userlimit_param_matches_adevs(self, estia_virtual_source_setup, limits):
+        devices = estia_virtual_source_setup
+        set(devices["virtual_source"], "motorlimits", limits)
+
+        assert devices["virtual_source"].motorlimits == limits
+
+        for adev_name in limits:
+            if adev_name != "rot":
+                assert devices[adev_name].userlimits == limits[adev_name]
+            else:
+                assert devices["rotation"].userlimits == limits[adev_name]
 
 
 # ----------Harness Device Setup-------------#
