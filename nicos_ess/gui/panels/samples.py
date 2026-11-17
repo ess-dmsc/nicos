@@ -139,9 +139,7 @@ class SamplePanel(PanelBase):
 
     def _apply_changes_btn_clicked(self):
         if self._has_duplicate_property_names():
-            self.apply_reminder_label.setText(
-                "Please make sure no metadata has the same property name"
-            )
+            self.showError("Please make sure no metadata has the same property name")
             return
         self.save_sample_data(self.pending_samples)
 
