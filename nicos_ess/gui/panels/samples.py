@@ -1,20 +1,8 @@
 from copy import deepcopy
 
-from nicos.guisupport.qt import (
-    QAbstractItemView,
-    QHBoxLayout,
-    QHeaderView,
-    QLabel,
-    QLineEdit,
-    QListWidget,
-    QListWidgetItem,
-    QPushButton,
-    Qt,
-    QTableWidget,
-    QTableWidgetItem,
-    QTimer,
-    QVBoxLayout,
-)
+from nicos.clients.gui.utils import loadUi
+from nicos.guisupport.qt import QListWidgetItem, Qt, QTableWidgetItem
+from nicos.utils import findResource
 from nicos_ess.gui.panels.panel import PanelBase
 
 
@@ -176,81 +164,9 @@ class SamplePanel(PanelBase):
         self.list.setCurrentRow(new_index)
 
     def _build_ui(self):
-        self._create_widgets()
-        self._set_layout()
-        self._format_layout()
+        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/samples.ui"))
+        self.table.setColumnWidth(0, 200)
         self._add_signals()
-
-    def _create_widgets(self):
-        self.list = QListWidget()
-        self.list.setWindowTitle("Samples")
-        self.btn_new = QPushButton("New")
-        self.btn_delete = QPushButton("Delete")
-        self.btn_duplicate = QPushButton("Duplicate")
-
-        self.label = QLabel("Samples")
-        self.sample_label = QLabel("Sample:")
-        self.txt_sample_name = QLineEdit()
-        self.metadata_label = QLabel("Metadata:")
-        self.table = QTableWidget()
-        self.table.setRowCount(100)
-        self.table.setColumnCount(2)
-        self.table.setHorizontalHeaderLabels(["Property", "Value"])
-        self.btn_apply_changes = QPushButton("Apply changes")
-        self.btn_discard_changes = QPushButton("Discard changes")
-
-        self.apply_reminder_label = QLabel()
-
-    def _set_layout(self):
-        list_btn_layout = QHBoxLayout()
-        list_btn_layout.addWidget(self.btn_new)
-        list_btn_layout.addWidget(self.btn_duplicate)
-        list_btn_layout.addWidget(self.btn_delete)
-        list_btn_layout.addStretch()
-        self.list_layout = QVBoxLayout()
-        self.list_layout.addWidget(self.label)
-        self.list_layout.addWidget(self.list)
-        self.list_layout.addLayout(list_btn_layout)
-
-        table_header_layout = QHBoxLayout()
-        table_header_layout.addWidget(self.sample_label)
-        table_header_layout.addWidget(self.txt_sample_name)
-        table_btn_layout = QHBoxLayout()
-        table_btn_layout.addStretch()
-        table_btn_layout.addWidget(self.btn_apply_changes)
-        table_btn_layout.addWidget(self.btn_discard_changes)
-        self.table_layout = QVBoxLayout()
-        self.table_layout.addLayout(table_header_layout)
-        self.table_layout.addWidget(self.metadata_label)
-        self.table_layout.addWidget(self.table)
-        self.table_layout.addWidget(self.apply_reminder_label)
-        self.table_layout.addLayout(table_btn_layout)
-
-        self.layout = QHBoxLayout()
-        self.layout.addLayout(self.list_layout)
-        self.layout.addLayout(self.table_layout)
-        self.setLayout(self.layout)
-
-    def _format_layout(self):
-        def _initial_label_column_width():
-            self.table.setColumnWidth(0, 200)
-
-        self.table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Interactive
-        )
-        self.table.horizontalHeader().setSectionResizeMode(
-            1, QHeaderView.ResizeMode.Stretch
-        )
-        QTimer.singleShot(0, _initial_label_column_width)
-        self.list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        self.btn_apply_changes.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.apply_reminder_label.setStyleSheet("color: red; font-weight: bold;")
-        self.apply_reminder_label.setAlignment(
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        )
-        self.sample_label.setStyleSheet("font-weight: bold;")
-        self.metadata_label.setStyleSheet("font-weight: bold;")
-        self.list_layout.setContentsMargins(0, 0, 20, 0)
 
     def _add_signals(self):
         self.list.itemSelectionChanged.connect(self._on_sample_selected)
