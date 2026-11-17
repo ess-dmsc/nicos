@@ -1,6 +1,8 @@
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from yuos_query.yuos_client import YuosCacheClient
 
 from nicos.commands.measure import count
 from nicos.commands.scan import scan
@@ -115,6 +117,78 @@ class TestEssExperiment:
                 "affiliation": "European Spallation Source ERIC (ESS)",
                 "facility_user_id": "johndoe",
             },
+        ]
+
+    def test_users_from_cache_without_email(self, experiment):
+        # TODO: delete this test once the yuos_query version that writes the
+        # email to the cache is released, together with the no-email branch
+        # in EssExperiment._user_from_cache.
+        experiment._yuos_client = YuosCacheClient.create(
+            "test/nicos_ess/test_devices/data/cached_proposals/cached_proposals_1.json"
+        )
+        experiment._yuos_client.update_cache()
+        result = experiment._queryProposals(kwds={"admin": True})[0]
+
+        assert result["users"] == [
+            {
+                "name": "Jane Doe",
+                "email": "",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "janedoe",
+            },
+            {
+                "name": "John Doe",
+                "email": "",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "johndoe",
+            },
+        ]
+
+    def test_users_from_cache_with_email(self, experiment):
+        experiment._yuos_client = YuosCacheClient.create(
+            "test/nicos_ess/test_devices/data/cached_proposals/"
+            "cached_proposals_with_email.json"
+        )
+        experiment._yuos_client.update_cache()
+        result = experiment._queryProposals(kwds={"admin": True})[0]
+
+        assert result["users"] == [
+            {
+                "name": "Jane Doe",
+                "email": "jane.doe@ess.eu",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "janedoe",
+            },
+            {
+                "name": "John Doe",
+                "email": "john.doe@ess.eu",
+                "affiliation": "European Spallation Source ERIC (ESS)",
+                "facility_user_id": "johndoe",
+            },
+        ]
+
+    def test_proposer_who_is_also_a_visitor_is_listed_once(self, experiment):
+        jane = ("Jane", "Doe", "janedoe", "ESS", "jane.doe@ess.eu")
+        john = ("John", "Doe", "johndoe", "ESS", "john.doe@ess.eu")
+        query_result = SimpleNamespace(proposer=jane, users=[jane, john])
+
+        users = experiment._extract_users(query_result)
+
+        assert [user["facility_user_id"] for user in users] == [
+            "janedoe",
+            "johndoe",
+        ]
+
+    def test_proposer_who_is_not_a_visitor_is_added(self, experiment):
+        jane = ("Jane", "Doe", "janedoe", "ESS", "jane.doe@ess.eu")
+        john = ("John", "Doe", "johndoe", "ESS", "john.doe@ess.eu")
+        query_result = SimpleNamespace(proposer=john, users=[jane])
+
+        users = experiment._extract_users(query_result)
+
+        assert [user["facility_user_id"] for user in users] == [
+            "janedoe",
+            "johndoe",
         ]
 
     def test_no_proposals_using_unknown_fed_id(self, experiment):
