@@ -1,3 +1,4 @@
+import contextlib
 import math
 from enum import Enum
 
@@ -308,7 +309,7 @@ class SpectrometerControl(QWidget):
             return
 
         try:
-            self.parent.client.eval(f"{self.selected_device}.pollParams()")
+            self.parent.client.eval(f"{self.selected_device}.asyncPollVolatileParams()")
         except NameError:
             return
 
@@ -599,10 +600,8 @@ class SpectrometerPanel(Panel):
         )
 
         for i, d in enumerate(calc_data):
-            try:
+            with contextlib.suppress(ValueError):
                 calc_data[i] = math.log10(d)
-            except ValueError:
-                pass
 
         self._update_plot(calc_data, self.x_axis)
 
