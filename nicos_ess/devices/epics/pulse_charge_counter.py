@@ -7,6 +7,7 @@ from nicos_ess.devices.epics.pva import EpicsReadable
 from nicos_ess.devices.epics.pva.epics_common import worst_status
 
 FINAL_UPDATE_TIMEOUT = 2.0
+FINAL_UPDATE_POLL_INTERVAL = 0.02
 
 
 class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
@@ -60,14 +61,14 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
     def doPreinit(self, mode):
         super().doPreinit(mode)
         self._ignore_next_update = False
-        self._latest_total = 0.0
         self._started_at = self._stopped_at = float("inf")
-        self._total_at_start = self._total_at_stop = None
+        self._total_at_start = self._total_at_stop = 0.0
+        self._stop_passed = False
 
     def _after_subscribe(self, mode):
         super()._after_subscribe(mode)
         if mode != SIMULATION and session.sessiontype != POLLER:
-            self._latest_total = self.total
+            self._total_at_start = self._total_at_stop = self.total
             self._cache.addCallback(self, "total", self._on_total_update)
 
     def doShutdown(self):
@@ -76,14 +77,14 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         super().doShutdown()
 
     def _on_total_update(self, key, total, time_stamp, *args):
-        if self._total_at_start is None and time_stamp > self._started_at:
-            self._total_at_start = self._latest_total
-        if self._total_at_stop is None and time_stamp > self._stopped_at:
-            self._total_at_stop = self._latest_total
-        self._latest_total = total
-        if self._total_at_start is not None and self._total_at_stop is None:
-            charge = total - self._total_at_start
-            self._cache.put(self._name, "value", charge, time_stamp)
+        if time_stamp <= self._started_at:
+            self._total_at_start = total
+        if time_stamp <= self._stopped_at:
+            self._total_at_stop = total
+            if time_stamp > self._started_at:
+                self._cache.put(self._name, "value", self.doRead(), time_stamp)
+        else:
+            self._stop_passed = True
 
     def _publish_state(self, value=Ellipsis):
         timestamp = time.time()
@@ -93,7 +94,8 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
 
     def doPrepare(self):
         self._started_at = self._stopped_at = float("inf")
-        self._total_at_start = self._total_at_stop = None
+        self._total_at_start = self._total_at_stop = self.total
+        self._stop_passed = False
         self._publish_state(0)
 
     def doStart(self):
@@ -104,10 +106,10 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
     def doFinish(self):
         self.started = False
         self._stopped_at = time.time()
-        for _ in range(round(FINAL_UPDATE_TIMEOUT / 0.02)):
-            if self._total_at_stop is not None:
-                break
-            session.delay(0.02)
+        waited = 0.0
+        while not self._stop_passed and waited < FINAL_UPDATE_TIMEOUT:
+            session.delay(FINAL_UPDATE_POLL_INTERVAL)
+            waited += FINAL_UPDATE_POLL_INTERVAL
         self._publish_state(self.doRead())
 
     def doStop(self):
@@ -120,10 +122,6 @@ class PulseChargeCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         return worst_status(super()._compute_status(maxage), counter_status)
 
     def doRead(self, maxage=0):
-        if self._total_at_start is None:
-            return 0.0
-        if self._total_at_stop is None:
-            return self._latest_total - self._total_at_start
         return self._total_at_stop - self._total_at_start
 
     def valueInfo(self):
