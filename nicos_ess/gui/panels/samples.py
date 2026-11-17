@@ -69,7 +69,7 @@ class SamplePanel(PanelBase):
         self.sample_edit.setEnabled(has_selection)
         self.table.setEnabled(has_selection)
         self.btn_duplicate.setEnabled(has_selection)
-        self.btn_remove.setEnabled(has_selection)
+        self.btn_delete.setEnabled(has_selection)
 
     def update_tree_widget_data(self):
         self.tree.clear()
@@ -166,7 +166,7 @@ class SamplePanel(PanelBase):
         self.pending_samples = deepcopy(self.applied_samples)
         self.update_tree_widget_data()
 
-    def _remove_sample_btn_clicked(self):
+    def _delete_sample_btn_clicked(self):
         selected_item = self.tree.selectedItems()[0]
         index = selected_item.data(0, Qt.ItemDataRole.UserRole)
 
@@ -185,7 +185,7 @@ class SamplePanel(PanelBase):
         self.tree = QTreeWidget()
         self.tree.setHeaderLabel("Samples")
         self.btn_new = QPushButton("New")
-        self.btn_remove = QPushButton("Remove")
+        self.btn_delete = QPushButton("Delete")
         self.btn_duplicate = QPushButton("Duplicate")
 
         self.sample_label = QLabel("Sample:")
@@ -204,7 +204,7 @@ class SamplePanel(PanelBase):
         tree_btn_layout = QHBoxLayout()
         tree_btn_layout.addWidget(self.btn_new)
         tree_btn_layout.addWidget(self.btn_duplicate)
-        tree_btn_layout.addWidget(self.btn_remove)
+        tree_btn_layout.addWidget(self.btn_delete)
         tree_btn_layout.addStretch()
         self.tree_layout = QVBoxLayout()
         self.tree_layout.addWidget(self.tree)
@@ -254,7 +254,7 @@ class SamplePanel(PanelBase):
         self.tree.itemSelectionChanged.connect(self._on_sample_selected)
         self.btn_new.clicked.connect(self._new_sample_btn_clicked)
         self.btn_duplicate.clicked.connect(self._duplicate_sample_btn_clicked)
-        self.btn_remove.clicked.connect(self._remove_sample_btn_clicked)
+        self.btn_delete.clicked.connect(self._delete_sample_btn_clicked)
         self.btn_apply_changes.clicked.connect(self._apply_changes_btn_clicked)
         self.btn_discard_changes.clicked.connect(self._discard_changes_btn_clicked)
         self.sample_edit.textEdited.connect(self.on_sample_name_changed)
