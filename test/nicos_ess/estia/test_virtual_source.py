@@ -1,17 +1,39 @@
 import pytest
 
+from nicos.commands.device import set
 from nicos.devices.generic.slit import Slit
 from nicos_ess.estia.devices.virtual_source import LaserMacro, VirtualSource
 from test.nicos_ess.test_devices.doubles import HarnessLinearAxis
 
 
-class TestVirtualSourceAndLaser:
+class TestVirtualSourceAndLaserHarness:
     # laser and virtual source are tested together since they share motors
 
-    def test_opmode_change_on_vs(self, estia_virtual_source_setup):
+    def test_opmode_change_on_vs_syncs_slit(self, estia_virtual_source_setup):
         devices = estia_virtual_source_setup
 
+        assert devices["slit"].opmode == devices["virtual_source"].opmode
+        set(devices["virtual_source"], "opmode", "4blades_opposite")
+        assert devices["virtual_source"].opmode == "4blades_opposite"
+        devices["virtual_source"]._syncOpmode(
+            devices["slit"].opmode, devices["virtual_source"].opmode
+        )
+        assert devices["slit"].opmode == devices["virtual_source"].opmode
+
+    def test_opmode_change_on_slit_prioritizes_vs(self, estia_virtual_source_setup):
+        devices = estia_virtual_source_setup
+
+        assert devices["slit"].opmode == devices["virtual_source"].opmode
+        set(devices["slit"], "opmode", "4blades_opposite")
+        assert devices["slit"].opmode == "4blades_opposite"
+        devices["virtual_source"]._syncOpmode(
+            devices["slit"].opmode, devices["virtual_source"].opmode
+        )
         assert devices["virtual_source"].opmode == "4blades"
+        assert devices["slit"].opmode == "4blades"
+
+
+# ----------Harness Device Setup-------------#
 
 
 def _create_master(daemon_device_harness, devcls, /, *args, **kwargs):
