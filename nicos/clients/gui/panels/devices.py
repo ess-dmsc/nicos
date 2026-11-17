@@ -39,6 +39,7 @@ from nicos.guisupport.qt import (
     QDialog,
     QDialogButtonBox,
     QFont,
+    QGuiApplication,
     QIcon,
     QInputDialog,
     QMenu,
@@ -53,6 +54,7 @@ from nicos.guisupport.qt import (
     sip,
 )
 from nicos.guisupport.typedvalue import DeviceParamEdit, DeviceValueEdit
+from nicos.guisupport.utils import waitCursor
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict
 
@@ -1084,6 +1086,8 @@ class ControlDialog(QDialog):
             return
 
         menu = QMenu(self)
+        copyAction = menu.addAction("Copy value")
+        menu.addSeparator()
         refreshAction = menu.addAction("Refresh")
         menu.addAction("Refresh all")
 

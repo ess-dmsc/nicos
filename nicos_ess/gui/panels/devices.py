@@ -857,7 +857,7 @@ class ControlDialog(QDialog):
         self.setWindowTitle(f"Control {self.devname}")
 
         # trigger parameter poll
-        self.client.eval(f"{self.devname}.pollParams()", None)
+        self.client.eval(f"{self.devname}.asyncPollVolatileParams()", None)
 
         # now get all cache keys pertaining to the device and set the
         # properties we want
