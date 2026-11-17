@@ -59,7 +59,7 @@ class SamplePanel(PanelBase):
     def _update_reminder_label(self):
         if self.has_changes():
             self.apply_reminder_label.setText(
-                "Changes have been made, remember to apply or discard"
+                "Changes to the samples have not been applied"
             )
         else:
             self.apply_reminder_label.setText("")
@@ -131,10 +131,9 @@ class SamplePanel(PanelBase):
         new_sample_index = len(self.pending_samples)
 
         self.pending_samples.append(deepcopy(self.pending_samples[index]))
-        new_name = name + " copy"
-        self.pending_samples[~0]["name"] = new_name
+        self.pending_samples[~0]["name"] = name
 
-        item = QTreeWidgetItem(self.tree, [new_name])
+        item = QTreeWidgetItem(self.tree, [name])
         item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
         self.tree.setCurrentItem(item)
 
