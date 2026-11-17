@@ -77,3 +77,19 @@ class TestFilewriter:
         metainfo = generateMetainfo()
         assert ("Exp", "title") in metainfo
         assert not any(dev == "motor1" for dev, _ in metainfo)
+
+    def test_metainfo_reads_each_device_once(self, monkeypatch):
+        self.motor1 = self.session.getDevice("motor1")
+        motor_class = type(self.motor1)
+        original_info = motor_class.info
+        calls = []
+
+        def counting_info(dev):
+            calls.append(dev.name)
+            return original_info(dev)
+
+        monkeypatch.setattr(motor_class, "info", counting_info)
+        self.session.devices = {"motor1": self.motor1}
+        metainfo = generateMetainfo()
+        assert calls == ["motor1"]
+        assert metainfo[("motor1", "value")].unit == "mm"

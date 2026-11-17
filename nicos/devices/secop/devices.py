@@ -68,8 +68,15 @@ from nicos.core import (
     status,
     usermethod,
 )
-from nicos.core.device import Device, DeviceMeta, Moveable, Readable
-from nicos.core.errors import ConfigurationError, CommunicationError
+from nicos.core.device import (
+    Device,
+    DeviceMeta,
+    DeviceMetaInfo,
+    DeviceParInfo,
+    Moveable,
+    Readable,
+)
+from nicos.core.errors import CommunicationError, ConfigurationError
 from nicos.core.params import anytype, dictof, floatrange, intrange, listof
 from nicos.core.utils import formatStatus
 from nicos.devices.secop.validators import get_validator
@@ -221,7 +228,7 @@ class SecNodeDevice(Readable):
             userparam=False,
         ),
         "async_only": Param(
-            "True: inhibit SECoP reads on created devices, " "use events only",
+            "True: inhibit SECoP reads on created devices, use events only",
             type=bool,
             prefercache=False,
             default=False,
@@ -513,8 +520,7 @@ class SecNodeDevice(Readable):
             # If the module should not be created, skip it
             if self.allow_list and module not in self.allow_list:
                 self.log.debug(
-                    "skipping module %s, as it is not in the list"
-                    " of allowed modules",
+                    "skipping module %s, as it is not in the list of allowed modules",
                     module,
                 )
                 continue
@@ -1283,11 +1289,16 @@ class SecopReadable(SecopDevice, Readable):
         if st[0] == status.DISABLED:
             # do not display info in data file when disabled
             return []
-        if st[0] == status.ERROR:
-            # avoid calling read()
+        exc = self._param_errors.get("value")
+        if exc is not None:
+            # avoid calling read(), as it would fail
             return [
-                ("value", None, "Error: %s" % st[1], "", "general"),
-                ("status", st, formatStatus(st), "", "status"),
+                DeviceMetaInfo(
+                    "value", DeviceParInfo(None, f"Error: {exc}", "", "general")
+                ),
+                DeviceMetaInfo(
+                    "status", DeviceParInfo(st, formatStatus(st), "", "status")
+                ),
             ]
         return Readable.info(self)
 
