@@ -29,14 +29,12 @@ class SamplePanel(PanelBase):
         self._on_sample_selected()  # start with nothing selected
         self.initialise_connection_status_listeners()
 
-    def load_sample_data(self, data=None):
-        if data is not None:
-            self.applied_samples = [dict(x) for x in data.values()]
-        else:
-            self.applied_samples = self.client.eval("session.experiment.get_samples()")
+    def set_sample_data(self, data):
+        self.applied_samples = data
         self.pending_samples = deepcopy(self.applied_samples)
 
     def save_sample_data(self, samples):
+        # Setting the samples will trigger an on_keyChange.
         self.client.run(f"Exp.set_samples({samples})")
 
     def initialise_connection_status_listeners(self):
@@ -45,12 +43,12 @@ class SamplePanel(PanelBase):
 
     def on_keyChange(self, key, value, time, expired):
         if key == "sample/samples":
-            self.load_sample_data(value)
+            self.set_sample_data([dict(x) for x in value.values()])
             self.update_tree_widget_data()
 
     def on_client_connected(self):
         PanelBase.on_client_connected(self)
-        self.load_sample_data()
+        self.set_sample_data(self.client.eval("session.experiment.get_samples()"))
         self.update_tree_widget_data()
 
     def has_changes(self):
@@ -59,14 +57,14 @@ class SamplePanel(PanelBase):
     def _update_reminder_label(self):
         if self.has_changes():
             self.apply_reminder_label.setText(
-                "Changes to the samples have not been applied"
+                "Changes to the samples have not been applied!"
             )
         else:
             self.apply_reminder_label.setText("")
 
     def _update_enabled_widgets(self):
         has_selection = bool(self.tree.selectedItems())
-        self.sample_edit.setEnabled(has_selection)
+        self.txt_sample_name.setEnabled(has_selection)
         self.table.setEnabled(has_selection)
         self.btn_duplicate.setEnabled(has_selection)
         self.btn_delete.setEnabled(has_selection)
@@ -82,7 +80,7 @@ class SamplePanel(PanelBase):
         data = deepcopy(data)
 
         sample = data.pop("name")
-        self.sample_edit.setText(str(sample))
+        self.txt_sample_name.setText(str(sample))
         for i, (key, value) in enumerate(data.items()):
             self.table.setItem(i, 0, QTableWidgetItem(str(key)))
             self.table.setItem(i, 1, QTableWidgetItem(str(value)))
@@ -90,7 +88,7 @@ class SamplePanel(PanelBase):
     def _on_sample_selected(self):
         self.ignore_table_changes = True
         self.table.clearContents()
-        self.sample_edit.clear()
+        self.txt_sample_name.clear()
         selected_items = self.tree.selectedItems()
         if selected_items:
             index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
@@ -186,7 +184,7 @@ class SamplePanel(PanelBase):
         self.btn_duplicate = QPushButton("Duplicate")
 
         self.sample_label = QLabel("Sample:")
-        self.sample_edit = QLineEdit()
+        self.txt_sample_name = QLineEdit()
         self.metadata_label = QLabel("Metadata:")
         self.table = QTableWidget()
         self.table.setRowCount(100)
@@ -209,7 +207,7 @@ class SamplePanel(PanelBase):
 
         table_header_layout = QHBoxLayout()
         table_header_layout.addWidget(self.sample_label)
-        table_header_layout.addWidget(self.sample_edit)
+        table_header_layout.addWidget(self.txt_sample_name)
         table_btn_layout = QHBoxLayout()
         table_btn_layout.addStretch()
         table_btn_layout.addWidget(self.btn_apply_changes)
@@ -254,5 +252,5 @@ class SamplePanel(PanelBase):
         self.btn_delete.clicked.connect(self._delete_sample_btn_clicked)
         self.btn_apply_changes.clicked.connect(self._apply_changes_btn_clicked)
         self.btn_discard_changes.clicked.connect(self._discard_changes_btn_clicked)
-        self.sample_edit.textEdited.connect(self.on_sample_name_changed)
+        self.txt_sample_name.textEdited.connect(self.on_sample_name_changed)
         self.table.itemChanged.connect(self.on_table_item_changed)
