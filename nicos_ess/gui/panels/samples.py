@@ -6,13 +6,13 @@ from nicos.guisupport.qt import (
     QHeaderView,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QPushButton,
     Qt,
     QTableWidget,
     QTableWidgetItem,
     QTimer,
-    QTreeWidget,
-    QTreeWidgetItem,
     QVBoxLayout,
 )
 from nicos_ess.gui.panels.panel import PanelBase
@@ -44,12 +44,12 @@ class SamplePanel(PanelBase):
     def on_keyChange(self, key, value, time, expired):
         if key == "sample/samples":
             self.set_sample_data([dict(x) for x in value.values()])
-            self.update_tree_widget_data()
+            self.update_list_widget_data()
 
     def on_client_connected(self):
         PanelBase.on_client_connected(self)
         self.set_sample_data(self.client.eval("session.experiment.get_samples()"))
-        self.update_tree_widget_data()
+        self.update_list_widget_data()
 
     def has_changes(self):
         return self.pending_samples != self.applied_samples
@@ -63,20 +63,21 @@ class SamplePanel(PanelBase):
             self.apply_reminder_label.setText("")
 
     def _update_enabled_widgets(self):
-        has_selection = bool(self.tree.selectedItems())
+        has_selection = bool(self.list.selectedItems())
         self.txt_sample_name.setEnabled(has_selection)
         self.table.setEnabled(has_selection)
         self.btn_duplicate.setEnabled(has_selection)
         self.btn_delete.setEnabled(has_selection)
 
-    def update_tree_widget_data(self):
-        selected_row = self.tree.indexOfTopLevelItem(self.tree.currentItem())
-        self.tree.clear()
+    def update_list_widget_data(self):
+        selected_row = self.list.currentRow()
+        self.list.clear()
         for i, sample in enumerate(self.pending_samples):
-            item = QTreeWidgetItem(self.tree, [sample["name"]])
-            item.setData(0, Qt.ItemDataRole.UserRole, i)
+            item = QListWidgetItem(sample["name"])
+            item.setData(Qt.ItemDataRole.UserRole, i)
+            self.list.addItem(item)
         self._on_sample_selected()
-        self.tree.setCurrentItem(self.tree.topLevelItem(selected_row))
+        self.list.setCurrentRow(selected_row)
 
     def _populate_table(self, data):
         data = deepcopy(data)
@@ -91,9 +92,9 @@ class SamplePanel(PanelBase):
         self.ignore_table_changes = True
         self.table.clearContents()
         self.txt_sample_name.clear()
-        selected_items = self.tree.selectedItems()
+        selected_items = self.list.selectedItems()
         if selected_items:
-            index = selected_items[0].data(0, Qt.ItemDataRole.UserRole)
+            index = selected_items[0].data(Qt.ItemDataRole.UserRole)
             if index < len(self.pending_samples):
                 self._populate_table(self.pending_samples[index])
         self._update_reminder_label()
@@ -101,16 +102,16 @@ class SamplePanel(PanelBase):
         self.ignore_table_changes = False
 
     def on_sample_name_changed(self, text):
-        selected_item = self.tree.selectedItems()[0]
-        selected_item.setText(0, text)
-        index = selected_item.data(0, Qt.ItemDataRole.UserRole)
+        selected_item = self.list.selectedItems()[0]
+        selected_item.setText(text)
+        index = selected_item.data(Qt.ItemDataRole.UserRole)
         self.pending_samples[index]["name"] = text
         self._update_reminder_label()
 
     def on_table_item_changed(self, item):
         if self.ignore_table_changes:
             return
-        index = self.tree.currentItem().data(0, Qt.ItemDataRole.UserRole)
+        index = self.list.currentItem().data(Qt.ItemDataRole.UserRole)
         name = self.pending_samples[index]["name"]
         self.pending_samples[index] = {"name": name, **self._get_table_data()}
         self._update_reminder_label()
@@ -120,26 +121,28 @@ class SamplePanel(PanelBase):
         new_name = "untitled"
         self.pending_samples.append({"name": new_name})
 
-        item = QTreeWidgetItem(self.tree, [new_name])
-        item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
-        self.tree.setCurrentItem(item)
+        item = QListWidgetItem(new_name)
+        item.setData(Qt.ItemDataRole.UserRole, new_sample_index)
+        self.list.addItem(item)
+        self.list.setCurrentItem(item)
 
     def _duplicate_sample_btn_clicked(self):
-        sample_to_duplicate = self.tree.selectedItems()[0]
-        index = sample_to_duplicate.data(0, Qt.ItemDataRole.UserRole)
-        name = sample_to_duplicate.text(0)
+        sample_to_duplicate = self.list.currentItem()
+        index = sample_to_duplicate.data(Qt.ItemDataRole.UserRole)
+        name = sample_to_duplicate.text()
         new_sample_index = len(self.pending_samples)
 
         self.pending_samples.append(deepcopy(self.pending_samples[index]))
         self.pending_samples[~0]["name"] = name
 
-        item = QTreeWidgetItem(self.tree, [name])
-        item.setData(0, Qt.ItemDataRole.UserRole, new_sample_index)
-        self.tree.setCurrentItem(item)
+        item = QListWidgetItem(name)
+        item.setData(Qt.ItemDataRole.UserRole, new_sample_index)
+        self.list.addItem(item)
+        self.list.setCurrentItem(item)
 
     def _apply_changes_btn_clicked(self):
         if self._has_duplicate_property_names():
-            self.showError("Please make sure no metadata has the same property name")
+            self.showError("Please make sure no metadata has the same property name.")
             return
         self.save_sample_data(self.pending_samples)
 
@@ -161,16 +164,16 @@ class SamplePanel(PanelBase):
 
     def _discard_changes_btn_clicked(self):
         self.pending_samples = deepcopy(self.applied_samples)
-        self.update_tree_widget_data()
+        self.update_list_widget_data()
 
     def _delete_sample_btn_clicked(self):
-        selected_item = self.tree.selectedItems()[0]
-        index = selected_item.data(0, Qt.ItemDataRole.UserRole)
+        selected_item = self.list.currentItem()
+        index = selected_item.data(Qt.ItemDataRole.UserRole)
 
         del self.pending_samples[index]
-        self.update_tree_widget_data()
+        self.update_list_widget_data()
         new_index = max(index - 1, 0)
-        self.tree.setCurrentItem(self.tree.topLevelItem(new_index))
+        self.list.setCurrentRow(new_index)
 
     def _build_ui(self):
         self._create_widgets()
@@ -179,12 +182,13 @@ class SamplePanel(PanelBase):
         self._add_signals()
 
     def _create_widgets(self):
-        self.tree = QTreeWidget()
-        self.tree.setHeaderLabel("Samples")
+        self.list = QListWidget()
+        self.list.setWindowTitle("Samples")
         self.btn_new = QPushButton("New")
         self.btn_delete = QPushButton("Delete")
         self.btn_duplicate = QPushButton("Duplicate")
 
+        self.label = QLabel("Samples")
         self.sample_label = QLabel("Sample:")
         self.txt_sample_name = QLineEdit()
         self.metadata_label = QLabel("Metadata:")
@@ -198,14 +202,15 @@ class SamplePanel(PanelBase):
         self.apply_reminder_label = QLabel()
 
     def _set_layout(self):
-        tree_btn_layout = QHBoxLayout()
-        tree_btn_layout.addWidget(self.btn_new)
-        tree_btn_layout.addWidget(self.btn_duplicate)
-        tree_btn_layout.addWidget(self.btn_delete)
-        tree_btn_layout.addStretch()
-        self.tree_layout = QVBoxLayout()
-        self.tree_layout.addWidget(self.tree)
-        self.tree_layout.addLayout(tree_btn_layout)
+        list_btn_layout = QHBoxLayout()
+        list_btn_layout.addWidget(self.btn_new)
+        list_btn_layout.addWidget(self.btn_duplicate)
+        list_btn_layout.addWidget(self.btn_delete)
+        list_btn_layout.addStretch()
+        self.list_layout = QVBoxLayout()
+        self.list_layout.addWidget(self.label)
+        self.list_layout.addWidget(self.list)
+        self.list_layout.addLayout(list_btn_layout)
 
         table_header_layout = QHBoxLayout()
         table_header_layout.addWidget(self.sample_label)
@@ -222,7 +227,7 @@ class SamplePanel(PanelBase):
         self.table_layout.addLayout(table_btn_layout)
 
         self.layout = QHBoxLayout()
-        self.layout.addLayout(self.tree_layout)
+        self.layout.addLayout(self.list_layout)
         self.layout.addLayout(self.table_layout)
         self.setLayout(self.layout)
 
@@ -237,7 +242,7 @@ class SamplePanel(PanelBase):
             1, QHeaderView.ResizeMode.Stretch
         )
         QTimer.singleShot(0, _initial_label_column_width)
-        self.tree.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.btn_apply_changes.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.apply_reminder_label.setStyleSheet("color: red; font-weight: bold;")
         self.apply_reminder_label.setAlignment(
@@ -245,10 +250,10 @@ class SamplePanel(PanelBase):
         )
         self.sample_label.setStyleSheet("font-weight: bold;")
         self.metadata_label.setStyleSheet("font-weight: bold;")
-        self.tree_layout.setContentsMargins(0, 0, 20, 0)
+        self.list_layout.setContentsMargins(0, 0, 20, 0)
 
     def _add_signals(self):
-        self.tree.itemSelectionChanged.connect(self._on_sample_selected)
+        self.list.itemSelectionChanged.connect(self._on_sample_selected)
         self.btn_new.clicked.connect(self._new_sample_btn_clicked)
         self.btn_duplicate.clicked.connect(self._duplicate_sample_btn_clicked)
         self.btn_delete.clicked.connect(self._delete_sample_btn_clicked)
