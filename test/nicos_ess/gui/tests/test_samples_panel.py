@@ -26,7 +26,7 @@ def panel(gui_window_factory, fake_daemon, qtbot):
 def test_selecting_a_sample_shows_its_name_and_properties(panel):
     panel.tree.setCurrentItem(panel.tree.topLevelItem(0))
 
-    assert panel.sample_edit.text() == "name1"
+    assert panel.txt_sample_name.text() == "name1"
     assert panel.table.item(0, 0).text() == "property1"
     assert panel.table.item(0, 1).text() == "value1"
 
