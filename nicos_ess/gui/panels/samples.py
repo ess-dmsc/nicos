@@ -70,11 +70,13 @@ class SamplePanel(PanelBase):
         self.btn_delete.setEnabled(has_selection)
 
     def update_tree_widget_data(self):
+        selected_row = self.tree.indexOfTopLevelItem(self.tree.currentItem())
         self.tree.clear()
         for i, sample in enumerate(self.pending_samples):
             item = QTreeWidgetItem(self.tree, [sample["name"]])
             item.setData(0, Qt.ItemDataRole.UserRole, i)
         self._on_sample_selected()
+        self.tree.setCurrentItem(self.tree.topLevelItem(selected_row))
 
     def _populate_table(self, data):
         data = deepcopy(data)
