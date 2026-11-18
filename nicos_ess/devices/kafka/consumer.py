@@ -1537,7 +1537,7 @@ class KafkaSubscriber:
             try:
                 self._messages_callback(deliver)
             except Exception:
-                session.log.error("[kafka] messages_callback raised")
+                session.log.error("[kafka] messages_callback raised", exc=True)
 
     def _handle_idle(
         self, had_error: bool, now: float, since_assign: float, since_reboot_ok: bool
@@ -1577,7 +1577,7 @@ class KafkaSubscriber:
             try:
                 self._no_messages_callback()
             except Exception:
-                session.log.error("[kafka] no_messages_callback raised")
+                session.log.error("[kafka] no_messages_callback raised", exc=True)
             self._last_no_msg_cb = now
 
         self._idle_backoff = min(
