@@ -2,11 +2,10 @@ description = "The timepix in NIDO"
 
 devices = dict(
     timepix=device(
-        "nicos_ess.devices.epics.area_detector.TimepixDetector",
+        "nicos_ess.devices.epics.adcore.TimepixDetector",
         description="TimePix3 detector.",
         pv_root="LabS-ECDC:NDet-TPX3-001:cam1:",
-        image_pv="LabS-ECDC:NDet-TPX3-001:image1:ArrayData",
-        unit="images",
+        image_pv_root="LabS-ECDC:NDet-TPX3-001:image1:",
         pollinterval=None,
         pva=True,
         monitor=True,
@@ -16,10 +15,18 @@ devices = dict(
         description="TimePix3 photon event counter",
         readpv="LabS-ECDC:NDet-TPX3-001:cam1:PelEvtRate_RBV",
     ),
+    timepix_timer=device(
+        "nicos_ess.devices.timer.TimerChannel",
+        description="Timer of the camera collector, for counts with a time preset",
+        fmtstr="%.2f",
+        unit="s",
+        visibility=(),
+    ),
     timepix_area_detector_collector=device(
-        "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
+        "nicos.devices.generic.Detector",
         description="Area detector collector",
         images=["timepix"],
+        timers=["timepix_timer"],
         liveinterval=1,
         pollinterval=1,
         unit="",
@@ -27,5 +34,5 @@ devices = dict(
 )
 
 startupcode = """
-SetDetectors(area_detector_collector)
+SetDetectors(timepix_area_detector_collector)
 """

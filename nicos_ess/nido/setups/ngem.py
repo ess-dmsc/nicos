@@ -2,11 +2,10 @@ description = "The nGEM in NIDO"
 
 devices = dict(
     ngem=device(
-        "nicos_ess.devices.epics.area_detector.AreaDetector",
+        "nicos_ess.devices.epics.adcore.AreaDetector",
         description="nGEM detector.",
         pv_root="TBL-Det1:cam1:",
-        image_pv="TBL-Det1:image1:ArrayData",
-        unit="images",
+        image_pv_root="TBL-Det1:image1:",
         pollinterval=None,
         pva=True,
         monitor=True,
@@ -34,10 +33,18 @@ devices = dict(
         readpv="TBL-Det1:cam1:FailedPushes-R",
         visibility=(),
     ),
+    ngem_timer=device(
+        "nicos_ess.devices.timer.TimerChannel",
+        description="Timer of the camera collector, for counts with a time preset",
+        fmtstr="%.2f",
+        unit="s",
+        visibility=(),
+    ),
     ngem_area_detector_collector=device(
-        "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
+        "nicos.devices.generic.Detector",
         description="Area detector collector",
         images=["ngem"],
+        timers=["ngem_timer"],
         liveinterval=1,
         pollinterval=1,
         unit="",

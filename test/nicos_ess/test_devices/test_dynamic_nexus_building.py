@@ -98,8 +98,6 @@ class TestDynamicNexusBuilding(TestCase):
         self.nexus: NexusStructureJsonFile = self.session.getDevice("NexusStructure")
         # Match the setup definition’s alias (if applicable)
         self.nexus.alias = "NexusStructure_Basic"
-        # No area-detector placeholder in this test
-        self.nexus.area_det_collector_device = ""
 
         yield
 

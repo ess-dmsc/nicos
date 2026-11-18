@@ -78,7 +78,6 @@ class TestNexusStructureJsonFile(TestCase):
         self.device.alias = "NexusStructure_Basic"  # match the setup definition
 
         # Assign parameters directly (keeps things simple for a smoke test).
-        self.device.area_det_collector_device = ""  # no area-detector placeholder
         yield
         # Teardown
         self.session.unloadSetup()

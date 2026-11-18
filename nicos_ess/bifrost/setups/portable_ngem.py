@@ -67,11 +67,10 @@ devices = dict(
     ),
     # Starts and stops the nGEM by hand; not a channel of ngem_detector.
     ngem_controller=device(
-        "nicos_ess.devices.epics.area_detector.AreaDetector",
+        "nicos_ess.devices.epics.adcore.AreaDetector",
         description="nGEM detector control",
         pv_root=DRIVER,
-        image_pv=f"{PV_PREFIX}image1:ArrayData",
-        unit="images",
+        image_pv_root=f"{PV_PREFIX}image1:",
         pollinterval=None,
         pva=True,
         monitor=True,

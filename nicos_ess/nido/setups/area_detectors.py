@@ -3,7 +3,6 @@ description = "The area detector for NIDO"
 camera_system_pv_root = "Orca:"
 camera_device_pv_root = ""
 camera_ndplugin_pv_root = "image1:"
-camera_kafkaplugin_pv_root = "Kfk1:"
 water_cooler_pv_root = ""
 
 devices = dict(
@@ -23,28 +22,31 @@ devices = dict(
         visibility=(),
     ),
     orca_camera=device(
-        "nicos_ess.devices.epics.area_detector.OrcaFlash4",
+        "nicos_ess.devices.epics.adcore.OrcaFlash4",
         description="The light tomography Orca camera.",
         pv_root=f"{camera_system_pv_root}{camera_device_pv_root}",
-        image_pv=f"{camera_system_pv_root}{camera_ndplugin_pv_root}ArrayData",
-        topicpv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}KafkaTopic_RBV",
-        sourcepv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}SourceName_RBV",
-        unit="images",
+        image_pv_root=f"{camera_system_pv_root}{camera_ndplugin_pv_root}",
         pva=True,
         monitor=True,
         pollinterval=0.5,
-        maxage=None,
-        watercooler_mode="watercooler_mode",
-        watercooler_temperature="watercooler_temperature",
+        watercooler="watercooler_mode",
     ),
     orca_image_type=device(
-        "nicos_ess.devices.epics.area_detector.ImageType",
+        "nicos_ess.devices.image_type.ImageType",
         description="Image type for the tomography setup.",
     ),
+    orca_timer=device(
+        "nicos_ess.devices.timer.TimerChannel",
+        description="Timer of the camera collector, for counts with a time preset",
+        fmtstr="%.2f",
+        unit="s",
+        visibility=(),
+    ),
     area_detector_collector=device(
-        "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
+        "nicos.devices.generic.Detector",
         description="Area detector collector",
         images=["orca_camera"],
+        timers=["orca_timer"],
         liveinterval=1,
         pollinterval=1,
         unit="",

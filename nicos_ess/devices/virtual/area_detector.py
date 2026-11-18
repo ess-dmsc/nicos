@@ -2,29 +2,21 @@ import threading
 import time
 from enum import Enum
 
-import numpy
 import numpy as np
 
 from nicos import session
 from nicos.core import (
-    LIVE,
     POLLER,
     SIMULATION,
     ArrayDesc,
-    CacheError,
-    Measurable,
     Override,
     Param,
     Value,
-    floatrange,
-    multiStatus,
     oneof,
     status,
     tupleof,
-    usermethod,
 )
-from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
-from nicos.utils import byteBuffer, createThread
+from nicos.devices.generic import ActiveChannel, ImageChannelMixin
 
 binning_factor_map = {
     0: "1x1",
@@ -32,76 +24,11 @@ binning_factor_map = {
     2: "4x4",
 }
 
-PROJECTION, FLATFIELD, DARKFIELD, INVALID = 0, 1, 2, 3
-
 
 class ImageMode(Enum):
     SINGLE = 0
     MULTIPLE = 1
     CONTINUOUS = 2
-
-
-class ImageType(ManualSwitch):
-    """
-    Class that contains the image type for a tomography experiment using the
-    epics AreaDetector class.
-    """
-
-    parameter_overrides = {
-        "fmtstr": Override(default="%d"),
-        "states": Override(
-            mandatory=False, default=list(range(PROJECTION, INVALID + 1))
-        ),
-        "maxage": Override(default=0),
-        "pollinterval": Override(default=None, userparam=False, settable=False),
-    }
-
-    hardware_access = False
-
-    _image_key_to_image_type = {
-        PROJECTION: "Projection",
-        FLATFIELD: "Flat field",
-        DARKFIELD: "Dark field",
-        INVALID: "Invalid",
-    }
-
-    def doStatus(self, maxage=0):
-        if self.target == INVALID:
-            return status.WARN, "State is invalid for a tomography experiment."
-        return status.OK, self._image_key_to_image_type[self.target]
-
-    def doStart(self, target):
-        ManualSwitch.doStart(self, target)
-        if self._mode != SIMULATION:
-            if not self._cache:
-                raise CacheError(
-                    self,
-                    "Detector requires a running cache for "
-                    "full functionality. Please check its status.",
-                )
-            curr_time = time.time()
-            self._cache.put(self._name, "value", target, curr_time)
-            self._cache.put(self._name, "status", self.doStatus(), curr_time)
-
-    @usermethod
-    def set_to_projection(self):
-        """Set the image key to projection"""
-        self.move(PROJECTION)
-
-    @usermethod
-    def set_to_flat_field(self):
-        """Set the image key to flat field"""
-        self.move(FLATFIELD)
-
-    @usermethod
-    def set_to_dark_field(self):
-        """Set the image key to dark field"""
-        self.move(DARKFIELD)
-
-    @usermethod
-    def set_to_invalid(self):
-        """Set the image key to invalid"""
-        self.move(INVALID)
 
 
 class FakeAreaDetector:
@@ -125,7 +52,7 @@ class FakeAreaDetector:
         self._run_thread = threading.Thread(target=self._run, daemon=True)
         self._status_thread = threading.Thread(target=self._update_status, daemon=True)
         self._running_flag = threading.Event()
-        self._running_flag.clear()
+        self._closed = threading.Event()
         self._run_thread.start()
         self._status_thread.start()
         self._status = status.OK, "Done"
@@ -138,14 +65,14 @@ class FakeAreaDetector:
         self._status_callback = callback
 
     def _update_status(self):
-        while True:
+        while not self._closed.is_set():
             if self._running_flag.is_set():
                 self._status = status.BUSY, "Acquiring"
             else:
                 self._status = status.OK, "Done"
             if self._status_callback is not None:
                 self._status_callback()
-            time.sleep(1)
+            self._closed.wait(1)
 
     def acquire(self):
         self._running_flag.set()
@@ -154,12 +81,19 @@ class FakeAreaDetector:
     def stop(self):
         self._running_flag.clear()
 
+    def close(self):
+        self._running_flag.clear()
+        self._closed.set()
+        self._run_thread.join()
+        self._status_thread.join()
+
     def _run(self):
-        while True:
+        while not self._closed.is_set():
             if self._running_flag.is_set():
                 self._status = status.BUSY, "Acquiring"
                 self._status_callback()
-                time.sleep(self._acquireperiod)
+                if self._closed.wait(self._acquireperiod):
+                    return
                 self._gen_image()
                 self._status_callback()
 
@@ -172,8 +106,7 @@ class FakeAreaDetector:
                         self._status_callback()
             else:
                 self._status = status.OK, "Done"
-
-            time.sleep(0.01)
+                time.sleep(0.01)
 
     def _gen_image(self):
         self._status = status.BUSY, "Acquiring"
@@ -220,20 +153,15 @@ class FakeAreaDetector:
             self._callback()
 
 
-class AreaDetector(ImageChannelMixin, Measurable):
-    """
-    Device that controls and acquires data from an area detector.
-    """
+class AreaDetector(ImageChannelMixin, ActiveChannel):
+    """A simulated camera as a NICOS image channel.
 
-    _hardware_access = False
+    With a preset such as ``count(virtual_camera=3)`` the camera stops after
+    that many images. Without a preset it acquires until the detector
+    finishes it.
+    """
 
     parameters = {
-        "iscontroller": Param(
-            "If this channel is an active controller",
-            type=bool,
-            settable=True,
-            default=True,
-        ),
         "imagemode": Param(
             "Mode to acquire images.",
             type=oneof("single", "multiple", "continuous"),
@@ -256,9 +184,15 @@ class AreaDetector(ImageChannelMixin, Measurable):
         "starty": Param(
             "Image Y start index.", settable=True, volatile=False, type=int
         ),
-        "acquiretime": Param("Exposure time ", settable=True, volatile=False),
+        "acquiretime": Param(
+            "Exposure time.", unit="s", default=0.1, settable=True, volatile=False
+        ),
         "acquireperiod": Param(
-            "Time between exposure starts.", settable=True, volatile=False
+            "Time between exposure starts.",
+            unit="s",
+            default=1.0,
+            settable=True,
+            volatile=False,
         ),
         "numimages": Param(
             "Number of images to take (only in imageMode=multiple).",
@@ -274,21 +208,22 @@ class AreaDetector(ImageChannelMixin, Measurable):
         ),
     }
 
-    _image_array = numpy.zeros((10, 10))
-    _detector_collector_name = ""
-    _last_update = 0
-    _plot_update_delay = 2.0
+    parameter_overrides = {
+        "unit": Override(default="images", mandatory=False),
+    }
 
     def doPreinit(self, mode):
+        self.arraydesc = ArrayDesc(self.name, shape=(1, 1), dtype=np.uint16)
         if mode == SIMULATION:
             return
-        self._image_processing_lock = threading.Lock()
-
         self._ad_simulator = FakeAreaDetector()
         self._initilize_ad_simulator()
         if session.sessiontype != POLLER:
-            self._ad_simulator.register_callback(self.on_image_callback)
             self._ad_simulator.register_status_callback(self.on_status_callback)
+
+    def doShutdown(self):
+        if hasattr(self, "_ad_simulator"):
+            self._ad_simulator.close()
 
     def _initilize_ad_simulator(self):
         self._ad_simulator._sizex = int(self.sizex)
@@ -302,84 +237,38 @@ class AreaDetector(ImageChannelMixin, Measurable):
         self._ad_simulator._binning = self.binning
 
     def doPrepare(self):
-        self._update_status(status.BUSY, "Preparing")
-        self._update_status(status.OK, "")
-        self.arraydesc = self.arrayInfo()[0]
+        self.update_arraydesc()
 
     def _update_status(self, new_status, message):
-        self._cache.put(self._name, "status", self.curstatus, time.time())
         self._setROParam("curstatus", (new_status, message))
+        self._cache.put(self._name, "status", self.curstatus, time.time())
 
     def on_status_callback(self):
-        status, message = self._ad_simulator._status
-        self._update_status(status, message)
+        self._update_status(*self.doStatus())
         self._cache.put(
-            self._name, "value", self._ad_simulator._image_counter, time.time()
+            self._name, "value", [self._ad_simulator._image_counter], time.time()
         )
 
     def valueInfo(self):
-        return (Value(self.name, fmtstr="%d"),)
+        return (Value(self.name, unit=self.unit, type="counter", fmtstr="%d"),)
 
     def arrayInfo(self):
         self.update_arraydesc()
-        return tuple([self.arraydesc])
+        return (self.arraydesc,)
 
     def update_arraydesc(self):
-        shape = self.sizey, self.sizex
         binning_factor = int(self.binning[0])
-        shape = (shape[0] // binning_factor, shape[1] // binning_factor)
-        self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
-        data_type = np.uint16
-        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
-
-    def on_image_callback(self):
-        status, message = self._ad_simulator._status
-        self._update_status(status, message)
-        if time.monotonic() - self._last_update > self._plot_update_delay:
-            _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
-
-    def get_image(self):
-        dataarray = self._ad_simulator._image
-        shape = self.arrayInfo()[0].shape
-        dataarray = dataarray.reshape(shape)
-        self.putResult(LIVE, dataarray, time.time())
-        self._last_update = time.monotonic()
-
-    def putResult(self, quality, data, timestamp):
-        self._image_array = data
-        databuffer = [byteBuffer(numpy.ascontiguousarray(data))]
-        datadesc = [
-            dict(
-                dtype=data.dtype.str,
-                shape=data.shape,
-                labels={
-                    "x": {"define": "classic"},
-                    "y": {"define": "classic"},
-                },
-                plotcount=1,
-            )
-        ]
-        if databuffer:
-            parameters = dict(
-                uid=0,
-                time=timestamp,
-                det=self._detector_collector_name,
-                tag=LIVE,
-                datadescs=datadesc,
-            )
-            labelbuffers = []
-            with self._image_processing_lock:
-                session.updateLiveData(parameters, databuffer, labelbuffers)
-
-    def doSetPreset(self, **preset):
-        if not preset:
-            # keep old settings
-            return
-        self._lastpreset = preset.copy()
+        shape = (self.sizey // binning_factor, self.sizex // binning_factor)
+        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=np.uint16)
 
     def doStatus(self, maxage=0):
-        severity, state = self.curstatus
-        return severity, state
+        # The poller has its own simulator that never acquires, so it shows
+        # the status that the daemon writes.
+        if session.sessiontype == POLLER:
+            return self.curstatus
+        if self._ad_simulator._running_flag.is_set():
+            return status.BUSY, "Acquiring"
+        return status.OK, ""
 
     def _limit_size(self, value, max_value):
         if value > max_value:
@@ -391,21 +280,16 @@ class AreaDetector(ImageChannelMixin, Measurable):
             value = 0
         return int(value)
 
-    def doStart(self, **preset):
-        num_images = self._lastpreset.get("n", None)
-        if num_images == 0:
-            return
-        elif not num_images or num_images < 0:
+    def doStart(self):
+        if not self.iscontroller or not self.preselection:
             self.imagemode = "continuous"
-        elif num_images == 1:
+        elif self.preselection == 1:
             self.imagemode = "single"
-        elif num_images > 1:
+        else:
             self.imagemode = "multiple"
-            self.numimages = num_images
-        self.doAcquire()
-
-    def doAcquire(self):
+            self.numimages = self.preselection
         self._ad_simulator.acquire()
+        self._update_status(status.BUSY, "Acquiring")
 
     def doFinish(self):
         self.doStop()
@@ -414,10 +298,26 @@ class AreaDetector(ImageChannelMixin, Measurable):
         self._ad_simulator.stop()
 
     def doRead(self, maxage=0):
-        return self._ad_simulator._image_counter
+        return [self._ad_simulator._image_counter]
 
     def doReadArray(self, quality):
-        return self._image_array
+        # The simulator keeps the last image of the previous count until the
+        # first image of this count is taken.
+        if not self._ad_simulator._image_counter:
+            return None
+        image = self._ad_simulator._image
+        self.update_arraydesc()
+        if image.size != int(np.prod(self.arraydesc.shape)):
+            return None
+        return image.reshape(self.arraydesc.shape).astype(self.arraydesc.dtype)
+
+    def doTime(self, preset):
+        if not self.iscontroller or not self.preselection:
+            return 0
+        return self.preselection * self.acquireperiod
+
+    def doSimulate(self, preset):
+        return [self.preselection if self.iscontroller else 0]
 
     def doReadSizex(self):
         return self._ad_simulator._sizex
@@ -476,83 +376,3 @@ class AreaDetector(ImageChannelMixin, Measurable):
 
     def doWriteBinning(self, value):
         self._ad_simulator._binning = value
-
-    def get_topic_and_source(self):
-        return "some_topic", "some_source"
-
-
-class AreaDetectorCollector(Detector):
-    """
-    A device class that collects the area detectors present in the instrument
-    setup.
-    """
-
-    parameter_overrides = {
-        "unit": Override(default="images", settable=False, mandatory=False),
-        "fmtstr": Override(default="%d"),
-        "liveinterval": Override(type=floatrange(0.5), default=1, userparam=True),
-        "pollinterval": Override(default=1, userparam=True, settable=False),
-    }
-
-    _presetkeys = set()
-    _hardware_access = False
-
-    def doPreinit(self, mode):
-        for image_channel in self._attached_images:
-            image_channel._detector_collector_name = self.name
-            self._presetkeys.add(image_channel.name)
-        self._channels = self._attached_images
-        self._collectControllers()
-
-    def _collectControllers(self):
-        self._controlchannels, self._followchannels = self._attached_images, []
-
-    def get_array_size(self, topic, source):
-        for area_detector in self._attached_images:
-            if (topic, source) == area_detector.get_topic_and_source():
-                return area_detector.arrayInfo()[0].shape
-        self.log.error(
-            "No array size was found for area detector with topic %s and source %s.",
-            topic,
-            source,
-        )
-        return []
-
-    def doSetPreset(self, **preset):
-        if not preset:
-            # keep old settings
-            return
-
-        for controller in self._controlchannels:
-            sub_preset = preset.get(controller.name)
-            if sub_preset:
-                controller.doSetPreset(**{"n": sub_preset})
-
-        self._lastpreset = preset.copy()
-
-    def doStatus(self, maxage=0):
-        return multiStatus(self._attached_images, maxage)
-
-    def doRead(self, maxage=0):
-        return []
-
-    def doReadArrays(self, quality):
-        return [image.readArray(quality) for image in self._attached_images]
-
-    def doReset(self):
-        pass
-
-    def duringMeasureHook(self, elapsed):
-        if (
-            self.liveinterval is not None
-            and elapsed > self._last_live + self.liveinterval
-        ):
-            self._last_live = elapsed
-            return LIVE
-        return None
-
-    def arrayInfo(self):
-        return tuple(ch.arrayInfo()[0] for ch in self._attached_images)
-
-    def doTime(self, preset):
-        return 0

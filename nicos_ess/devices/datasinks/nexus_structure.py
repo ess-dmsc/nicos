@@ -136,13 +136,6 @@ class NexusStructureJsonFile(NexusStructureProvider):
             userparam=True,
             settable=True,
         ),
-        "area_det_collector_device": Param(
-            "Area collector device name",
-            type=str,
-            mandatory=False,
-            userparam=True,
-            settable=True,
-        ),
         "instrument_name": Param(
             "Instrument name",
             type=oneof(*ALLOWED_INSTRUMENT_NAMES),
@@ -159,7 +152,6 @@ class NexusStructureJsonFile(NexusStructureProvider):
         structure = self._insert_extra_devices(structure)
         structure = self._filter_structure(structure)
         structure = self._insert_metadata(structure, metainfo, counter)
-        structure = self._insert_array_size(structure)
         return json.dumps(structure)
 
     def _load_structure(self):
@@ -351,35 +343,6 @@ class NexusStructureJsonFile(NexusStructureProvider):
             )
         topic = f"{session.instrument.name.lower()}_nicos_devices"
         return generate_nxlog_json(name, "f144", dev.name.lower(), topic, units)
-
-    def _insert_array_size(self, structure):
-        dumped_structure = json.dumps(structure)
-        if "$AREADET$" not in dumped_structure:
-            return structure
-
-        if not self.area_det_collector_device:
-            raise ConfigurationError(
-                "Area detector collector device not "
-                "set for structure with area detector"
-            )
-
-        self._replace_area_detector_placeholder(structure)
-        return structure
-
-    def _replace_area_detector_placeholder(self, data):
-        for item in data["children"]:
-            if item.get("config", {}).get("array_size") == "$AREADET$":
-                item["config"]["array_size"] = []
-                for val in self._get_detector_device_array_size(item["config"]):
-                    item["config"]["array_size"].append(val)
-            if "children" in item:
-                self._replace_area_detector_placeholder(item)
-
-    def _get_detector_device_array_size(self, json_config):
-        area_detector_collector = session.getDevice(self.area_det_collector_device)
-        return area_detector_collector.get_array_size(
-            json_config["topic"], json_config["source"]
-        )
 
     def _generate_nxclass_template(self, nx_class, prefix, entities, skip_keys=None):
         temp = []
