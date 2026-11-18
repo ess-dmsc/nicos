@@ -1137,7 +1137,7 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
 
         cpos = self._attached_m_cart()
         xpos = self._laser_pos_from_cart(cpos - self.cart_center)
-        if abs(xpos) < 300:
+        if abs(xpos) < 125:
             measure_channels = [
                 self._attached_ch_d_v1.channel,
                 self._attached_ch_d_v2.channel,
@@ -1226,7 +1226,8 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
         self.log.info("Performing calibration of interferometer lengths")
         self._attached_m_cart.maw(self.cart_center)
         self._attached_interferometer.measure()
-        self._attached_interferometer.wait()
+        # maybe reintroduce later
+        # self._attached_interferometer.wait()
 
         v, h1, h2 = self._nominal_path_lengths(0.0)
         for li, chi in [
