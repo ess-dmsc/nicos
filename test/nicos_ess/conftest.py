@@ -24,11 +24,13 @@
 
 import pytest
 
+from nicos_ess.devices.epics.pva import epics_common
 from nicos_ess.utilities.live_frame import decode
 from test.nicos_ess.device_harness import (
     isolated_daemon_device_harness,
     isolated_device_harness,
 )
+from test.nicos_ess.test_devices.doubles.adcore_camera import seed_camera
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import patch_create_wrapper
 
 
@@ -54,6 +56,12 @@ def fake_epics_backend_factory(monkeypatch):
         return patch_create_wrapper(monkeypatch, module)
 
     return _install
+
+
+@pytest.fixture
+def camera_ioc(fake_epics_backend_factory):
+    """A fake areaDetector IOC with an idle camera and its image plugin."""
+    return seed_camera(fake_epics_backend_factory(epics_common))
 
 
 class LiveUpdates(list):
