@@ -39,6 +39,7 @@ from nicos_ess.devices.epics.pva.epics_common import (
     setpoint_channel,
     worst_status,
 )
+from nicos_ess.utilities.live_frame import LiveArrayDesc, default_dims
 
 #: How many ``ArraySize<n>_RBV`` records an NDArray plugin publishes.
 MAX_DIMENSIONS = 3
@@ -121,6 +122,20 @@ class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
 
     parameters = {
         "pv_root": Param("PV root of the camera port", type=pvname, mandatory=True),
+        "image_unit": Param(
+            "Unit of the pixel values in the live views, for example 'ADU' for "
+            "camera grey levels or 'counts' for counted hits. Empty if unknown",
+            type=str,
+            default="",
+            userparam=False,
+        ),
+        "image_counts": Param(
+            "Whether the pixel values are counted hits. The live views sum "
+            "counted hits when they combine pixels and average grey levels",
+            type=bool,
+            default=False,
+            userparam=False,
+        ),
         "image_pv_root": Param(
             "PV root of the NDStdArrays plugin that the frames are read from",
             type=pvname,
@@ -310,13 +325,29 @@ class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
     def arrayInfo(self):
         return (self.arraydesc,)
 
+    def _array_desc(self, shape, dtype):
+        return LiveArrayDesc(
+            self.name,
+            shape,
+            dtype,
+            default_dims(len(shape)),
+            unit=self.image_unit,
+            counts=self.image_counts,
+            binned=self._binned(),
+            meta={"exposure": self.acquiretime},
+        )
+
+    def _binned(self):
+        """Return the sensor pixels per frame pixel along binned dims, like {"x": 2}."""
+        return {}
+
     def _refresh_arraydesc(self):
         shape, dtype = self._describe()
         if shape is None:
             # A plugin that has not received a frame since its IOC booted
             # reports no dimensions. The first frame that is read sets the shape.
             shape = self.arraydesc.shape
-        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=dtype)
+        self.arraydesc = self._array_desc(shape, dtype)
 
     def _describe(self):
         """Return the shape and dtype of the frame in the plugin.
@@ -357,7 +388,7 @@ class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
                 f"the image plugin delivered {frame.size} elements for the "
                 f"shape {shape}",
             )
-        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=dtype)
+        self.arraydesc = self._array_desc(shape, dtype)
         return frame.astype(dtype, copy=False).reshape(shape)
 
     def _unique_id_of_this_run(self):
@@ -405,7 +436,7 @@ class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
         driver reports Done.
         """
         if not self._epics.get_channel_value("num_images_counter"):
-            self.log.warning("no image was acquired")  # as the value says
+            self.log.warning("no image was acquired")
             return None
         last = self._epics.get_channel_value("array_counter")
         caught_up = last > self._start_counter and self._wait_for_frame(last)
@@ -522,7 +553,7 @@ class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
         self._setROParam("counting", False)
         # This ends a Continuous run. A Single or Multiple run has stopped already.
         if not self._stop_acquisition():
-            # the frames taken are worth saving; the FINAL read reports
+            # This is no error because the frames taken are still worth saving.
             self.log.warning(
                 "the camera did not report Done within %s s", self.finishtimeout
             )
@@ -532,8 +563,11 @@ class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
         self._epics.put_channel_value("acquire", 0)
 
     def doPause(self):
-        """ADCore cannot pause: a Continuous follower is stopped and restarted;
-        a controller refuses, as a restart would count its images from zero."""
+        """Stop and restart a Continuous follower because ADCore cannot pause.
+
+        A controller refuses to pause because a restart would count the images
+        from zero again.
+        """
         if self.iscontroller and self.preselection:
             return False
         self._epics.put_channel_value("acquire", 0)
@@ -582,7 +616,7 @@ class AreaDetector(ImageChannelMixin, EpicsDeviceBase, ActiveChannel):
             # outside a run.
             severity = status.ERROR if self.counting else status.WARN
             camera = severity, f"Error: {message}" if message else "Error"
-        else:  # "Aborted" is how every Continuous run ends: no news
+        else:  # Every Continuous run ends in "Aborted".
             code = DETECTOR_STATE_STATUS[state]
             camera = code, "" if code == status.OK else state
         busy = self._read_channel_cached("acquire_busy", maxage=maxage)

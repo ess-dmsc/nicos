@@ -237,3 +237,33 @@ def test_the_cache_shows_the_exposure_the_device_reads(device_harness, orca_back
         assert poller._cache.get(poller, record.lower()) is None
     assert poller._cache.get(poller, "triggerpolarity") != "Negative"
     assert device_harness.run("daemon", lambda: orca.triggerpolarity) == "Positive"
+
+
+def test_the_orca_frames_are_grey_levels_in_adu(device_harness, orca_backend):
+    """The frames are grey levels, so the live views average them when they
+    combine pixels."""
+    orca, _poller = create_orca(device_harness)
+
+    run_count(device_harness, orca, orca_backend, frames=1, preset=1)
+    device_harness.run("daemon", orca.readArray, FINAL)
+
+    desc = device_harness.run("daemon", lambda: orca.arraydesc)
+    assert (desc.frame.unit, desc.frame.counts) == ("ADU", False)
+    exposure = device_harness.run("daemon", lambda: orca.acquiretime)
+    # The background checks need the exposure.
+    assert desc.frame.meta == {"exposure": exposure}
+
+
+def test_the_orca_frames_tell_the_live_views_the_binning(device_harness, orca_backend):
+    orca, _poller = create_orca(device_harness)
+
+    run_count(device_harness, orca, orca_backend, frames=1, preset=1)
+    device_harness.run("daemon", orca.readArray, FINAL)
+    desc = device_harness.run("daemon", lambda: orca.arraydesc)
+    assert desc.frame.binned == {}
+
+    set_choice(orca_backend, "Binning", "2x2")
+    device_harness.run("daemon", orca.readArray, FINAL)
+    desc = device_harness.run("daemon", lambda: orca.arraydesc)
+    # The live views use the binning to show sensor pixels.
+    assert desc.frame.binned == {"y": 2, "x": 2}

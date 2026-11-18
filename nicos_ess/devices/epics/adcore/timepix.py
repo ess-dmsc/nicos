@@ -13,7 +13,7 @@ EMPIR is told to process that folder. The IOC expects this start sequence.
 
 import time
 
-from nicos.core import CommunicationError, Param
+from nicos.core import CommunicationError, Override, Param
 from nicos_ess.devices.epics.adcore.base import (
     AreaDetector,
     adcore_setting,
@@ -38,6 +38,11 @@ def _text(value):
 
 class TimepixDetector(AreaDetector):
     """TimePix3 camera whose raw data EMPIR turns into images."""
+
+    parameter_overrides = {
+        "image_unit": Override(default="counts"),
+        "image_counts": Override(default=True),
+    }
 
     parameters = {
         "rawdir": Param(

@@ -179,8 +179,9 @@ class XrayPanel(Panel):
         loadUi(self, findResource("nicos_ess/ymir/gui/xray.ui"))
         self.opt = options.get  # The options name the devices.
 
-        # the camera image from the shared live data, with its corrections
-        self.view = FrameView(self.opt("collector") or "camera")
+        # The view shows the camera image with its corrections. The image comes
+        # from the shared live data under the name of the camera.
+        self.view = FrameView(self.opt("camera") or "camera")
         self.place_panel.addWidget(FrameCanvas(self.view), 1)
         self.place_panel.addWidget(self._corrections_bar())
         # The plot menu can change the corrections too.
@@ -276,8 +277,8 @@ class XrayPanel(Panel):
         self.shown_menu.setCurrentText(corrections.shown)
 
     def on_live_data(self, names):
-        if self.opt("collector") in names:
-            self.view.show_frame(*self.hub.outputs[self.opt("collector")])
+        if self.opt("camera") in names:
+            self.view.show_frame(*self.hub.outputs[self.opt("camera")])
 
     def on_client_setup(self):
         if self.client.getDeviceList():

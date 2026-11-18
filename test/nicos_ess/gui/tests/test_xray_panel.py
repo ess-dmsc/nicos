@@ -49,11 +49,11 @@ def send_image(xray, value, exposure):
     image = Frame(
         np.full((4, 5), float(value)),
         ("y", "x"),
-        name="cam_collector",
+        name="cam",
         meta={"exposure": exposure},
     )
     datadescs, data, labels = encode([image])
-    params = dict(uid=0, time=0, det="cam", tag=LIVE, datadescs=datadescs)
+    params = dict(uid=0, time=0, det="cam_collector", tag=LIVE, datadescs=datadescs)
     blobs = [bytes(byteBuffer(b)) for b in [*data, *labels]]
     xray.client.livedata.emit(params, blobs)
 

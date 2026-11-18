@@ -49,7 +49,9 @@ def _histogram(unique_id, state, total, num_bins):
             "dim_metadata": [
                 {
                     "length": num_bins,
-                    "bin_boundaries": np.arange(num_bins + 1, dtype=np.float64),
+                    "bin_boundaries": 1000.0 * np.arange(num_bins + 1),
+                    "unit": "ns",
+                    "label": "tof",
                 }
             ],
             "data": data,
@@ -179,3 +181,39 @@ def test_just_bin_it_scan_across_two_points(session, jbi_backend):
         assert {h["id"] for h in configs[0]["histograms"]}.isdisjoint(
             h["id"] for h in configs[1]["histograms"]
         )
+
+
+def test_the_live_view_gets_the_histogram_over_time_of_flight(
+    session, jbi_backend, monkeypatch
+):
+    """The generic live view sink sends just-bin-it histograms to clients.
+
+    The frames carry the ToF bin edges in ms on an axis named time_of_arrival,
+    the same as esslivedata frames. The fake histogram labels its axis "tof",
+    and the sink must not use that label as the axis name.
+    """
+    from nicos_ess.utilities.live_frame import frames
+
+    sent = []
+    monkeypatch.setattr(
+        session,
+        "updateLiveData",
+        lambda params, data, labels=None: sent.append(
+            dict(frames(params, [bytes(b) for b in [*data, *(labels or [])]]))
+        ),
+    )
+    with loaded_setup(session, "ess_just_bin_it_count_scan"):
+        set_detectors(session, "jbi_detector")
+        jbi_backend.totals = {"image_1": 7}
+        count(t=COUNT_TIMER_PRESET_SECONDS)
+
+    last = sent[-1]
+    assert set(last) == {"image_1", "image_2"}
+    frame = last["image_1"]
+    assert frame.dims == ("time_of_arrival",)
+    assert np.allclose(
+        frame.coords["time_of_arrival"].values, [0.0, 1e-3, 2e-3, 3e-3, 4e-3]
+    )
+    assert frame.coords["time_of_arrival"].unit == "ms"
+    assert frame.unit == "counts"
+    assert frame.data.sum() == 7

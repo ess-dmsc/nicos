@@ -11,7 +11,15 @@ image spans. NICOS calls it ``numtriggers``. Exposure and period are both
 import math
 import time
 
-from nicos.core import Attach, InvalidValueError, Param, Readable, floatrange, oneof
+from nicos.core import (
+    Attach,
+    InvalidValueError,
+    Override,
+    Param,
+    Readable,
+    floatrange,
+    oneof,
+)
 from nicos_ess.devices.epics.adcore.base import (
     AreaDetector,
     adcore_setting,
@@ -33,6 +41,12 @@ SYNC_READOUT = {
 
 class OrcaFlash4(AreaDetector):
     """Hamamatsu ORCA-Flash4.0 V3 C13440-20CU, triggered by the EVR in Sync Readout."""
+
+    parameter_overrides = {
+        # The image holds grey levels of the 16-bit ADC above an offset. The
+        # grey levels are not neutron counts.
+        "image_unit": Override(default="ADU"),
+    }
 
     parameters = {
         "triggerrate": Param(
@@ -184,6 +198,12 @@ class OrcaFlash4(AreaDetector):
         return triggers
 
     doReadBinning, doWriteBinning = setting_methods("binning")
+
+    def _binned(self):
+        # Binning values look like "2x2".
+        x, y = map(int, self.binning.split("x"))
+        return {dim: factor for dim, factor in (("y", y), ("x", x)) if factor > 1}
+
     doReadTemperature = reader("temperature")
     doReadCoolerstatus = reader("cooler_status")
     doReadFramerate = reader("frame_rate")
