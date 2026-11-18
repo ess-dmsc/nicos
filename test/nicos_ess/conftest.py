@@ -24,6 +24,7 @@
 
 import pytest
 
+from nicos_ess.utilities.live_frame import decode
 from test.nicos_ess.device_harness import (
     isolated_daemon_device_harness,
     isolated_device_harness,
@@ -53,3 +54,31 @@ def fake_epics_backend_factory(monkeypatch):
         return patch_create_wrapper(monkeypatch, module)
 
     return _install
+
+
+class LiveUpdates(list):
+    """The calls of session.updateLiveData as (parameters, databuffers, labelbuffers)."""
+
+    def frames(self):
+        """Return the detector name and the decoded frame of each array sent."""
+        return [
+            (parameters["det"], decode(desc, buffer, labelbuffers))
+            for parameters, databuffers, labelbuffers in self
+            for desc, buffer in zip(parameters["datadescs"], databuffers, strict=True)
+        ]
+
+
+@pytest.fixture
+def live_updates(session, monkeypatch):
+    """Record what reaches the clients through session.updateLiveData."""
+    updates = LiveUpdates()
+
+    def update_live_data(parameters, databuffers, labelbuffers=None):
+        # The sender may reuse its buffers, so the test keeps copies.
+        databuffers = [bytes(buffer) for buffer in databuffers]
+        if labelbuffers is not None:
+            labelbuffers = [bytes(buffer) for buffer in labelbuffers]
+        updates.append((parameters, databuffers, labelbuffers))
+
+    monkeypatch.setattr(session, "updateLiveData", update_live_data)
+    return updates
