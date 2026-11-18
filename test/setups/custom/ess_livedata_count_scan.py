@@ -5,7 +5,10 @@
 # controller.
 includes = ["ess_count_scan_common"]
 
+sysconfig = dict(datasinks=["liveview"])
+
 devices = dict(
+    liveview=device("nicos_ess.devices.datasinks.live_view.ReducedLiveViewSink"),
     channel_1=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Livedata channel 1",
@@ -28,7 +31,7 @@ devices = dict(
         brokers=["localhost:9092"],
         data_topics=["livedata_nicos_data"],
         commands_topic="livedata_commands",
-        others=["channel_1", "channel_2"],
+        images=["channel_1", "channel_2"],
         timers=["timer"],
     ),
 )

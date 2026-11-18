@@ -10,8 +10,9 @@ NICOS data source devices for consuming ESSLivedata and sending light commands.
 - DataChannel:
     * Uses a "device_name" (from ESSlivedata device contract) for device-based
       channels (LIVEDATA_NICOS_DATA topic)
-    * Receives matched DA00 messages and pushes to NICOS live plots
-    * Ignores pre-reset data until its "start_time" coordinate changes
+    * Keeps the latest matched DA00 message as a `live_frame.Frame`, read
+      as the channel's array, so it reaches clients like any other image
+    * Ignores data until esslivedata has acknowledged the reset of the count
 """
 
 from __future__ import annotations
@@ -19,17 +20,17 @@ from __future__ import annotations
 import json
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import uuid4
 
 import numpy as np
 from streaming_data_types import deserialise_da00
-from streaming_data_types.status_x5f2 import deserialise_x5f2
 from streaming_data_types.utils import get_schema
 
 from nicos import session
 from nicos.core import (
     LIVE,
+    MASTER,
     POLLER,
     SIMULATION,
     CommunicationError,
@@ -41,12 +42,33 @@ from nicos.core import (
     status,
     tupleof,
 )
-from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
-from nicos.utils import byteBuffer, createThread
+from nicos.devices.generic import (
+    CounterChannelMixin,
+    Detector,
+    ImageChannelMixin,
+    PassiveChannel,
+)
+from nicos.utils import createThread
+from nicos_ess.devices.datasources import livedata_protocol as proto
+from nicos_ess.devices.datasources.livedata_protocol import (
+    frame_from_da00,
+    job_health,
+    parse_heartbeat,
+)
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
+from nicos_ess.utilities.limited_warnings import LimitedWarnings
+from nicos_ess.utilities.live_frame import Frame, LiveArrayDesc
 
 COMMAND_TIMEOUT = 5.0
+
+
+def data_seconds(frame):
+    """Return how many seconds of data a frame holds according to its time stamps."""
+    meta = frame.meta if frame else {}
+    if "start_time" in meta and "time" in meta:
+        return meta["time"] - meta["start_time"]
+    return 0.0
 
 
 @dataclass
@@ -55,16 +77,19 @@ class _JobHealth:
 
     workflow_id: str
     source_name: str
+    job_number: str
     code: int
     text: str
     expected_at: float
 
 
-class DataChannel(CounterChannelMixin, PassiveChannel):
+class DataChannel(ImageChannelMixin, CounterChannelMixin, PassiveChannel):
     """Channel for a particular derived device.
 
-    Forwards DA00 'signal' arrays to NICOS live data.
-    Supports 1D, 2D, and N-D.
+    The array is the ``signal`` of the latest DA00 message in the count and
+    can have any number of dimensions. A `LiveArrayDesc` describes it. The
+    value is the sum of the finite values of the signal. Attach the channel to
+    the detector as one of its ``images``.
 
     Uses a device_name to match messages from the
     LIVEDATA_NICOS_DATA topic (without job_number)
@@ -90,6 +115,13 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             type=str,
             mandatory=True,
         ),
+        "counts": Param(
+            "Whether the values are counts that the live views sum when they "
+            "combine bins. The ADC values of a beam monitor are not counts.",
+            type=bool,
+            default=True,
+            userparam=False,
+        ),
         "data_timeout": Param(
             "Time without data after which the channel warns",
             type=floatrange(0.1),
@@ -105,7 +137,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         "curvalue": Param(
             "Store the current device value (sum of signal)",
             internal=True,
-            type=int,
+            type=float,
             settable=True,
         ),
         "running": Param(
@@ -118,20 +150,45 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
     }
 
     parameter_overrides = {
-        "unit": Override(default="events", settable=False, mandatory=False),
+        "unit": Override(default="counts", settable=False, mandatory=False),
         "fmtstr": Override(default="%d"),
         "pollinterval": Override(default=None, userparam=False, settable=False),
     }
 
     def doPreinit(self, mode):
         self._collector = None  # set by LiveDataCollector
-        self._signal: np.ndarray | None = None
-        self._plot: dict = {}
+        # The Kafka thread writes these and the count loop reads them.
+        self._frame_lock = threading.Lock()
+        self._frame: Frame | None = None
+        # The count needs this many seconds of data.
+        self._need: float | None = None
+        # This is set once a frame holds enough data.
+        self._covered = threading.Event()
+        self._live_sent: Frame | None = None
+        self.arraydesc = LiveArrayDesc(self.name, (0,), np.float64, ["dim_0"])
+        # The start_time of the accumulation that this count reads.
         self._generation: int | None = None
-        self._gate_generation: int | None = None
-        self._reset_confirmed = True
+        # The Kafka timestamp in ms of the ACK to the reset of this count.
+        self._acked_at = np.inf
+        # The collector sets this to the time when it sent the reset of the
+        # workflow of this channel.
+        self._reset_at = np.inf
+        # _seen_generation holds the start_time of the latest message. doPrepare
+        # copies it to _stale_generation, so that the count can skip the
+        # accumulation from before its reset.
+        self._seen_generation = self._stale_generation = None
+        self._warnings = LimitedWarnings(self.log)
+        self._outage_logged = False
         self._last_data = time.monotonic()
-        if session.sessiontype != POLLER:
+        # Data from before the reset also updates this.
+        self._heard = -np.inf
+
+    def doInit(self, mode):
+        if mode == MASTER:
+            # A daemon that died during a count can leave `running` set in the
+            # cache. That would keep the channel BUSY and the next count would
+            # wait for it forever.
+            self.running = False
             self._update_status(status.OK, "")
 
     def doRead(self, maxage=0):
@@ -163,21 +220,58 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         health = self._collector.source_health(self.workflow_id, self.source_name)
         if health[0] != status.OK:
             return health
+        late = time.monotonic() > self._reset_at + COMMAND_TIMEOUT
+        if late and self._acked_at == np.inf:
+            return status.ERROR, "esslivedata did not acknowledge the reset"
         if time.monotonic() - self._last_data > self.data_timeout:
-            return status.WARN, f"No data received for {self.data_timeout:g} s"
+            # A preset that gets no data can never be reached.
+            code = status.ERROR if self.iscontroller else status.WARN
+            return code, f"No data received for {self.data_timeout:g} s"
         return status.OK, ""
 
     def doPrepare(self):
-        """Zero the value and blank the plot left by the previous count."""
+        """Zero the value, drop the frame and ignore all data until esslivedata
+        acknowledges the next reset.
+
+        The plots keep showing the data of the previous count until new data
+        arrives. The collector also calls this when a count starts.
+        """
         self.curvalue = 0
-        if self._signal is not None:
-            self._signal = np.zeros_like(self._signal)
-            self._push_to_nicos(timestamp=time.time_ns(), **self._plot)
-            self._signal = None
+        with self._frame_lock:
+            self._frame = self._generation = None
+            self._acked_at = self._reset_at = np.inf
+            self._stale_generation = self._seen_generation
+            self._outage_logged = False
+            self._need = None
+            self._covered.clear()
+        self._warnings.clear()
         self._update_status(status.OK, "")
+
+    def need_data_for(self, seconds):
+        """Keep the first frame of this count that holds *seconds* of data.
+
+        esslivedata publishes its accumulation about once a second, so the
+        latest frame at the end of the count can miss up to a second of data.
+        The time stamps of a frame tell how much data it holds.
+        """
+        with self._frame_lock:
+            self._need = seconds
+            if self._frame is not None and data_seconds(self._frame) >= seconds - 1e-3:
+                self._covered.set()
+
+    def doReadArray(self, quality):
+        """Return the latest frame. A LIVE read returns each frame only once."""
+        frame = self._frame
+        if frame is None or (quality == LIVE and frame is self._live_sent):
+            return None
+        self._live_sent = frame
+        self.arraydesc = LiveArrayDesc.of(frame, self.name)
+        return frame.data
 
     def doStop(self):
         self.running = False
+        # This ends the wait in finish().
+        self._covered.set()
         if self.curstatus[0] != status.ERROR:
             self._update_status(status.OK, "")
 
@@ -194,22 +288,14 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
     def doStart(self):
         self._last_data = time.monotonic()
         self.running = True
-        self._update_status(status.BUSY, "Counting started")
+        # The status is already ERROR if esslivedata refused the reset.
+        if self.curstatus[0] != status.ERROR:
+            self._update_status(status.BUSY, "Counting started")
 
     def _update_status(self, new_status, message):
         self.curstatus = (new_status, message)
         if self._cache:
             self._cache.put(self._name, "status", self.doStatus(), time.time())
-
-    def arm_reset(self):
-        """Ignore the current accumulation until a reset starts a new one.
-
-        A channel that has not seen data yet cannot tell the old accumulation
-        from the new one, so its first change of generation is taken as the
-        reset.
-        """
-        self._gate_generation = self._generation
-        self._reset_confirmed = self._generation is not None
 
     @staticmethod
     def _generation_of(by_name) -> int | None:
@@ -220,247 +306,62 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         data = np.asarray(var.data).reshape(-1)
         return int(data[0]) if data.size else None
 
-    # Called by collector when a matching DA00 arrives
-    def update_data_from_da00(self, da00_msg, timestamp_ns: int):
+    # The collector calls this for each matching DA00 message. The Kafka
+    # timestamp *sent* is in ms.
+    def update_data_from_da00(self, da00_msg, sent):
         try:
-            variables = list(da00_msg.data)
-            by_name = {
-                getattr(v, "name", None): v
-                for v in variables
-                if getattr(v, "name", None)
-            }
+            by_name = {v.name: v for v in da00_msg.data if v.name}
 
             generation = self._generation_of(by_name)
             if generation is None:
                 if self.running:
-                    self._update_status(status.ERROR, "Missing start_time in data")
+                    self._ignore("it has no start_time")
                 return
+            self._seen_generation = generation
+            if "signal" in by_name:
+                self._heard = time.monotonic()
             if not self.running:
                 if "signal" in by_name:
-                    self._generation = max(self._generation or generation, generation)
                     self._last_data = time.monotonic()
                 return
-            if self.curstatus[0] == status.ERROR:
+            # Skip data after a failure and data sent before the reset. A worker
+            # that answers the reset after another one can still send the
+            # accumulation from before the reset.
+            if (
+                self.curstatus[0] == status.ERROR
+                or sent < self._acked_at
+                or generation == self._stale_generation
+            ):
                 return
-            if self._gate_generation is not None:
-                if generation <= self._gate_generation:
+
+            frame = frame_from_da00(by_name, self.name)
+            if frame.unit in ("", "dimensionless"):
+                # esslivedata sends monitor counts without a unit, for example.
+                # A ratio needs unit="" and counts=False in the setup.
+                frame = replace(frame, unit=self.unit)
+            frame = replace(frame, counts=self.counts)
+            finite = np.isfinite(frame.data)
+            total = float(np.sum(frame.data, where=finite, dtype=np.float64))
+            with self._frame_lock:
+                if self._covered.is_set():
                     return
-                self._gate_generation = None
-            elif self._generation is not None:
-                if generation < self._generation:
-                    return
-                if generation > self._generation and self._reset_confirmed:
+                if self._generation is None:
                     self._generation = generation
+                elif generation != self._generation:
                     self._update_status(status.ERROR, "Accumulation reset during count")
                     return
-                self._reset_confirmed |= generation > self._generation
-            self._generation = generation
-
-            sig = by_name.get("signal")
-            if sig is None:
-                return
-
-            arr = np.asarray(sig.data)
-            arr = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
-            sig_axes = list(getattr(sig, "axes", [])) or [
-                f"dim{i}" for i in range(arr.ndim)
-            ]
-            estia_labels = ["blade", "wire", "strip"]
-
-            def _coord_for(ax_name: str):
-                v = by_name.get(ax_name)
-                if v is not None and getattr(v, "axes", None) in (
-                    [ax_name],
-                    (ax_name,),
-                ):
-                    return v
-                if "/" in ax_name:  # tolerate 'arc/tube' etc.
-                    token = ax_name.split("/")[0]
-                    v = by_name.get(token)
-                    if v is not None and getattr(v, "axes", None) in (
-                        [token],
-                        (token,),
-                    ):
-                        return v
-                return None
-
-            def _labels_from_coord(var, dim_len):
-                if var is None:
-                    return np.arange(dim_len, dtype=np.float64), "", False
-                vals = np.asarray(var.data)
-                unit = getattr(var, "unit", None) or ""
-                is_time = False
-                if isinstance(unit, str) and unit.startswith("datetime64["):
-                    u = unit[len("datetime64[") : -1]
-                    scale = {
-                        "ns": 1e-9,
-                        "us": 1e-6,
-                        "ms": 1e-3,
-                        "s": 1.0,
-                        "m": 60.0,
-                        "h": 3600.0,
-                    }.get(u, 1.0)
-                    vals = vals.astype(np.float64) * scale
-                    unit = "s"
-                    is_time = True
-                else:
-                    vals = vals.astype(np.float64, copy=False)
-
-                if vals.shape[-1] == dim_len:
-                    return np.ascontiguousarray(vals), unit, is_time
-                if vals.shape[-1] == dim_len + 1:
-                    mids = 0.5 * (vals[:-1] + vals[1:])
-                    return np.ascontiguousarray(mids), unit, is_time
-                return np.arange(dim_len, dtype=np.float64), unit, is_time
-
-            if arr.ndim == 0:
-                arr = arr.reshape(1)
-                sig_axes = ["dim0"]
-
-            signal = None
-            if arr.ndim == 1:
-                x_idx = 0
-                signal = np.ascontiguousarray(arr)
-                x_labels, x_unit, x_is_time_flag = _labels_from_coord(
-                    _coord_for(sig_axes[x_idx]), arr.shape[0]
-                )
-                labels = [x_labels]
-                plot_type = "hist-1d"
-                axis_names = [sig_axes[x_idx], "Counts"]
-                axis_units = [x_unit, (getattr(sig, "unit", None) or "")]
-
-            # 3D estia layout: collapse last two dims into a 2D view
-            elif arr.ndim == 3 and all(label in sig_axes for label in estia_labels):
-                y_idx, x_idx = 0, 1
-                dimension_lengths = [arr.shape[i] for i in range(arr.ndim)]
-                view = arr.reshape(
-                    dimension_lengths[0], dimension_lengths[1] * dimension_lengths[2]
-                )
-                signal = np.ascontiguousarray(view)
-
-                x_labels, x_unit, x_is_time_flag = _labels_from_coord(
-                    _coord_for(sig_axes[x_idx]), signal.shape[1]
-                )
-                y_labels, y_unit, _ = _labels_from_coord(
-                    _coord_for(sig_axes[y_idx]), signal.shape[0]
-                )
-                labels = [x_labels, y_labels]
-                plot_type = "hist-3d"
-                axis_names = [
-                    f"{sig_axes[x_idx]}/{sig_axes[x_idx + 1]}",
-                    sig_axes[y_idx],
-                ]  # ["blade/wire", "strip"]
-                axis_units = [x_unit, y_unit]
-
-            elif arr.ndim == 2 or arr.ndim >= 4:
-                # choose two axes and sum over the rest
-                def _pick_2d_axes(ax_names):
-                    dim_lens = [arr.shape[i] for i in range(arr.ndim)]
-                    idx_with_coords = []
-                    for i, name in enumerate(ax_names):
-                        cv = _coord_for(name)
-                        if cv is None:
-                            continue
-                        clen = np.asarray(cv.data).shape[-1]
-                        if clen in (dim_lens[i], dim_lens[i] + 1):
-                            idx_with_coords.append(i)
-                    if len(idx_with_coords) >= 2:
-                        y_idx, x_idx = idx_with_coords[-2], idx_with_coords[-1]
-                    else:
-                        y_idx, x_idx = max(0, arr.ndim - 2), max(0, arr.ndim - 1)
-                    reduce_idxs = [
-                        i for i in range(arr.ndim) if i not in (y_idx, x_idx)
-                    ]
-                    return y_idx, x_idx, reduce_idxs
-
-                y_idx, x_idx, reduce_idxs = _pick_2d_axes(sig_axes)
-                view = arr
-                for ax in sorted(reduce_idxs, reverse=True):
-                    view = view.sum(axis=ax, dtype=view.dtype)
-                signal = np.ascontiguousarray(view)
-
-                x_labels, x_unit, x_is_time_flag = _labels_from_coord(
-                    _coord_for(sig_axes[x_idx]), signal.shape[1]
-                )
-                y_labels, y_unit, _ = _labels_from_coord(
-                    _coord_for(sig_axes[y_idx]), signal.shape[0]
-                )
-                labels = [x_labels, y_labels]
-                plot_type = "hist-2d"
-                axis_names = [sig_axes[x_idx], sig_axes[y_idx]]
-                axis_units = [x_unit, y_unit]
-
-            title = (getattr(sig, "label", None) or "").strip() or self.name
-            signal_unit = getattr(sig, "unit", None) or ""
-
-            if signal is None:
-                self.log.warning(
-                    f"Data could not be extracted from DA00 for {self.name}"
-                )
-                return
-
-            self.curvalue = int(signal.sum()) if signal.size else 0
-            self._cache.put(self, "value", self.curvalue, time.time())
-
-            self._plot = dict(
-                plot_type=plot_type,
-                label_arrays=labels,
-                axis_names=axis_names,
-                axis_units=axis_units,
-                title=title,
-                signal_unit=signal_unit,
-                x_is_time=x_is_time_flag,
-            )
-            self._signal = signal
-            self._push_to_nicos(timestamp=timestamp_ns, **self._plot)
+                self._frame = frame
+                self.curvalue = total
+                # Set the event last because finish() reads the value as soon
+                # as the event is set.
+                if self._need is not None and data_seconds(frame) >= self._need - 1e-3:
+                    self._covered.set()
             self._last_data = time.monotonic()
-            self._update_status(status.BUSY, "Counting")
         except Exception as exc:
-            self._update_status(status.ERROR, str(exc))
+            self._ignore(exc)
 
-    def _push_to_nicos(
-        self,
-        plot_type: str,
-        label_arrays: list[np.ndarray],
-        timestamp: int,
-        *,
-        axis_names: list[str] | None = None,
-        axis_units: list[str] | None = None,
-        title: str | None = None,
-        signal_unit: str | None = None,
-        x_is_time: bool = False,
-    ):
-        if self._signal is None:
-            return
-
-        databuffer = [byteBuffer(np.ascontiguousarray(self._signal))]
-        datadesc = [
-            dict(
-                dtype=self._signal.dtype.str,
-                shape=self._signal.shape,
-                labels={"x": {"define": "classic"}, "y": {"define": "classic"}},
-                plotcount=1,
-                plot_type=plot_type,
-                label_shape=tuple(len(a) for a in label_arrays),
-                label_dtypes=tuple(np.dtype(np.float64).str for _ in label_arrays),
-                axis_names=axis_names or [],
-                axis_units=axis_units or [],
-                title=title or "",
-                signal_unit=signal_unit or "",
-                x_is_time=bool(x_is_time),
-            )
-        ]
-
-        flat_labels = np.ascontiguousarray(
-            np.concatenate(label_arrays), dtype=np.float64
-        )
-        labelbuffers = [byteBuffer(flat_labels)]
-
-        session.updateLiveData(
-            dict(uid=0, time=timestamp, det=self.name, tag=LIVE, datadescs=datadesc),
-            databuffer,
-            labelbuffers,
-        )
+    def _ignore(self, why):
+        self._warnings.warn("data", "ignoring a message from esslivedata: %s", why)
 
 
 class LiveDataCollector(Detector):
@@ -497,7 +398,7 @@ class LiveDataCollector(Detector):
         "commands_topic": Param(
             "Kafka topic to which we send job_command/workflow_config",
             type=str,
-            default="",
+            mandatory=True,
             preinit=True,
             userparam=False,
         ),
@@ -507,6 +408,14 @@ class LiveDataCollector(Detector):
             default="nicos-livedata",
             settable=True,
             userparam=False,
+        ),
+        "finish_timeout": Param(
+            "How long finish() waits for data covering the whole count",
+            type=floatrange(0),
+            default=10,
+            unit="s",
+            userparam=False,
+            settable=True,
         ),
         "status_timeout": Param(
             "Consider disconnected if no heartbeat within N seconds beyond interval",
@@ -536,18 +445,27 @@ class LiveDataCollector(Detector):
         self._status_consumer = None
         self._status_thread = None
         self._producer = None
+        # Maps the message_id of each reset in this count to its workflow and,
+        # for the reset of one job, to the source of that job.
+        self._resets = {}
         # Written by the status thread, read by channel status calls
         self._jobs_lock = threading.Lock()
         self._jobs: dict[str, _JobHealth] = {}
         self._seen_sources = set()
+        self._started = time.monotonic()
         self._heartbeat_started = time.monotonic()
         self._stop_status = threading.Event()
         self._published_health: dict[str, tuple[int, str]] = {}
+        self._warnings = LimitedWarnings(self.log)
 
         # Attach collector reference to channels
         for ch in self._data_channels:
             ch._collector = self
 
+    def doInit(self, mode):
+        Detector.doInit(self, mode)
+        # Subscribe only after Detector.doInit, because a message that arrives
+        # earlier would find the status and presets missing.
         if mode == SIMULATION or session.sessiontype == POLLER:
             return
 
@@ -559,23 +477,21 @@ class LiveDataCollector(Detector):
             self._on_no_data,
         )
 
-        # Status/heartbeat consumer (simple tail thread)
-        if self.status_topics:
-            self._status_consumer = KafkaConsumer.create(
-                self.brokers,
-                starting_offset="latest",
-                group_id=self._unique_group("status"),
-            )
-            self._status_consumer.subscribe(self.status_topics)
-            self._status_thread = createThread(
-                "livedata_status_tail", self._tail_status_topic
-            )
+        # A simple thread follows the heartbeats and the answers to commands.
+        self._responses_topic = proto.responses_topic(self.commands_topic)
+        self._status_consumer = KafkaConsumer.create(
+            self.brokers,
+            starting_offset="latest",
+            group_id=self._unique_group("status"),
+        )
+        self._status_consumer.subscribe([*self.status_topics, self._responses_topic])
+        self._status_thread = createThread(
+            "livedata_status_tail", self._tail_status_topic
+        )
 
-        # Commands producer
-        if self.commands_topic:
-            self._producer = KafkaProducer.create(
-                self.brokers, **{"message.timeout.ms": int(COMMAND_TIMEOUT * 1000)}
-            )
+        self._producer = KafkaProducer.create(
+            self.brokers, **{"message.timeout.ms": int(COMMAND_TIMEOUT * 1000)}
+        )
 
     def _unique_group(self, label: str) -> str:
         base = self.cfg_group_id or "nicos-livedata"
@@ -594,22 +510,117 @@ class LiveDataCollector(Detector):
     def doStart(self):
         """Reset the accumulation behind every channel, then start counting.
 
-        Reset is whole-workflow, so channels sharing a workflow_id are covered
-        by one command. Channels are armed first, so that a post-reset message
-        arriving before they start is not taken for the old accumulation.
+        Channels take data only after esslivedata has acknowledged the reset.
+        Every job of a workflow answers a workflow reset with the same message
+        ID, so its ACK cannot tell which job has reset. If the heartbeats name
+        the job of every source of a workflow, each job gets its own reset and
+        its ACK opens only the channels of its source. Otherwise the whole
+        workflow gets one reset, because a job that NICOS does not know cannot
+        be reset on its own.
         """
+        # A late answer to the reset of an earlier count must not count.
+        self._resets = {}
         for ch in self._data_channels:
-            ch.arm_reset()
+            ch.prepare()
         for workflow_id in self._workflow_ids():
-            self.send_workflow_reset_command(workflow_id)
+            for job in self._jobs_of(workflow_id) or [None]:
+                self.send_workflow_reset_command(workflow_id, job)
+        self._started = time.monotonic()
         Detector.doStart(self)
+        _, _, seconds = self._timer_preset()
+        if seconds:
+            for ch in self._data_channels:
+                ch.need_data_for(seconds)
+
+    def _jobs_of(self, workflow_id):
+        """Return the live jobs of *workflow_id* if they cover all its sources."""
+        sources = {
+            ch.source_name
+            for ch in self._data_channels
+            if ch.device_name and ch.workflow_id == workflow_id
+        }
+        now = time.monotonic()
+        with self._jobs_lock:
+            jobs = [
+                job
+                for job in self._jobs.values()
+                if job.workflow_id == workflow_id
+                and job.expected_at + self.status_timeout > now
+            ]
+        return jobs if sources <= {job.source_name for job in jobs} else []
 
     def doFinish(self):
-        silent = [ch.name for ch in self._data_channels if ch._signal is None]
+        self._wait_for_data(self._count_seconds())
+        silent = [ch.name for ch in self._data_channels if ch._frame is None]
         Detector.doFinish(self)
         if silent:
             self.log.warning(
                 "No data received during the count from %s", ", ".join(silent)
+            )
+
+    def doStatus(self, maxage=0):
+        """Return the status with a text that names only the channels with a problem.
+
+        That way an abort message starts with the cause of the abort.
+        """
+        code, _ = Detector.doStatus(self, maxage)
+        problems = []
+        for ch in self._channels:
+            st, text = ch.status(maxage)
+            if st not in (status.OK, status.BUSY) or (
+                ch in self._data_channels and ch._data_health()[0] != status.OK
+            ):
+                problems.append(f"{ch}={text}")
+        return code, ", ".join(problems) or ("counting" if code == status.BUSY else "")
+
+    def _timer_preset(self):
+        for timer in self._attached_timers:
+            for name, value in self._channel_presets.get(timer, ()):
+                if float(value) > 0:
+                    return timer, name, float(value)
+        return None, None, None
+
+    def _count_seconds(self):
+        timer, name, seconds = self._timer_preset()
+        if seconds and timer.presetReached(name, seconds, 0):
+            return seconds
+        for ch in self._controlchannels:
+            presets = self._channel_presets.get(ch, ())
+            if isinstance(ch, DataChannel) and any(
+                ch.presetReached(n, v, 0) for n, v in presets
+            ):
+                return data_seconds(ch._frame)
+        return time.monotonic() - self._started
+
+    def _wait_for_data(self, seconds):
+        """Wait until every channel with data holds *seconds* of it.
+
+        This includes channels whose data is still on the way. esslivedata
+        publishes about once a second, so a short count can end before the
+        first data after its reset arrives.
+        """
+        now = time.monotonic()
+        channels = [
+            ch
+            for ch in self._data_channels
+            if ch.running
+            and (ch._frame is not None or now - ch._heard < ch.data_timeout)
+        ]
+        for ch in channels:
+            ch.need_data_for(seconds)
+        deadline = now + self.finish_timeout
+        short = [
+            ch.name
+            for ch in channels
+            if not ch._covered.wait(max(0, deadline - time.monotonic()))
+        ]
+        if short:
+            self.log.warning(
+                "%s sent no data covering the %.3g s count within %g s, so "
+                "their values miss the end of the count",
+                ", ".join(short),
+                seconds,
+                self.finish_timeout,
             )
 
     @property
@@ -622,19 +633,24 @@ class LiveDataCollector(Detector):
 
         A session that never subscribed has no opinion and reports OK.
         """
-        if self._status_consumer is None or not workflow_id:
+        if not self.status_topics or not workflow_id:
             return (status.OK, "")
         now = time.monotonic()
         with self._jobs_lock:
             awaiting_heartbeat = (workflow_id, source_name) not in self._seen_sources
-            live = [
+            jobs = [
                 job
                 for job in self._jobs.values()
-                if job.workflow_id == workflow_id
-                and job.source_name == source_name
-                and job.expected_at + self.status_timeout > now
+                if job.workflow_id == workflow_id and job.source_name == source_name
             ]
+        live = [job for job in jobs if job.expected_at + self.status_timeout > now]
         if not live:
+            if jobs:
+                # The job did not stop, so the service or Kafka is down.
+                return (
+                    status.ERROR,
+                    f"No heartbeat from the esslivedata job for {source_name}",
+                )
             if (
                 awaiting_heartbeat
                 and now < self._heartbeat_started + self.status_timeout
@@ -644,17 +660,17 @@ class LiveDataCollector(Detector):
         worst = max(live, key=lambda job: job.code)
         return (worst.code, worst.text)
 
-    def _on_data_messages(self, messages: list[tuple[int, bytes]]):
-        for timestamp_ns, raw in messages:
+    def _on_data_messages(self, messages):
+        for (_type, sent), raw in messages:
             try:
                 if get_schema(raw) != "da00":
                     continue
                 da = deserialise_da00(raw)
 
                 # Route to matching channels
-                self._dispatch_to_channels(timestamp_ns, da)
+                self._dispatch_to_channels(da, sent)
             except Exception as exc:
-                self.log.warning(f"Could not decode/route DA00: {exc}")
+                self._warnings.warn("data", "could not read a da00 message: %s", exc)
         self._publish_health_changes()
 
     def _on_no_data(self):
@@ -662,28 +678,48 @@ class LiveDataCollector(Detector):
 
     def _tail_status_topic(self):
         while not self._stop_status.is_set():
-            # poll() also yields partition-EOF and error events, which carry
-            # no payload.
-            msg = self._status_consumer.poll(timeout_ms=200)
-            if msg is not None and not msg.error():
-                try:
-                    self._note_job_heartbeat(msg.value())
-                except Exception as exc:
-                    self.log.warning(f"Could not decode heartbeat: {exc}")
-            # Runs on every pass, so a workflow that stops heartbeating expires.
-            now = time.monotonic()
-            with self._jobs_lock:
-                self._jobs = {
-                    key: job
-                    for key, job in self._jobs.items()
-                    if job.expected_at + self.status_timeout > now
-                }
-            self._publish_health_changes()
+            try:
+                # poll() also yields partition-EOF and error events, which
+                # carry no payload.
+                msg = self._status_consumer.poll(timeout_ms=200)
+                if msg is not None and not msg.error():
+                    try:
+                        if msg.topic() == self._responses_topic:
+                            self._note_answer(msg.value(), msg.timestamp()[1])
+                        else:
+                            self._note_job_heartbeat(msg.value())
+                    except Exception as exc:
+                        self._warnings.warn(
+                            msg.topic(),
+                            "could not read a message on %s: %s",
+                            msg.topic(),
+                            exc,
+                        )
+                # Check on every pass so that a job which stops heartbeating
+                # is noticed.
+                self._publish_health_changes()
+            except Exception as exc:
+                # The thread must keep running, otherwise a dead job looks
+                # alive.
+                self._warnings.warn(
+                    "poll", "following the status topic failed: %s", exc
+                )
+                self._stop_status.wait(1)
 
     def _publish_health_changes(self):
-        """Push health changes and data timeouts into the cache."""
+        """Push health changes and data timeouts into the cache.
+
+        The first outage in a count is logged. It is no error, but the data
+        has a gap.
+        """
         changed = False
         for ch in self._data_channels:
+            code, text = ch._data_health()
+            if code != status.OK and ch.running and not ch._outage_logged:
+                ch._outage_logged = True
+                ch.log.warning(
+                    "%s. The count goes on, but the value may miss data", text
+                )
             health = ch.doStatus(0)
             if health != self._published_health.get(ch.name):
                 self._published_health[ch.name] = health
@@ -692,78 +728,96 @@ class LiveDataCollector(Detector):
         if changed:
             self._cache.put(self, "status", self.doStatus(0), time.time())
 
-    def _note_job_heartbeat(self, raw: bytes):
-        """Record what one x5f2 job heartbeat says.
+    def _note_answer(self, raw, sent):
+        """Handle the esslivedata answer to a command.
 
-        ``status_json.status`` is already a NICOS status constant.
+        The Kafka timestamp *sent* of the answer is in ms. An ACK of a reset
+        lets the channels that it reset take the data sent after it. An ERR
+        puts these channels in ERROR.
         """
-        if get_schema(raw) != "x5f2":
-            return
-        st = deserialise_x5f2(raw)
-        payload = json.loads(st.status_json) if st.status_json else {}
-        message = payload.get("message") or {}
-        if message.get("message_type") != "job":
-            return
+        answer = proto.parse_ack(raw)
+        workflow_id, source = self._resets.get(answer["message_id"], (None, None))
+        for ch in self._data_channels:
+            if (
+                workflow_id
+                and ch.workflow_id == workflow_id
+                and source in (None, ch.source_name)
+            ):
+                if answer["ok"]:
+                    ch._acked_at = sent
+                else:
+                    ch._update_status(status.ERROR, proto.headline(answer["message"]))
 
-        job = message["job_id"]
+    def _note_job_heartbeat(self, raw: bytes):
+        parsed = parse_heartbeat(raw)
+        if parsed is None or parsed[0] != "job":
+            return
+        job = parsed[1]
         key = f"{job['source_name']}/{job['job_number']}"
-        state = message["state"]
+        source = job["workflow_id"], job["source_name"]
+        now = time.monotonic()
         with self._jobs_lock:
-            self._seen_sources.add((message["workflow_id"], job["source_name"]))
-            if state == "stopped":
+            self._seen_sources.add(source)
+            # A restarted job has a new number, so the expired jobs of its
+            # source go.
+            self._jobs = {
+                k: j
+                for k, j in self._jobs.items()
+                if (j.workflow_id, j.source_name) != source
+                or j.expected_at + self.status_timeout > now
+            }
+            if job["state"] == "stopped":
                 self._jobs.pop(key, None)
                 return
-            code = int(payload["status"])
-            if code == status.UNKNOWN:
-                code = status.ERROR
+            code, text = job_health(job)
             self._jobs[key] = _JobHealth(
-                workflow_id=message["workflow_id"],
+                workflow_id=job["workflow_id"],
                 source_name=job["source_name"],
+                job_number=job["job_number"],
                 code=code,
-                text=""
-                if code == status.OK
-                else (message.get("error") or message.get("warning") or f"Job {state}"),
-                expected_at=time.monotonic() + max(1, int(st.update_interval // 1000)),
+                text=text,
+                expected_at=now + job["interval"],
             )
 
-    def _dispatch_to_channels(self, timestamp_ns: int, da):
+    def _dispatch_to_channels(self, da, sent):
         if not da.source_name:
             return
         for ch in self._data_channels:
             if ch.device_name == da.source_name:
-                ch.update_data_from_da00(da, timestamp_ns)
+                ch.update_data_from_da00(da, sent)
 
-    def send_workflow_reset_command(self, workflow_id: str):
-        """
-        Send a workflow-level reset command (for NICOS-derived devices).
+    def send_workflow_reset_command(self, workflow_id: str, job=None):
+        """Reset all jobs of *workflow_id*, or only *job* if it is given.
 
-        This sends a reset command with only workflow_id (no job_id), which
-        resets all jobs of that workflow. Used by device-based channels that
-        don't track individual job_numbers.
-
-        Parameters
-        ----------
-        workflow_id : str
-            The workflow ID in format "instrument/name/version"
+        The workflow ID has the format "instrument/name/version".
         """
         if not self._producer or not self.commands_topic:
             raise CommunicationError(self, "No producer or commands_topic configured")
 
         # Build payload according to ADR 0006
-        payload = {
-            "kind": "job_command",
-            "action": "reset",
-            "workflow_id": workflow_id,
-            "message_id": str(uuid4()),
-        }
+        payload = {"kind": "job_command", "action": "reset", "message_id": str(uuid4())}
+        if job:
+            payload["job_id"] = {
+                "source_name": job.source_name,
+                "job_number": job.job_number,
+            }
+        else:
+            payload["workflow_id"] = workflow_id
+        source = job.source_name if job else None
 
         delivery = []
 
         def _on_delivery(err, msg):
             delivery.append(err)
 
+        # Register the reset before sending it, because the answer can come
+        # right away.
+        self._resets[payload["message_id"]] = workflow_id, source
+        for ch in self._data_channels:
+            if ch.workflow_id == workflow_id and source in (None, ch.source_name):
+                ch._reset_at = time.monotonic()
         try:
-            self.log.info(f"Sending workflow reset command for {workflow_id}")
+            self.log.debug("sending a reset command for %s %s", workflow_id, source)
             self._producer.produce(
                 self.commands_topic,
                 message=json.dumps(payload).encode("utf-8"),

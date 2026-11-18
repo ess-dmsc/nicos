@@ -28,6 +28,7 @@ from nicos_ess.devices.kafka.status_handler import (
     DISCONNECTED_STATE,
     KafkaStatusHandler,
 )
+from nicos_ess.utilities.live_frame import Coord, LiveArrayDesc, default_dims
 
 
 class Hist1dTof:
@@ -258,6 +259,13 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             userparam=True,
             settable=True,
         ),
+        "counts": Param(
+            "Whether the values are counts that the live views sum when they "
+            "combine bins. The ADC values of a beam monitor are not counts.",
+            type=bool,
+            default=True,
+            userparam=False,
+        ),
         "event_rate": Param(
             "The neutron event rate",
             type=float,
@@ -269,7 +277,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
     }
 
     parameter_overrides = {
-        "unit": Override(default="events", settable=False, mandatory=False),
+        "unit": Override(default="counts", settable=False, mandatory=False),
         "fmtstr": Override(default="%d"),
         "pollinterval": Override(default=None, userparam=False, settable=False),
     }
@@ -289,13 +297,48 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         self._zero_data()
 
     def _zero_data(self):
-        self.arraydesc = hist_type_by_name[self.hist_type].get_array_description(
-            **self._params
-        )
-        self._hist_data = hist_type_by_name[self.hist_type].get_zeroes(**self._params)
+        hist_type = hist_type_by_name[self.hist_type]
+        desc = hist_type.get_array_description(**self._params)
+        # The histogram and its description share one attribute, so a read
+        # never pairs a histogram with the description of another one.
+        self._hist = hist_type.get_zeroes(**self._params), desc
+        self.arraydesc = desc
 
     def arrayInfo(self):
         return self.arraydesc
+
+    def _describe(self, data, dim_metadata):
+        """Describe *data* with the axes that just-bin-it sends.
+
+        The ToF axis of a 1-D histogram is converted to ms and always named the
+        way esslivedata names it, whatever label just-bin-it sends. A rotated
+        2-D histogram keeps plain pixel axes, and so do labels that repeat a
+        dim name.
+        """
+        dims = ["time_of_arrival"] if data.ndim == 1 else list(default_dims(data.ndim))
+        coords = {}
+        if len(dim_metadata) == data.ndim and not (data.ndim == 2 and self.rotation):
+            if data.ndim > 1:
+                labels = [m.get("label") or dims[i] for i, m in enumerate(dim_metadata)]
+                if len(set(labels)) == data.ndim:
+                    dims = labels
+            for i, meta in enumerate(dim_metadata):
+                dim = dims[i]
+                edges = np.asarray(meta["bin_boundaries"], dtype=np.float64)
+                unit = meta.get("unit") or ("ns" if data.ndim == 1 else "")
+                if unit == "ns":
+                    edges, unit = edges / 1e6, "ms"
+                if len(edges) in (data.shape[i], data.shape[i] + 1):
+                    coords[dim] = Coord((dim,), edges, unit)
+        return LiveArrayDesc(
+            self.name,
+            data.shape,
+            data.dtype,
+            dims,
+            unit=self.unit,
+            counts=self.counts,
+            coords=coords,
+        )
 
     def doPrepare(self):
         self._unique_id = None
@@ -318,10 +361,12 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         if not self._unique_id or info.get("id") != self._unique_id:
             return
         state = info.get("state")
-        self._hist_data = hist_type_by_name[self.hist_type].transform_data(
+        data = hist_type_by_name[self.hist_type].transform_data(
             hist["data"], rotation=self.rotation
         )
-        self._hist_sum = self._hist_data.sum()
+        desc = self._describe(data, hist["dim_metadata"])
+        self._hist = data, desc
+        self._hist_sum = data.sum()
         self._hist_edges = hist["dim_metadata"][0]["bin_boundaries"]
         rate = info.get("rate")
         if rate is not None and self._mode == MASTER:
@@ -349,7 +394,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         return [self._hist_sum]
 
     def doReadArray(self, quality):
-        return self._hist_data
+        data, self.arraydesc = self._hist
+        return data
 
     def valueInfo(self):
         return (Value(self.name, fmtstr="%d"),)
@@ -465,7 +511,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     }
 
     parameter_overrides = {
-        "unit": Override(default="events", settable=False, mandatory=False),
+        "unit": Override(default="counts", settable=False, mandatory=False),
         "fmtstr": Override(default="%d"),
         "liveinterval": Override(type=floatrange(0.5), default=1),
         "pollinterval": Override(default=None, userparam=False, settable=False),

@@ -4,7 +4,10 @@
 # detector-wide timer preset and a preset targeting one specific image channel.
 includes = ["ess_count_scan_common"]
 
+sysconfig = dict(datasinks=["liveview"])
+
 devices = dict(
+    liveview=device("nicos_ess.devices.datasinks.live_view.ReducedLiveViewSink"),
     image_1=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="just-bin-it image 1",

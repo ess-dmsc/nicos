@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 from streaming_data_types import serialise_hs01
 
-from nicos.core import FINAL, status
+from nicos.core import FINAL, LIVE, status
 from nicos.devices.generic import VirtualImage
 from nicos_ess.devices.datasources import just_bin_it
 from nicos_ess.devices.kafka import status_handler
@@ -440,3 +440,168 @@ class TestJustBinItFinalHistograms:
         heartbeat = detector._kafka_subscriber
         detector.shutdown()
         assert heartbeat.closed
+
+
+class TestLiveAxes:
+    """The live view draws a histogram over the axes that just-bin-it sends."""
+
+    @pytest.fixture
+    def start_count(self, daemon_device_harness, recording_kafka):
+        """Start a count on a detector with one image of the given config.
+
+        It returns the image and a function that delivers a histogram of the
+        running job to the detector.
+        """
+
+        def start(**config):
+            daemon_device_harness.create_master(
+                TimerChannel, name="timer", update_interval=0.01
+            )
+            image = daemon_device_harness.create_master(
+                just_bin_it.JustBinItImage,
+                name="jbi_image",
+                brokers=["localhost:9092"],
+                hist_topic="jbi_hist",
+                data_topic="jbi_data",
+                **{"hist_type": "1-D TOF", "num_bins": 4, "rotation": 0, **config},
+            )
+            detector = daemon_device_harness.create_master(
+                just_bin_it.JustBinItDetector,
+                name="just_bin_it_detector",
+                brokers=["localhost:9092"],
+                command_topic="jbi_command",
+                response_topic="jbi_response",
+                statustopic=[],
+                images=["jbi_image"],
+                timers=["timer"],
+            )
+            detector.prepare()
+            detector.start()
+            (config_command,) = _commands(recording_kafka)
+            (histogram_config,) = config_command["histograms"]
+
+            def send(data, dim_metadata):
+                message = serialise_hs01(
+                    {
+                        "source": "jbi",
+                        "timestamp": 0,
+                        "current_shape": list(data.shape),
+                        "dim_metadata": dim_metadata,
+                        "data": data.astype(np.float64),
+                        "info": json.dumps(
+                            {"id": histogram_config["id"], "state": "COUNTING"}
+                        ),
+                    }
+                )
+                detector._hist_subscriber.emit_messages([(0, message)])
+
+            return image, send
+
+        return start
+
+    @staticmethod
+    def meta(label, unit, edges):
+        return dict(
+            length=len(edges) - 1,
+            bin_boundaries=np.asarray(edges, dtype=np.float64),
+            unit=unit,
+            label=label,
+        )
+
+    def test_the_description_follows_the_last_read_array(self, start_count):
+        """arrayInfo() keeps describing the last read array until the next read,
+        even when a histogram of another shape arrives in between."""
+        image, send = start_count()
+        assert image.readArray(LIVE).shape == (4,)
+
+        send(np.ones(6), [self.meta("tof", "ns", range(7))])
+
+        assert image.arrayInfo().shape == (4,)
+        assert image.readArray(LIVE).shape == (6,)
+        assert image.arrayInfo().shape == (6,)
+
+    def test_a_tof_histogram_has_its_edges_in_ms(self, start_count):
+        """The ToF axis gets the esslivedata name, whatever label just-bin-it sends."""
+        image, send = start_count(unit="ADC counts", counts=False)
+        send(np.zeros(2), [self.meta("tof", "ns", [0.0, 5e6, 1e7])])
+        image.readArray(LIVE)
+        desc = image.arrayInfo()
+
+        assert desc.dimnames == ["time_of_arrival"]
+        assert desc.frame.coords["time_of_arrival"].values.tolist() == [0.0, 5.0, 10.0]
+        assert desc.frame.coords["time_of_arrival"].unit == "ms"
+        assert desc.frame.unit == "ADC counts"
+        assert desc.frame.counts is False
+
+    def test_a_tof_histogram_without_label_or_unit_is_in_ns(self, start_count):
+        """just-bin-it 0.1.1 sends neither labels nor units."""
+        image, send = start_count()
+        send(np.zeros(2), [self.meta("", "", [0.0, 3.5e7, 7.1e7])])
+        image.readArray(LIVE)
+        desc = image.arrayInfo()
+
+        assert desc.dimnames == ["time_of_arrival"]
+        assert desc.frame.coords["time_of_arrival"].values.tolist() == [0.0, 35.0, 71.0]
+        assert desc.frame.coords["time_of_arrival"].unit == "ms"
+
+    def test_a_frame_is_titled_with_the_channel_name_and_counts(self, start_count):
+        image, send = start_count()
+        send(np.zeros(2), [self.meta("", "", [0.0, 1.0, 2.0])])
+        image.readArray(LIVE)
+        desc = image.arrayInfo()
+
+        assert desc.frame.title == "jbi_image"
+        assert desc.frame.unit == "counts"
+        assert desc.frame.counts is True
+
+    def test_a_2d_histogram_names_both_axes(self, start_count):
+        image, send = start_count(hist_type="2-D DET", det_width=2, det_height=3)
+        send(
+            np.zeros((2, 3)),
+            [
+                self.meta("det_y", "", [0, 1, 2]),
+                self.meta("tof", "ns", [0, 1e6, 2e6, 3e6]),
+            ],
+        )
+        image.readArray(LIVE)
+        desc = image.arrayInfo()
+
+        assert desc.dimnames == ["det_y", "tof"]
+        assert desc.frame.coords["det_y"].values.tolist() == [0.0, 1.0, 2.0]
+        assert desc.frame.coords["det_y"].unit == ""
+        assert desc.frame.coords["tof"].values.tolist() == [0.0, 1.0, 2.0, 3.0]
+        assert desc.frame.coords["tof"].unit == "ms"
+
+    def test_labels_that_repeat_a_dim_name_give_the_default_names(self, start_count):
+        image, send = start_count(hist_type="2-D DET", det_width=2, det_height=3)
+        send(
+            np.zeros((2, 3)),
+            [self.meta("x", "", [0, 1, 2]), self.meta("", "", [0, 1, 2, 3])],
+        )
+        image.readArray(LIVE)
+        desc = image.arrayInfo()
+
+        assert desc.dimnames == ["y", "x"]
+        assert desc.frame.coords["x"].values.tolist() == [0.0, 1.0, 2.0, 3.0]
+
+    def test_a_rotated_image_keeps_pixel_axes(self, start_count):
+        """After the rotation the axes that just-bin-it sends no longer match
+        the array, so the live view only gets plain pixel axes."""
+        image, send = start_count(
+            hist_type="2-D DET", det_width=2, det_height=3, rotation=90
+        )
+        histogram = np.arange(6.0).reshape(2, 3)
+        send(
+            histogram,
+            [
+                self.meta("det_y", "", [0, 1, 2]),
+                self.meta("det_x", "", [0, 1, 2, 3]),
+            ],
+        )
+        data = image.readArray(LIVE)
+        desc = image.arrayInfo()
+
+        assert data.tolist() == np.rot90(histogram).tolist()
+        assert desc.shape == (3, 2)
+        assert desc.dimnames == ["y", "x"]
+        assert desc.frame.coords == {}
