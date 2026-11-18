@@ -54,6 +54,13 @@ class SamplePanel(PanelBase):
             self.btn_apply_changes.setHidden(True)
             self.btn_discard_changes.setHidden(True)
 
+    def setViewOnly(self, viewonly):
+        self.list.setEnabled(not viewonly)
+        self.btn_new.setEnabled(not viewonly)
+        if viewonly:
+            # deselecting sample disables everything else
+            self.list.setCurrentRow(-1)
+
     def _update_enabled_widgets(self):
         has_selection = bool(self.list.selectedItems())
         self.txt_sample_name.setEnabled(has_selection)
