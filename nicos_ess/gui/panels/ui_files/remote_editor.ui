@@ -364,7 +364,7 @@
     <string>&amp;Get</string>
    </property>
    <property name="toolTip">
-    <string>Copy the currently running script into this window</string>
+    <string>Get the current script from the server</string>
    </property>
   </action>
   <action name="actionFind">
