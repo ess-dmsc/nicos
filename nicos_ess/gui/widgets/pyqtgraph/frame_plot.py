@@ -40,7 +40,15 @@ from nicos_ess.gui.widgets.pyqtgraph.plot_parts import (
 )
 from nicos_ess.gui.widgets.pyqtgraph.plot_view_box import PlotViewBox
 from nicos_ess.gui.widgets.pyqtgraph.profiles import SideProfiles, finite_mean
-from nicos_ess.utilities.frame_views import axis, flat_views, view_label, view_of, views
+from nicos_ess.gui.widgets.pyqtgraph.range_sliders import RangeSliders, Row
+from nicos_ess.utilities.frame_views import (
+    axis,
+    fit_window,
+    flat_views,
+    view_label,
+    view_of,
+    views,
+)
 from nicos_ess.utilities.live_frame import curve_frame
 from nicos_ess.utilities.series import Series
 
@@ -84,6 +92,33 @@ def _age_timer():
     timer.timeout.connect(tick)
     timer.start(1000)
     return timer
+
+
+def _views_changing_dim(choice, k, known):
+    """Return the views in *known* that have another dim at position *k* of
+    *choice*, with the label of that dim.
+
+    If *choice* has the new dim at another position, the two dims swap places.
+    """
+    found = {}
+    for dim in dict.fromkeys(d for c in known if len(c) == len(choice) for d in c):
+        new = list(choice)
+        if dim in choice:
+            new[choice.index(dim)] = choice[k]
+        new[k] = dim
+        if tuple(new) in known:
+            found[tuple(new)] = view_label((dim,))
+    return found
+
+
+def _valid_windows(windows):
+    """Return the saved *windows* as tuples and leave out the damaged ones."""
+    return {
+        d: tuple(w)
+        for d, w in windows.items()
+        if isinstance(w, list) and len(w) == 2 and all(type(i) is int for i in w)
+        if 0 <= w[0] < w[1]
+    }
 
 
 class _Sample(pg.ItemSample):
@@ -163,6 +198,7 @@ class FrameView(QObject):
         self.armed = None  # The next drag or click places this tool.
         self.hover, self._pointer = "", None
         self._saved_view = self._quantities = self._shown_dims = None
+        self._total = (None, np.nan)  # This holds a frame and its `fmt.total_of`.
         self.item = pg.GraphicsLayout()
         # Right-clicks that no item took, as beside an image, open the plot menu too.
         self.item.mouseClickEvent = self._clicked
@@ -204,6 +240,15 @@ class FrameView(QObject):
         if self.age() is not None:
             _VIEWS_WITH_AGE.add(self)
             _age_timer()
+        self._pick_choice()
+        self._fit_windows(frame)
+        # This comes after the slices fit the frame, because it may draw the title.
+        self._same_quantities(
+            (tuple((d, axis(frame, d).unit) for d in frame.dims), frame.unit)
+        )
+        self.redraw()
+
+    def _pick_choice(self):
         choices = self.known_choices()
         if self._saved_view is not None:
             labels = {view_label(c): c for c in choices}
@@ -215,6 +260,13 @@ class FrameView(QObject):
             if self.choice is not None and self._saved_view is None:
                 self._saved_view = view_label(self.choice)
             self.choice = choices[0]
+
+    def _fit_windows(self, frame):
+        """Fit the windows of the hidden dims to *frame*.
+
+        The windows of dims that *frame* does not have are kept for a later
+        frame.
+        """
         hidden = set(frame.dims) - fmt.shown_dims(self.choice)
         windows = {**self._saved_windows, **self.windows}
         self._saved_windows = {d: w for d, w in windows.items() if d not in frame.dims}
@@ -222,11 +274,6 @@ class FrameView(QObject):
         for dim in hidden & set(windows):
             if window := fit_window(windows[dim], frame.sizes[dim]):
                 self.windows[dim] = window
-        # This comes after the slices fit the frame, because it may draw the title.
-        self._same_quantities(
-            (tuple((d, axis(frame, d).unit) for d in frame.dims), frame.unit)
-        )
-        self.redraw()
 
     def show_frames(self, frames, received=None):
         """Show the first frame and draw the others as curves over it."""
@@ -498,14 +545,7 @@ class FrameView(QObject):
         sides = ("bottom",) if len(choice) == 1 else ("left", "bottom")
         if self.view is None or self.history_shown() or side not in sides:
             return {}
-        k, known, found = sides.index(side), self.known_choices(), {}
-        for part in dict.fromkeys(p for c in known if len(c) == len(choice) for p in c):
-            new = list(choice)
-            if part in choice:
-                new[choice.index(part)] = choice[k]
-            new[k] = part
-            if tuple(new) in known:
-                found[tuple(new)] = view_label((part,))
+        found = _views_changing_dim(choice, sides.index(side), self.known_choices())
         return found if len(found) > 1 else {}
 
     def open_axis_menu(self, side, pos):
@@ -669,30 +709,9 @@ class FrameView(QObject):
         second unit go on the right axis, unless ``meta["axis"]`` says
         otherwise. Curves in any further unit are not drawn.
         """
-        own, others, self.overlay_views = self.frame.unit, {}, {}
-        for name in self.overlays if self.view is not None else ():
-            frame = self.overlay_frames.get(name)
-            if frame is None or (x.dim not in frame.dims and len(frame.dims) != 1):
-                continue
-            dim = x.dim if x.dim in frame.dims else frame.dims[0]
-            other = view_of(frame, (dim,))
-            if fmt.same_unit(axis(other, dim).unit, x.unit):
-                others[name] = other
-        chosen = [o.unit for o in others.values() if o.meta.get("axis") == "right"]
-        # Each axis has one unit.
-        units = {"left": own, "right": next(iter(chosen), None)}
-        drawn, self.hidden_curves = {}, []
-        self.sides = {self.curve_name or self.name: "left"}
-        for name, other in others.items():
-            same = fmt.same_unit(other.unit, own)
-            side = other.meta.get("axis") or ("left" if same else "right")
-            if units[side] is None:
-                units[side] = other.unit
-            if fmt.same_unit(other.unit, units[side]):
-                drawn[name] = (other, side == "right")
-            else:
-                self.hidden_curves.append(name)
-            self.sides[name] = side if name in drawn else "hidden"
+        self.overlay_views = {}
+        others = self._overlays_along(x) if self.view is not None else {}
+        drawn, right_unit = self._choose_sides(others)
         for name in set(self.overlay_curves) - set(drawn):
             self.overlay_curves.pop(name).remove()
         entries = [(self.curve.line, self.curve_name or self.name)] * bool(drawn)
@@ -709,10 +728,52 @@ class FrameView(QObject):
             self.overlay_views[name] = other
             entries.append((curve.line, name + " (right axis)" * right))
         self._set_legend(entries)
-        on_right = any(right for *_p, right in drawn.values())
+        on_right = any(right for _other, right in drawn.values())
         self.plot.showAxis("right", on_right)
         if on_right:
-            self.plot.setLabel("right", units["right"])
+            self.plot.setLabel("right", right_unit)
+
+    def _overlays_along(self, x):
+        """Return the views of the chosen overlays along the dim of *x* and
+        with the same x unit.
+
+        An overlay with a single dim is drawn along *x* whatever its dim is.
+        """
+        others = {}
+        for name in self.overlays:
+            frame = self.overlay_frames.get(name)
+            if frame is None or (x.dim not in frame.dims and len(frame.dims) != 1):
+                continue
+            dim = x.dim if x.dim in frame.dims else frame.dims[0]
+            other = view_of(frame, (dim,))
+            if fmt.same_unit(axis(other, dim).unit, x.unit):
+                others[name] = other
+        return others
+
+    def _choose_sides(self, others):
+        """Choose the axis of each overlay and set ``sides`` and ``hidden_curves``.
+
+        Return the overlays to draw as {name: (view, on the right axis)} and
+        the unit of the right axis.
+        """
+        own = self.frame.unit
+        chosen = [o.unit for o in others.values() if o.meta.get("axis") == "right"]
+        # Each axis has one unit.
+        units = {"left": own, "right": next(iter(chosen), None)}
+        drawn, self.hidden_curves = {}, []
+        self.sides = {self.curve_name or self.name: "left"}
+        for name, other in others.items():
+            same = fmt.same_unit(other.unit, own)
+            side = other.meta.get("axis") or ("left" if same else "right")
+            if units[side] is None:
+                units[side] = other.unit
+            if fmt.same_unit(other.unit, units[side]):
+                drawn[name] = (other, side == "right")
+                self.sides[name] = side
+            else:
+                self.hidden_curves.append(name)
+                self.sides[name] = "hidden"
+        return drawn, units["right"]
 
     def _totals(self):
         """Return the totals over time as a frame.
@@ -916,26 +977,35 @@ class FrameView(QObject):
             if found is None:
                 return "", []
             return found[0], [(None, "", fmt.value_text(self.view, found[1]), 0.0)]
-        if self.view is None:
-            shown = self.frame is not None and self.history_shown() and self.history
-            curves = [(self.curve, "", self._totals())] if shown else []
-        else:  # The curves only need names when there are several.
-            name = (self.curve_name or self.name) * bool(self.overlay_views)
-            curves = [(self.curve, name, self.view)]
-            curves += [
-                (self.overlay_curves[n], n, v) for n, v in self.overlay_views.items()
-            ]
         where, rows = "", []
-        for curve, name, view in curves:
+        for curve, name, view in self._hover_curves():
             if (found := fmt.pointer_at(view, point.x())) is None:
                 continue
             where = where or found[0]
-            value = float(view.data[found[1]])
-            y = np.log10(value) if self.log and value > 0 else value
-            at = curve.line.mapToScene(QPointF(point.x(), y))
-            distance = abs(at.y() - scene_pos.y()) if np.isfinite(y) else np.inf
+            distance = self._curve_distance(curve, view, found[1], point, scene_pos)
             rows.append((curve.color, name, fmt.value_text(view, found[1]), distance))
         return where, rows
+
+    def _curve_distance(self, curve, view, index, point, scene_pos):
+        """Return the distance in px on the screen from the pointer to *curve*
+        at *index*."""
+        value = float(view.data[index])
+        y = np.log10(value) if self.log and value > 0 else value
+        if not np.isfinite(y):
+            return np.inf
+        return abs(curve.line.mapToScene(QPointF(point.x(), y)).y() - scene_pos.y())
+
+    def _hover_curves(self):
+        """Return (curve, name, view) for each curve that the hover box reads."""
+        if self.view is None:
+            shown = self.frame is not None and self.history_shown() and self.history
+            return [(self.curve, "", self._totals())] if shown else []
+        # The curves only need names when there are several.
+        name = (self.curve_name or self.name) * bool(self.overlay_views)
+        curves = [(self.curve, name, self.view)]
+        return curves + [
+            (self.overlay_curves[n], n, v) for n, v in self.overlay_views.items()
+        ]
 
     def _add_entries(self, entries):
         """Add the entries of this plot to *entries*, see `plot_parts.fill_menu`."""
@@ -1035,13 +1105,7 @@ class FrameView(QObject):
         scale = get("length_scale", (list, tuple), ())
         valid = len(scale) == 2 and isinstance(scale[0], (int, float))
         self.measure.length_scale = tuple(scale) if valid else None
-        windows = get("windows", dict, {})
-        self.windows = {
-            d: tuple(w)
-            for d, w in windows.items()
-            if isinstance(w, list) and len(w) == 2 and all(type(i) is int for i in w)
-            if 0 <= w[0] < w[1]
-        }
+        self.windows = _valid_windows(get("windows", dict, {}))
         self._saved_windows = {}
         self.stepping = next(iter(self.windows), None)
         self._saved_view = get("view", str)

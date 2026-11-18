@@ -67,35 +67,59 @@ class Corrections:
         The view comes back unchanged if no correction applies. A corrected
         view has no errors. A division by the flat field gives the transmission,
         a ratio that has no unit and is no count. When a reference is shown it
-        is returned instead of
-        the values. The note says which corrections could not be applied and
-        which reference was taken at another exposure than the view.
+        is returned instead of the values. The note says which corrections could
+        not be applied and which reference was taken at another exposure than
+        the view.
         """
         if self.shown != "image":
-            if not self._fits(self.shown, edges):
-                return view, f"no {self.shown} taken at this binning"
-            return replace(view, data=self.references[self.shown], errors=None), ""
-        raw = values = np.asarray(view.data, dtype=float)
-        unit, counts, now = view.unit, view.counts, view.meta.get("exposure")
-        notes, below = [], None
-        for on, which in ((self.subtract, "background"), (self.divide, "flat field")):
+            return self._shown_reference(view, edges)
+        values, below = np.asarray(view.data, dtype=float), None
+        unit, counts = view.unit, view.counts
+        notes, applied = [], False
+        for which in self._active():
+            missing = self._missing(which, edges)
+            if missing:
+                notes.append(missing)
+                continue
+            notes += self._exposure_notes(which, view.meta.get("exposure"))
+            applied = True
             reference = self.references[which]
-            if not on:
-                continue
-            if not self._fits(which, edges):
-                why = "none taken" if reference is None else "taken at another binning"
-                notes.append(f"{which} not applied: {why}")
-                continue
-            notes += self._exposure_notes(which, now)
             if which == "background":
                 values, below = values - reference, reference
             else:
                 values = _divide_by_flat(values, reference, below)
                 unit, counts = "", False
-        if values is raw:
+        if not applied:
             return view, "; ".join(notes)
         corrected = replace(view, data=values, errors=None, unit=unit, counts=counts)
         return corrected, "; ".join(notes)
+
+    def _shown_reference(self, view, edges):
+        if not self._fits(self.shown, edges):
+            return view, f"no {self.shown} taken at this binning"
+        return replace(view, data=self.references[self.shown], errors=None), ""
+
+    def _active(self):
+        """Return the references to correct with, the background first."""
+        return [
+            which
+            for on, which in (
+                (self.subtract, "background"),
+                (self.divide, "flat field"),
+            )
+            if on
+        ]
+
+    def _missing(self, which, edges):
+        """Return why the reference *which* cannot be applied, or None."""
+        if self._fits(which, edges):
+            return None
+        why = (
+            "none taken"
+            if self.references[which] is None
+            else "taken at another binning"
+        )
+        return f"{which} not applied: {why}"
 
     def applied(self):
         """Return the active corrections as text for the title."""

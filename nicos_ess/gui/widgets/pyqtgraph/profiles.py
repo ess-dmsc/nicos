@@ -533,15 +533,16 @@ class SideProfiles(QObject):
         for kind, strip in self.strips.items():
             strip.size_to(self.depth)
             if strip.box not in self.layout.items:
-                self.layout.addItem(strip.box, *cells[kind])
-                if kind == "y":
-                    # The values of the y strip go above the strip.
-                    self.layout.addItem(strip.axes[0], 0, 0)
-                    self.layout.layout.setAlignment(
-                        strip.axes[0], Qt.AlignmentFlag.AlignRight
-                    )
+                self._add_strip(kind, strip, cells[kind])
         self.mirror()
         self._align()
+
+    def _add_strip(self, kind, strip, cell):
+        self.layout.addItem(strip.box, *cell)
+        if kind == "y":
+            # The values of the y strip go above the strip.
+            self.layout.addItem(strip.axes[0], 0, 0)
+            self.layout.layout.setAlignment(strip.axes[0], Qt.AlignmentFlag.AlignRight)
 
     def mirror(self):
         """Show the image axes outside the strips instead of the plot axes."""

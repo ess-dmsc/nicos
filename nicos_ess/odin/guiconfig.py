@@ -23,18 +23,28 @@ main_window = vbox(
                         ),
                         ("Scan Plot", panel("nicos_ess.gui.panels.scans.ScansPanel")),
                         (
-                            "Detector Image",
-                            panel("nicos_ess.odin.gui.panels.live.MultiLiveDataPanel"),
+                            "Live 1",
+                            panel(
+                                "nicos_ess.gui.panels.liveview.LiveViewPanel", index=1
+                            ),
+                        ),
+                        (
+                            "Live 2",
+                            panel(
+                                "nicos_ess.gui.panels.liveview.LiveViewPanel", index=2
+                            ),
+                        ),
+                        (
+                            "Live 3",
+                            panel(
+                                "nicos_ess.gui.panels.liveview.LiveViewPanel", index=3
+                            ),
                         ),
                         (
                             "Component Tracking",
                             panel(
                                 "nicos_ess.odin.gui.metrology_system.MetrologySystemPanel"
                             ),
-                        ),
-                        (
-                            "Live Data Panel",
-                            panel("nicos_ess.gui.panels.livedata.LiveDataPanel"),
                         ),
                         (
                             "Choppers",

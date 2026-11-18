@@ -15,8 +15,13 @@ in a small ``guiconfigs/<instrument>/<panel>.py`` file and pass
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
+import nicos_ess
+from nicos.clients.gui.config import panel, prepareGuiNamespace
+from nicos.utils import importString
 from test.nicos_ess.gui.doubles import DeviceSpec
 from test.nicos_ess.gui.helpers import (
     assert_panel_starts_clean,
@@ -103,24 +108,9 @@ STARTUP_CASE_GROUPS = [
                 case_id="history-pyqt",
                 panel_class="nicos_ess.gui.panels.history_pyqt.HistoryPanel",
             ),
-            # Standalone live_gr.LiveDataPanel is a base implementation for
-            # instrument-specific/multi-panel live views, not a supported ESS
-            # guiconfig entry point.
             panel_case(
-                case_id="live-gr-multi",
-                panel_class="nicos_ess.gui.panels.live_gr.MultiLiveDataPanel",
-            ),
-            panel_case(
-                case_id="live-pyqt",
-                panel_class="nicos_ess.gui.panels.live_pyqt.LiveDataPanel",
-            ),
-            panel_case(
-                case_id="live-pyqt-multi",
-                panel_class="nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel",
-            ),
-            panel_case(
-                case_id="livedata",
-                panel_class="nicos_ess.gui.panels.livedata.LiveDataPanel",
+                case_id="liveview",
+                panel_class="nicos_ess.gui.panels.liveview.LiveViewPanel",
             ),
             panel_case(
                 case_id="logviewer",
@@ -202,24 +192,6 @@ STARTUP_CASE_GROUPS = [
             ),
         ],
     ),
-    (
-        "odin-panels",
-        [
-            panel_case(
-                case_id="live",
-                panel_class="nicos_ess.odin.gui.panels.live.MultiLiveDataPanel",
-            ),
-        ],
-    ),
-    (
-        "tbl-panels",
-        [
-            panel_case(
-                case_id="live",
-                panel_class="nicos_ess.tbl.gui.panels.live.MultiLiveDataPanel",
-            ),
-        ],
-    ),
 ]
 
 
@@ -264,3 +236,84 @@ def test_panel_survives_minimal_status_transitions_without_warnings_or_errors(
         caplog=caplog,
         qtbot=qtbot,
     )
+
+
+def collect_panels(item, found):
+    if isinstance(item, panel):
+        found.add(item.clsname)
+    elif isinstance(item, (tuple, list)):
+        for child in item:
+            collect_panels(child, found)
+
+
+def panels_in_guiconfig(source):
+    # processGuiConfig also changes the global settings group, so this runs the
+    # source in the same namespace without calling processGuiConfig.
+    namespace = prepareGuiNamespace()
+    exec(source, namespace)
+    found = set()
+    collect_panels(namespace["main_window"], found)
+    collect_panels(namespace.get("windows", []), found)
+    return found
+
+
+def guiconfig_panels():
+    """Map each panel class in the production guiconfigs to the files naming it."""
+    root = Path(nicos_ess.__file__).parent
+    panels = {}
+    for path in sorted(root.rglob("guiconfig.py")):
+        for name in panels_in_guiconfig(path.read_text()):
+            panels.setdefault(name, []).append(str(path.relative_to(root)))
+    return panels
+
+
+GUICONFIG_PANELS = guiconfig_panels()
+
+PANELS_WITHOUT_STARTUP_CASE = {
+    "nicos.clients.gui.panels.errors.ErrorPanel": "core NICOS panel",
+    "nicos.clients.gui.panels.logviewer.LogViewerPanel": "core NICOS panel",
+    "nicos_ess.gui.panels.samples.SamplePanel": "tested in test_samples_panel.py",
+    "nicos_ess.gui.panels.xray.XrayPanel": "tested in test_xray_panel.py",
+    "nicos_ess.gui.panels.dashboard.Dashboard": "has no startup case yet",
+    "nicos_ess.gui.panels.remote_editor.EditorPanel": "has no startup case yet",
+    "nicos_ess.freia.gui.panels.hexapod.HexapodPanel": "has no startup case yet",
+}
+
+
+def test_guiconfig_panels_are_found():
+    liveview = "nicos_ess.gui.panels.liveview.LiveViewPanel"
+    scriptbuilder = "nicos_ess.loki.gui.scriptbuilder.LokiScriptBuilderPanel"
+    assert "guiconfig.py" in GUICONFIG_PANELS.get(liveview, [])
+    assert GUICONFIG_PANELS.get(scriptbuilder) == ["loki/guiconfig.py"]
+
+
+def test_guiconfig_panels_are_read_the_way_the_gui_reads_them():
+    source = """
+first = 'a.Quoted'
+main_window = vbox(
+    # panel("a.CommentedOut"),
+    panel(first),
+    tabbed(("Tab", panel(
+        "a.OnTheNextLine"))),
+)
+windows = [window("Extra", "icon", panel("a.InAWindow"))]
+"""
+    assert panels_in_guiconfig(source) == {"a.Quoted", "a.OnTheNextLine", "a.InAWindow"}
+
+
+def test_every_guiconfig_panel_has_a_startup_case_or_a_reason():
+    with_case = {case.panel_class for _, cases in STARTUP_CASE_GROUPS for case in cases}
+    missing = {
+        name: files
+        for name, files in GUICONFIG_PANELS.items()
+        if name not in with_case and name not in PANELS_WITHOUT_STARTUP_CASE
+    }
+    assert missing == {}
+
+
+@pytest.mark.parametrize("name", sorted(GUICONFIG_PANELS))
+def test_every_panel_named_in_a_guiconfig_imports(name):
+    try:
+        importString(name)
+    except Exception as err:
+        pytest.fail(f"{name} from {GUICONFIG_PANELS[name]} does not import: {err!r}")

@@ -17,7 +17,6 @@ from nicos.guisupport.qt import (
     QLabel,
     QLineEdit,
     QPoint,
-    QWidgetAction,
     sip,
 )
 from nicos_ess.gui.widgets.pyqtgraph.frame_plot import FrameView
@@ -41,12 +40,6 @@ def image_view(view):
 def drag(view, kind, start, end):
     view.arm(kind)
     return view.measure.measure_between(kind, pg.Point(*start), pg.Point(*end), True)
-
-
-def menu_widget(menu, name):
-    """Return the widget called *name* in a menu, for example "statistics"."""
-    found = [a.defaultWidget() for a in menu.actions() if isinstance(a, QWidgetAction)]
-    return next(w for w in found if w.objectName() == name)
 
 
 def form_of(menu):

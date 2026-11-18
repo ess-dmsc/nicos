@@ -1,167 +1,96 @@
 import numpy as np
-import pyqtgraph as pg
 from pyqtgraph import Point, mkBrush, mkPen
 from pyqtgraph.graphicsItems.ROI import ROI
 from pyqtgraph.graphicsItems.ROI import LineROI as DefaultLineROI
 
-from nicos.guisupport.qt import QCursor, QPainter, QPointF, QRectF, Qt
+from nicos.guisupport.qt import QPainter, QPointF, QRectF, Qt
+from nicos_ess.gui.widgets.pyqtgraph.theme import (
+    LINE_ROI_COLOR,
+    LINE_ROI_HANDLE_COLOR_LEFT,
+    LINE_ROI_HANDLE_COLOR_RIGHT,
+    LINE_ROI_HANDLE_HOOVER_COLOR_LEFT,
+    LINE_ROI_HANDLE_HOOVER_COLOR_RIGHT,
+    LINE_ROI_HOOVER_COLOR,
+    LINE_ROI_WIDTH_COLOR,
+)
 
-CROSS_COLOR = (255, 165, 0, 150)
-CROSS_HOOVER_COLOR = (255, 165, 0, 255)
-ROI_COLOR = (7, 188, 230, 180)
-ROI_HOOVER_COLOR = (7, 188, 230, 255)
-ROI_HANDLE_COLOR = (7, 188, 230, 180)
-ROI_HANDLE_HOOVER_COLOR = (7, 188, 230, 255)
-LINE_ROI_WIDTH_COLOR = (166, 0, 255, 100)
-LINE_ROI_COLOR = (166, 0, 255, 180)
-LINE_ROI_HOOVER_COLOR = (166, 0, 255, 255)
-LINE_ROI_HANDLE_COLOR_LEFT = (255, 0, 0, 180)
-LINE_ROI_HANDLE_HOOVER_COLOR_LEFT = (255, 0, 0, 255)
-LINE_ROI_HANDLE_COLOR_RIGHT = (0, 0, 0, 180)
-LINE_ROI_HANDLE_HOOVER_COLOR_RIGHT = (0, 0, 0, 255)
+Cursor = Qt.CursorShape
+
+
+def _set_pens(handle, color, hover_color):
+    handle.pen = handle.currentPen = mkPen(color, width=2)
+    handle.hoverPen = mkPen(hover_color, width=2)
 
 
 class PlotROI(ROI):
-    def __init__(self, size, *args, **kwargs):
-        ROI.__init__(
-            self,
-            pos=[0, 0],
-            size=size,
-            rotatable=False,
-            *args,
-            **kwargs,
-        )
-        self._setup_handles()
+    """Box with scale handles on its corners and edges."""
 
-    def _setup_handles(self):
-        positions = [
-            ([1, 1], [0, 0]),
-            ([0, 0], [1, 1]),
-            ([1, 0], [0, 1]),
-            ([0, 1], [1, 0]),
-            ([1, 0.5], [0, 0.5]),
-            ([0.5, 1], [0.5, 0]),
-            ([0, 0.5], [1, 0.5]),
-            ([0.5, 0], [0.5, 1]),
-        ]
-        cursors = [
-            Qt.CursorShape.SizeFDiagCursor,
-            Qt.CursorShape.SizeFDiagCursor,
-            Qt.CursorShape.SizeBDiagCursor,
-            Qt.CursorShape.SizeBDiagCursor,
-            Qt.CursorShape.SizeHorCursor,
-            Qt.CursorShape.SizeVerCursor,
-            Qt.CursorShape.SizeHorCursor,
-            Qt.CursorShape.SizeVerCursor,
-        ]
-        for (pos, center), cursor in zip(positions, cursors):
-            handle = self.addScaleHandle(pos, center)
-            handle.setCursor(cursor)
-        self.setCursor(QCursor(Qt.CursorShape.OpenHandCursor))
+    def __init__(self, size, *args, **kwargs):
+        super().__init__(*args, pos=[0, 0], size=size, rotatable=False, **kwargs)
+        # Each handle has a position, a fixed point for scaling and a cursor.
+        for pos, center, cursor in [
+            ([1, 1], [0, 0], Cursor.SizeFDiagCursor),
+            ([0, 0], [1, 1], Cursor.SizeFDiagCursor),
+            ([1, 0], [0, 1], Cursor.SizeBDiagCursor),
+            ([0, 1], [1, 0], Cursor.SizeBDiagCursor),
+            ([1, 0.5], [0, 0.5], Cursor.SizeHorCursor),
+            ([0.5, 1], [0.5, 0], Cursor.SizeVerCursor),
+            ([0, 0.5], [1, 0.5], Cursor.SizeHorCursor),
+            ([0.5, 0], [0.5, 1], Cursor.SizeVerCursor),
+        ]:
+            self.addScaleHandle(pos, center).setCursor(cursor)
+        self.setCursor(Cursor.OpenHandCursor)
 
 
 class LineROI(DefaultLineROI):
+    """Line with a width. The start handle is red and the end handle is black."""
+
     def __init__(self, pos1, pos2, width, *args, **kwargs):
-        DefaultLineROI.__init__(
-            self,
-            pos1=pos1,
-            pos2=pos2,
-            width=width,
-            *args,
-            **kwargs,
+        super().__init__(*args, pos1=pos1, pos2=pos2, width=width, **kwargs)
+        ends = iter(
+            [
+                (LINE_ROI_HANDLE_COLOR_LEFT, LINE_ROI_HANDLE_HOOVER_COLOR_LEFT),
+                (LINE_ROI_HANDLE_COLOR_RIGHT, LINE_ROI_HANDLE_HOOVER_COLOR_RIGHT),
+            ]
         )
-        self._setup_handles()
-
-    def paint(self, pen, options, widget):
-        r = QRectF(0, 0, self.state["size"][0], self.state["size"][1]).normalized()
-        pen.setRenderHint(QPainter.RenderHint.Antialiasing)
-        pen.setPen(Qt.PenStyle.NoPen)
-        pen.setBrush(mkBrush(LINE_ROI_WIDTH_COLOR))
-        pen.translate(r.left(), r.top())
-        pen.scale(r.width(), r.height())
-        pen.drawRect(0, 0, 1, 1)
-
-        pen.setPen(mkPen(LINE_ROI_COLOR, width=4))
-        point_1 = QPointF(0, 0.5)
-        point_2 = QPointF(1, 0.5)
-        pen.drawLine(point_1, point_2)
-
-    def _setup_handles(self):
-        first_flag = False
-        for handle_info in self.handles:
-            handle = handle_info["item"]
-            h_type = handle_info["type"]
-            if h_type == "sr":
-                handle.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                if not first_flag:
-                    first_flag = True
-                    handle.pen = mkPen(LINE_ROI_HANDLE_COLOR_LEFT, width=2)
-                    handle.currentPen = handle.pen
-                    handle.hoverPen = mkPen(LINE_ROI_HANDLE_HOOVER_COLOR_LEFT, width=2)
-                else:
-                    handle.pen = mkPen(LINE_ROI_HANDLE_COLOR_RIGHT, width=2)
-                    handle.currentPen = handle.pen
-                    handle.hoverPen = mkPen(LINE_ROI_HANDLE_HOOVER_COLOR_RIGHT, width=2)
+        for info in self.handles:
+            handle = info["item"]
+            if info["type"] == "sr":
+                _set_pens(handle, *next(ends))
+                handle.setCursor(Cursor.PointingHandCursor)
             else:
-                handle.pen = mkPen(LINE_ROI_COLOR, width=2)
-                handle.currentPen = handle.pen
-                handle.hoverPen = mkPen(LINE_ROI_HOOVER_COLOR, width=2)
-                handle.setCursor(QCursor(Qt.CursorShape.SizeHorCursor))
+                _set_pens(handle, LINE_ROI_COLOR, LINE_ROI_HOOVER_COLOR)
+                handle.setCursor(Cursor.SizeHorCursor)
+        self.setCursor(Cursor.OpenHandCursor)
 
-        self.setCursor(QCursor(Qt.CursorShape.OpenHandCursor))
+    def paint(self, painter, options, widget):
+        r = QRectF(0, 0, self.state["size"][0], self.state["size"][1]).normalized()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(mkBrush(LINE_ROI_WIDTH_COLOR))
+        painter.translate(r.left(), r.top())
+        painter.scale(r.width(), r.height())
+        painter.drawRect(0, 0, 1, 1)
+        painter.setPen(mkPen(LINE_ROI_COLOR, width=4))
+        painter.drawLine(QPointF(0, 0.5), QPointF(1, 0.5))
+
+    def _offset(self, width, angle):
+        """Return the offset from the start of the line to the corner of the ROI."""
+        return Point(width / 2 * np.sin(angle), -width / 2 * np.cos(angle))
 
     def set_pos(self, start_coord, end_coord, width=None):
-        if width is None:
-            width = self.get_width()
-        pos1 = Point(*start_coord)
-        pos2 = Point(*end_coord)
-        distance = pos2 - pos1
-        length = distance.length()
-        angle = distance.angle(Point(1, 0), units="radians")
-        center = Point(width / 2.0 * np.sin(angle), -width / 2.0 * np.cos(angle))
-        pos1 = pos1 + center
-
-        self.setPos(pos1)
-        self.setSize(Point(length, width))
-        self.setAngle(np.rad2deg(angle))
+        width = self.get_width() if width is None else width
+        pos1, pos2 = Point(*start_coord), Point(*end_coord)
+        angle = (pos2 - pos1).angle(Point(1, 0), units="radians")
+        self.setPos(pos1 + self._offset(width, angle), finish=False)
+        self.setSize(Point((pos2 - pos1).length(), width), finish=False)
+        self.setAngle(np.rad2deg(angle), finish=False)
 
     def get_pos(self):
-        pos = self.pos()
-        size = self.size()
+        length, width = self.size().x(), self.size().y()
         angle = np.deg2rad(self.angle())
-
-        length, width = size.x(), size.y()
-
-        center = Point(width / 2.0 * np.sin(angle), -width / 2.0 * np.cos(angle))
-
-        original_pos1 = pos - center
-
-        dx = length * np.cos(angle)
-        dy = length * np.sin(angle)
-        pos2 = Point(original_pos1.x() + dx, original_pos1.y() + dy)
-
-        return original_pos1, pos2
+        pos1 = self.pos() - self._offset(width, angle)
+        return pos1, pos1 + Point(length * np.cos(angle), length * np.sin(angle))
 
     def get_width(self):
         return self.size().y()
-
-
-class CrossROI:
-    def __init__(self):
-        self.first_show = True
-        pen = mkPen(CROSS_COLOR, width=3)
-        hover_pen = mkPen(CROSS_HOOVER_COLOR, width=3)
-        self.vertical_line = pg.InfiniteLine(
-            pos=10,
-            angle=90,
-            movable=True,
-            pen=pen,
-            hoverPen=hover_pen,
-        )
-        self.horizontal_line = pg.InfiniteLine(
-            pos=10, angle=0, movable=True, pen=pen, hoverPen=hover_pen
-        )
-        self.vertical_line.setCursor(QCursor(Qt.CursorShape.SizeHorCursor))
-        self.horizontal_line.setCursor(QCursor(Qt.CursorShape.SizeVerCursor))
-        self.vertical_line.setZValue(100)
-        self.horizontal_line.setZValue(100)

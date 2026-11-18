@@ -7,9 +7,11 @@ from dataclasses import replace
 import numpy as np
 import pyqtgraph as pg
 
-from nicos.guisupport.qt import Qt
+from nicos.core import LIVE
+from nicos.guisupport.qt import Qt, QWidgetAction
+from nicos.utils import byteBuffer
 from nicos_ess.gui.widgets.pyqtgraph.frame_plot import FrameView
-from nicos_ess.utilities.live_frame import Coord, Frame
+from nicos_ess.utilities.live_frame import Coord, Frame, encode
 
 
 class FakeClick:
@@ -121,3 +123,43 @@ def make_view(qtbot, **options):
 def wait_exposed(qtbot, widget):
     """Wait until the window of a shown *widget* is on the screen."""
     qtbot.waitUntil(lambda: widget.windowHandle().isExposed())
+
+
+def live_event(frames, device):
+    """Return the parameters and blobs of a live data event of *device*."""
+    datadescs, data, labels = encode(frames)
+    params = dict(uid=0, time=0, det=device, tag=LIVE, datadescs=datadescs)
+    return params, [bytes(byteBuffer(b)) for b in [*data, *labels]]
+
+
+def deliver(qtbot, fake_daemon, panel, *frames, device=None):
+    """Send *frames* again and again until the panel has them.
+
+    The client drops live data until the panel unmasks it after connecting,
+    so the first sends can get lost. A *device* sends all frames in one
+    message. Without it, each frame comes from a device with the name of its
+    output.
+    """
+    messages = [(device, frames)] if device else [(f.name, [f]) for f in frames]
+
+    def arrived():
+        for det, sent in messages:
+            fake_daemon.push("livedata", *live_event(sent, det))
+        qtbot.wait(20)
+        outputs = panel.hub.outputs
+        return all(f.name in outputs and same(outputs[f.name][0], f) for f in frames)
+
+    def same(held, sent):
+        return (held.data.tolist(), held.unit, held.counts) == (
+            sent.data.tolist(),
+            sent.unit,
+            sent.counts,
+        )
+
+    qtbot.waitUntil(arrived)
+
+
+def menu_widget(menu, name):
+    """Return the widget called *name* in a menu, for example "statistics"."""
+    found = [a.defaultWidget() for a in menu.actions() if isinstance(a, QWidgetAction)]
+    return next(w for w in found if w.objectName() == name)
