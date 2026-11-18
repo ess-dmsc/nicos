@@ -1,781 +1,437 @@
-import json
-import pickle
-import random
-import time
-from collections import OrderedDict
+"""This history viewer draws its plots with pyqtgraph.
+
+The panel reuses the view list, dialogs, presets and settings of the GR
+history panel. The plots are frame views of the series.
+"""
+
+from functools import partial
+from time import time as currenttime
 
 import numpy as np
 
-from nicos.clients.gui.panels import Panel
-from nicos.clients.gui.utils import DlgUtils, loadUi
+from nicos.clients.gui.utils import enumerateWithProgress
+from nicos.clients.gui.widgets.plotting import ViewPlot
 from nicos.guisupport.qt import (
-    QAction,
-    QBrush,
-    QByteArray,
-    QColor,
-    QCompleter,
-    QDateTime,
     QDialog,
-    QIcon,
-    QInputDialog,
-    QListWidget,
+    QLabel,
     QListWidgetItem,
-    QMainWindow,
     QObject,
-    QSplitter,
-    QStyledItemDelegate,
     Qt,
     QTimer,
-    QToolBar,
     QVBoxLayout,
-    pyqtSignal,
-    pyqtSlot,
+    QWidget,
+    sip,
 )
-from nicos.guisupport.trees import BaseDeviceParamTree
-from nicos.utils import number_types, parseDuration, parseKeyExpression
-from nicos_ess.gui.utils import get_icon
-from nicos_ess.gui.widgets.pyqtgraph.history_plot import HistoryWidget
-from nicos_ess.gui.widgets.pyqtgraph.utils.utils import COLORS, PlotTypes, clear_layout
+from nicos.utils import parseKeyExpression
+from nicos_ess.gui.history_series import ColumnNames, HistorySeries
+from nicos_ess.gui.panels import history
+from nicos_ess.gui.panels.history import NewViewDialog, get_time_and_interval
+from nicos_ess.gui.widgets.pyqtgraph.export import (
+    print_plot,
+    save_plot_dialog,
+    save_plot_quietly,
+)
+from nicos_ess.gui.widgets.pyqtgraph.frame_plot import FrameCanvas, FrameView
+from nicos_ess.gui.widgets.pyqtgraph.plot_parts import radio_entries
+from nicos_ess.utilities.live_frame import curve_frame
+
+PLACES = {"left": "Left axis", "right": "Right axis", "hidden": "Hidden"}
 
 
-class NoEditDelegate(QStyledItemDelegate):
-    def createEditor(self, parent, option, index):
-        return None
+class View(QObject):
+    """A View holds the series of one history view and its plot while the plot
+    is open.
+    """
 
-
-def float_with_default(s, d):
-    try:
-        return float(s)
-    except ValueError:
-        return d
-
-
-class NewViewDialog(DlgUtils, QDialog):
-    def __init__(self, parent, info=None, client=None):
-        QDialog.__init__(self, parent)
-        DlgUtils.__init__(self, "History viewer")
-        loadUi(self, "panels/history_new.ui")
-        self.client = client
-
-        self.fromdate.setDateTime(QDateTime.currentDateTime())
-        self.todate.setDateTime(QDateTime.currentDateTime())
-
-        self.interval.hide()
-        self.label_4.hide()
-        self.customY.hide()
-        self.customYFrom.hide()
-        self.customYTo.hide()
-        self.label_5.hide()
-
-        # Connect signals
-        self.customY.toggled.connect(self.toggleCustomY)
-        self.toggleCustomY(False)
-
-        self.simpleTime.toggled.connect(self.toggleTimeOptions)
-        self.extTime.toggled.connect(self.toggleTimeOptions)
-        self.frombox.toggled.connect(self.toggleTimeOptions)
-        self.tobox.toggled.connect(self.toggleTimeOptions)
-        self.toggleTimeOptions()
-
-        self.helpButton.clicked.connect(self.showDeviceHelp)
-        self.simpleHelpButton.clicked.connect(self.showSimpleHelp)
-
-        self.devicesFrame.hide()
-        self.deviceTree = None
-        self.deviceTreeSel = OrderedDict()
-        if not client:
-            self.devicesExpandBtn.hide()
-        else:
-            devices = client.getDeviceList()
-            devcompleter = QCompleter(devices, self)
-            devcompleter.setCompletionMode(QCompleter.CompletionMode.InlineCompletion)
-            self.devices.setCompleter(devcompleter)
-
-        if info is not None:
-            self.devices.setText(info["devices"])
-            self.namebox.setText(info["name"])
-            self.simpleTime.setChecked(info["simpleTime"])
-            self.simpleTimeSpec.setText(info["simpleTimeSpec"])
-            self.slidingWindow.setChecked(info["slidingWindow"])
-            self.extTime.setChecked(not info["simpleTime"])
-            self.frombox.setChecked(info["frombox"])
-            self.tobox.setChecked(info["tobox"])
-            self.fromdate.setDateTime(QDateTime.fromSecsSinceEpoch(info["fromdate"]))
-            self.todate.setDateTime(QDateTime.fromSecsSinceEpoch(info["todate"]))
-            self.customY.setChecked(info["customY"])
-            self.customYFrom.setText(info["customYFrom"])
-            self.customYTo.setText(info["customYTo"])
-
-    def toggleCustomY(self, on):
-        self.customYFrom.setEnabled(on)
-        self.customYTo.setEnabled(on)
-        if on:
-            self.customYFrom.setFocus()
-
-    def toggleTimeOptions(self):
-        """Enable or disable UI elements based on the time selection."""
-        on = self.simpleTime.isChecked()
-        self.simpleTimeSpec.setEnabled(on)
-        self.slidingWindow.setEnabled(on)
-        self.frombox.setEnabled(not on)
-        self.fromdate.setEnabled(not on and self.frombox.isChecked())
-        self.tobox.setEnabled(not on)
-        self.todate.setEnabled(not on and self.tobox.isChecked())
-
-    def on_devicesAllBox_toggled(self, on):
-        self.deviceTree.only_explicit = not on
-        self.deviceTree._reinit()
-        self._syncDeviceTree()
-
-    @pyqtSlot()
-    def on_devicesExpandBtn_clicked(self):
-        self.devicesExpandBtn.hide()
-        self._createDeviceTree()
-
-    blacklist = {"maxage", "pollinterval", "visibility", "classes", "value"}
-
-    def _createDeviceTree(self):
-        def param_predicate(name, value, info):
-            return (
-                name not in self.blacklist
-                and (not info or info.get("userparam", True))
-                and isinstance(value, (number_types, list, tuple))
+    def __init__(self, panel, info, name, keys, exprs, descs, times, interval):
+        QObject.__init__(self)
+        self.name, self.dlginfo, self.client = name, info, panel.client
+        self.fromtime, self.totime, self.window, self.yrange = times
+        self.interval = interval
+        self.meta = panel._getMetainfo(keys)
+        self.uniq_keys = set()
+        self.series = {}  # This maps the name of a curve to its HistorySeries.
+        self._key_series = {}  # This maps a key to a dict from name to series.
+        # This maps a multi-value key to (ColumnNames, description).
+        self._columns = {}
+        self._format_keys = {}  # This maps a format string key to ColumnNames.
+        self.listitem = self.plot = None
+        self.missing = []  # These keys have no history.
+        # The extra 60 seconds also catch values that arrive during the query.
+        hist_totime = self.totime or currenttime() + 60
+        queried = {}
+        items = list(zip(keys, exprs, descs, strict=True))
+        if self.fromtime is not None:
+            text = "Querying history..."
+            items = (
+                i for _, i in enumerateWithProgress(items, text, force_display=True)
             )
-
-        def item_callback(item, parent=None):
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
-            if parent and item.text(0) == "status":
-                item.setText(1, "0")
-            item.setCheckState(0, Qt.CheckState.Unchecked)
-            return True
-
-        self.deviceTree = tree = BaseDeviceParamTree(self)
-        tree.device_clause = '"." not in dn'
-        tree.param_predicate = param_predicate
-        tree.item_callback = item_callback
-        tree.setColumnCount(3)
-        tree.setHeaderLabels(["Device/Param", "Index", "Scale", "Offset"])
-        tree.setClient(self.client)
-
-        tree.setColumnWidth(1, tree.columnWidth(1) // 2)
-        tree.setColumnWidth(2, tree.columnWidth(2) // 2)
-        tree.setColumnWidth(3, tree.columnWidth(3) // 2)
-        tree.resizeColumnToContents(0)
-        tree.setColumnWidth(0, round(tree.columnWidth(0) * 1.5))
-        # disallow editing for name column
-        tree.setItemDelegateForColumn(0, NoEditDelegate())
-        tree.itemChanged.connect(self.on_deviceTree_itemChanged)
-        self._syncDeviceTree()
-
-        self.devicesFrame.layout().addWidget(tree)
-        self.devicesFrame.show()
-        self.resize(self.sizeHint())
-
-    def _syncDeviceTree(self):
-        # restore selection from entries in textbox
-        if not self.devices.text():
-            return
-
-        tree = self.deviceTree
-        tree.itemChanged.disconnect(self.on_deviceTree_itemChanged)
-        keys = parseKeyExpression(self.devices.text(), multiple=True)[0]
-        for key in keys:
-            dev, _, param = key.partition("/")
-            for i in range(tree.topLevelItemCount()):
-                if tree.topLevelItem(i).text(0).lower() == dev:
-                    devitem = tree.topLevelItem(i)
-                    break
-            else:
+            # The store thins the points to what a series keeps.
+            step = max(interval, (hist_totime - self.fromtime) / HistorySeries.maxsize)
+        for key, expr, desc in items:
+            self.uniq_keys.add(key)
+            history = []
+            if self.fromtime is not None:
+                if key not in queried:
+                    queried[key] = self._history(key, hist_totime, step)
+                    if not queried[key]:
+                        self.missing.append(key.removesuffix("/value"))
+                        if self.totime is None:
+                            queried[key] = self._current_value(key)
+                history = queried[key]
+            first = history[0][1] if history else None
+            if expr or not isinstance(first, (list, tuple)):
+                self._new_series(key, desc, expr).load(history)
                 continue
-            if param == "value":
-                item = devitem
-                newkey = devitem.text(0)
-            else:
-                if not devitem.childCount():
-                    tree.on_itemExpanded(devitem)
-                for i in range(devitem.childCount()):
-                    if devitem.child(i).text(0).lower() == param:
-                        item = devitem.child(i)
-                        item.parent().setExpanded(True)
-                        break
-                else:
-                    continue
-                newkey = devitem.text(0) + "." + item.text(0)
-            item.setCheckState(0, Qt.CheckState.Checked)
-            item.setText(1, "")
-            item.setText(2, "")
-            item.setText(3, "")
-            self.deviceTreeSel[newkey] = ""
-        tree.itemChanged.connect(self.on_deviceTree_itemChanged)
+            # Make one series per column and take the column names from the
+            # format string when possible.
+            columns = self._column_names(key, hist_totime, history)
+            if columns is None:
+                for i in range(len(first)):
+                    self._new_series(key, f"{desc}[{i}]", f"x[{i}]").load(history)
+                continue
+            self._columns[key] = (columns, desc)
+            history = [(t, columns.named(t, v) or {}) for t, v in history]
+            for column in dict.fromkeys(c for _t, value in history for c in value):
+                self._column_series(key, column).load(history)
 
-    def on_deviceTree_itemChanged(self, item, col):
-        key = item.text(0)
-        if item.parent():  # a device parameter
-            key = item.parent().text(0) + "." + key
-        if item.checkState(0) == Qt.CheckState.Checked:
-            index = item.text(1)
-            if not item.text(2):
-                item.setText(2, "1")
-            if not item.text(3):
-                item.setText(3, "0")
-            suffix = "".join("[%s]" % i for i in index.split(",")) if index else ""
-            scale = float_with_default(item.text(2), 1)
-            offset = float_with_default(item.text(3), 0)
-            if scale != 1:
-                suffix += "*" + item.text(2)
-            if offset != 0:
-                suffix += ("+" if offset > 0 else "-") + item.text(3).strip("+-")
-            self.deviceTreeSel[key] = suffix
-        else:
-            self.deviceTreeSel.pop(key, None)
-        self.devices.setText(
-            ", ".join((k + v) for (k, v) in self.deviceTreeSel.items())
-        )
+    def _history(self, key, totime, interval):
+        """Return the history of *key* with at most one point per *interval*."""
+        args = (key, str(self.fromtime), str(totime), interval)
+        return self.client.ask("gethistory", *args, default=[])
 
-    def showSimpleHelp(self):
-        self.showInfo(
-            "Please enter a time interval with units like this:\n\n"
-            "30m   (30 minutes)\n"
-            "12h   (12 hours)\n"
-            "1d 6h (30 hours)\n"
-            "3d    (3 days)\n"
-        )
+    def _new_series(self, key, name, expr):
+        """Return the series of *key* called *name*. A view like "multi[0], multi"
+        asks for the same series twice. A name that another key already uses
+        gets the key appended."""
+        key_series = self._key_series.setdefault(key, {})
+        if name in key_series:
+            return key_series[name]
+        if name in self.series:
+            return self._new_series(key, f"{name} ({key})", expr)
+        unit, mapping = self.meta[0].get(key), self.meta[1].get(key)
+        series = HistorySeries(name, expr, self.interval, self.window, unit, mapping)
+        self.series[name] = key_series[name] = series
+        return series
 
-    def showDeviceHelp(self):
-        self.showInfo(
-            "Enter a comma-separated list of device names or "
-            'parameters (as "device.parameter").  Example:\n\n'
-            "T, T.setpoint\n\nshows the value of device T, and the "
-            "value of the T.setpoint parameter.\n\n"
-            "More complex expressions using these are supported:\n"
-            "- use [i] to select subitems by index, e.g. motor.status[0]\n"
-            "- use *x or /x to scale the values by a constant, e.g. "
-            "T*100, T.heaterpower\n"
-            "- use +x or -x to add an offset to the values, e.g. "
-            "T+5 or combined (T+5)*100\n"
-            "- you can also use functions like sqrt()"
-        )
+    def _column_series(self, key, column):
+        desc = self._columns[key][1]
+        name = f"{desc}.{column}" if column else desc
+        return self._new_series(key, name, f"x[{column!r}]")
 
-    def accept(self):
-        devices_expr = self.devices.text()
-        devices, expressions, descriptions = parseKeyExpression(
-            devices_expr, multiple=True
-        )
-        if len(devices) == 0:
-            self.showError("You must select at least one device/signal.")
+    def _column_names(self, key, totime, history):
+        """Return the `ColumnNames` of a multi-value key from the history of
+        its format string.
+
+        Return None if the format string does not name the columns.
+        """
+        if not key.endswith("/value"):
+            return None
+        fmtkey = key[: -len("value")] + "fmtstr"
+        # Every format is needed, because each names the columns from its time on.
+        formats = self._history(fmtkey, totime, 0)
+        item = None if formats else self.client.getCacheKey(fmtkey)
+        if item is not None and item[1] is not None:
+            formats = [(self.fromtime, item[1])]
+        columns = ColumnNames(formats or ())
+        if not any(columns.named(t, v) for t, v in history):
+            return None
+        self._format_keys[fmtkey] = columns
+        self.uniq_keys.add(fmtkey)
+        return columns
+
+    def _current_value(self, key):
+        # The history store returns the reading that was valid at the start of
+        # a query. This is only needed for values older than the retention
+        # period or when the store does not have the value. The cache does not
+        # tell when the value was set, so the value counts as valid from now.
+        item = self.client.getCacheKey(key)
+        return [] if item is None or item[1] is None else [(currenttime(), item[1])]
+
+    def newValue(self, vtime, key, op, value):
+        if op != "=":
             return
-
-        if self.simpleTime.isChecked():
-            try:
-                parseDuration(self.simpleTimeSpec.text())
-            except ValueError:
-                self.showSimpleHelp()
+        if key in self._format_keys:
+            self._format_keys[key].add(vtime, value)
+            return
+        if key in self._columns:
+            value = self._columns[key][0].named(vtime, value)
+            if not value:
                 return
+            for column in value:
+                self._column_series(key, column)
+        # The panel redraws the current plot once per second.
+        for series in self._key_series[key].values():
+            series.add(vtime, value)
 
-        if self.customY.isChecked():
-            try:
-                float(self.customYFrom.text())
-            except ValueError:
-                self.showError("You have to input valid y axis limits.")
-                return
-            try:
-                float(self.customYTo.text())
-            except ValueError:
-                self.showError("You have to input valid y-axis limits.")
-                return
-        return QDialog.accept(self)
+    def close_plot(self):
+        # Delete the plot right away because Qt could still call the plot items
+        # if Python freed them first. The panel takes the plot out of the
+        # layout beforehand and never closes a view from inside the plot.
+        if self.plot:
+            sip.delete(self.plot)
+            self.plot = None
 
-    def infoDict(self):
-        return dict(
-            devices=self.devices.text(),
-            name=self.namebox.text(),
-            simpleTime=self.simpleTime.isChecked(),
-            simpleTimeSpec=self.simpleTimeSpec.text(),
-            slidingWindow=self.slidingWindow.isChecked(),
-            frombox=self.frombox.isChecked(),
-            tobox=self.tobox.isChecked(),
-            fromdate=self.fromdate.dateTime().toSecsSinceEpoch(),
-            todate=self.todate.dateTime().toSecsSinceEpoch(),
-            customY=self.customY.isChecked(),
-            customYFrom=self.customYFrom.text(),
-            customYTo=self.customYTo.text(),
-        )
+    cleanup = close_plot
 
 
-class LineData(QObject):
-    dataChanged = pyqtSignal(str)
-    throttledDataChanged = pyqtSignal(str)
+def series_frame(series, start, end, meta):
+    """Return the frame of *series* from *start* to *end*.
 
-    def __init__(
-        self,
-        name,
-        raw_data=None,
-        color_index=None,
-        expires=False,
-        throttle_rate_ms=1000,
-        synthetic_rate_ms=1000,
-        units=None,
-    ):
+    A *start* of None means all data. The frame starts with the value that is
+    valid at *start*, and the last value is held until *end*.
+    """
+    keep = np.isfinite(series.x) & np.isfinite(series.y)
+    x, y = series.x[keep], series.y[keep]
+    if start is not None:
+        first = max(int(np.searchsorted(x, start, side="right")) - 1, 0)
+        x, y = np.maximum(x[first:], start), y[first:]
+    if x.size and end > x[-1]:
+        x, y = np.append(x, end), np.append(y, y[-1])
+    t = "datetime64[s]"
+    return curve_frame("time", series.unit, x, y, t, name=series.label, meta=meta)
+
+
+class HistoryPlot(QWidget):
+    """A HistoryPlot shows the time plot of a view.
+
+    Each signal is on the "left" or "right" axis or is "hidden". By default a
+    second unit goes to the right axis.
+    """
+
+    def __init__(self, view, extra_menu=None):
         super().__init__()
-        if raw_data is None:
-            raw_data = []
-        self.raw_data = raw_data
-        self._name = name
-        self._timestamps = None
-        self._values = None
-        self._expires = expires
-        self._throttle_rate_ms = throttle_rate_ms
-        self._synthetic_rate_ms = synthetic_rate_ms
-        self._units = units if units else ""
-        self._update_timer = QTimer(self)
-        self._update_timer.timeout.connect(self._on_timer_timeout)
-        self._update_timer.start(throttle_rate_ms)
-        self._color = (
-            random.choice(COLORS) if color_index is None else COLORS[color_index]
-        )
+        self.view, view.plot = view, self
+        # This maps signal to place. The info of a view can share its axes with
+        # a preset or an older view, so the plot takes its own copy.
+        self.places = view.dlginfo["axes"] = dict(view.dlginfo.get("axes", {}))
+        self.frames = FrameView(view.name, extra_menu, totals=False)
+        self.canvas = FrameCanvas(self.frames)
+        self.view_box = self.frames.plot.vb
+        QVBoxLayout(self).setContentsMargins(0, 0, 0, 0)
+        self.layout().addWidget(self.canvas)
+        if view.yrange:
+            self.view_box.enableAutoRange(y=False)
+            self.view_box.setYRange(*view.yrange, padding=0)
 
-        self.dataChanged.connect(self._on_data_changed)
+    def refresh(self):
+        """Draw the series up to now for a live view, or up to the end of the
+        view."""
+        view = self.view
+        end = view.totime or currenttime()
+        start = end - view.window if view.window else view.fromtime
+        meta = {"hold": True}
+        if view.missing:
+            meta["facts"] = [f"no history of {', '.join(view.missing)}"]
+        frames = [
+            series_frame(s, start, end, meta | {"axis": self.places.get(s.descr)})
+            for s in view.series.values()
+            if s.n and self.places.get(s.descr) != "hidden"
+        ]
+        frames.sort(key=lambda frame: frame.meta["axis"] == "right")
+        self.frames.show_frames(frames or [curve_frame("time", "", [], [])])
 
-        self._last_throttled_timestamp = 0
+    def place(self, signal):
+        """Return whether *signal* is on the "left" or "right" axis or is
+        "hidden"."""
+        # Ask the frames because they know where the signal is actually drawn.
+        return self.frames.sides.get(self.view.series[signal].label, "hidden")
 
-        if raw_data:
-            self._timestamps, self._values = self._process_raw_data(raw_data)
-            self.dataChanged.emit(self._name)
-            self.throttledDataChanged.emit(self._name)
+    def set_place(self, signal, place):
+        """Move *signal* to *place*.
 
-    def _process_raw_data(self, raw_data):
-        timestamps = np.array([x[0] for x in raw_data])
-        values = np.array([x[1] for x in raw_data])
-        return timestamps, values
+        Moving a signal to the right axis hides the signals there that have
+        another unit.
+        """
+        units = {s.descr: s.unit for s in self.view.series.values()}
+        for other, was in list(self.places.items()):
+            if place == was == "right" and units.get(other) != units[signal]:
+                self.places[other] = "hidden"
+        self.places[signal] = place
+        self.refresh()
 
-    def set_units(self, units):
-        self._units = units
+    def unzoom(self):
+        self.frames.follow_data()
 
-    def get_units(self):
-        return self._units
+    def savePlot(self):
+        return save_plot_dialog(self.canvas, self)
 
-    def remove_duplicates(self, timestamps, values):
-        timestamps, indices = np.unique(timestamps, return_index=True)
-        values = np.array(values)[indices]
-        return timestamps, values
+    def printPlot(self):
+        return print_plot(self.canvas, self)
 
-    def set_raw_data(self, raw_data):
-        self._timestamps, self._values = self._process_raw_data(raw_data)
-        self.dataChanged.emit(self._name)
+    def saveQuietly(self):
+        return save_plot_quietly(self.canvas)
 
-    def add_point(self, timestamp_ms, value):
-        self._timestamps = np.append(self._timestamps, timestamp_ms)
-        self._values = np.append(self._values, value)
-        self.dataChanged.emit(self._name)
+    # Reuse the data export of the GR plot for the series of this plot.
+    saveData = ViewPlot.saveData
 
-    def add_array(self, raw_data):
-        timestamps, values = self._process_raw_data(raw_data)
-        self._timestamps = np.append(self._timestamps, timestamps)
-        self._values = np.append(self._values, values)
-        self.dataChanged.emit(self._name)
+    @property
+    def plotcurves(self):
+        return [series for series in self.view.series.values() if series.n]
 
-    def set_arrays(self, timestamps, values):
-        self._timestamps = timestamps
-        self._values = values
-        self.dataChanged.emit(self._name)
+    def _getCurveLegend(self, series):
+        return series.title
 
-    def _on_timer_timeout(self):
-        if time.time() - self._last_throttled_timestamp > self._throttle_rate_ms / 1000:
-            self.throttledDataChanged.emit(self._name)
-            self._last_throttled_timestamp = time.time()
-
-    def _on_data_changed(self):
-        timestamps, values = self.remove_duplicates(self._timestamps, self._values)
-        self._timestamps = timestamps
-        self._values = values
-
-    def get_data(self):
-        return self._timestamps, self._values
-
-    def get_color(self):
-        return self._color
-
-    def get_name(self):
-        return self._name
-
-    def does_expire(self):
-        return self._expires
-
-    def trim_data(self, start_time):
-        if self._timestamps is None or len(self._timestamps) == 0:
-            return
-        idx = np.searchsorted(self._timestamps, start_time)
-        self._timestamps = self._timestamps[idx:]
-        self._values = self._values[idx:]
-
-    def update_synthetic_data(self):
-        if self._timestamps is None or len(self._timestamps) == 0:
-            return
-        last_ts = self._timestamps[-1]
-        if time.time() - last_ts > self._synthetic_rate_ms / 1000:
-            self.add_point(time.time(), self._values[-1])
+    def _getCurveData(self, series):
+        return series.x, series.y
 
 
-class HistoryPanel(Panel):
+class HistoryPanel(history.HistoryPanel):
+    """The panel shows time series plots of any cache values."""
+
     panelName = "History"
 
     def __init__(self, parent, client, options):
-        Panel.__init__(self, parent, client, options)
+        history.HistoryPanel.__init__(self, parent, client, options)
+        # The 20 px of the base class are below the minimum width.
+        self.splitter.setSizes([200, 800])
+        self.splitter.restoreState(self.splitterstate)
+        self.empty = QLabel(
+            "There is no history view yet. New View in the tool bar adds one."
+        )
+        self.empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.plotLayout.addWidget(self.empty)
+        self._refresh_presets()
+        self._holdTimer = QTimer(self, interval=1000)
+        self._holdTimer.timeout.connect(self._holdCurrentView)
+        self._holdTimer.start()
 
-        self.history_view = HistoryWidget()
-        self.views = []
+    def setPanelToolbar(self):
+        bar = super().setPanelToolbar()
+        in_menu = (self.actionScaleX, self.actionScaleY, self.actionUnzoom)
+        # These actions are in the plot menu instead.
+        for action in (*in_menu, self.actionSavePlot):
+            bar.removeAction(action)
+        self.presetmenu.setTitle("Presets")
+        return bar
 
-        self._lines = {}
-        self._plots = {}
+    def _plot_entries(self, entries, _view):
+        entries["Curves"] = self._fill_curves_menu
+        entries["Presets"] = lambda m: m.addMenu(self.presetmenu)
+        entries["Attach to electronic log"] = lambda m: m.addAction(
+            self.actionAttachElog
+        )
 
-        self._window_length = 100
+    def setCustomStyle(self, font, back):
+        self.user_font, self.user_color = font, back
 
-        self.initialize_view_widget()
-        self.initialize_ui()
-        self.create_toolbar()
-        self.build_ui()
-        self.setup_connections(client)
+    def _autoscale(self, x=None, y=None):
+        """Do nothing because a plot follows the data until it is zoomed and
+        again after "Reset zoom"."""
 
-        self._poll_timer = QTimer(self)
-        self._poll_timer.timeout.connect(self.on_poll)
-        self._poll_timer.start(100)
+    def _fill_curves_menu(self, menu):
+        plot = self.currentPlot
+        signals = [s for s in plot.view.series.values() if s.n] if plot else []
+        if not signals:
+            menu.addAction("(no curves)").setEnabled(False)
+        # Hidden curves are marked so that they match the count in the title.
+        for series in signals:
+            d = series.descr
+            sub = menu.addMenu(series.title + " (hidden)" * (plot.place(d) == "hidden"))
+            radio_entries(sub, PLACES, plot.place(d), partial(plot.set_place, d))
 
-    def initialize_ui(self):
-        self.main_layout = QVBoxLayout()
-        self.views_layout = QVBoxLayout()
-        self.controls_layout = QVBoxLayout()
-        self.setLayout(self.main_layout)
-
-    def initialize_view_widget(self):
-        self.views_list = QListWidget()
-        for name, view in self.last_views:
-            name = view.get("name") or view.get("devices")
-            item = QListWidgetItem(name)
-            item.setData(Qt.ItemDataRole.UserRole, view)
-            item.setForeground(QBrush(QColor("#aaaaaa")))
-            self.views_list.addItem(item)
-
-    def create_toolbar(self):
-        self.toolbar = QToolBar("History Toolbar")
-        self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-        self.layout().addWidget(self.toolbar)
-
-        actions_info = [
-            ("Add View", "add_circle_outline-24px.svg", self.on_add_view),
-            ("Edit View", "edit-24px.svg", self.on_edit_view),
-            ("Delete View", "delete-24px.svg", self.on_delete_view),
-            ("Autoscale View", None, self.on_autoscale_view),
-            ("Correlate Signals", None, self.on_correlate_signals),
-            ("Histogram Signal", None, self.on_histogram_signal),
-        ]
-
-        for text, icon_name, callback in actions_info:
-            icon = get_icon(icon_name) if icon_name else QIcon()
-            action = QAction(icon, text, self)
-            action.triggered.connect(callback)
-            setattr(self, f"{text.lower().replace(' ', '_')}_action", action)
-            self.toolbar.addAction(action)
-
-    def build_ui(self):
-        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.main_splitter.addWidget(self.views_list)
-        self.main_splitter.addWidget(self.history_view)
-
-        self.main_splitter.setSizes([20, 80])
-        self.main_splitter.restoreState(self.splitterstate)
-
-        self.main_layout.addWidget(self.main_splitter)
-
-    def setup_connections(self, client):
-        client.connected.connect(self.on_client_connected)
-        client.cache.connect(self.on_client_cache)
-        self.views_list.currentItemChanged.connect(self.on_view_item_changed)
-        self.views_list.itemClicked.connect(self.on_view_item_clicked)
-        self.views_list.itemDoubleClicked.connect(self.on_item_double_clicked)
-        self.history_view.derivedWidgetRemoved.connect(self.on_derived_widget_removed)
-
-    def on_add_view(self):
-        self._open_view_dialog(NewViewDialog)
-
-    def on_edit_view(self):
-        current_item = self.views_list.currentItem()
-        if current_item:
-            view_info = current_item.data(Qt.ItemDataRole.UserRole)
-            self._open_view_dialog(NewViewDialog, view_info, current_item)
-
-    def on_item_double_clicked(self, item):
-        if item:
-            view_info = item.data(Qt.ItemDataRole.UserRole)
-            self._open_view_dialog(NewViewDialog, view_info, item)
-
-    def _open_view_dialog(self, dialog_class, info=None, item=None):
-        dialog = dialog_class(self, info=info, client=self.client)
-        if dialog.exec() == QDialog.Accepted:
-            view_info = dialog.infoDict()
-            if item:
-                self.update_view(item, view_info)
-            else:
-                self.create_view_from_info(view_info)
-                self.views_list.setCurrentRow(self.views_list.count() - 1)
-
-    def on_delete_view(self):
-        current_item = self.views_list.currentItem()
-        if current_item:
-            row = self.views_list.row(current_item)
-            self.views_list.takeItem(row)
-            self.views.remove(current_item)
-            self.history_view.clear()
-
-        if self.views_list.count() > 0:
-            self.on_view_item_changed(self.views_list.currentItem(), None)
-        else:
-            self.history_view.clear()
-            self.history_view.remove_all_derived_widgets()
-            clear_layout(self.history_view.derived_plots_layout)
-            self.history_view.reset_widget()
-
-    def on_autoscale_view(self):
-        self.history_view.set_autoscale()
-
-    def on_correlate_signals(self):
-        if len(self._lines) < 2:
-            self.showError("You must have at least two signals to correlate.")
-            return
-
-        selected_signals = self._select_signals(2, "Select Signals to Correlate")
-        if selected_signals:
-            self.history_view.create_xy_plot(selected_signals)
-            self._update_view_info(PlotTypes.XY.value, selected_signals)
-        else:
-            self.showError("You must select exactly two signals.")
-
-    def on_histogram_signal(self):
-        selected_signals = self._select_signals(1, "Select Signal for Histogram")
-        if selected_signals:
-            self.history_view.create_histogram_plot(selected_signals)
-            self._update_view_info(PlotTypes.HISTOGRAM.value, selected_signals)
-
-    def on_poll(self):
-        for line in self._lines.values():
-            line.update_synthetic_data()
-
-    def loadSettings(self, settings):
-        self.splitterstate = settings.value("splitter", "", QByteArray)
-        self.presetdict = {}
-        # read new format if present
-        settings.beginGroup("presets_new")
-        for key in settings.childKeys():
-            self.presetdict[key] = json.loads(settings.value(key))
-        settings.endGroup()
-        # convert old format
-        try:
-            presetval = settings.value("presets")
-            if presetval:
-                for name, value in presetval.items():
-                    if not isinstance(value, bytes):
-                        value = value.encode("latin1")
-                    self.presetdict[name] = pickle.loads(value)
-        except Exception:
-            pass
-        settings.remove("presets")
-        self.last_views = []
-        settings.beginGroup("views_new")
-        for key in settings.childKeys():
+    def _createViewFromDialog(self, info, row=None):
+        if not info["devices"].strip():
+            return None
+        keys, exprs, descs = parseKeyExpression(info["devices"], multiple=True)
+        name, window = info["name"] or info["devices"], None
+        if info["simpleTime"]:
+            name += f" ({info['simpleTimeSpec']})"
             try:
-                info = json.loads(settings.value(key))
-                self.last_views.append((key, info))
-            except Exception:
-                pass
-        settings.endGroup()
-
-    def saveSettings(self, settings):
-        settings.setValue("splitter", self.main_splitter.saveState())
-        settings.beginGroup("presets_new")
-        for key, info in self.presetdict.items():
-            settings.setValue(key, json.dumps(info))
-        settings.endGroup()
-        settings.beginGroup("views_new")
-        settings.remove("")  # empty the existing entries before add new
-        for view_item in self.views:
-            view_info = view_item.data(Qt.ItemDataRole.UserRole)
-            view_name = view_info.get("name") or view_info.get("devices")
-            settings.setValue(view_name, json.dumps(view_info))
-        settings.endGroup()
-
-    def _select_signals(self, count, title):
-        signal_names = list(self._lines.keys())
-        selected_signals = []
-        for i in range(count):
-            signal, ok = QInputDialog.getItem(
-                self,
-                title,
-                f"Select signal {i + 1}:",
-                signal_names,
-                0,
-                False,
-            )
-            if not ok or signal in selected_signals:
+                itime, _ = get_time_and_interval(info["simpleTimeSpec"])
+            except ValueError:
                 return None
-            selected_signals.append(signal)
-            signal_names.remove(signal)
-        return selected_signals
+            fromtime, totime = currenttime() - itime, None
+            window = itime if info["slidingWindow"] else None
+        else:
+            fromtime = info["fromdate"] if info["frombox"] else None
+            totime = info["todate"] if info["tobox"] else None
+        try:
+            interval = float(info.get("interval", ""))
+        except ValueError:
+            interval = 5.0
+        ys = info["customY"] and (float(info["customYFrom"]), float(info["customYTo"]))
+        times = (fromtime, totime, window, ys or None)
+        view = View(self, info, name, keys, exprs, descs, times, interval)
+        # The panel lists the view only when its plot could be built.
+        HistoryPlot(view, self._plot_entries)
+        self.views.append(view)
+        view.listitem = QListWidgetItem(view.name)
+        row = self.viewList.count() if row is None else row
+        self.viewList.insertItem(row, view.listitem)
+        self.openView(view)
+        if view.totime is None:
+            for key in view.uniq_keys:
+                self.keyviews.setdefault(key, []).append(view)
+        return view
 
-    def _update_view_info(self, plot_type, data):
-        current_item = self.views_list.currentItem()
-        if current_item:
-            view_info = current_item.data(Qt.ItemDataRole.UserRole)
-            view_info[plot_type] = data
-            current_item.setData(Qt.ItemDataRole.UserRole, view_info)
+    def _holdCurrentView(self):
+        """Extend the curves of a live view to now because cache values stay
+        valid until they change."""
+        plot = self.currentPlot
+        if plot is not None and plot.view.totime is None:
+            plot.refresh()
 
-    def create_view_from_info(self, info):
-        name = info.get("name") or info.get("devices")
-        item = QListWidgetItem(name)
-        item.setData(Qt.ItemDataRole.UserRole, info)
-        self.views_list.addItem(item)
-        self.views.append(item)
-        self.load_view(info)
+    def openView(self, view):
+        if not view.plot:
+            HistoryPlot(view, self._plot_entries)
+        self.viewList.setCurrentItem(view.listitem)
+        self.setCurrentView(view)
 
-    def update_view(self, item, info):
-        name = info.get("name") or info.get("devices")
-        item.setText(name)
-        item.setData(Qt.ItemDataRole.UserRole, info)
-        self.load_view(info)
+    def setCurrentView(self, view):
+        if self.currentPlot:
+            self.plotLayout.removeWidget(self.currentPlot)
+            self.currentPlot.hide()
+        self.currentPlot = plot = view and view.plot
+        self.empty.setVisible(view is None)
+        self.enablePlotActions(view is not None)
+        if view is None:
+            return
+        if view in self.viewStack:
+            self.viewStack.remove(view)
+        self.viewStack.append(view)
+        self.viewList.setCurrentItem(view.listitem)
+        self.plotLayout.addWidget(plot)
+        plot.show()
+        # The timer redraws only the shown plot, so a plot that was hidden is
+        # out of date.
+        plot.refresh()
 
-    def load_view(self, info):
-        self.history_view.clear()
-        self.history_view.remove_all_derived_widgets()
-        clear_layout(self.history_view.derived_plots_layout)
-        self.history_view.reset_widget()
-        self._lines.clear()
-        self._plots.clear()
-        devices_expr = info["devices"]
+    def on__actionEditView_triggered(self):
+        view = self.viewStack[-1]
+        dialog = NewViewDialog(self, view.dlginfo, client=self.client)
+        dialog.setWindowTitle("Edit history view")
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        # Merging keeps the axes of the old view.
+        info = dict(view.dlginfo, **dialog.infoDict())
+        if dialog.savePreset.isChecked():
+            self._add_preset(info["name"], info)
+        self._replace_view(view, info)
 
-        xy_plots = info.get(PlotTypes.XY.value, None)
-        histogram = info.get(PlotTypes.HISTOGRAM.value, None)
+    def _replace_view(self, view, info):
+        """Build a view from *info* in the row of *view*, and remove *view* only
+        if the new view was built."""
+        if self._createViewFromDialog(info, self.viewList.row(view.listitem)):
+            self.viewStack.remove(view)
+            self.clearView(view)
 
-        if xy_plots:
-            self.history_view.create_xy_plot(xy_plots)
-        if histogram:
-            self.history_view.create_histogram_plot(histogram)
+    def clearView(self, view):
+        # Take the plot out of the layout before it is deleted. Removing it
+        # later hands it back to Python, and the garbage collector could then
+        # free it at any time, even inside Qt event handling.
+        if view.plot is self.currentPlot:
+            self.setCurrentView(None)
+        return super().clearView(view)
 
-        simple_query = info["simpleTime"]
-        extended_query_open = not info["tobox"] and not simple_query
-
-        live_updating = simple_query or extended_query_open
-
-        self._window_length = parseDuration(info["simpleTimeSpec"])
-        devices, expressions, descriptions = parseKeyExpression(
-            devices_expr, multiple=True
-        )
-        for i, (device, expr, desc) in enumerate(
-            zip(devices, expressions, descriptions)
-        ):
-            fr = time.time() - self._window_length if simple_query else info["fromdate"]
-            to = time.time() + 60 if live_updating else info["todate"]
-            interval = None
-            data = self._get_history(device, fr, to, interval)
-
-            if not data:
-                rescaled_to = to - 60 if live_updating else to
-                #  No history data available, synthesise some fake data based
-                #  on the last known value
-                result = self._get_cached_value(device)
-                last_value = [res for res in result if res[0] == device][0][1]
-                num_fake_points = max((rescaled_to - fr) // 60, 100)
-                data = [
-                    (ts, last_value)
-                    for ts in np.linspace(fr, rescaled_to, num_fake_points)
-                ]
-
-            try:
-                units = self._get_cached_value(f"{desc}/unit")[0][1]
-            except IndexError:
-                units = None
-
-            line = self._lines.get(device, None)
-            if line is None:
-                line = LineData(
-                    device,
-                    data,
-                    color_index=i,
-                    expires=simple_query,
-                    throttle_rate_ms=1000,
-                    units=units,
-                )
-                self._lines[device] = line
-                if live_updating:
-                    line.throttledDataChanged.connect(self.on_line_data_changed)
-            else:
-                line.set_raw_data(data)
-
-        self.history_view.set_plots(self._lines)
-
-    def on_view_item_changed(self, current, previous):
-        if current:
-            view_info = current.data(Qt.ItemDataRole.UserRole)
-            if current in self.views:
-                self.load_view(view_info)
-
-    def on_view_item_clicked(self, item):
-        info = item.data(Qt.ItemDataRole.UserRole)
-        if info is not None and item not in self.views:
-            row = self.views_list.row(item)
-
-            do_restore = self.askQuestion("Restore this view from last time?")
-            self.views_list.takeItem(row)
-
-            new_item = QListWidgetItem(item.text())
-            new_item.setData(Qt.ItemDataRole.UserRole, info)
-            if do_restore:
-                self.views_list.insertItem(row, new_item)
-                self.views.append(new_item)
-                self.views_list.setCurrentItem(new_item)
-
-        self.on_view_item_changed(item, None)
-
-    def exec_command(self, command):
-        self.client.tell("exec", command)
-
-    def eval_command(self, command, *args, **kwargs):
-        return self.client.eval(command, *args, **kwargs)
-
-    def get_start_time(self):
-        return time.time() - self._window_length
-
-    def on_line_data_changed(self, key):
-        self._remove_expired_data()
-        self.history_view.update_plot(key, self._lines)
-
-    def _remove_expired_data(self):
-        start_time = self.get_start_time()
-        for key, line in self._lines.items():
-            if line.does_expire():
-                line.trim_data(start_time)
-
-    def on_client_cache(self, data):
-        timestamp, key, _, value = data
-        if key in self._lines:
-            self._lines[key].add_point(timestamp, eval(value))
-
-    def _get_history(self, key, fr, to, interval):
-        return self.client.ask(
-            "gethistory", key, str(fr), str(to), interval, default=[]
-        )
-
-    def _get_cached_value(self, key):
-        result = self.client.ask("getcachekeys", key, default=[])
-        return result
+    def on__actionCloseView_triggered(self):
+        view = self.viewStack.pop()
+        self.setCurrentView(self.viewStack[-1] if self.viewStack else None)
+        view.close_plot()
 
     def on_client_connected(self):
-        pass
-
-    def on_derived_widget_removed(self, widget_name):
-        current_item = self.views_list.currentItem()
-        if current_item:
-            info = current_item.data(Qt.ItemDataRole.UserRole)
-            info.pop(widget_name, None)
-            current_item.setData(Qt.ItemDataRole.UserRole, info)
-
-    def closeEvent(self, event):
-        self.saveSettings(self.settings)
-        return QMainWindow.closeEvent(self, event)
+        # After a longer disconnect, reload the views to avoid "flatlines".
+        if currenttime() - self._disconnected_since < 5:
+            return
+        for view in list(self.viewStack):
+            self._replace_view(view, view.dlginfo)
