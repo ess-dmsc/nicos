@@ -45,6 +45,7 @@ devices = dict(
         source="cbm1",
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="ADC counts",
+        counts=False,
         hist_type="1-D TOF",
         det_width=1,
         det_height=1,

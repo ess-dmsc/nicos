@@ -39,7 +39,7 @@ devices = dict(
         "nicos.devices.datasinks.DaemonSink",
     ),
     liveview=device(
-        "nicos.devices.datasinks.LiveViewSink",
+        "nicos_ess.devices.datasinks.live_view.ReducedLiveViewSink",
     ),
     scanlog=device(
         "nicos_ess.devices.datasinks.scan_log.ScanLogSink",

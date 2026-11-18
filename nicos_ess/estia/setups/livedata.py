@@ -24,6 +24,6 @@ devices = dict(
         data_topics=["estia_livedata_nicos_data"],
         commands_topic="estia_livedata_commands",
         status_topics=["estia_livedata_heartbeat"],
-        others=["cbm1_counts_total", "multiblade_detector_counts_total"],
+        images=["cbm1_counts_total", "multiblade_detector_counts_total"],
     ),
 )

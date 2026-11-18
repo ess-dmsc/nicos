@@ -18,6 +18,9 @@ devices = dict(
         source_name="overlap_monitor",
         workflow_id="bifrost/monitor_histogram/1",
         type="counter",
+        # This monitor is an IBM that reads out ADC values. It is cbm2/3 in essconfig.
+        unit="ADC counts",
+        counts=False,
     ),
     bandwidth_monitor=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
@@ -26,6 +29,9 @@ devices = dict(
         source_name="bandwidth_monitor",
         workflow_id="bifrost/monitor_histogram/1",
         type="counter",
+        # This monitor is an IBM that reads out ADC values. It is cbm2/3 in essconfig.
+        unit="ADC counts",
+        counts=False,
     ),
     normalization_monitor=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
@@ -51,6 +57,12 @@ devices = dict(
         workflow_id="bifrost/unified_detector_view/1",
         type="counter",
     ),
+    esslivedata=device(
+        "nicos_ess.devices.datasources.livedata_monitor.LiveDataMonitor",
+        description="The jobs and services of esslivedata, read only",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        instrument="bifrost",
+    ),
     livedata_collector=device(
         "nicos_ess.devices.datasources.livedata.LiveDataCollector",
         description="The bifrost livedata collector",
@@ -58,7 +70,7 @@ devices = dict(
         data_topics=["bifrost_livedata_nicos_data"],
         commands_topic="bifrost_livedata_commands",
         status_topics=["bifrost_livedata_heartbeat"],
-        others=[
+        images=[
             "psc_monitor",
             "overlap_monitor",
             "bandwidth_monitor",

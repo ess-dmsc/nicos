@@ -34,7 +34,7 @@ devices = dict(
         data_topics=["odin_livedata_nicos_data"],
         commands_topic="odin_livedata_commands",
         status_topics=["odin_livedata_heartbeat"],
-        others=["monitor_1", "monitor_2", "timepix3_image"],
+        images=["monitor_1", "monitor_2", "timepix3_image"],
         timers=["timer"],
     ),
     timer=device(

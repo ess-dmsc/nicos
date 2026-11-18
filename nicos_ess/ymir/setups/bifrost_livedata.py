@@ -32,7 +32,7 @@ devices = dict(
         data_topics=["bifrost_livedata_nicos_data"],
         commands_topic="bifrost_livedata_commands",
         status_topics=["bifrost_livedata_heartbeat"],
-        others=[
+        images=[
             "psc_monitor_counts_total",
             "overlap_monitor_counts_total",
             "unified_detector_counts_total",

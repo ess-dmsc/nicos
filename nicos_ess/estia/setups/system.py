@@ -33,7 +33,7 @@ devices = dict(
     ),
     conssink=device("nicos_ess.devices.datasinks.console_scan_sink.ConsoleScanSink"),
     liveview=device(
-        "nicos.devices.datasinks.LiveViewSink",
+        "nicos_ess.devices.datasinks.live_view.ReducedLiveViewSink",
     ),
     daemonsink=device(
         "nicos.devices.datasinks.DaemonSink",

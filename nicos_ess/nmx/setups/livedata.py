@@ -24,6 +24,6 @@ devices = dict(
         data_topics=["nmx_livedata_nicos_data"],
         commands_topic="nmx_livedata_commands",
         status_topics=["nmx_livedata_heartbeat"],
-        others=["monitor_1", "monitor_2"],
+        images=["monitor_1", "monitor_2"],
     ),
 )

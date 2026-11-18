@@ -64,7 +64,7 @@ devices = dict(
         data_topics=["dream_livedata_nicos_data"],
         commands_topic="dream_livedata_commands",
         status_topics=["dream_livedata_heartbeat"],
-        others=[
+        images=[
             "monitor_bunker_counts_total",
             "monitor_cave_counts_total",
             "mantle_detector_counts_total",

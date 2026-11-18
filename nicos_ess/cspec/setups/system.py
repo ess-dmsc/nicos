@@ -45,5 +45,5 @@ devices = dict(
         "nicos.devices.datasinks.DaemonSink",
         visibility=(),
     ),
-    liveview=device("nicos.devices.datasinks.LiveViewSink"),
+    liveview=device("nicos_ess.devices.datasinks.live_view.ReducedLiveViewSink"),
 )

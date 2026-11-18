@@ -35,7 +35,7 @@ devices = dict(
         "nicos.devices.datasinks.DaemonSink",
     ),
     liveview=device(
-        "nicos.devices.datasinks.LiveViewSink",
+        "nicos_ess.devices.datasinks.live_view.ReducedLiveViewSink",
     ),
     KafkaForwarder=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
