@@ -227,7 +227,7 @@ class MultilineController(EpicsDeviceBase, Waitable):
         "last_measurement_lengths": readback_channel(
             "LstVldDataLenLength-R",
             refresh_status=True,
-            cache_key="measurement_lengths",
+            cache_key="last_measurement_lengths",
         ),
         "measurement_gains": readback_channel(
             "Gains-R",
