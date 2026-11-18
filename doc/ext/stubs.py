@@ -28,9 +28,20 @@
 from nicos.utils.stubs import generate_stubs
 
 
-def setup(app):
-    generate_stubs()
-    return {
-        "parallel_read_safe": True,
-        "version": "0.1.0",
-    }
+@pytest.fixture(scope='class')
+def dataroot(request, session):
+    """Dataroot handling fixture"""
+
+    exp = session.experiment
+    dataroot = path.join(config.nicos_root, request.module.exp_dataroot)
+    os.makedirs(dataroot)
+
+    counter = path.join(dataroot, exp.counterfile)
+    updateFileCounter(counter, 'scan', 42)
+    updateFileCounter(counter, 'point', 42)
+
+    exp._setROParam('dataroot', dataroot)
+    exp.new(1234, user='testuser')
+    exp.sample.new({'samplename': 'mysample'})
+
+    return dataroot

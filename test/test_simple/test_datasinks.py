@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -32,19 +32,18 @@ from os import path
 import pytest
 
 from nicos import config
+from nicos.commands.measure import ListDatasinks
 from nicos.commands.scan import scan
 from nicos.core import ScanDataset
+from nicos.core.device import DeviceParInfo
+from nicos.devices.datasinks.raw import RawImageFileReader
 from nicos.devices.datasinks.scan import AsciiScanfileReader
 from nicos.utils import readFile, updateFileCounter
-from test.utils import raises
 
 try:
-    import astropy.io.fits as pyfits
+    from astropy.io import fits
 except ImportError:
-    try:
-        import pyfits
-    except ImportError:
-        pyfits = None
+    fits = None
 
 try:
     import PIL
@@ -82,7 +81,7 @@ class TestSinks:
 
         exp._setROParam("dataroot", dataroot)
         exp.new(1234, user="testuser", localcontact=exp.localcontact)
-        exp.sample.new({"name": "mysample"})
+        exp.sample.new({"samplename": "mysample"})
         assert path.abspath(exp.datapath) == path.abspath(
             path.join(config.nicos_root, "testdata", year, "p1234", "data")
         )
@@ -102,8 +101,9 @@ class TestSinks:
         assert len(handlers) == 1
         calls = handlers[0]._calls
         # this was called for a scan
-        assert calls == ["prepare", "begin"] + ["addSubset"] * 5 + ["end"]
-
+        assert calls == ["prepare", "begin"] + 5 * (
+            ["putValues"] * 10 + ["addSubset"]
+        ) + ["end"]
         pointsink = session.getDevice("testsink2")
         handlers = pointsink._handlers
         assert len(handlers) == 1
@@ -160,6 +160,9 @@ class TestSinks:
         assert path.isfile(scanfile)
         asfr = AsciiScanfileReader(scanfile)
         ds = asfr.scandataset
+
+        assert all(isinstance(v, DeviceParInfo) for v in ds.metainfo.values())
+
         assert ds.number == 0
         assert ds.counter == "43 (p1234_00000043.dat)"
         assert ds.devvaluelists == [
@@ -185,6 +188,8 @@ class TestSinks:
         assert path.isfile(rawfile)
         assert path.getsize(rawfile) == 128 * 128 * 4  # 128x128 px, 32bit ints
 
+        RawImageFileReader.fromfile(rawfile)
+
         headerfile = path.join(session.experiment.datapath, "p1234_1.header")
         assert path.isfile(headerfile)
         contents = readFile(headerfile)
@@ -205,7 +210,7 @@ class TestSinks:
 
         if hasattr(os, "link"):
             linkfile = path.join(session.experiment.datapath, "00000168.raw")
-            assert path.isfile(linkfile)  # hardlink
+            assert path.isfile(linkfile)  # hard link
             assert os.stat(linkfile).st_ino == os.stat(rawfile).st_ino
 
         # check files written by the single-raw sink
@@ -213,11 +218,13 @@ class TestSinks:
         assert path.isfile(rawfile)
         assert path.getsize(rawfile) > 128 * 128 * 4  # data plus header
 
+        RawImageFileReader.fromfile(rawfile)
+
         if hasattr(os, "link"):
             # this entry in filenametemplate is absolute, which means relative to
             # the dataroot, not the current experiment's datapath
             linkfile = path.join(session.experiment.dataroot, "00000172.raw")
-            assert path.isfile(linkfile)  # hardlink
+            assert path.isfile(linkfile)  # hard link
             assert os.stat(linkfile).st_ino == os.stat(rawfile).st_ino
 
     def test_bersans_sink(self, session):
@@ -236,10 +243,10 @@ class TestSinks:
             with open(serial_file, "rb") as fp:
                 datasets = pickle.load(fp)
         except Exception:
-            assert False, "could not read serialized sink"
+            pytest.fail("could not read serialized sink")
         assert len(datasets) == 1
         assert datasets[43]
-        assert raises(KeyError, lambda: datasets[41])
+        pytest.raises(KeyError, lambda: datasets[41])
         data = datasets[43]
         assert data.samplecounter == 1
         assert data.counter == 43
@@ -260,12 +267,12 @@ class TestSinks:
         tifffile = path.join(session.experiment.datapath, "00000168.tiff")
         assert path.isfile(tifffile)
 
-    @pytest.mark.skipif(not pyfits, reason="pyfits library missing")
+    @pytest.mark.skipif(not fits, reason="astropy.io.fits library missing")
     def test_fits_sink(self, session):
         fitsfile = path.join(session.experiment.datapath, "00000168.fits")
         assert path.isfile(fitsfile)
         assert ("%o" % os.stat(fitsfile).st_mode)[2:] == "0444"
-        with pyfits.open(fitsfile) as ffile:
+        with fits.open(fitsfile) as ffile:
             hdu = ffile[0]
             assert hdu.data.shape == (128, 128)
             assert hdu.header["Exp/proposal"] == "p1234"
@@ -306,6 +313,32 @@ class TestSinks:
         assert contents["instrument"]["name"] == "INSTR"
         assert contents["experiment"]["proposal"] == "p1234"
         assert contents["measurement"]["sample"]["description"]["name"] == "mysample"
+
+
+class TestListDatasinks:
+    def test_ListDatasinks(self, session, log):
+        with log.assert_msg_matches(
+            [
+                r"Currently used data sinks are:",
+                r"name         used for       active for detectors",
+                r"srawsink     point",
+                r"tiffsink     point",
+                r"livesink     point",
+                r"yamlsink     point",
+                r"fitssink     point",
+                r"bersanssink  point",
+                r"testsink1    scan",
+                r"testsink2    point          det",
+                r"rawsink      point",
+                # The order of the subsets isn't well-defined so both options
+                # have to be checked
+                r"consolesink  (scan, subscan|subscan, scan)",
+                r"daemonsink   (scan, subscan|subscan, scan)",
+                r"asciisink    (scan, subscan|subscan, scan)",
+                r"serialsink   (scan, subscan|subscan, scan)",
+            ]
+        ):
+            ListDatasinks()
 
 
 def test_sink_ordering(session):
