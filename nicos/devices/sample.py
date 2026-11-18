@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -54,13 +54,15 @@ class Sample(Moveable):
     """
 
     parameters = {
+        "sampledescription": Param(
+            "Extended sample description", type=str, settable=True, category="sample"
+        ),
         "samplename": Param(
             "Current sample name", type=str, settable=True, category="sample"
         ),
         "samplenumber": Param(
-            "Current sample number: e.g. the position in "
-            "a sample changer or the index of the sample "
-            "among all defined samples",
+            "Current sample number: e.g. the position in a sample changer or "
+            "the index of the sample among all defined samples",
             type=none_or(int),
             settable=True,
         ),
@@ -75,6 +77,7 @@ class Sample(Moveable):
 
     parameter_overrides = {
         "unit": Override(mandatory=False, default=""),
+        "fmtstr": Override(default="%s"),
     }
 
     valuetype = str
@@ -102,6 +105,7 @@ class Sample(Moveable):
 
     def clear(self):
         """Clear experiment-specific information."""
+        self.sampledescription = ""
         self.samplename = ""
         self.samplenumber = None
         self.samples = {}
@@ -111,7 +115,8 @@ class Sample(Moveable):
         # In this simple base class, we expect the user to use only NewSample,
         # so we remove stored sample information every time to avoid a buildup
         # of unused sample information.
-        self.samples = {0: parameters}
+        self.clear()
+        self.set(0, parameters)
         self.select(0)
 
     def set(self, number, parameters):
@@ -123,8 +128,12 @@ class Sample(Moveable):
             self.log.warning(
                 "overwriting parameters for sample %s (%s)",
                 number,
-                info[number]["name"],
+                info[number]["samplename"],
             )
+        if "sampledescription" not in parameters:
+            parameters["sampledescription"] = ""
+        if "samplename" not in parameters:
+            parameters["samplename"] = f"Sample {number + 1}"
         info[number] = parameters
         self.samples = info
 
@@ -147,30 +156,34 @@ class Sample(Moveable):
         if number_or_name in self.samples:
             return number_or_name
         # look by name
-        found = None
+        found = []
         for number, parameters in self.samples.items():
-            if parameters["name"] == number_or_name:
-                if found is not None:
-                    # two samples with same name found...
-                    raise InvalidValueError(
-                        self,
-                        "two samples with name %r "
-                        "were found, please use the "
-                        "sample number (%s or %s)" % (number_or_name, found, number),
-                    )
-                found = number
-        return found
+            if parameters["samplename"] == number_or_name:
+                found.append(number)
+
+        # more the one sample with same name found...
+        if len(found) > 1:
+            raise InvalidValueError(
+                self,
+                "At least two samples with name %r were found, please "
+                " use the sample number (%s or %s)"
+                % (number_or_name, ", ".join(str(f) for f in found[:-1]), found[-1]),
+            )
+        elif len(found) == 1:
+            return found[0]
+        return None
 
     def _applyParams(self, number, parameters):
         """Apply sample parameters.  Override in subclasses.
 
-        All parameters beside the name should be treated as optional by
+        All parameters beside the 'samplename' should be treated as optional by
         subclasses, since they will not be provided for the empty sample
         created by NewExperiment.
         """
+        self.sampledescription = parameters.get("sampledescription", "")
         self.samplenumber = number
-        self.samplename = parameters["name"]
-        self._setROParam("target", parameters["name"])
+        self.samplename = parameters["samplename"]
+        self._setROParam("target", self.samplename)
 
     def doUpdateSamples(self, info):
-        self.valuetype = oneof(*(info[n]["name"] for n in sorted(info)))
+        self.valuetype = oneof(*(info[n]["samplename"] for n in sorted(info)))

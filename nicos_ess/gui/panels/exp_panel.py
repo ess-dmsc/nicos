@@ -257,8 +257,8 @@ class ExpPanel(PanelBase):
 
         samples = {}
         for index, sample in enumerate(self.new_settings.samples):
-            if not sample.get("name", ""):
-                sample["name"] = f"sample {index + 1}"
+            if not sample.get("samplename", ""):
+                sample["samplename"] = f"sample {index + 1}"
             samples[index] = sample
         self.client.run(f"Exp.sample.set_samples({dict(samples)})")
 
