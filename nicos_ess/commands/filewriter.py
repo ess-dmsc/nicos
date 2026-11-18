@@ -63,8 +63,8 @@ def nexusfile_open(run_title=None):
             )
             nested_call = True
         yield
-    except Exception as e:
-        session.log.error("Could not start filewriting: %s", e)
+    except Exception:
+        session.log.exception("Could not start filewriting")
         session.log.warning("The rest of the batch file code will be ignored.")
     finally:
         if not nested_call:
