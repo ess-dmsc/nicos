@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from pytest import CollectReport, StashKey
 
 from nicos.clients.base import ConnectionData
 from nicos.clients.gui.config import processGuiConfig
@@ -28,6 +29,21 @@ from test.nicos_ess.gui.helpers import (
     get_panel_by_class,
     resolve_guiconfig_path,
 )
+
+phase_report_key = StashKey[dict[str, CollectReport]]()
+
+
+@pytest.hookimpl(wrapper=True, tryfirst=True)
+def pytest_runtest_makereport(item, call):
+    # execute all other hooks to obtain the report object
+    rep = yield
+
+    # store test results for each phase of a call, which can
+    # be "setup", "call", "teardown"
+    item.stash.setdefault(phase_report_key, {})[rep.when] = rep
+
+    return rep
+
 
 TEST_ROOT = Path(__file__).resolve().parents[2] / "root"
 RESOURCES_DIR = Path(__file__).resolve().parents[3] / "resources"
@@ -173,8 +189,13 @@ def allow_unpatched_message_boxes():
 
 
 @pytest.fixture
-def gui_window_factory(monkeypatch, qtbot, fake_daemon):
-    """Build real ESS GUI windows connected to the in-process fake daemon."""
+def gui_window_factory(monkeypatch, qtbot, fake_daemon, request, tmp_path):
+    """Build real ESS GUI windows connected to the in-process fake daemon.
+
+    request and tmp_path fixtures are needed for parsing test results and
+    creating a screenshot of all open windows in case of a test failure.
+
+    """
     from nicos.guisupport.qt import QApplication
 
     windows = []
@@ -222,6 +243,19 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
         return window
 
     yield _build
+
+    # request.node is an "item" because we use the default
+    # "function" scope
+    report = request.node.stash[phase_report_key]
+    if report["setup"].failed:
+        print("setting up a test failed", request.node.nodeid)
+    elif report["setup"].skipped:
+        print("setting up a test skipped", request.node.nodeid)
+    elif ("call" not in report) or report["call"].failed:
+        print("executing test failed or skipped", request.node.nodeid)
+        for window in windows:
+            path = qtbot.screenshot(window)
+            print(f"taking screenshot of {window.name} and storing it in {path}")
 
     # The real MainWindow.closeEvent() ends by quitting the process-global
     # QApplication. Patch only that session-level side effect so teardown can
