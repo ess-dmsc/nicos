@@ -56,6 +56,8 @@ class SamplePanel(PanelBase):
         self.table.setEnabled(has_selection)
         self.btn_duplicate.setEnabled(has_selection)
         self.btn_delete.setEnabled(has_selection)
+        self.sample_label.setEnabled(has_selection)
+        self.metadata_label.setEnabled(has_selection)
 
     def update_list_widget_data(self):
         selected_row = self.list.currentRow()
@@ -166,6 +168,12 @@ class SamplePanel(PanelBase):
     def _build_ui(self):
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/samples.ui"))
         self.table.setColumnWidth(0, 200)
+        # todo: add this to the ESS stylesheet instead of inline here?
+        self.sample_label.setStyleSheet("QLabel:disabled { color: #a0a0a9; }")
+        self.metadata_label.setStyleSheet("QLabel:disabled { color: #a0a0a9; }")
+        self.table.setStyleSheet(
+            "QHeaderView:disabled { background-color: #d4d8dc; color: #a0a0a9; }"
+        )
         self._add_signals()
 
     def _add_signals(self):

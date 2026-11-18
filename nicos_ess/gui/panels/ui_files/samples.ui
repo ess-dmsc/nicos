@@ -14,7 +14,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Samples</string>
+      <string>Samples:</string>
      </property>
     </widget>
    </item>
@@ -79,7 +79,7 @@
          <item>
           <widget class="QLabel" name="sample_label">
            <property name="styleSheet">
-            <string notr="true">font-weight: bold;</string>
+            <string notr="true"></string>
            </property>
            <property name="text">
             <string>Sample:</string>
@@ -94,7 +94,7 @@
        <item>
         <widget class="QLabel" name="metadata_label">
          <property name="styleSheet">
-          <string notr="true">font-weight: bold;</string>
+          <string notr="true"></string>
          </property>
          <property name="text">
           <string>Metadata:</string>
