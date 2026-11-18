@@ -238,7 +238,7 @@ class MultilineController(EpicsStringReadable, Waitable):
         available_channels = self.selected_channels
         return [int(chi) for chi in available_channels if chi > 0]
 
-    def doReadSelected_Channels(self, maxage=0):
+    def doReadSelected_Channels(self):
         return self._epics_wrapper.get_pv_value(self._get_pv_name("available_channels"))
 
     def measure(self, channels=None):
@@ -411,7 +411,7 @@ class MultilineChannel(Readable):
         else:
             return float(self._attached_controller.measurement_lengths[ch_idx])
 
-    def doReadGain(self, maxage=0):
+    def doReadGain(self):
         available_channels = self._attached_controller.available_channels
         try:
             ch_idx = available_channels.index(self.channel)
