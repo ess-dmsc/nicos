@@ -53,12 +53,7 @@ SESSION_PANEL_EVALS = {
     "session.spMode": False,
     "session.alias_config": {},
     "session.experiment.scriptpath": "",
-}
-
-# nicos_ess/gui/panels/live_gr.py and live_pyqt.py need experiment metadata.
-LIVE_PANEL_EVALS = {
     "session.experiment.name": "exp",
-    "session.experiment.detectors": [],
 }
 
 # nicos_ess/gui/panels/exp_panel.py:_update_proposal_info reads these keys.
@@ -130,6 +125,7 @@ class FakeDaemon:
         self.setups = {}
         self.loaded_setups = set()
         self.cache = {}
+        self.history = {}
         self.messages = []
         self.datasets = []
         self.evals = {}
@@ -150,7 +146,6 @@ class FakeDaemon:
         """
         self.evals.update(MAINWINDOW_TOOLBAR_EVALS)
         self.evals.update(SESSION_PANEL_EVALS)
-        self.evals.update(LIVE_PANEL_EVALS)
         self.evals.update(EXP_PANEL_EVALS)
         self.evals.update(CONFIG_PATH_EVALS)
         self._refresh_state_evals()
@@ -246,6 +241,9 @@ class FakeDaemon:
     def set_cache(self, key, value):
         self.cache[key.lower()] = value
 
+    def set_history(self, key, points):
+        self.history[key.lower()] = list(points)
+
     def add_message(self, message):
         self.messages.append(message)
         return message
@@ -256,7 +254,18 @@ class FakeDaemon:
 
         if command == "authenticate":
             return True, {"user_level": self.user_level}
-        if command in {"eventmask", "eventunmask", "exec", "keepalive", "quit"}:
+        # STATUS_IDLEEXC is below STATUS_IDLE, and both mean that no script runs.
+        if command == "finish" and self.status[0] <= STATUS_IDLE:
+            return False, "no script is running"
+        if command in {
+            "eventmask",
+            "eventunmask",
+            "exec",
+            "finish",
+            "keepalive",
+            "quit",
+            "unqueue",
+        }:
             return True, None
         if command in {"queue", "start"}:
             request_id = self._next_request_id
@@ -283,6 +292,12 @@ class FakeDaemon:
             return True, list(self.messages)
         if command == "getcachekeys":
             return True, self._cache_reply(args[0])
+        if command == "gethistory":
+            key, fromtime, totime = args[0], float(args[1]), float(args[2])
+            points = sorted(self.history.get(key.lower(), []), key=lambda p: p[0])
+            before = [point for point in points if point[0] < fromtime][-1:]
+            inside = [point for point in points if fromtime <= point[0] <= totime]
+            return True, before + inside
         if command == "complete":
             return True, []
         if command == "eval":

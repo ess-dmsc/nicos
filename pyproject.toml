@@ -19,7 +19,7 @@ dependencies = [
     "p4p>=4.0.0",
     "psutil>=2.0",
     "pycryptodomex>=3.4.7",
-    "pyqtgraph>=0.12.4",
+    "pyqtgraph>=0.14.0",
     "pyzmq>=13.1.0",
     "redis>=5.0.4",
     "rsa>=3.1.2",
@@ -109,7 +109,7 @@ gui = [
     "gr>=1.23.2",
     "matplotlib>=3.9.4",
     "pyqt5>=5.15.6",
-    "pyqtgraph>=0.12.4",
+    "pyqtgraph>=0.14.0",
     "pyqtwebengine>=5.15.5",
     "qscintilla>=2.13.4",
 ]
@@ -123,7 +123,7 @@ gui_qt6 = [
     "pyqt6-qt6>=6.6.2",
     "pyqt6-webengine>=6.6.0",
     "pyqt6-webengine-qt6>=6.6.0",
-    "pyqtgraph>=0.12.4",
+    "pyqtgraph>=0.14.0",
 ]
 
 [dependency-groups]

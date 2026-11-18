@@ -48,6 +48,18 @@ QMenuBar::item:pressed {
     background: white ;
     color:black;
 }
+
+/* ----- QMenu ----- */
+/* Every menu (menu bar, context menus, pyqtgraph's) highlights its entry in
+   the accent, as the combo box lists do. Only palette roles are set, because
+   a QMenu background, border or separator rule makes Qt draw the section
+   titles of QMenu.addSection as bare lines without their text. */
+
+QMenu {
+    selection-background-color: #0094ca;
+    selection-color: white;
+}
+
 /* ----- QToolBar ----- */
 
 QToolBar {
@@ -344,12 +356,27 @@ QSplitter::separator {
     margin: 0px;
 }
 
-QSplitter::handle:horizontal{
-    image: url(:/splitterv);
+/* A hairline in the middle of the gap, lit in the accent under the pointer. */
+QSplitter::handle:horizontal {
+    background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                stop: 0 transparent, stop: 0.33 transparent,
+                                stop: 0.34 #d9d9d9, stop: 0.66 #d9d9d9,
+                                stop: 0.67 transparent, stop: 1 transparent);
 }
 
-QSplitter::handle:vertical{
-    image: url(:/splitterh);
+QSplitter::handle:vertical {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 transparent, stop: 0.33 transparent,
+                                stop: 0.34 #d9d9d9, stop: 0.66 #d9d9d9,
+                                stop: 0.67 transparent, stop: 1 transparent);
+}
+
+QSplitter::handle:hover {
+    background: #89c3ea;
+}
+
+QSplitter::handle:pressed {
+    background: #0094ca;
 }
 
 /* ----- QCheckBox ----- */
@@ -487,6 +514,41 @@ QPushButton:checked:pressed {
     background-color: white;
 }
 
+/* ----- QGroupBox ----- */
+/* A group box is a titled section on the background of the panel. */
+
+QGroupBox {
+    font-weight: bold;
+    border: 1px solid #d9d9d9;
+    border-radius: 5px;
+    margin-top: 1.2em;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 8px;
+    padding: 0px 4px;
+    color: black;
+}
+
+QGroupBox::title:disabled {
+    color: #959ea7;
+}
+
+/* ----- Scroll areas in panels ----- */
+/* Scrolled content sits on the panel without a second frame around it. */
+
+Panel QScrollArea {
+    border: none;
+}
+
+Panel QScrollArea,
+Panel QScrollArea > QWidget#qt_scrollarea_viewport,
+Panel QScrollArea > QWidget#qt_scrollarea_viewport > QWidget {
+    background: transparent;
+}
+
 /* ------ QDialog ----- */
 /* At the end, so that it overrides QTab*/
 
@@ -543,23 +605,6 @@ CommandLineEdit[state="BUSY"] {
     border: 2px solid #0094ca;
     border-radius: 5px;
     background-color: #ffdddd;
-}
-
-LiveWidgetWrapper:title {
-    subcontrol-origin: margin;
-    subcontrol-position: top center;
-    padding-left: 10px;
-    padding-right: 10px;
-}
-
-LiveWidgetWrapper[state="SELECTED"] {
-    border: 5px solid #0094CA;
-    border-radius: 5px;
-}
-
-LiveWidgetWrapper[state="UNSELECTED"] {
-    border: 5px solid white;
-    border-radius: 5px;
 }
 
 QLineEdit:disabled, QComboBox:disabled {

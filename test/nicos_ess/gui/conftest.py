@@ -71,6 +71,22 @@ def pytest_configure(config):
         config._nicos_test_xdg_runtime_dir = runtime_dir
         os.environ["XDG_RUNTIME_DIR"] = str(runtime_dir)
 
+    # The GUI writes its QSettings to a temporary folder instead of the user's
+    # ~/.config. When the run ends, the folder is removed and the old
+    # XDG_CONFIG_HOME comes back.
+    settings_folder = tempfile.TemporaryDirectory(prefix="nicos-gui-settings-")
+    original_config_home = os.environ.get("XDG_CONFIG_HOME")
+    os.environ["XDG_CONFIG_HOME"] = settings_folder.name
+
+    def restore_config_home():
+        if original_config_home is None:
+            os.environ.pop("XDG_CONFIG_HOME", None)
+        else:
+            os.environ["XDG_CONFIG_HOME"] = original_config_home
+        settings_folder.cleanup()
+
+    config.add_cleanup(restore_config_home)
+
     # Some CI invocations disable entry-point plugin autoloading. These tests
     # require pytest-qt for both qtbot and qt_log_ignore.
     if not config.pluginmanager.hasplugin("pytest-qt"):
@@ -422,3 +438,18 @@ def no_mouse_button_held(request):
         f"{request.node.nodeid} left the {' and '.join(held_names)} mouse button held"
     )
 
+
+@pytest.fixture(autouse=True)
+def no_saved_settings():
+    """Closing a window saves its settings, and a later test would read them."""
+    from nicos.guisupport.qt import QSettings
+
+    def clear():
+        if QApplication.instance() is not None:
+            settings = QSettings()
+            settings.clear()
+            settings.sync()
+
+    clear()
+    yield
+    clear()

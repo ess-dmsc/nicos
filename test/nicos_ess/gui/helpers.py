@@ -6,13 +6,23 @@ single-panel config strings become too cumbersome.
 
 from __future__ import annotations
 
+import contextlib
+import itertools
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from nicos.guisupport.qt import QApplication, QDialog
+from nicos.guisupport.qt import (
+    QApplication,
+    QDialog,
+    QEvent,
+    QMenu,
+    QMouseEvent,
+    QPointF,
+    Qt,
+)
 from nicos.guisupport.typedvalue import DeviceValueEdit
 from nicos.protocols.daemon import STATUS_IDLE, STATUS_RUNNING
 from nicos.utils import importString
@@ -152,6 +162,46 @@ def panel_case(
         expert_mode=expert_mode,
         marks=marks,
     )
+
+
+def _grab_pixels(widget):
+    import numpy as np
+
+    from nicos.guisupport.qt import QImage
+
+    image = widget.grab().toImage().convertToFormat(QImage.Format.Format_RGB32)
+    bits = image.constBits()
+    bits.setsize(image.sizeInBytes())
+    rows = np.frombuffer(bits, np.uint32).reshape(image.height(), -1)
+    return rows[:, : image.width()].copy()
+
+
+def drawn_pixels(widget, item):
+    """Return the x and y arrays of the pixels of *widget* that the plot *item*
+    draws.
+
+    These are the pixels that change when the item is hidden, so the axes,
+    ticks, grid, title and the other curves do not count.
+    """
+    import numpy as np
+    import pyqtgraph as pg
+
+    if not item.isVisible():
+        return np.array([], int), np.array([], int)
+    boxes = [box for box in item.scene().items() if isinstance(box, pg.ViewBox)]
+    # A hidden item would change the auto range and with it the axes.
+    auto_ranges = [(box, list(box.state["autoRange"])) for box in boxes]
+    for box in boxes:
+        box.disableAutoRange()
+    item.hide()
+    without_item = _grab_pixels(widget)
+    item.show()
+    with_item = _grab_pixels(widget)
+    for box, (x_auto, y_auto) in auto_ranges:
+        box.enableAutoRange(pg.ViewBox.XAxis, x_auto)
+        box.enableAutoRange(pg.ViewBox.YAxis, y_auto)
+    ys, xs = np.nonzero(with_item != without_item)
+    return xs, ys
 
 
 def get_panel_by_class(window, panel_class):
@@ -300,3 +350,70 @@ def set_device_value(dialog, value):
     """Set the value in the only device value editor of ``dialog``."""
     [editor] = dialog.findChildren(DeviceValueEdit)
     editor.setValue(value)
+
+
+def menu_action(plot_menu, text):
+    """Return the entry called *text* from a freshly opened plot menu or one
+    of its submenus."""
+    menu = plot_menu.menu
+    menu.aboutToShow.emit()
+    submenus = [a for m in menu.findChildren(QMenu) for a in m.actions()]
+    actions = menu.actions() + submenus
+    action = next((a for a in actions if a.text() == text), None)
+    if action is None:
+        raise AssertionError(
+            f"The plot menu has no entry {text!r}. "
+            f"Its entries are {[a.text() for a in actions]}."
+        )
+    return action
+
+
+def mouse_move(qtbot, widget, point, buttons=Qt.MouseButton.LeftButton):
+    """Move the mouse to *point* on *widget* with *buttons* held."""
+    event = QMouseEvent(
+        QEvent.Type.MouseMove,
+        QPointF(point),
+        QPointF(widget.mapToGlobal(QPointF(point).toPoint())),
+        Qt.MouseButton.NoButton,
+        buttons,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    QApplication.sendEvent(widget, event)
+    qtbot.wait(20)
+
+
+def _press_and_move(qtbot, viewport, start, *ends):
+    # The mouse hovers before it presses because pyqtgraph picks the item that
+    # a drag moves while hovering.
+    mouse_move(qtbot, viewport, start, Qt.MouseButton.NoButton)
+    qtbot.mousePress(viewport, Qt.MouseButton.LeftButton, pos=start)
+    for a, b in itertools.pairwise((start, *ends)):
+        for i in range(1, 6):
+            mouse_move(qtbot, viewport, a + (b - a) * i / 5)
+
+
+def mouse_drag(qtbot, viewport, start, *ends, settle_ms=150):
+    """Drag the mouse from *start* through *ends* on *viewport* the way a hand does.
+
+    After the release the test waits *settle_ms* so that the timers which
+    the release starts can run before the next step or the teardown.
+    """
+    _press_and_move(qtbot, viewport, start, *ends)
+    qtbot.mouseRelease(viewport, Qt.MouseButton.LeftButton, pos=ends[-1])
+    qtbot.wait(settle_ms)
+
+
+@contextlib.contextmanager
+def mouse_held(qtbot, viewport, start, *ends):
+    """Drag like `mouse_drag` and keep the button down inside the with block.
+
+    The block can release the button anywhere itself. Otherwise the button
+    comes up at the last point when the block ends, also when the block
+    fails, so a later test does not see a held button.
+    """
+    try:
+        _press_and_move(qtbot, viewport, start, *ends)
+        yield
+    finally:
+        if QApplication.mouseButtons() & Qt.MouseButton.LeftButton:
+            qtbot.mouseRelease(viewport, Qt.MouseButton.LeftButton, pos=ends[-1])
