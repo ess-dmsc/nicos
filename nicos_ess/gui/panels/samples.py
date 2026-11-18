@@ -47,8 +47,12 @@ class SamplePanel(PanelBase):
             self.apply_reminder_label.setText(
                 "Changes to the samples have not been applied!"
             )
+            self.btn_apply_changes.setHidden(False)
+            self.btn_discard_changes.setHidden(False)
         else:
             self.apply_reminder_label.setText("")
+            self.btn_apply_changes.setHidden(True)
+            self.btn_discard_changes.setHidden(True)
 
     def _update_enabled_widgets(self):
         has_selection = bool(self.list.selectedItems())
@@ -169,11 +173,12 @@ class SamplePanel(PanelBase):
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/samples.ui"))
         self.table.setColumnWidth(0, 200)
         # todo: add this to the ESS stylesheet instead of inline here?
-        self.sample_label.setStyleSheet("QLabel:disabled { color: #a0a0a9; }")
-        self.metadata_label.setStyleSheet("QLabel:disabled { color: #a0a0a9; }")
         self.table.setStyleSheet(
             "QHeaderView:disabled { background-color: #d4d8dc; color: #a0a0a9; }"
         )
+        policy = self.btn_apply_changes.sizePolicy()
+        policy.setRetainSizeWhenHidden(True)
+        self.btn_apply_changes.setSizePolicy(policy)
         self._add_signals()
 
     def _add_signals(self):
