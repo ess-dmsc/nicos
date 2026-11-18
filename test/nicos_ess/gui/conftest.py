@@ -21,6 +21,7 @@ from pytest import CollectReport, StashKey
 
 from nicos.clients.base import ConnectionData
 from nicos.clients.gui.config import processGuiConfig
+from nicos.guisupport.qt import QApplication, Qt
 from nicos.utils import importString
 from nicos.utils.loggers import NicosLogger
 from test.nicos_ess.gui.doubles import FakeClientTransport, FakeDaemon
@@ -383,3 +384,41 @@ def gui_panel(request, gui_window):
     if panel_class is None:
         raise ValueError("gui_panel requires an indirect panel class parameter")
     return get_panel_by_class(gui_window, panel_class)
+
+
+@pytest.fixture(autouse=True)
+def no_mouse_button_held(request):
+    """A button that a test leaves held hides the hover box in later tests.
+
+    The fixture releases the button before it fails, so that only the test
+    that left it held fails.
+    """
+    yield
+    if QApplication.instance() is None:
+        return
+    held = QApplication.mouseButtons()
+    if held == Qt.MouseButton.NoButton:
+        return
+    from pytestqt.qt_compat import qt_api
+
+    from nicos.guisupport.qt import QEvent, QWidget
+
+    # The windows of the test are closed already, and QTest needs a shown
+    # window to send the release to.
+    window = QWidget()
+    window.show()
+    buttons = {
+        "left": Qt.MouseButton.LeftButton,
+        "right": Qt.MouseButton.RightButton,
+        "middle": Qt.MouseButton.MiddleButton,
+    }
+    held_names = [name for name, button in buttons.items() if held & button]
+    for name in held_names:
+        qt_api.QtTest.QTest.mouseRelease(window, buttons[name])
+    window.close()
+    window.deleteLater()
+    QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    pytest.fail(
+        f"{request.node.nodeid} left the {' and '.join(held_names)} mouse button held"
+    )
+
