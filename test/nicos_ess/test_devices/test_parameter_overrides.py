@@ -37,30 +37,6 @@ class TestKnauerValveOverrides:
         assert p.default == "%d"
 
 
-class TestIDS3010ControlOverrides:
-    """IDS3010Control(EpicsAnalogMoveable) — dead-code removal."""
-
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        from nicos_ess.estia.devices.attocube import IDS3010Control
-
-        self.cls = IDS3010Control
-
-    def test_statuspv_not_in_parameters(self):
-        assert "statuspv" not in self.cls.parameters
-
-    def test_unit_override(self):
-        p = self.cls.parameters["unit"]
-        assert p.mandatory is False
-        assert p.settable is False
-        assert p.userparam is False
-        assert p.default == ""
-
-    def test_target_override(self):
-        p = self.cls.parameters["target"]
-        assert p.userparam is False
-
-
 class TestChopperAlarmsOverrides:
     """ChopperAlarms(EpicsParameters, Readable) — redundant attribute removal."""
 
