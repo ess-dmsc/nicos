@@ -1,6 +1,7 @@
 import pytest
 
-from nicos.commands.device import set
+from nicos.commands.device import move, set
+from nicos.core.errors import InvalidValueError
 from nicos.devices.generic.slit import Slit
 from nicos_ess.estia.devices.virtual_source import LaserMacro, VirtualSource
 from test.nicos_ess.test_devices.doubles import HarnessLinearAxis
@@ -73,6 +74,73 @@ class TestVirtualSourceAndLaserHarness:
                 assert devices[adev_name].userlimits == limits[adev_name]
             else:
                 assert devices["rotation"].userlimits == limits[adev_name]
+
+    @pytest.mark.parametrize(
+        "limits",
+        [
+            pytest.param(
+                {
+                    "left": (-50, -0.5),  # error limit
+                    "right": (0.5, 25.5),
+                    "bottom": (-12.5, 12.5),
+                    "top": (-12.5, 12.5),
+                    "rot": (-1.5, 200),  # error limit
+                },
+                id="setting limits outside abslimits throws error",
+            ),
+            pytest.param(
+                {
+                    "left": (-25.5, -0.5),
+                    "right": (0.5, 25.5),
+                    "bottom": (12.5, -12.5),  # error limit
+                    "top": (-12.5, 12.5),
+                    "rot": (-1.5, 16),
+                },
+                id="error when min > max",
+            ),
+        ],
+    )
+    def test_user_cannot_set_invalid_userlimits(
+        self, estia_virtual_source_setup, limits
+    ):
+        devices = estia_virtual_source_setup
+        with pytest.raises(InvalidValueError):
+            set(devices["virtual_source"], "motorlimits", limits)
+
+    @pytest.mark.parametrize(
+        ("v_pos", "r_pos", "map_pos", "msg"),
+        [
+            pytest.param(
+                -12,
+                16,
+                "On",
+                "Laser in Position",
+                id="Laser in position",
+            ),
+            pytest.param(
+                -12,
+                16,
+                "Off",
+                "Off",
+                id="Laser Reset to last known pos",
+            ),
+        ],
+    )
+    def test_laser_moves_to_correct_position(
+        self, estia_virtual_source_setup, v_pos, r_pos, map_pos, msg
+    ):
+        devices = estia_virtual_source_setup
+        mapping = devices["laser_ctrl"].mapping
+        devices["bottom"].start(v_pos)
+        devices["rotation"].start(r_pos)
+
+        move(devices["laser_ctrl"], map_pos)
+
+        assert (
+            devices["laser_ctrl"]().startswith(msg)
+            and devices["laser_ctrl"]._adevs["blade_v"].read() == mapping[map_pos][0]
+            and devices["laser_ctrl"]._adevs["angle"].read() == mapping[map_pos][1]
+        )
 
 
 # ----------Harness Device Setup-------------#
