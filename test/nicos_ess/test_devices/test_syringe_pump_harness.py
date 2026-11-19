@@ -81,7 +81,7 @@ class TestSyringePumpControllerHarness:
         del fake_backend, attached_status_device
         daemon_device, _poller_device = self._create_pair(device_harness)
 
-        assert daemon_device.read(0) == "Stopped"
+        assert device_harness.run("daemon", daemon_device.read, 0) == "Stopped"
 
     def test_start_command_writes_start_pv(
         self, device_harness, fake_backend, attached_status_device
@@ -89,7 +89,7 @@ class TestSyringePumpControllerHarness:
         del attached_status_device
         daemon_device, _poller_device = self._create_pair(device_harness)
 
-        daemon_device.move("start")
+        device_harness.run("daemon", daemon_device.move, "start")
 
         assert fake_backend.values[f"{PV_ROOT}START"] == 1
 
