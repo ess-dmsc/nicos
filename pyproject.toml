@@ -24,7 +24,6 @@ dependencies = [
     "redis>=5.0.4",
     "rsa>=3.1.2",
     "scipy>=0.9.0",
-    "systemd-python>=230 ; sys_platform == 'linux'",
     "toml>=0.10",
     "urllib3>=1.26.20",
     "platformdirs",
@@ -101,6 +100,10 @@ members = ["nicos_ess", "nicos_demo"]
 # exclude = ["packages/some_package"]
 
 [project.optional-dependencies]
+systemd = [
+    "systemd-python>=230",
+]
+
 gui = [
     "flake8",
     "gr>=1.23.2",
