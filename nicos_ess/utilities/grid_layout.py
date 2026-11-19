@@ -97,16 +97,23 @@ def pack(spans, keep=None):
             row = _close_gaps(cells, fixed)
             if row is None:
                 return cells
-        # The tallest plot in the row of the gap that stays gets a row shorter.
-        # If every plot in that row is one row high, the tallest plot anywhere
-        # gets a row shorter.
-        near = {c.name for c in cells if row in c.rows()}
-        tallest = max(
-            spans, key=lambda s: (s[2] > 1 and s[0] in near, s[2], s[0] != keep)
-        )
-        if tallest[2] == 1:
+        shorter = _shorten_tallest(spans, cells, row, keep)
+        if shorter is None:
             return cells
-        spans = [(n, w, h - (n == tallest[0])) for n, w, h in spans]
+        spans = shorter
+
+
+def _shorten_tallest(spans, cells, row, keep):
+    """Return *spans* with one plot a row shorter, or None if all are one row high.
+
+    The tallest plot in *row*, where a gap stays, gets shorter. If every plot
+    in that row is one row high, the tallest plot anywhere gets shorter.
+    """
+    near = {c.name for c in cells if row in c.rows()}
+    tallest = max(spans, key=lambda s: (s[2] > 1 and s[0] in near, s[2], s[0] != keep))
+    if tallest[2] == 1:
+        return None
+    return [(n, w, h - (n == tallest[0])) for n, w, h in spans]
 
 
 def _place(spans):
@@ -143,27 +150,47 @@ def _widen(at, x, end, y, keep, side):
     and have the same height as the plot next to the gap.
     """
     near = at.get((x - 1, y) if side < 0 else (end, y))
-    if near is None or near.y != y or not free(at, x, end, near.rows()):
+    if not _can_widen(at, near, x, end, y):
         return False
-    chain = [near]
-    while True:
-        last = chain[-1]
-        neighbour = at.get((last.x - 1, y) if side < 0 else (last.x + last.w, y))
-        if neighbour is None or (neighbour.y, neighbour.h) != (y, near.h):
-            break
-        chain.append(neighbour)
+    chain = _row_beside(at, near, side)
     growing = [c for c in chain if c.name != keep]
     if not growing:
         return False
-    for _ in range(end - x):
-        # The narrowest plot gets the next column, and of equal ones the one
-        # nearest to the gap.
-        min(growing, key=lambda c: (c.w, chain.index(c))).w += 1
+    _share_columns(chain, growing, end - x)
     start = min(c.x for c in chain) if side < 0 else x
     for cell in sorted(chain, key=lambda c: c.x):
         cell.x = start
         start += cell.w
     return True
+
+
+def _share_columns(chain, growing, columns):
+    """Give *columns* more columns to the *growing* plots of *chain*.
+
+    The narrowest plot gets the next column, and of equal ones the one nearest
+    to the gap.
+    """
+    for _ in range(columns):
+        min(growing, key=lambda c: (c.w, chain.index(c))).w += 1
+
+
+def _can_widen(at, near, x, end, y):
+    """Return whether the plot *near* the gap from *x* to *end* in row *y* starts
+    in that row and finds the gap free over all its rows."""
+    return near is not None and near.y == y and free(at, x, end, near.rows())
+
+
+def _row_beside(at, near, side):
+    """Return *near* and the plots next to each other on its *side* that start
+    in its row and have its height."""
+    chain = [near]
+    while True:
+        last = chain[-1]
+        where = (last.x - 1, near.y) if side < 0 else (last.x + last.w, near.y)
+        neighbour = at.get(where)
+        if neighbour is None or (neighbour.y, neighbour.h) != (near.y, near.h):
+            return chain
+        chain.append(neighbour)
 
 
 def _grow_down(at, x, end, y, keep):

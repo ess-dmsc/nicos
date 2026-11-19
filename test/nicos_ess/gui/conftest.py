@@ -21,7 +21,7 @@ from pytest import CollectReport, StashKey
 
 from nicos.clients.base import ConnectionData
 from nicos.clients.gui.config import processGuiConfig
-from nicos.guisupport.qt import QApplication, Qt
+from nicos.guisupport.qt import QApplication, QEvent, Qt
 from nicos.utils import importString
 from nicos.utils.loggers import NicosLogger
 from test.nicos_ess.gui.doubles import FakeClientTransport, FakeDaemon
@@ -302,6 +302,11 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon, request, tmp_path):
                 teardown_errors.append(err)
 
     QApplication.processEvents()
+    # processEvents leaves deleteLater for a real event loop. Until then the C++
+    # widgets live on while the GC may already have cleared their Python slots,
+    # and a timer or animation of the old window calls a cleared slot during the
+    # next test.
+    QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     if teardown_errors:
         _raise_teardown_errors(teardown_errors)
 

@@ -1,17 +1,17 @@
 """The live view panel shows all live data outputs as a grid of plots.
 
-Several live views (``index`` 1, 2, ...) share one `LiveHub` per connection.
-New outputs go to the view with the lowest index; the plot menu moves an
-output or shows it in several views. A timer redraws plots of changed
-outputs while the panel is visible. The tool bar chooses pan/zoom or a
-measurement tool (Esc: pan/zoom).
+Several live views with ``index`` 1, 2 and so on share one `LiveHub` per
+connection. New outputs go to the view with the lowest index. The user drags
+plots by their titles to arrange them or to move them to another view, and
+the plot menu can also move an output or show it in several views. While the
+panel is visible, a timer redraws the plots whose outputs changed. The tool bar
+selects pan/zoom or a measurement tool, and Esc goes back to pan/zoom.
 """
 
 from __future__ import annotations
 
 import collections
 import json
-import math
 import time
 from functools import partial
 
@@ -20,71 +20,62 @@ from nicos.guisupport.qt import (
     QActionGroup,
     QCursor,
     QKeySequence,
-    QLabel,
     QMenu,
     QShortcut,
-    QSplitter,
     Qt,
     QTimer,
     QToolBar,
     QVBoxLayout,
 )
 from nicos_ess.gui.live_hub import hub_for
+from nicos_ess.gui.panels.live_grid import LiveGrid
 from nicos_ess.gui.widgets.pyqtgraph.frame_plot import FrameCanvas, FrameView, Solo
 from nicos_ess.gui.widgets.pyqtgraph.measure_editor import KINDS
 from nicos_ess.gui.widgets.pyqtgraph.plot_parts import check_action, submenu
+from nicos_ess.utilities.grid_layout import arrange, automatic, from_preset, pack
 
 REDRAW_MS = 100
 # Drawing stops after this many seconds per tick so that the GUI still
 # handles user input.
 DRAW_BUDGET = 0.05
 CELL_ASPECT = 1.4  # plots should be about this much wider than high
-MAX_COLUMNS = 8
-# dragging a splitter cannot make a plot smaller than this in pixels
-MIN_CELL = (160, 120)
 # An output is out of date when it is more than LAG seconds or three of its
 # periods behind the newest output.
 LAG = 10
-EQUAL = 10_000  # QSplitter scales the sizes to fit, so equal values give equal sizes
 TOOL_BAR_STYLE = (
     "QToolBar { spacing: 2px; padding: 2px 4px; }"
     " QToolBar > QToolButton { padding: 1px 8px; }"
 )
 
 
-def grid_columns(count, width, height, aspect=CELL_ASPECT):
-    """Return the number of columns for *count* plots.
+def saved_spans(saved):
+    """Return the spans of the plots in the saved settings of a panel.
 
-    The cells should be close to *aspect* and few cells should stay empty.
+    Damaged spans and repeated names are left out.
     """
-    if count <= 1 or width <= 0 or height <= 0:
-        return 1
-
-    def cost(cols):
-        rows = math.ceil(count / cols)
-        shape = abs(math.log((width / cols) / (height / rows) / aspect))
-        return shape + (rows * cols - count) / count
-
-    return min(range(1, min(count, MAX_COLUMNS) + 1), key=cost)
-
-
-def splitter(orientation, widgets):
-    split = QSplitter(orientation)
-    split.setHandleWidth(4)
-    split.setChildrenCollapsible(False)
-    split.setOpaqueResize(False)  # redrawing all plots while dragging lags
-    for widget in widgets:
-        split.addWidget(widget)
-        widget.setMinimumSize(*MIN_CELL)
-        widget.show()
-    split.setSizes([EQUAL] * split.count())
-    return split
+    grid = saved.get("grid") if isinstance(saved, dict) else None
+    spans = {}
+    for span in grid if isinstance(grid, list) else []:
+        if not (isinstance(span, list) and len(span) == 3):
+            continue
+        name, w, h = span
+        ints = type(w) is int and type(h) is int  # True is an int too
+        if isinstance(name, str) and ints and name not in spans:
+            spans[name] = (name, w, h)
+    return list(spans.values())
 
 
 class LiveViewPanel(Panel):
     """The panel shows a live view of the outputs placed in it.
 
-    Options: ``index`` (default 1) and ``title`` (default "Live <index>").
+    The options are ``index`` with default 1 and ``title`` with default
+    "Live <index>". The option ``layout`` places the plots until the user
+    arranges them. It maps output names or fnmatch wildcards to cells
+    (x, y, width, height) on a grid of 12 columns, where the rows share the
+    height of the panel. The plots keep the order of these cells, and the rules
+    of `grid_layout` close any gaps between them. The option ``outputs`` lists
+    names or wildcards of the outputs that go to this view unless the user
+    placed them.
     """
 
     panelName = "Live view"
@@ -92,6 +83,10 @@ class LiveViewPanel(Panel):
     def __init__(self, parent, client, options):
         self.index = int(options.get("index", 1))
         self.title = options.get("title") or f"Live {self.index}"
+        layout = dict(options.get("layout") or {})
+        self.preset = {k: cell for k, cell in layout.items() if len(cell) == 4}
+        outputs = options.get("outputs") or []
+        self.outputs = [outputs] if isinstance(outputs, str) else list(outputs)
         if self.index != 1:  # The other views need their own settings.
             self.panelName = f"Live view {self.index}"
         # Panel.__init__ calls loadSettings, which fills self._saved.
@@ -104,20 +99,22 @@ class LiveViewPanel(Panel):
         # This remembers when each output was last drawn.
         self.drawn = collections.defaultdict(float)
         self.solo = Solo(self.canvases.values(), changed=self.relayout)
-        self._key = None
-        # splitter sizes that the user set for each arrangement "names|columns",
-        # but only the sizes of the shown arrangement are saved
-        self.split_states = dict(self._saved.get("splits", {}))
-        # the user chose this order of the plots
-        self.order = list(self._saved.get("order", []))
-        self._shown, self._cols = [], 0
-        self.tool = None  # measurement tool, None for pan/zoom
+        # The spans (name, w, h) of the plots are in the order the user put
+        # them. They also keep the places of outputs that are gone for now.
+        self.spans = saved_spans(self._saved)
+        self.tool = None  # None means pan/zoom
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.tool_bar = self._tool_bar()
         layout.addWidget(self.tool_bar)
-        self.grid = QLabel()
+        self.grid = LiveGrid(self.index)
+        self.grid.arranged.connect(self.keep_arrangement)
+        self.grid.dropped.connect(self.take_dropped)
+        self.grid.ended.connect(self.sync_views)
+        self.grid.show_all.connect(lambda: self.solo.show(None))
+        self.grid.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.grid.customContextMenuRequested.connect(self._empty_menu)
         layout.addWidget(self.grid)
         for interval, slot in ((REDRAW_MS, self.draw_dirty), (1000, self.update_ages)):
             timer = QTimer(self)
@@ -183,6 +180,8 @@ class LiveViewPanel(Panel):
         Making a plot takes long, so after DRAW_BUDGET the next turn of the
         event loop makes the rest.
         """
+        if self.grid.session is not None:
+            return  # the grid calls this again when the drag has ended
         mine = set(self.mine())
         for name in set(self.views) - mine:
             self._drop_view(name)
@@ -201,13 +200,13 @@ class LiveViewPanel(Panel):
             self.dirty.update(o for o, v in self.views.items() if name in v.overlays)
         if self.dirty - set(self.views):
             self.sync_views()
-        elif not self.views:
-            self.grid.setText(self._empty_text())  # the output went to another view
+        elif not self.views and self.grid.empty_text != self._empty_text():
+            self.relayout()  # the first output went to another view
 
     def _empty_text(self):
         if self.hub.names():
-            return f"Nothing placed in {self.title}: right-click to choose outputs"
-        return "No live data yet: it comes with the next count"
+            return f"Nothing placed in {self.title}. Right-click or drag plots here."
+        return "No live data yet. It comes with the next count."
 
     def _make_view(self, name):
         view = self.views[name] = FrameView(
@@ -224,9 +223,11 @@ class LiveViewPanel(Panel):
         view.hide_requested.connect(lambda: self.set_hidden(name, True))
         view.overlays_changed.connect(lambda: self._draw(name))
         view.arm_chosen.connect(self.set_tool)
+        view.title_item.dragged.connect(partial(self.grid.title_drag, name))
+        view.title_item.set_draggable()
         view.arm(self.tool)
         self.canvases[name] = FrameCanvas(view)
-        self.canvases[name].setParent(self)
+        self.grid.add(name, self.canvases[name])
         self.solo.add(self.canvases[name])
         self.dirty.add(name)
 
@@ -236,102 +237,74 @@ class LiveViewPanel(Panel):
 
     def _drop_view(self, name):
         self.dirty.discard(name)
+        self.drawn.pop(name, None)
         self._keep_state(name, self.views.pop(name))
         canvas = self.canvases.pop(name)
-        canvas.setParent(None)
+        self.grid.remove(name)
         canvas.deleteLater()
         self.solo.remove(canvas)
 
-    def shown(self, alone=True):
-        if alone and (solo := [n for n, view in self.views.items() if view.solo]):
-            return solo
-        names = [n for n in self.order if n in self.views]
-        for name in sorted(set(self.views) - set(names)):
-            # a derived plot such as "ngem.roi0" goes after the plot of "ngem"
-            base = name.split(".")[0]
-            ours = [i for i, n in enumerate(names) if n.split(".")[0] == base]
-            names.insert(ours[-1] + 1 if ours else len(names), name)
-        return names
+    def solo_name(self):
+        """Return the name of the plot that is shown alone, or None."""
+        return next((n for n, view in self.views.items() if view.solo), None)
 
-    def place(self, name, after):
-        """Put plot *name* after plot *after*, or first if *after* is None."""
-        names = [n for n in self.shown() if n != name]
-        names.insert(names.index(after) + 1 if after else 0, name)
-        self.order = names + [n for n in self.order if n not in names]
-        self.relayout()
+    def shown(self):
+        solo = self.solo_name()
+        return [solo] if solo else sorted(self.views)
+
+    def arrangement(self, names):
+        """Return the cells of *names* as the user, the guiconfig or the shape of
+        the panel places them.
+        """
+        if self.spans:
+            return arrange(names, self.spans)
+        if spans := from_preset(names, self.preset):
+            return arrange(names, spans)
+        width, height = self.grid.width(), self.grid.height()
+        return pack(automatic(names, width, height, CELL_ASPECT))
 
     def relayout(self):
-        """Lay out all plots in a grid.
-
-        When one plot is shown alone, the other plots and the empty rows are
-        hidden so that the grid keeps its sizes.
-        """
-        shown = self.shown(alone=False)
-        cols = grid_columns(len(shown), self.width(), self.height())
-        if shown and (shown, cols) == (self._shown, self._cols):
-            return self._show_alone()
-        self._remember_split()
-        self._shown, self._cols = shown, cols
+        """Put the plots into their cells, or show the one plot shown alone."""
+        shown = sorted(self.views)
         self.tool_bar.setEnabled(bool(shown))
-        for canvas in self.canvases.values():
-            # the canvas must survive the deletion of the old grid
-            canvas.setParent(self)
-        if shown:
-            rows = [
-                splitter(
-                    Qt.Orientation.Horizontal,
-                    [self.canvases[n] for n in shown[i : i + cols]],
-                )
-                for i in range(0, len(shown), cols)
-            ]
-            grid = splitter(Qt.Orientation.Vertical, rows)
-            self._key = f"{'/'.join(shown)}|{cols}"
-            state = self.split_states.get(self._key, {})
-            for split, sizes in zip(
-                [grid, *rows], [state.get("rows"), *state.get("cols", [])], strict=False
-            ):
-                if sizes and len(sizes) == split.count():
-                    split.setSizes(sizes)
-        else:
-            grid = QLabel(self._empty_text())
-            grid.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            grid.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            grid.customContextMenuRequested.connect(self._empty_menu)
-            self._key = None
-        self.layout().replaceWidget(self.grid, grid)
-        self.grid.deleteLater()
-        self.grid = grid
-        self._show_alone()
+        self.grid.empty_text = "" if shown else self._empty_text()
+        self.grid.set_cells(self.arrangement(shown), self.solo_name())
         self.draw_dirty()
 
-    def _show_alone(self):
-        alone = self.shown()
-        for name, canvas in self.canvases.items():
-            canvas.setVisible(name in alone)
-        for row in self._rows() if self._key else []:
-            shown = any(not row.widget(i).isHidden() for i in range(row.count()))
-            row.setVisible(shown)
+    def keep_arrangement(self, spans):
+        """Keep the layout *spans* that the user made.
 
-    def _empty_menu(self, _pos):
+        The plots of outputs that are gone for now keep their places in the list.
+        """
+        names = {name for name, _w, _h in spans}
+        spans = list(spans)
+        for i, span in enumerate(self.spans):
+            if span[0] not in names:
+                spans.insert(min(i, len(spans)), span)
+        self.spans = spans
+        self.relayout()
+
+    def take_dropped(self, name, copy, source):
+        """Show the output *name* dropped here from the view *source*.
+
+        A copy also stays in *source*, and a move takes it only from there.
+        """
+        if copy:
+            self.hub.show_in(name, self.index, True)
+        else:
+            self.hub.move(name, self.index, source)
+
+    def reset_layout(self):
+        self.spans = []
+        self.relayout()
+
+    def _empty_menu(self, pos):
+        if self.grid.childAt(pos) is not None:
+            return  # a right click on a plot opens the plot's own menu
         menu = QMenu()
         self._layout_entries(menu)
         if not menu.isEmpty():
             menu.exec(QCursor.pos())
-
-    def _rows(self):
-        return [self.grid.widget(i) for i in range(self.grid.count())]
-
-    def _remember_split(self):
-        if self._key is not None and not any(v.solo for v in self.views.values()):
-            self.split_states[self._key] = dict(
-                rows=self.grid.sizes(), cols=[row.sizes() for row in self._rows()]
-            )
-
-    def equal_sizes(self):
-        """Give all rows and plots equal sizes again."""
-        self.split_states.pop(self._key, None)
-        for split in [self.grid, *self._rows()]:
-            split.setSizes([EQUAL] * split.count())
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -374,15 +347,12 @@ class LiveViewPanel(Panel):
             move, also = menu.addMenu("Move to"), menu.addMenu("Also show in")
             for index in [i for i in hub.indices() if i != self.index]:
                 title, on = hub.title(index), index in hub.where(view.name)
-                move.addAction(title, partial(hub.move, view.name, index))
+                move.addAction(title, partial(hub.move, view.name, index, self.index))
                 check_action(also, title, on, partial(hub.show_in, view.name, index))
-        if view is not None and not view.solo and len(self.views) > 1:
-            place = menu.addMenu("Place")
-            place.addAction("First", partial(self.place, view.name, None))
-            for name in [n for n in self.shown() if n != view.name]:
-                place.addAction(f"After {name}", partial(self.place, view.name, name))
-        if len(self._shown) > 1:
-            menu.addAction("Equal plot sizes").triggered.connect(self.equal_sizes)
+        if self.views:
+            reset = menu.addAction("Reset layout", self.reset_layout)
+            reset.setEnabled(bool(self.spans))
+            reset.setToolTip("Go back to the layout of the instrument")
 
     def _draw(self, name):
         self.dirty.discard(name)
@@ -393,17 +363,22 @@ class LiveViewPanel(Panel):
         outputs = self.hub.outputs
         view.overlay_frames = {o: outputs[o][0] for o in view.overlays if o in outputs}
         view.show_frame(frame, received)
+        self.grid.refresh(name)
 
     def draw_dirty(self):
         """Draw the shown plots that changed, the longest waiting first.
 
         Drawing stops after DRAW_BUDGET and the rest is drawn on the next ticks.
+        While pictures cover the plots during a drag and its animations, only
+        the dragged plot and new plots are drawn, so the animations stay smooth.
         """
         if self.isVisible():
             start = time.monotonic()
-            for name in sorted(
-                self.dirty & set(self.shown()), key=self.drawn.__getitem__
-            ):
+            shown = set(self.shown())
+            if self.grid.layer.isVisible():
+                dragged = getattr(self.grid.session, "name", None)
+                shown = {n for n in shown if n == dragged or not self.drawn.get(n)}
+            for name in sorted(self.dirty & shown, key=self.drawn.__getitem__):
                 if time.monotonic() - start > DRAW_BUDGET:
                     break
                 self.drawn[name] = start
@@ -414,7 +389,10 @@ class LiveViewPanel(Panel):
         if self.isVisible():
             hub = self.hub
             newest = max((t for _f, t in hub.outputs.values()), default=0)
-            for name in self._shown:
+            for name in self.views:
+                # A drag keeps the plot of a forgotten output until it ends.
+                if name not in hub.outputs:
+                    continue
                 # time spent in a pause is not lag
                 lag = newest - max(hub.outputs[name][1], hub.resumed)
                 view = self.views[name]
@@ -424,10 +402,7 @@ class LiveViewPanel(Panel):
     def saveSettings(self, settings):
         for name, view in self.views.items():
             self._keep_state(name, view)
-        self._remember_split()
-        splits = {self._key: self.split_states[self._key]} if self._key else {}
-        saved = dict(splits=splits, order=self.order)
-        settings.setValue("liveview", json.dumps(saved))
+        settings.setValue("liveview", json.dumps(dict(grid=self.spans)))
         self.hub.save()
 
     def loadSettings(self, settings):

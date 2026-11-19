@@ -6,6 +6,7 @@ frame, the total over time, the views that show the output and its plot settings
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import time
 
@@ -87,19 +88,43 @@ class LiveHub(QObject):
     def where(self, name):
         """Return the indices of the views that show *name*.
 
-        If *name* has no placement in a view of this GUI, the first view shows it.
+        If the user has not placed *name* in a view of this GUI, the views
+        whose ``outputs`` option matches it show it, or else the views of its
+        own output (an ROI plot "det.roi0" goes where "det" is), or else the
+        first view.
         """
         indices = self.indices()
-        place = [i for i in self.placement.get(name, ()) if i in indices]
-        return place if place or self.placement.get(name) == [] else indices[:1]
+        if name in self.placement:
+            place = [i for i in self.placement[name] if i in indices]
+            # An empty placement hides the output, a stale one falls through.
+            if place or not self.placement[name]:
+                return place
+        wanted = self._wanted_by_option(name)
+        output = name.split(".")[0]
+        if not wanted and output != name and output in self.outputs:
+            wanted = self.where(output)
+        return wanted or indices[:1]
+
+    def _wanted_by_option(self, name):
+        """Return the indices of the views whose ``outputs`` option matches *name*."""
+        return [
+            panel.index
+            for panel in self.panels
+            if any(fnmatch.fnmatchcase(name, pattern) for pattern in panel.outputs)
+        ]
 
     def show_in(self, name, index, on):
         place = set(self.where(name)) - {index} | ({index} if on else set())
         self.placement[name] = sorted(place)
         self.placed.emit()
 
-    def move(self, name, index):
-        self.placement[name] = [index]
+    def move(self, name, index, source=None):
+        """Show *name* in the view *index*, and no longer in *source*.
+
+        Without *source*, the output leaves all other views.
+        """
+        stay = set() if source is None else set(self.where(name)) - {source}
+        self.placement[name] = sorted(stay | {index})
         self.placed.emit()
 
     def show_everything_in(self, index):

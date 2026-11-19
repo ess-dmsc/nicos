@@ -8,6 +8,7 @@ import pyqtgraph as pg
 from nicos.guisupport.qt import (
     QActionGroup,
     QApplication,
+    QColor,
     QDoubleValidator,
     QFontMetricsF,
     QFormLayout,
@@ -34,6 +35,7 @@ from nicos_ess.gui.widgets.pyqtgraph.theme import (
 )
 
 FIELD_WIDTH = 110  # The width is in pixels.
+GRIP_ROOM = 14  # Draggable titles start with grip dots in this many pixels.
 MENU_MARKER = " ▾"  # This follows a name that opens a menu.
 BOX_FILL, BOX_EDGE = (255, 255, 255, 235), "#c8c8c8"
 NUMBER = re.compile(r"–|[-+]?\d[\d.,:]*(?:e[-+]?\d+)?[kMGT]?")
@@ -236,11 +238,16 @@ class Title(pg.LabelItem):
     kept parts are shortened. A note is cut between words and a number is
     never cut. Each part keeps the width of its widest numbers so the parts
     after it do not move. The tooltip shows all parts and *hints*. With *menu*
-    set, a click on the name emits ``menu_requested`` with the screen position
-    below the name.
+    set, a click on the name or a right-click anywhere on the title emits
+    ``menu_requested`` with the screen position below the name. After
+    ``set_draggable``, the user can drag the plot by its title. Such a title
+    starts with grip dots, which show while ``show_grip`` is on.
     """
 
     menu_requested = pyqtSignal(object)
+    # This sends the screen positions where the drag started and where the
+    # pointer is, and "start", "move" or "finish".
+    dragged = pyqtSignal(object, object, str)
 
     def __init__(self, menu=False):
         super().__init__(justify="left")
@@ -253,6 +260,7 @@ class Title(pg.LabelItem):
         # This maps each part with its numbers masked to its width in pixels.
         self.rooms = {}
         self.name_end = 0.0  # The name and the menu marker end at this x.
+        self.grip_shown = self.draggable = False
         self.geometryChanged.connect(self._fit)
 
     def set_parts(self, name, parts=(), hints=()):
@@ -278,22 +286,31 @@ class Title(pg.LabelItem):
             room = self.rooms[key] = width
         return room
 
+    def _space(self, width):
+        """Return HTML for a space *width* pixels wide."""
+        space = self.plain.horizontalAdvance("\u00a0")
+        return f"<span style='letter-spacing:{width - space:.2f}px'>&nbsp;</span>"
+
     def _padded(self, text, color):
         pad = self._room(text) - self.plain.horizontalAdvance(text)
-        space = self.plain.horizontalAdvance("\u00a0")
-        filler = f"<span style='letter-spacing:{pad - space:.2f}px'>&nbsp;</span>"
         return f"<span style='color:{color or '#222'}'>{html.escape(text)}</span>" + (
-            filler if pad > 0.1 else ""
+            self._space(pad) if pad > 0.1 else ""
         )
 
     def _fit(self):
         marker = MENU_MARKER if self.menu and self.name else ""
         width = self.geometry().width() or 1e6  # The width is 0 before layout.
-        width -= 8 + self.plain.horizontalAdvance(marker)
+        width -= 8 + self.plain.horizontalAdvance(marker) + self._grip_room()
+        name, kept = self._fitted(width)
+        self._show(name, marker, kept)
+
+    def _fitted(self, width):
+        """Return the name and the parts that fit in *width* pixels."""
         sep = self.plain.horizontalAdvance(" · ")
         # The name tells plots apart, so it never gets shorter than 12 letters.
-        name = self.name
-        floor = name if len(name) <= 12 else f"{name[:6]}…{name[-5:]}"
+        floor = (
+            self.name if len(self.name) <= 12 else f"{self.name[:6]}…{self.name[-5:]}"
+        )
 
         def wide(name, parts):
             return self.bold.horizontalAdvance(name) + sum(
@@ -311,23 +328,33 @@ class Title(pg.LabelItem):
         while wide(self.name, kept) > width and not all(p[2] for p in kept):
             kept.pop(max(i for i, p in enumerate(kept) if not p[2]))
         name = shortened(kept)
-        if wide(name, kept) > width:  # Keep parts whole or cut a note at a word.
-            room, fitted = width - self.bold.horizontalAdvance(name) - sep, []
-            for text, color, keep in kept:
-                short = (
-                    text if NUMBER.search(text) else elide_words(self.plain, text, room)
-                )
-                if self._room(short) > room:
-                    continue  # Leave this part out because the age may still fit.
-                fitted.append((short, color, keep))
-                room -= sep + self._room(short)
-                if short != text:
-                    break
-            kept = fitted
+        if wide(name, kept) > width:
+            kept = self._cut(kept, width - self.bold.horizontalAdvance(name) - sep, sep)
             name = shortened(kept)
+        return name, kept
+
+    def _cut(self, parts, room, sep):
+        """Return the parts that fit in *room* pixels.
+
+        Parts with numbers stay whole. A note is cut at a word and is the last
+        part kept.
+        """
+        fitted = []
+        for text, color, keep in parts:
+            short = text if NUMBER.search(text) else elide_words(self.plain, text, room)
+            if self._room(short) > room:
+                continue  # Leave this part out because the age may still fit.
+            fitted.append((short, color, keep))
+            room -= sep + self._room(short)
+            if short != text:
+                break
+        return fitted
+
+    def _show(self, name, marker, kept):
         self.name_end = (
             self.item.pos().x()
             + self.item.document().documentMargin()
+            + self._grip_room()
             + self.bold.horizontalAdvance(name + marker)
         )
         pieces = [
@@ -335,7 +362,8 @@ class Title(pg.LabelItem):
         ] * bool(name)
         pieces += [self._padded(text, color) for text, color, _keep in kept]
         self.setText(
-            f"<span style='color:{MUTED}'> · </span>".join(pieces),
+            (self._space(GRIP_ROOM) if self.draggable else "")
+            + f"<span style='color:{MUTED}'> · </span>".join(pieces),
             size=css_size(TITLE_SCALE),
             color="#222",
         )
@@ -344,14 +372,57 @@ class Title(pg.LabelItem):
         )
 
     def _on_name(self, pos):
-        return self.menu and bool(self.name) and pos.x() <= self.name_end + 4
+        start = self.item.pos().x() + self._grip_room()
+        return self.menu and bool(self.name) and start <= pos.x() <= self.name_end + 4
+
+    def _grip_room(self):
+        return GRIP_ROOM if self.draggable else 0
+
+    def set_draggable(self):
+        """Let the user drag the plot by this title, which emits ``dragged``."""
+        self.draggable = True
+        self._fit()  # The grip dots need their room in the text.
+
+    def show_grip(self, on):
+        """Show or hide the grip dots that mark the title as a handle."""
+        if on != self.grip_shown:
+            self.grip_shown = on
+            self.update()
+
+    def paint(self, painter, *args):
+        super().paint(painter, *args)
+        if self.grip_shown and self.draggable:
+            x = self.item.pos().x() + self.item.document().documentMargin() + 3
+            y = self.boundingRect().center().y() - 5
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(MUTED))
+            for row in range(3):
+                for column in range(2):
+                    painter.drawEllipse(
+                        QPointF(x + 4 * column, y + 4 * row + 1), 1.2, 1.2
+                    )
 
     def hoverEvent(self, ev):
+        draggable = not ev.isExit() and self.draggable
+        if draggable:
+            ev.acceptDrags(Qt.MouseButton.LeftButton)
+        if not ev.isExit() and self.menu:
+            ev.acceptClicks(Qt.MouseButton.RightButton)
         if not ev.isExit() and self._on_name(ev.pos()):
             ev.acceptClicks(Qt.MouseButton.LeftButton)
             self.setCursor(Qt.CursorShape.PointingHandCursor)
+        elif draggable:
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
         else:
             self.unsetCursor()
+
+    def mouseDragEvent(self, ev):
+        if ev.button() != Qt.MouseButton.LeftButton or not self.draggable:
+            ev.ignore()
+            return
+        ev.accept()
+        phase = "start" if ev.isStart() else "finish" if ev.isFinish() else "move"
+        self.dragged.emit(ev.buttonDownScreenPos(), ev.screenPos(), phase)
 
     def mouseClickEvent(self, ev):
         right = self.menu and ev.button() == Qt.MouseButton.RightButton

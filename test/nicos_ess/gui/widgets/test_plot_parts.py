@@ -10,6 +10,7 @@ from nicos.guisupport.qt import (
     QFileDialog,
     QLocale,
     QMenu,
+    QPointF,
     Qt,
 )
 from nicos_ess.gui.widgets.pyqtgraph import export
@@ -21,6 +22,7 @@ from nicos_ess.gui.widgets.pyqtgraph.image_layer import (
     auto_levels,
 )
 from nicos_ess.gui.widgets.pyqtgraph.plot_parts import (
+    GRIP_ROOM,
     MENU_ORDER,
     HoverBox,
     PlotMenu,
@@ -368,6 +370,32 @@ def test_title_parts_stay_put_while_the_numbers_before_them_change(plot):
     shifts = [shape_x(t) - first for t in ("9950", "10.1k", "999k")]
     assert shifts == pytest.approx([0, 0, 0], abs=0.5)
     assert shape_x("3") < first
+
+
+def test_a_draggable_title_starts_with_grip_dots_before_its_menu(qtbot):
+    widget = pg.GraphicsLayoutWidget()
+    qtbot.addWidget(widget)
+    title = Title(menu=True)
+    widget.addItem(title)
+    widget.resize(600, 100)
+    widget.show()
+    qtbot.waitExposed(widget)
+    title.set_parts("detector")
+    menu_starts = title.name_end
+    title.set_draggable()
+    assert title.name_end == pytest.approx(menu_starts + GRIP_ROOM)
+    requests = []
+    title.menu_requested.connect(requests.append)
+
+    def click(x):
+        scene = title.mapToScene(QPointF(x, title.boundingRect().center().y()))
+        at = widget.mapFromScene(scene)
+        qtbot.mouseClick(widget.viewport(), Qt.MouseButton.LeftButton, pos=at)
+
+    click(GRIP_ROOM / 2)  # A press on the dots drags.
+    assert requests == []
+    click(GRIP_ROOM + 10)
+    assert len(requests) == 1
 
 
 def test_a_narrow_title_shortens_the_name_and_leaves_out_whole_parts(plot):
