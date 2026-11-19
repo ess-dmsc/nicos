@@ -97,6 +97,8 @@ class LiveViewPanel(Panel):
         # Panel.__init__ calls loadSettings, which fills self._saved.
         self._saved = {}
         Panel.__init__(self, parent, client, options)
+        for name in layout.keys() - self.preset.keys():
+            self.log.warning("layout of %s needs (x, y, w, h)", name)
         self.hub = hub_for(client, self.log)
         self.views, self.canvases, self.dirty = {}, {}, set()
         # This remembers when each output was last drawn.
