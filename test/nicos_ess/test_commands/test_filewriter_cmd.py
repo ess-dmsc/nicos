@@ -2,7 +2,7 @@
 
 import pytest
 
-from nicos_ess.commands.filewriter import nexusfile_open
+from nicos_ess.commands.filewriter import nexusfile_open, start_filewriting
 from nicos_ess.devices.datasinks import file_writer
 from nicos_ess.devices.datasinks.nexus_structure import (
     NexusStructureJsonFile,
@@ -85,3 +85,43 @@ def test_nexusfile_open_produces_traceback_log_when_propsalnumber_missing(
         assert isinstance(msg[0].exc_info[1], RuntimeError), (
             "Error log record is missing exception"
         )
+
+
+def test_failed_start_keeps_the_previous_run_title(
+    session, device_harness, filewriter_control_sink_devices, monkeypatch
+):
+    with loaded_setup(session, "ess_filewriter"):
+        daemon_device, poller_device = filewriter_control_sink_devices
+
+        def refuse(self):
+            raise file_writer.FileWriterStartError("no file writer took job #1")
+
+        monkeypatch.setattr(file_writer.FileWriter, "start_job", refuse)
+        with device_harness.activate("daemon") as daemon_session:
+            with pytest.raises(file_writer.FileWriterStartError):
+                start_filewriting("refused title")
+
+            assert daemon_session.experiment.run_title == "mocksessionexp_runtitle"
+
+
+def test_nexusfile_open_does_not_stop_files_it_did_not_start(
+    session, device_harness, filewriter_control_sink_devices, monkeypatch
+):
+    with loaded_setup(session, "ess_filewriter"):
+        stops = []
+
+        def refuse(self):
+            raise file_writer.FileWriterStartError("no file writer took job #1")
+
+        monkeypatch.setattr(file_writer.FileWriter, "start_job", refuse)
+        monkeypatch.setattr(
+            file_writer.FileWriter, "stop_job", lambda *args: stops.append(1)
+        )
+        with (
+            device_harness.activate("daemon"),
+            pytest.raises(RuntimeError, match="didn't yield"),
+            nexusfile_open("title"),
+        ):
+            pass
+
+        assert not stops
