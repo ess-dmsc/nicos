@@ -74,8 +74,8 @@ successful stop `answ`, keeps reporting for a short stop leeway, publishes
 `wrdn`, then returns to the pool topic and idle status.
 
 The smoke test verifies that NICOS sees this lifecycle through
-`FileWriterStatus`: no jobs initially, `STARTED` during `nexusfile_open`, and
-`WRITTEN` after the stop leeway. It also runs `list_filewriting_jobs()` so the
+`FileWriter`: no jobs initially, `WRITING` during `nexusfile_open`, and
+`DONE` after the stop leeway. It also runs `list_filewriting_jobs()` so the
 command path is exercised.
 
 ## Test Coverage
@@ -86,7 +86,7 @@ command path is exercised.
 - EPICS PVA readable/moveable status and readback;
 - `NewExperiment`, `NewSample`, and `SetDetectors`;
 - `nexusfile_open` around a scan;
-- filewriter active-job state and `FileWriterStatus` history;
+- filewriter active-job state and `FileWriter` history;
 - scan/file counter increments;
 - experiment `lastscan` and current run number.
 

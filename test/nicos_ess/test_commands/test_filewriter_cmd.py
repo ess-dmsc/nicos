@@ -10,7 +10,6 @@ from nicos_ess.devices.datasinks.nexus_structure import (
 from nicos_ess.devices.kafka import status_handler
 from test.nicos_ess.command_helpers import loaded_setup
 from test.nicos_ess.test_devices.doubles import (
-    StubKafkaConsumer,
     StubKafkaProducer,
     StubKafkaSubscriber,
 )
@@ -30,9 +29,6 @@ class HarnessNexusStructureProvider(NexusStructureJsonFile):
 def kafka_stubs(monkeypatch):
     monkeypatch.setattr(status_handler, "KafkaSubscriber", StubKafkaSubscriber)
     monkeypatch.setattr(
-        file_writer.KafkaConsumer, "create", lambda *args, **kwargs: StubKafkaConsumer()
-    )
-    monkeypatch.setattr(
         file_writer.KafkaProducer, "create", lambda *args, **kwargs: StubKafkaProducer()
     )
 
@@ -45,31 +41,19 @@ def filewriter_control_sink_devices(device_harness, kafka_stubs):
     with device_harness.activate("daemon") as daemon_session:
         daemon_session.experiment.propinfo["proposal"] = "123456"
         daemon_session.experiment.run_title = "mocksessionexp_runtitle"
-    # attached filewriter status device
-    device_harness.create_pair(
-        file_writer.FileWriterStatus,
-        name="filewriter_status_device",
-        shared={
-            "brokers": ["localhost:9092"],
-            "statustopic": ["filewriter_status"],
-        },
-    )
-    # attached nexus structure device
     device_harness.create_pair(
         HarnessNexusStructureProvider,
         name="NexusStructure",
-        shared={
-            "instrument_name": "ymir",
-        },
+        shared={"instrument_name": "ymir"},
     )
     return device_harness.create_pair(
-        file_writer.FileWriterControlSink,
-        name="file_writer_control_sink",
+        file_writer.FileWriter,
+        name="file_writer",
         shared={
             "brokers": ["localhost:9092"],
+            "statustopic": ["filewriter_instrument"],
             "pool_topic": "filewriter_pool",
             "instrument_topic": "filewriter_instrument",
-            "status": "filewriter_status_device",
             "nexus": "NexusStructure",
         },
     )

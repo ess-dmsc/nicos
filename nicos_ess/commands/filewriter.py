@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from nicos import session
 from nicos.commands import helparglist, parallel_safe, usercommand
 from nicos.core import ADMIN, SIMULATION, requires
-from nicos_ess.devices.datasinks.file_writer import FileWriterControlSink
+from nicos_ess.devices.datasinks.file_writer import FileWriter
 
 __all__ = [
     "nexusfile_open",
@@ -19,9 +19,9 @@ __all__ = [
 def _find_filewriter_dev():
     for dev in session.devices.values():
         # Should only be one at most
-        if isinstance(dev, FileWriterControlSink):
+        if isinstance(dev, FileWriter):
             return dev
-    raise RuntimeError("Could not find FileWriterControlSink device")
+    raise RuntimeError("Could not find the FileWriter device")
 
 
 @usercommand
