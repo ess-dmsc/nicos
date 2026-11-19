@@ -62,12 +62,12 @@ class MultilineController(EpicsDeviceBase, Waitable):
             settable=False,
             userparam=False,
         ),
-        "polling_counter": Param(
-            "Number of polling requests from IOC",
-            type=int,
-            settable=False,
-            userparam=True,
-        ),
+        # "polling_counter": Param(
+        #     "Number of polling requests from IOC",
+        #     type=int,
+        #     settable=False,
+        #     userparam=True,
+        # ),
         "front_end_splitter": Param(
             "Turn front end splitter on/off.", type=str, settable=True, internal=True
         ),
@@ -86,12 +86,12 @@ class MultilineController(EpicsDeviceBase, Waitable):
             settable=True,
             internal=True,
         ),
-        "current_task": Param(
-            "String value of the IOC task currently performed.",
-            type=str,
-            settable=False,
-            internal=True,
-        ),
+        # "current_task": Param(
+        #     "String value of the IOC task currently performed.",
+        #     type=str,
+        #     settable=False,
+        #     internal=True,
+        # ),
         "measurement_lengths": Param(
             "Last measurement length array",
             type=listof(float),
@@ -111,6 +111,7 @@ class MultilineController(EpicsDeviceBase, Waitable):
             type=listof(int),
             settable=False,
             internal=True,
+            volatile=True,
         ),
         "measurement_counter": Param(
             "Last measurement errors",
@@ -179,12 +180,12 @@ class MultilineController(EpicsDeviceBase, Waitable):
             refresh_status=True,
             cache_key="alignment_process",
         ),
-        "current_task": enum_readback_channel(
-            "CurrentTask-R",
-            refresh_status=True,
-            cache_key="current_task",
-            as_string=True,
-        ),
+        # "current_task": enum_readback_channel(
+        #     "CurrentTask-R",
+        #     refresh_status=True,
+        #     cache_key="current_task",
+        #     as_string=True,
+        # ),
         # 'ioc_connect': 'ConnectIOCtoServer-S',
         "num_channels": readback_channel(
             "NumChannels-R",
@@ -194,11 +195,11 @@ class MultilineController(EpicsDeviceBase, Waitable):
         "is_grouped": enum_readback_channel(
             "IsGrouped-R", refresh_status=True, cache_key="is_grouped", as_string=True
         ),
-        "polling_counter": readback_channel(
-            "PollingCounter-R",
-            refresh_status=True,
-            cache_key="polling_counter",
-        ),
+        # "polling_counter": readback_channel(
+        #     "PollingCounter-R",
+        #     refresh_status=True,
+        #     cache_key="polling_counter",
+        # ),
         "available_channels": readback_channel(
             "SelectedChannels-R",
             refresh_status=True,
@@ -338,8 +339,9 @@ class MultilineController(EpicsDeviceBase, Waitable):
             return readpv_status, readpv_message
 
         state = self.read(maxage)
-        task = self.current_task
-        if task == "Aligning":
+        # task = self.readpv
+        task = self._read_channel_cached("readpv")
+        if task in ["Requested", "Measuring", "Processing"]:
             return status.BUSY, "Alignment Running"
         else:
             if state == "Idle":
@@ -394,11 +396,11 @@ class MultilineController(EpicsDeviceBase, Waitable):
         output = np.array([0 for i in self.measurement_lengths])
         for i, error in enumerate(self._error_flag_list):
             # create bit-flag for each error
-            output += 2**i * self._read_channel_cached(error)
-        return output
+            output += 2**i * self._epics.get_channel_value(error)
+        return list(output)
 
-    def doReadPolling_Counter(self):
-        return self._read_channel_cached("polling_counter")
+    # def doReadPolling_Counter(self):
+    #     return self._read_channel_cached("polling_counter")
 
     _task_codes = {
         0: "Idle",
@@ -408,12 +410,12 @@ class MultilineController(EpicsDeviceBase, Waitable):
         4: "Error",
     }
 
-    def doReadCurrent_Task(self):
-        value = self._read_channel_cached("current_task")
-        if isinstance(value, str):
-            return value
-        else:
-            return self._task_codes[int(value)]
+    # def doReadCurrent_Task(self):
+    #     value = self._read_channel_cached("current_task")
+    #     if isinstance(value, str):
+    #         return value
+    #     else:
+    #         return self._task_codes[int(value)]
 
     def doReadFront_End_Splitter(self):
         return self._read_channel_cached("front_end_splitter")
@@ -490,16 +492,17 @@ class MultilineChannel(Readable):
 
         self._pollParam("gain")
 
-        if self._attached_controller.current_task == "Aligning":
-            return (
-                float(
-                    self._attached_controller.align_max[ch_idx]
-                    - self._attached_controller.align_min[ch_idx]
-                )
-                / 2.0
-            )
-        else:
-            return float(self._attached_controller.measurement_lengths[ch_idx])
+        return float(self._attached_controller.measurement_lengths[ch_idx])
+        # if self._attached_controller.current_task == "Aligning":
+        #     return (
+        #         float(
+        #             self._attached_controller.align_max[ch_idx]
+        #             - self._attached_controller.align_min[ch_idx]
+        #         )
+        #         / 2.0
+        #     )
+        # else:
+        #     return float(self._attached_controller.measurement_lengths[ch_idx])
 
     def doReadGain(self, maxage=0):
         available_channels = self._attached_controller.available_channels
@@ -535,7 +538,7 @@ class MultilineChannel(Readable):
         ret_msg = f"CH-{self.channel}"
 
         if (
-            self._attached_controller.current_task == "Measuring"
+            self._attached_controller.status == "Measuring"
             and self._attached_controller.measurement_channels[ch_idx]
         ):
             ret_stat = status.BUSY
