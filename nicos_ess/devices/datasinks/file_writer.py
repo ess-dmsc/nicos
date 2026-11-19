@@ -122,10 +122,16 @@ def _hook_into_daemon(controller):
     return True
 
 
+def _command_id(job_id):
+    # the format main always sent: a deployed file writer rejected uuid4 ids
+    digits = job_id.replace("-", "")[:12] + "5" + "0" * 11 + uuid.uuid1().hex[:8]
+    return str(uuid.UUID(digits[:16] + "8" + digits[17:]))
+
+
 def _stop_message(job, stop_time):
     return serialise_6s4t(
         job_id=job["id"],
-        command_id=str(uuid.uuid4()),
+        command_id=_command_id(job["id"]),
         service_id=job["service"],
         stop_time=stop_time,
         run_name="",
