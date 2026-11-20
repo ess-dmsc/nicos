@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from nicos import session
 from nicos.commands import helparglist, parallel_safe, usercommand
 from nicos.core import ADMIN, SIMULATION, requires
-from nicos_ess.devices.datasinks.file_writer import FileWriterControlSink
+from nicos_ess.devices.datasinks.file_writer import FileWriter
 
 __all__ = [
     "nexusfile_open",
@@ -19,9 +19,9 @@ __all__ = [
 def _find_filewriter_dev():
     for dev in session.devices.values():
         # Should only be one at most
-        if isinstance(dev, FileWriterControlSink):
+        if isinstance(dev, FileWriter):
             return dev
-    raise RuntimeError("Could not find FileWriterControlSink device")
+    raise RuntimeError("Could not find the FileWriter device")
 
 
 @usercommand
@@ -46,14 +46,14 @@ def nexusfile_open(run_title=None):
         with nexusfile_open('Motor alignment'):
             scan(motor, 0, 1, 11, timer=10)
     """
-    nested_call = False
+    nested_call = started = False
     if run_title is None:
         run_title = session.experiment.run_title
     try:
-        active_jobs = _find_filewriter_dev().get_active_jobs()
-        if not active_jobs:
+        if not _find_filewriter_dev().get_active_jobs():
             session.log.info("Setting run title to: %s", run_title)
             start_filewriting(run_title)
+            started = True
         else:
             #  Allow nested calls, but give a warning since it is not
             #  a preferred way of writing scripts
@@ -67,9 +67,9 @@ def nexusfile_open(run_title=None):
         session.log.exception("Could not start filewriting")
         session.log.warning("The rest of the batch file code will be ignored.")
     finally:
-        if not nested_call:
+        if started:
             stop_filewriting()
-        else:
+        elif nested_call:
             session.log.warning(
                 "Since this context did not start the "
                 "filewriter for file with title: %s, "
@@ -86,9 +86,15 @@ def start_filewriting(run_title=None):
 
     A proposal must be selected and no other job may be active.
     """
+    old_title = session.experiment.run_title
     if run_title is not None and session.mode != SIMULATION:
         session.experiment.run_title = run_title
-    _find_filewriter_dev().start_job()
+    try:
+        _find_filewriter_dev().start_job()
+    except Exception:
+        if session.mode != SIMULATION:
+            session.experiment.run_title = old_title
+        raise
 
 
 @usercommand

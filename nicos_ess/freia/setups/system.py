@@ -63,20 +63,14 @@ devices = dict(
         instrument_name="freia",
         visibility=(),
     ),
-    FileWriterStatus=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
-        description="Status of the file-writer",
+    FileWriter=device(
+        "nicos_ess.devices.datasinks.file_writer.FileWriter",
+        description="Starts and stops file writing jobs",
         brokers=configdata("config.KAFKA_BROKERS"),
         statustopic=["freia_filewriter", "ess_filewriter_status"],
-        unit="",
-    ),
-    FileWriterControl=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriterControlSink",
-        description="Control for the file-writer",
-        brokers=configdata("config.KAFKA_BROKERS"),
         pool_topic="ess_filewriter_pool",
         instrument_topic="freia_filewriter",
-        status="FileWriterStatus",
         nexus="NexusStructure",
+        unit="",
     ),
 )
