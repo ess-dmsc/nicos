@@ -26,9 +26,10 @@ devices = dict(
     Exp=device(
         "nicos_ess.devices.experiment.EssExperiment",
         description="experiment object",
-        dataroot="/opt/nicos-data",
+        dataroot="nicos-data",
         sample="Sample",
-        cache_filepath="/opt/nicos-data/cached_proposals.json",
+        cache_filepath="nicos-data/cached_proposals.json",
+        scripts_directory="instrument-nicos-scripts"
     ),
     conssink=device(
         "nicos_ess.devices.datasinks.console_scan_sink.ConsoleScanSink",
