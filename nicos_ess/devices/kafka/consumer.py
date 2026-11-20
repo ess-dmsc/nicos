@@ -6,9 +6,8 @@ import random
 import threading
 import time
 import uuid
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Callable
 
 from confluent_kafka import (
     OFFSET_BEGINNING,
@@ -1512,6 +1511,9 @@ class KafkaSubscriber:
 
             if err:
                 had_error = True
+                if KafkaConsumer.is_partition_eof(err):
+                    # since librdkafka 2.13.2 position() stays invalid at the end
+                    self._last_seen[(m.topic(), m.partition())] = m.offset() - 1
                 self._handle_message_error(err)
                 continue
 

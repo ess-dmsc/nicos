@@ -794,3 +794,47 @@ def test_first_message_after_long_idle_is_consumed_instead_of_stuck_rebootstrap_
     # Validate: delivered and no stuck reboot
     assert b"FIRST-S" in [v for (_, v) in delivered]
     assert "stuck_no_progress_despite_lag" not in reasons
+
+
+def test_idle_topic_with_retained_messages_is_not_stuck(clock):
+    consumer = mod.KafkaConsumer(
+        brokers=["broker1:9092"],
+        consumer_factory=lambda conf: ConsumerStub(conf),
+        topic_partition_factory=lambda t, p, o=mod.OFFSET_END: TopicPartitionStub(
+            t, p, o
+        ),
+        now=clock.now,
+        sleep=clock.sleep,
+        rand_uniform=lambda a, b: 0.0,
+    )
+    stub = consumer._consumer
+    stub.report_eof = True
+    stub.create_topic("idle", num_partitions=1)
+    for offset in range(500):
+        stub.add_message("idle", 0, offset=offset, key=b"k", value=b"old")
+    reasons = []
+    consumer._on_rebootstrap = reasons.append
+    sub = mod.KafkaSubscriber(
+        consumer=consumer,
+        cooldown_secs=0.5,
+        wait_after_assign_secs=0.2,
+        stuck_with_lag_secs=0.8,
+        min_lag_for_stuck=1,
+        now=clock.now,
+        sleep=clock.sleep,
+        use_thread=False,
+    )
+    delivered = []
+    sub.subscribe(["idle"], delivered.extend)
+
+    for _ in range(100):
+        consumer._health.last_stats_mono = clock.now()
+        sub.tick()
+        clock.sleep(0.1)
+
+    assert not delivered
+    assert "stuck_no_progress_despite_lag" not in reasons
+    stub.add_message("idle", 0, offset=500, key=b"k", value=b"new")
+    pump(sub, steps=5)
+    assert [value for _, value in delivered] == [b"new"]
+    stub.clear_all_clusters()
