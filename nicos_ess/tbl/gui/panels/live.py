@@ -414,7 +414,9 @@ class ADControl(QWidget):
         if not self.selected_device:
             return
 
-        self.parent.eval_command("%s.pollParams()" % self.selected_device, None)
+        self.parent.eval_command(
+            f"{self.selected_device}.asyncPollVolatileParams()", None
+        )
         param_info = self.parent.client.getDeviceParams(self.selected_device)
         if not param_info:
             return
@@ -581,7 +583,7 @@ class MultiLiveDataPanel(DefaultMultiLiveDataPanel):
         )
 
     def on_ad_selected(self, ad_name):
-        if ad_name not in self._previews.keys():
+        if ad_name not in self._previews:
             return
         self._change_detector_to_display(ad_name)
 

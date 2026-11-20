@@ -221,7 +221,7 @@ class FakeDaemon:
         for param, value in device.params.items():
             self.set_cache(f"{device.name.lower()}/{param}", value)
             self.evals[f"{device.name}.{param}"] = value
-        self.evals[f"{device.name}.pollParams()"] = None
+        self.evals[f"{device.name}.asyncPollVolatileParams()"] = None
         self.evals[f"session.getDevice({device.name!r}).read()"] = device.params.get(
             "value"
         )
