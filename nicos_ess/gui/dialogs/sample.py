@@ -38,20 +38,20 @@ class SampleDialog(QDialog):
         self.resize(self.width(), self.sizeHint().height())
 
     def _set_samples(self, samples):
-        self.samples = {n: s for n, s in (samples or {}).items() if "name" in s}
+        self.samples = {n: s for n, s in (samples or {}).items() if "samplename" in s}
         self.samples_combo.clear()
         for number, sample in self.samples.items():
-            self.samples_combo.addItem(f"{number} : {sample['name']}", number)
+            self.samples_combo.addItem(f"{number} : {sample['samplename']}", number)
 
     def _show_sample(self, sample_number):
         self.current_sample_number = sample_number
         sample = self.samples.get(sample_number, {})
-        self.sampleName.setText(sample.get("name", ""))
+        self.sampleName.setText(sample.get("samplename", ""))
         self.samples_combo.setCurrentIndex(self.samples_combo.findData(sample_number))
 
         self.metadata_model.removeRows(0, self.metadata_model.rowCount())
         for key, value in sample.items():
-            if key != "name":
+            if key != "samplename":
                 self.metadata_model.appendRow(
                     [QStandardItem(str(key)), QStandardItem(str(value))]
                 )
