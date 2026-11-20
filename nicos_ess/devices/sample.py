@@ -26,17 +26,5 @@ class EssSample(Sample):
         "samples": Override(category="sample"),
     }
 
-    def get_samples(self):
-        """Return the samples as a list of dicts."""
-        return [dict(x) for x in self.samples.values()]
-
     def set_samples(self, samples):
-        """Store samples given as a list or as ``{index: sample_dict}``."""
-        if isinstance(samples, list):
-            indexed_samples_dict = {}
-            for index, sample in enumerate(samples):
-                if not sample.get("name", ""):
-                    sample["name"] = f"sample {index + 1}"
-                indexed_samples_dict[index] = sample
-            samples = indexed_samples_dict
         self.samples = samples

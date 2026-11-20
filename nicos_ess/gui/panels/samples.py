@@ -23,7 +23,8 @@ class SamplePanel(PanelBase):
 
     def save_sample_data(self, samples):
         # Setting the samples will trigger an on_keyChange.
-        self.client.run(f"Exp.set_samples({samples})")
+        samples_dict = {index: sample for index, sample in enumerate(samples)}
+        self.client.run(f"Exp.sample.set_samples({samples_dict})")
 
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
