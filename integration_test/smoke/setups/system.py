@@ -68,21 +68,14 @@ devices = dict(
         alias="NexusStructure_Basic",
         devclass="nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
     ),
-    FileWriterStatus=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
-        description="Status of the file-writer",
+    FileWriter=device(
+        "nicos_ess.devices.datasinks.file_writer.FileWriter",
+        description="Starts and stops file writing jobs",
         brokers=configdata("config.KAFKA_BROKERS"),
         statustopic=configdata("config.FILEWRITER_STATUS_TOPICS"),
-        unit="",
-    ),
-    FileWriterControl=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriterControlSink",
-        description="Control for the file-writer",
-        brokers=configdata("config.KAFKA_BROKERS"),
         pool_topic=configdata("config.FILEWRITER_POOL_TOPIC"),
         instrument_topic=configdata("config.FILEWRITER_INSTRUMENT_TOPIC"),
-        status="FileWriterStatus",
         nexus="NexusStructure",
-        use_instrument_directory=True,
+        unit="",
     ),
 )
