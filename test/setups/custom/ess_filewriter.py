@@ -22,7 +22,6 @@
 # *****************************************************************************
 
 sysconfig = dict(
-    datasinks=["FileWriterControl"],
     experiment="Exp",
     instrument="YMIR",
 )
@@ -50,22 +49,15 @@ devices = dict(
         templatesmodule="nicos_ess.ymir.nexus.nexus_templates",
         templatename="ymir_default",
     ),
-    FileWriterStatus=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
-        description="Status for file-writer",
+    FileWriter=device(
+        "nicos_ess.devices.datasinks.file_writer.FileWriter",
+        description="Starts and stops file writing jobs",
         brokers=["someserver:9092"],
-        statustopic=["TEST_controlTopic"],
-        unit="",
-    ),
-    FileWriterControl=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriterControlSink",
-        description="Control for file-writer",
-        brokers=["someserver:9092"],
-        unit="",
+        statustopic=["TEST_filewriter"],
         pool_topic="TEST_jobPool",
         instrument_topic="TEST_filewriter",
         nexus="NexusStructure",
-        status="FileWriterStatus",
+        unit="",
     ),
     motor=device(
         "nicos.devices.generic.VirtualMotor",

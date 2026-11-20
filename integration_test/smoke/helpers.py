@@ -72,9 +72,9 @@ def wait_for_moveable_readback(
 def filewriter_jobs(smoke_client):
     return smoke_client.eval(
         "["
-        "(job.job_id, job.job_number, job.get_state_string(), "
-        "job.stop_requested, job.error_msg, job.service_id) "
-        "for job in FileWriterStatus._jobs_in_order.values()"
+        "(job['id'], job['number'], job['state'], "
+        "job['stop'] is not None, job['error'], job['service']) "
+        "for job in FileWriter.jobs"
         "]",
         default=[],
     )
@@ -104,12 +104,12 @@ def run_scan_with_filewriter_context(
         dedent(
             f"""
             __smoke_filewriter_jobs_before = [
-                (job.job_id, job.job_number, job.get_state_string())
-                for job in FileWriterStatus._jobs_in_order.values()
+                (job['id'], job['number'], job['state'])
+                for job in FileWriter.jobs
             ]
-            __smoke_jobs_before = FileWriterControl.get_active_jobs()
+            __smoke_jobs_before = FileWriter.get_active_jobs()
             with nexusfile_open({title!r}):
-                __smoke_jobs_during = FileWriterControl.get_active_jobs()
+                __smoke_jobs_during = FileWriter.get_active_jobs()
                 __smoke_filewriter_state_during = ""
                 __smoke_filewriter_service_during = ""
                 import time as __smoke_time
@@ -117,12 +117,12 @@ def run_scan_with_filewriter_context(
                 while __smoke_time.monotonic() < __smoke_deadline:
                     __smoke_filewriter_jobs_during = [
                         (
-                            job.job_id,
-                            job.job_number,
-                            job.get_state_string(),
-                            job.service_id,
+                            job['id'],
+                            job['number'],
+                            job['state'],
+                            job['service'],
                         )
-                        for job in FileWriterStatus._jobs_in_order.values()
+                        for job in FileWriter.jobs
                     ]
                     if __smoke_filewriter_jobs_during:
                         __smoke_latest_filewriter = (
@@ -138,17 +138,17 @@ def run_scan_with_filewriter_context(
                         break
                     __smoke_time.sleep(0.1)
                 scan(SmokeBasicMoveable, [0, 5, 10], timer=2.0)
-            __smoke_jobs_after = FileWriterControl.get_active_jobs()
+            __smoke_jobs_after = FileWriter.get_active_jobs()
             __smoke_filewriter_jobs_after = [
                 (
-                    job.job_id,
-                    job.job_number,
-                    job.get_state_string(),
-                    job.stop_requested,
-                    job.error_msg,
-                    job.service_id,
+                    job['id'],
+                    job['number'],
+                    job['state'],
+                    job['stop'] is not None,
+                    job['error'],
+                    job['service'],
                 )
-                for job in FileWriterStatus._jobs_in_order.values()
+                for job in FileWriter.jobs
             ]
             """
         ),

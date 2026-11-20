@@ -94,7 +94,7 @@ def test_full_experiment_workflow_with_filewriter_scan(smoke_client) -> None:
     )
     assert lastscan >= scan_before + 1
     assert run_number >= file_before + 1
-    assert status("FileWriterStatus", 0) is not None
+    assert status("FileWriter", 0) is not None
 
     lastpoint = int(smoke_client.eval("session.experiment.lastpoint", default=0))
     assert counters_after.get("point", 0) == lastpoint
