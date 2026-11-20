@@ -7,9 +7,12 @@ from nicos.clients.gui.utils import (
 )
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
+    QImageReader,
     QLabel,
+    QPainter,
     QPixmap,
     QPushButton,
+    QSize,
     QSizePolicy,
     Qt,
     pyqtSlot,
@@ -329,14 +332,28 @@ class Dashboard(Panel):
 
     def add_logo(self):
         nicos_label = QLabel()
-        pxr = decolor_logo(
-            QPixmap(":/nicos-logo-high"),
-            Qt.GlobalColor.white,
-        )
         nicos_label.setPixmap(
-            pxr.scaledToHeight(30, Qt.TransformationMode.SmoothTransformation)
+            self.render_logo(":/nicos-logo-high", 70, self.devicePixelRatioF())
         )
         self.logo_box.addWidget(nicos_label)
+
+    @staticmethod
+    def render_logo(resource, height, dpr):
+        """Render the logo sharply in white, ``height`` logical pixels high."""
+        # Draw the SVG directly at the screen's real pixel size; width 0
+        # lets Qt keep the aspect ratio.
+        reader = QImageReader(resource)
+        reader.setScaledSize(QSize(0, round(height * dpr)))
+        image = reader.read()
+        # Paint white only where the logo is, keeping its smooth edges.
+        painter = QPainter(image)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+        painter.fillRect(image.rect(), Qt.GlobalColor.white)
+        painter.end()
+        # Tell Qt the pixels are for this screen, so it isn't stretched.
+        pixmap = QPixmap.fromImage(image)
+        pixmap.setDevicePixelRatio(dpr)
+        return pixmap
 
     @pyqtSlot()
     def on_actionEmergencyStop_triggered(self):
