@@ -27,7 +27,6 @@
 
 from nicos.utils.stubs import generate_stubs
 
-
 def setup(app):
     generate_stubs()
     return {
