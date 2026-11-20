@@ -1,5 +1,7 @@
 import time
 
+from test.nicos_ess.test_devices.doubles import FakeKafkaError
+
 # Common librdkafka offset constants
 OFFSET_BEGINNING = -2
 OFFSET_END = -1
@@ -91,8 +93,8 @@ class Metadata:
 class ConsumerStub:
     _clusters = {}
 
-    def __init__(self, config={"auto.offset.reset": "earliest"}):
-        self.config = config
+    def __init__(self, config=None):
+        self.config = config or {"auto.offset.reset": "earliest"}
         self.messages = {}
         self.current_offsets = {}
         self._pos_known = {}
@@ -101,6 +103,8 @@ class ConsumerStub:
         self.poll_index = 0
         self._closed = False
         self._paused = set()
+        self._eof_sent = set()
+        self.report_eof = False
 
         bs = config.get("bootstrap.servers", "default-cluster")
         gid = config.get("group.id") or config.get("group_id") or "default-group"
@@ -157,10 +161,25 @@ class ConsumerStub:
                     # advance next-to-consume and mark position known
                     self.current_offsets[topic][partition] = cur + 1
                     self._pos_known.setdefault(topic, {})[partition] = True
+                    self._eof_sent.discard((topic, partition))
                     self.poll_index = (self.poll_index + 1) % len(
                         self.assigned_partitions
                     )
                     return msg
+                if (
+                    self.report_eof
+                    and isinstance(cur, int)
+                    and cur == len(msgs)
+                    and (topic, partition) not in self._eof_sent
+                ):
+                    # like librdkafka >= 2.13.2: EOF does not make position() valid
+                    self._eof_sent.add((topic, partition))
+                    self.poll_index = (self.poll_index + 1) % len(
+                        self.assigned_partitions
+                    )
+                    return Message(
+                        topic, partition, cur, None, None, FakeKafkaError(-191)
+                    )
 
             self.poll_index = (self.poll_index + 1) % len(self.assigned_partitions)
             if self.poll_index == start_index:
@@ -237,10 +256,14 @@ class ConsumerStub:
             # set numeric offset but mark as unknown until fetch/seek
             if isinstance(offset, int) and offset >= 0:
                 self.current_offsets[topic][partition] = offset
+            elif offset == OFFSET_END:
+                msgs = self.messages.get(topic, {}).get(partition, [])
+                self.current_offsets[topic][partition] = len(msgs)
             else:
                 self.current_offsets[topic].setdefault(partition, OFFSET_INVALID)
 
             self._pos_known[topic][partition] = False
+            self._eof_sent.discard((topic, partition))
             self.assigned_partitions.append(TopicPartition(topic, partition, offset))
 
         self.poll_index = 0
