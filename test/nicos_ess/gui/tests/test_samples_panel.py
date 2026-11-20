@@ -40,7 +40,7 @@ def test_apply_sends_edited_samples_to_daemon(panel, fake_daemon, qtbot):
     qtbot.waitUntil(lambda: bool(fake_daemon.sent_calls()))
     assert fake_daemon.sent_calls() == [
         (
-            "Exp.set_samples",
+            "Exp.sample.set_samples",
             [{"name": "name1", "property1": "value2"}, {"name": "name2"}],
         )
     ]
