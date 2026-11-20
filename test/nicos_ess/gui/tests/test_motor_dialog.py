@@ -79,6 +79,12 @@ def open_limits_dialog(dialog, monkeypatch, fill=None, accept=False):
     return shown
 
 
+def test_opening_asks_the_poller_for_volatile_params(dialog, fake_daemon):
+    sent = fake_daemon.sent_scripts("eval")
+    assert "blade.asyncPollVolatileParams()" in sent
+    assert "blade.pollParams()" not in sent
+
+
 def test_hardware_limits_are_the_record_user_window(dialog):
     assert isinstance(dialog, MotorDialog)
     assert dialog.txt_hw_limits_from.text() == "0.000"

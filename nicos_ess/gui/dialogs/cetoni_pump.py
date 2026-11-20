@@ -91,7 +91,7 @@ class CetoniLinkedDialog(QDialog):
         self.resize(sz)
 
     def _update_params(self):
-        self.client.eval(f"{self.devname}.pollParams()", None)
+        self.client.eval(f"{self.devname}.asyncPollVolatileParams()", None)
         self.params = self.client.getDeviceParams(self.devname)
         self.paraminfo = self.client.getDeviceParamInfo(self.devname)
         self.param_table.set_params(self.params, self.paraminfo)

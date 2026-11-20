@@ -155,7 +155,7 @@ class ParametersTable(QWidget):
         if action:
             cmd = "session.getDevice({!r}).pollParams({})".format(
                 self.devname,
-                f"param_list=[{item.text(0)!r}]" if action == refreshAction else "",
+                repr(item.text(0)) if action == refreshAction else "",
             )
             # poll even non volatile parameter as requested explicitly
             self.client.eval(cmd, None)
