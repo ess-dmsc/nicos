@@ -74,8 +74,8 @@ successful stop `answ`, keeps reporting for a short stop leeway, publishes
 `wrdn`, then returns to the pool topic and idle status.
 
 The smoke test verifies that NICOS sees this lifecycle through
-`FileWriter`: no jobs initially, `WRITING` during `nexusfile_open`, and
-`DONE` after the stop leeway. It also runs `list_filewriting_jobs()` so the
+`FileWriter`: no jobs initially, `STARTED` during `nexusfile_open`, and
+`WRITTEN` after the stop leeway. It also runs `list_filewriting_jobs()` so the
 command path is exercised.
 
 ## Test Coverage

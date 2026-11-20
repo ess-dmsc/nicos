@@ -45,7 +45,8 @@ LATE_OCT_2191 = datetime.fromtimestamp(7_000_000_000)
 HISTORY_LENGTH = 10
 DELIVERY_TIMEOUT = 10
 STOP_ANSWER_TIMEOUT = 10
-STARTING, WRITING, LOST, DONE, FAILED = "starting", "writing", "lost", "done", "failed"
+NOT_STARTED, STARTED, WRITTEN = "NOT_STARTED", "STARTED", "WRITTEN"
+REJECTED, FAILED, LOST = "REJECTED", "FAILED", "LOST"
 
 
 class AlreadyWritingException(Exception):
@@ -139,7 +140,7 @@ def _stop_message(job, stop_time):
 
 
 def _stoppable(job):
-    return job["stop"] is None and job["state"] in (STARTING, WRITING, LOST)
+    return job["stop"] is None and job["state"] in (NOT_STARTED, STARTED, LOST)
 
 
 class FileWriter(KafkaStatusHandler):
@@ -197,7 +198,7 @@ class FileWriter(KafkaStatusHandler):
                 job = dict(job)
                 if "id" not in job or job["id"] in self._jobs:
                     continue
-                if job["state"] in (STARTING, WRITING):
+                if job["state"] in (NOT_STARTED, STARTED):
                     job["state"] = LOST
                 self._jobs[job["id"]] = job
         if mode == SIMULATION or session.sessiontype == POLLER:
@@ -225,12 +226,12 @@ class FileWriter(KafkaStatusHandler):
         with self._lock:
             now = time.time()
             for job in self._jobs.values():
-                if job["state"] == STARTING and now > job["deadline"]:
+                if job["state"] == NOT_STARTED and now > job["deadline"]:
                     self._end(job, LOST, "no file writer took the job")
-                elif job["state"] == WRITING and now > job["deadline"]:
+                elif job["state"] == STARTED and now > job["deadline"]:
                     self._end(job, LOST, "no status from the file writer")
             writing = any(
-                job["state"] in (STARTING, WRITING) for job in self._jobs.values()
+                job["state"] in (NOT_STARTED, STARTED) for job in self._jobs.values()
             )
             new_status = (status.BUSY, "recording data") if writing else (status.OK, "")
             if self._mode == MASTER and new_status != self.curstatus:
@@ -259,30 +260,30 @@ class FileWriter(KafkaStatusHandler):
             elif result.outcome == ActionOutcome.Success:
                 job.update(stop_confirmed=True, stop_wanted=False)
             elif start:
-                self._end(job, FAILED, f"rejected: {result.message}")
-            elif job["state"] in (STARTING, WRITING):
+                self._end(job, REJECTED, result.message)
+            elif job["state"] in (NOT_STARTED, STARTED):
                 self.log.error("job #%s: %s", job["number"], result.message)
         elif kind == b"wrdn":
             result = deserialise_wrdn(message)
             job = self._jobs.get(result.job_id)
-            if job is not None and job["state"] in (STARTING, WRITING, LOST):
+            if job is not None and job["state"] in (NOT_STARTED, STARTED, LOST):
                 if result.error_encountered:
                     self._end(job, FAILED, result.message)
                 else:
                     job["error"] = ""
-                    self._end(job, DONE)
+                    self._end(job, WRITTEN)
 
     def _writing(self, job_id, interval):
         job = self._jobs.get(job_id)
-        if job is None or job["state"] not in (STARTING, WRITING, LOST):
+        if job is None or job["state"] not in (NOT_STARTED, STARTED, LOST):
             return
         if job["state"] == LOST and job["error"]:
             self.log.warning("a file writer reports on job #%s again", job["number"])
         job["deadline"] = time.time() + interval + self.timeoutinterval
         if job.get("stop_wanted") and self._mode == MASTER:
             self._send_stop_again(job)
-        if job["state"] != WRITING:
-            job.update(state=WRITING, error="")
+        if job["state"] != STARTED:
+            job.update(state=STARTED, error="")
             self._save()
 
     def _send_stop_again(self, job):
@@ -352,7 +353,7 @@ class FileWriter(KafkaStatusHandler):
         job = {
             "id": job_id,
             "number": counter,
-            "state": STARTING,
+            "state": NOT_STARTED,
             "start": start_time.timestamp(),
             "stop": stop_time.timestamp() if stop_time else None,
             "error": "",
@@ -367,7 +368,7 @@ class FileWriter(KafkaStatusHandler):
         try:
             self._update(job_id, offset=self._send(self.pool_topic, message))
             if not self._wait(
-                job_id, lambda job: job["state"] != STARTING, self.starttimeout
+                job_id, lambda job: job["state"] != NOT_STARTED, self.starttimeout
             ):
                 raise FileWriterStartError(
                     f"no file writer took job #{counter} within "
@@ -379,7 +380,7 @@ class FileWriter(KafkaStatusHandler):
             self._stop_safely(self._job(job_id), "start failed")
             raise
         job = self._job(job_id)
-        if job["state"] in (FAILED, LOST):
+        if job["state"] in (REJECTED, FAILED, LOST):
             raise FileWriterStartError(f"job #{counter} {job['state']}: {job['error']}")
 
     def _job(self, job_id):
@@ -474,14 +475,14 @@ class FileWriter(KafkaStatusHandler):
         jobs = [
             job
             for job in self._copy_jobs()
-            if _stoppable(job) or (job_number is not None and job["state"] == WRITING)
+            if _stoppable(job) or (job_number is not None and job["state"] == STARTED)
         ]
         if job_number is not None:
             jobs = [job for job in jobs if str(job["number"]) == str(job_number)]
             if not jobs:
                 self.log.error("job %s is not being written", job_number)
                 return
-        jobs = [job for job in jobs if job["state"] == WRITING] or jobs
+        jobs = [job for job in jobs if job["state"] == STARTED] or jobs
         if len(jobs) > 1:
             numbers = [job["number"] for job in jobs]
             self.log.error(
@@ -494,7 +495,7 @@ class FileWriter(KafkaStatusHandler):
         self._stop(jobs[0])
 
         def confirmed(job):
-            return job.get("stop_confirmed") or job["state"] in (DONE, FAILED)
+            return job.get("stop_confirmed") or job["state"] in (WRITTEN, FAILED)
 
         if self._wait(jobs[0]["id"], confirmed, STOP_ANSWER_TIMEOUT):
             self.log.info("Filewriting stopped")
@@ -530,7 +531,7 @@ class FileWriter(KafkaStatusHandler):
         return [
             job["id"]
             for job in self._copy_jobs()
-            if job["state"] == WRITING and job["stop"] is None
+            if job["state"] == STARTED and job["stop"] is None
         ]
 
     def list_jobs(self, n=None):
@@ -545,7 +546,7 @@ class FileWriter(KafkaStatusHandler):
         rows = [
             [str(job["number"])]
             + [job["id"]] * admin
-            + [job["state"].upper(), fmt(job["start"]), fmt(job["stop"])]
+            + [job["state"], fmt(job["start"]), fmt(job["stop"])]
             + [str(job["replay_of"] or ""), job["error"]]
             for job in self._copy_jobs()[-max(int(n or 0), 0) :]
         ]

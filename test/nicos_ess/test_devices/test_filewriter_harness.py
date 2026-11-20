@@ -7,10 +7,11 @@ from streaming_data_types import deserialise_6s4t, deserialise_pl72, serialise_x
 from nicos.core import MAIN, MASTER, SLAVE, ConfigurationError, status
 from nicos_ess.devices.datasinks import file_writer
 from nicos_ess.devices.datasinks.file_writer import (
-    DONE,
     FAILED,
     LOST,
-    WRITING,
+    REJECTED,
+    STARTED,
+    WRITTEN,
     AlreadyWritingException,
     FileWriterStartError,
 )
@@ -198,7 +199,7 @@ def two_running_jobs(start, fw, writer):
 def test_start_waits_for_a_writer_to_take_the_job(start, fw):
     job_id = start()
 
-    assert job(fw)["state"] == WRITING
+    assert job(fw)["state"] == STARTED
     assert job_id.startswith("12345600")
     assert fw.status(0) == (status.BUSY, "recording data")
 
@@ -218,10 +219,10 @@ def test_cannot_start_without_proposal(fw, device_harness):
 
 def test_rejected_start_raises(start, writer, fw):
     writer.answer = "reject"
-    with pytest.raises(FileWriterStartError, match="rejected"):
+    with pytest.raises(FileWriterStartError, match="REJECTED"):
         start()
 
-    assert job(fw)["state"] == FAILED
+    assert job(fw)["state"] == REJECTED
     assert not fw.get_active_jobs()
 
 
@@ -234,7 +235,7 @@ def test_start_no_writer_takes_raises_and_is_stopped(start, writer, fw):
     job_id = job(fw)["id"]
     assert writer.stopped == [job_id]
     writer.send(create_start_request_message(job_id))
-    assert job(fw)["state"] == WRITING
+    assert job(fw)["state"] == STARTED
     assert not fw.get_active_jobs()
 
 
@@ -408,13 +409,16 @@ def test_job_without_heartbeat_is_lost_and_comes_back(start, fw, writer, caplog)
     assert job(fw)["error"] == "no status from the file writer"
     assert fw.status(0) == (status.OK, "")
     writer.send(create_status_message(job_id))
-    assert job(fw)["state"] == WRITING
+    assert job(fw)["state"] == STARTED
     assert "reports on job #42 again" in caplog.text
 
 
 @pytest.mark.parametrize(
     "done, state",
-    [(create_stop_confirmed_message, DONE), (create_stop_message_with_error, FAILED)],
+    [
+        (create_stop_confirmed_message, WRITTEN),
+        (create_stop_message_with_error, FAILED),
+    ],
 )
 def test_done_message_ends_the_job(start, fw, writer, done, state):
     job_id = start()
@@ -430,7 +434,7 @@ def test_messages_of_other_services_are_ignored(start, fw, writer, status_json):
     strange = serialise_x5f2("other", "1", "id", "host", 1, 1000, status_json)
     writer.send(strange, create_stop_confirmed_message(job_id))
 
-    assert job(fw)["state"] == DONE
+    assert job(fw)["state"] == WRITTEN
 
 
 def test_status_is_valid_before_a_master_wrote_one(writer, other):
@@ -445,7 +449,7 @@ def test_a_slave_follows_the_jobs(start, fw, writer, other):
 
     writer.send(create_stop_confirmed_message(job_id), to=slave)
     assert not slave.get_active_jobs()
-    assert job(fw)["state"] == WRITING
+    assert job(fw)["state"] == STARTED
 
 
 def test_statustopic_must_contain_the_instrument_topic(writer, device_harness):

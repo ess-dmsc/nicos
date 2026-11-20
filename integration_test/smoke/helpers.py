@@ -72,7 +72,7 @@ def wait_for_moveable_readback(
 def filewriter_jobs(smoke_client):
     return smoke_client.eval(
         "["
-        "(job['id'], job['number'], job['state'].upper(), "
+        "(job['id'], job['number'], job['state'], "
         "job['stop'] is not None, job['error'], job['service']) "
         "for job in FileWriter.jobs"
         "]",
@@ -104,7 +104,7 @@ def run_scan_with_filewriter_context(
         dedent(
             f"""
             __smoke_filewriter_jobs_before = [
-                (job['id'], job['number'], job['state'].upper())
+                (job['id'], job['number'], job['state'])
                 for job in FileWriter.jobs
             ]
             __smoke_jobs_before = FileWriter.get_active_jobs()
@@ -119,7 +119,7 @@ def run_scan_with_filewriter_context(
                         (
                             job['id'],
                             job['number'],
-                            job['state'].upper(),
+                            job['state'],
                             job['service'],
                         )
                         for job in FileWriter.jobs
@@ -134,7 +134,7 @@ def run_scan_with_filewriter_context(
                         __smoke_filewriter_service_during = (
                             __smoke_latest_filewriter[3]
                         )
-                    if __smoke_filewriter_state_during == "WRITING":
+                    if __smoke_filewriter_state_during == "STARTED":
                         break
                     __smoke_time.sleep(0.1)
                 scan(SmokeBasicMoveable, [0, 5, 10], timer=2.0)
@@ -143,7 +143,7 @@ def run_scan_with_filewriter_context(
                 (
                     job['id'],
                     job['number'],
-                    job['state'].upper(),
+                    job['state'],
                     job['stop'] is not None,
                     job['error'],
                     job['service'],

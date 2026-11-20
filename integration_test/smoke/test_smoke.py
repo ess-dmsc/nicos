@@ -67,14 +67,14 @@ def test_full_experiment_workflow_with_filewriter_scan(smoke_client) -> None:
     assert jobs_during
     assert not jobs_after
     assert not filewriter_scan["filewriter_jobs_before"]
-    assert filewriter_scan["filewriter_state_during"] == "WRITING"
+    assert filewriter_scan["filewriter_state_during"] == "STARTED"
     assert filewriter_scan["filewriter_service_during"] == (
         "nicos-smoke-filewriter-double"
     )
 
     job_id = next(iter(jobs_during))
     job_after_stop = wait_for_filewriter_job_state(
-        smoke_client, job_id, "DONE", timeout=20.0
+        smoke_client, job_id, "WRITTEN", timeout=20.0
     )
     assert job_after_stop[3] is True
     assert not job_after_stop[4]
