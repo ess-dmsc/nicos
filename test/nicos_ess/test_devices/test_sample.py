@@ -10,8 +10,8 @@ class TestEssSample:
         )
         samples = {0: {"name": "SampleA"}, 1: {"name": "SampleB"}}
         sample_device.set_samples(samples)
-        assert sample_device.get_samples() == samples
-        assert sample_device.get_samples(as_list=True) == [
+        assert sample_device.samples == samples
+        assert sample_device.get_samples() == [
             {"name": "SampleA"},
             {"name": "SampleB"},
         ]
@@ -23,8 +23,8 @@ class TestEssSample:
             name="Sample",
         )
         samples = [{"name": "SampleA"}, {"name": "SampleB"}]
-        sample_device.set_samples(samples, as_list=True)
-        assert sample_device.get_samples() == {
+        sample_device.set_samples(samples)
+        assert sample_device.samples == {
             0: {"name": "SampleA"},
             1: {"name": "SampleB"},
         }
@@ -36,8 +36,8 @@ class TestEssSample:
             name="Sample",
         )
         samples = [{"description": "some_sample"}, {"description": "some_other_sample"}]
-        sample_device.set_samples(samples, as_list=True)
-        assert sample_device.get_samples() == {
+        sample_device.set_samples(samples)
+        assert sample_device.samples == {
             0: {"description": "some_sample", "name": "sample 1"},
             1: {"description": "some_other_sample", "name": "sample 2"},
         }

@@ -279,10 +279,10 @@ class EssExperiment(Experiment):
         }
 
     def get_samples(self):
-        return self.sample.get_samples(as_list=True)
+        return self.sample.get_samples()
 
     def set_samples(self, samples):
-        self.sample.set_samples(samples, as_list=True)
+        self.sample.set_samples(samples)
 
     def newSample(self, parameters):
         # Do not try to create unwanted directories as
