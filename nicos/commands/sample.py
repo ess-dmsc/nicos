@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -33,9 +33,7 @@ from numpy import arcsin, degrees, pi, radians, sin, sqrt
 from nicos import session
 from nicos.commands import helparglist, parallel_safe, usercommand
 from nicos.commands.analyze import CommandLineFitResult
-from nicos.commands.output import (
-    printinfo,
-)
+from nicos.commands.output import printinfo
 from nicos.core import ConfigurationError, UsageError
 from nicos.devices.tas.spacegroups import can_reflect, get_spacegroup
 from nicos.utils import printTable
@@ -70,6 +68,11 @@ def NewSample(name, **parameters):
     >>> NewSample('Cr', lattice=[2.88, 2.88, 2.88], angles=[90, 90, 90])
 
     see also: `SetSample`, `SelectSample`, `ClearSamples`, `ListSamples`
+
+    .. warning::
+
+        It clears the list of existing samples!
+
     """
     parameters["samplename"] = name
     session.experiment.sample.new(parameters)
@@ -139,15 +142,25 @@ def ListSamples():
         all_cols.update(info)
     all_cols.discard("samplename")
     all_cols.discard("sampledescription")
+    all_cols.discard("name")
     index = {key: i for (i, key) in enumerate(sorted(all_cols), start=3)}
     index["samplename"] = 1
     index["sampledescription"] = 2
     for number, info in session.experiment.sample.samples.items():
         star = "*" if session.experiment.sample.samplenumber == number else " "
         rows.append(
-            [f"{star:2}{number}", info["samplename"], info["sampledescription"]]
+            [
+                f"{star:2}{number}",
+                info.get("samplename", ""),
+                info.get("sampledescription", ""),
+            ]
             + [""] * len(all_cols)
         )
+        if "name" in info:
+            info = dict(info)
+            name = info.pop("name")
+            if "samplename" not in info:
+                info["samplename"] = name
         for key in info:
             rows[-1][index[key]] = str(info[key])
     printTable(
@@ -253,7 +266,7 @@ def activation(
         raise UsageError("Please specify an instrument or flux")
     if mass is None:
         try:
-            formula = session.experiment.sample.mass
+            mass = session.experiment.sample.mass
         except (ConfigurationError, AttributeError):
             pass
     if mass is None:
