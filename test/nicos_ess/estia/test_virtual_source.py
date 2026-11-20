@@ -142,6 +142,17 @@ class TestVirtualSourceAndLaserHarness:
             and devices["laser_ctrl"]._adevs["angle"].read() == mapping[map_pos][1]
         )
 
+    def test_laser_updates_off_position_on_move(self, estia_virtual_source_setup):
+        devices = estia_virtual_source_setup
+        devices["bottom"].start(-10)
+        devices["rotation"].start(-1.5)
+
+        assert devices["laser_ctrl"].mapping == {"On": (11.5, 5), "Off": (0, 0)}
+
+        move(devices["laser_ctrl"], "On")
+
+        assert devices["laser_ctrl"].mapping == {"On": (11.5, 5), "Off": (-10, -1.5)}
+
 
 # ----------Harness Device Setup-------------#
 
