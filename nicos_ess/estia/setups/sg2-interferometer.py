@@ -9,7 +9,6 @@ devices = dict(
         "nicos_ess.estia.devices.multiline.MultilineController",
         description="Multiline interferometer controller",
         pvprefix=etalon_prefix,
-        readpv=f"{etalon_prefix}:MeasState-R",
         epicstimeout=30.0,
         # pilot_laser='pilot_laser',
         # temperature='env_temperature',
