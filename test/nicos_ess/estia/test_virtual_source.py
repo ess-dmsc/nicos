@@ -11,6 +11,23 @@ class TestVirtualSourceAndLaserHarness:
     # laser and virtual source are tested together since they share motors
     adevs = ("left", "right", "bottom", "top", "rot")
 
+    @pytest.mark.parametrize(
+        ("target", "opmode", "result"),
+        [
+            pytest.param([1, 2, 3, 4, 5], "4blades", [[1, 2, 3, 4], 5]),
+            pytest.param([1, 2, 3], "centered", [[1, 2], 3]),
+        ],
+    )
+    def test_ensure_parse_target_follows_opmode(
+        self, estia_virtual_source_setup, target, opmode, result
+    ):
+        devices = estia_virtual_source_setup
+        set(devices["virtual_source"], "opmode", opmode)
+
+        parsed_targets = devices["virtual_source"]._parseTargets(target)
+
+        assert parsed_targets == result
+
     def test_opmode_change_on_vs_syncs_slit(self, estia_virtual_source_setup):
         devices = estia_virtual_source_setup
 
@@ -107,6 +124,25 @@ class TestVirtualSourceAndLaserHarness:
         with pytest.raises(InvalidValueError):
             set(devices["virtual_source"], "motorlimits", limits)
 
+    def test_preinit_collects_limits_from_adevs(self, estia_virtual_source_setup):
+        devices = estia_virtual_source_setup
+
+        devices["virtual_source"].doPreinit(mode="sim")
+
+        for device in self.adevs:
+            if device != "rot":
+                assert (
+                    devices["virtual_source"].motorlimits[device]
+                    == devices[device].userlimits
+                )
+            else:
+                assert (
+                    devices["virtual_source"].motorlimits["rot"]
+                    == devices["rotation"].userlimits
+                )
+
+    # ------ Laser Macro ------ #
+
     @pytest.mark.parametrize(
         ("v_pos", "r_pos", "map_pos", "msg"),
         [
@@ -144,12 +180,12 @@ class TestVirtualSourceAndLaserHarness:
 
     def test_laser_updates_off_position_on_move(self, estia_virtual_source_setup):
         devices = estia_virtual_source_setup
-        devices["bottom"].start(-10)
-        devices["rotation"].start(-1.5)
 
         assert devices["laser_ctrl"].mapping == {"On": (11.5, 5), "Off": (0, 0)}
 
-        move(devices["laser_ctrl"], "On")
+        devices["bottom"].start(-10)
+        devices["rotation"].start(-1.5)
+        devices["laser_ctrl"]._updateLastKnownPos()
 
         assert devices["laser_ctrl"].mapping == {"On": (11.5, 5), "Off": (-10, -1.5)}
 
