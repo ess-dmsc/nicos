@@ -564,11 +564,11 @@ class MainWindow(DlgUtils, QMainWindow):
             and self.client.user_level >= ADMIN
         )
 
-        self.actionConnect.setIcon(get_icon("power_off-24px.svg"))
+        self.actionConnect.setIcon(get_icon("logout-24px.svg"))
         self.actionExpert.setEnabled(True)
         self.actionViewOnly.setEnabled(True)
         self.actionEmergencyStop.setEnabled(not self.client.viewonly)
-        self.actionConnect.setText("Disconnect")
+        self.actionConnect.setText("Log out")
         self.actionViewOnly.setChecked(self.client.viewonly)
 
         # set focus to command input, if present
@@ -593,8 +593,8 @@ class MainWindow(DlgUtils, QMainWindow):
     def on_client_disconnected(self):
         self.adminLabel.setVisible(False)
         self.setStatus("disconnected")
-        self.actionConnect.setIcon(get_icon("power-24px.svg"))
-        self.actionConnect.setText("Connect to server...")
+        self.actionConnect.setIcon(get_icon("login-24px.svg"))
+        self.actionConnect.setText("Log in")
         self.actionExpert.setEnabled(False)
         self.actionViewOnly.setEnabled(False)
         self.actionEmergencyStop.setEnabled(False)
