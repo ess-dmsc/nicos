@@ -44,7 +44,7 @@ from nicos.guisupport.qt import (
     QSystemTrayIcon,
     Qt,
     QTimer,
-    QWebView,
+    QWebEngineView,
     pyqtSignal,
     pyqtSlot,
 )
@@ -711,7 +711,7 @@ class MainWindow(DlgUtils, QMainWindow):
 
     @pyqtSlot()
     def on_actionNicosDocu_triggered(self):
-        if not QWebView:
+        if not QWebEngineView:
             self.showError(
                 "Cannot open documentation window: Qt web extension"
                 " is not available on your system."

@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-2025 by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -41,30 +41,28 @@ from nicos.guisupport.qt import (
     QPrintDialog,
     QPrinter,
     QPushButton,
-    Qt,
     QTextDocument,
     QTextEdit,
     QTimer,
     QToolBar,
     QUrl,
-    QWebPage,
-    QWebView,
+    QWebEngineView,
     pyqtSlot,
 )
 
-if QWebView is None:
+if QWebEngineView is None:
     raise ImportError("Qt webview component is not available")
 
 
 class ELogPanel(Panel):
-    """Provides a HTML widget for the electronic logbook."""
+    """Provides an HTML widget for the electronic logbook."""
 
     panelName = "Electronic logbook"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         loadUi(self, "panels/elog.ui")
-        self.preview = QWebView(self)
+        self.preview = QWebEngineView(self)
         self.frame.layout().addWidget(self.preview)
 
         self.timer = QTimer(self, singleShot=True, timeout=self.on_timer_timeout)
@@ -84,11 +82,6 @@ class ELogPanel(Panel):
         self.activeGroup.addAction(self.actionAddRemark)
         self.activeGroup.addAction(self.actionAttachFile)
         self.activeGroup.addAction(self.actionNewSample)
-
-        page = self.preview.page()
-        if hasattr(page, "setForwardUnsupportedContent"):  # QWebKit only
-            page.setForwardUnsupportedContent(True)
-            page.unsupportedContent.connect(self.on_page_unsupportedContent)
 
     def getMenus(self):
         if not self.menus:
@@ -130,11 +123,7 @@ class ELogPanel(Panel):
             bar.addWidget(btn)
 
             def callback():
-                if hasattr(QWebPage, "FindWrapsAroundDocument"):  # WebKit
-                    self.preview.findText(box.text(), QWebPage.FindWrapsAroundDocument)
-                else:
-                    # WebEngine wraps automatically
-                    self.preview.findText(box.text())
+                self.preview.findText(box.text())
 
             box.returnPressed.connect(callback)
             btn.clicked.connect(callback)
@@ -146,29 +135,6 @@ class ELogPanel(Panel):
         self.activeGroup.setEnabled(not viewonly)
 
     def on_timer_timeout(self):
-        if hasattr(self.preview.page(), "mainFrame"):  # QWebKit only
-            try:
-                frame = self.preview.page().mainFrame().childFrames()[1]
-            except IndexError:
-                self.log.error("No logbook seems to be loaded.")
-                self.on_client_connected()
-                return
-            scrollval = frame.scrollBarValue(Qt.Orientation.Vertical)
-            was_at_bottom = scrollval == frame.scrollBarMaximum(Qt.Orientation.Vertical)
-
-            # restore current scrolling position in document on reload
-            def callback(new_size):
-                nframe = self.preview.page().mainFrame().childFrames()[1]
-                if was_at_bottom:
-                    nframe.setScrollBarValue(
-                        Qt.Orientation.Vertical,
-                        nframe.scrollBarMaximum(Qt.Orientation.Vertical),
-                    )
-                else:
-                    nframe.setScrollBarValue(Qt.Orientation.Vertical, scrollval)
-                self.preview.loadFinished.disconnect(callback)
-
-            self.preview.loadFinished.connect(callback)
         self.preview.reload()
 
     def on_client_connected(self):
@@ -204,7 +170,7 @@ class ELogPanel(Panel):
             window.resize(600, 800)
             window.setWindowTitle(filename)
             widget = QTextEdit(window)
-            widget.setFontFamily("monospace")
+            widget.setFontFamily("Monospace")
             window.setCentralWidget(widget)
             widget.setText(content)
             window.show()
@@ -324,7 +290,7 @@ class ELogPanel(Panel):
 
         # Workaround for Qt versions < 4.8.0
         printWholeSite = True
-        if hasattr(QWebView, "selectedHtml"):
+        if hasattr(QWebEngineView, "selectedHtml"):
             if self.preview.hasSelection():
                 printWholeSite = False
 
