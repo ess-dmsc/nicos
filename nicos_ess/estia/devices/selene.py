@@ -274,6 +274,8 @@ class SeleneRobot(Moveable):
     def _get_driver(self, position):
         # Return which driver is best suited for a certain x-position of the cart
         self.doRead()
+        # This hack is using the position of the first screw to figure out which
+        # of the two selene guides we're operating
         if position[0] in [1, 2, 3] and self.positions[1][1][1] > 300:
             return 1
         if position[0] in [4, 5, 6] and self.positions[1][1][1] > 300:
@@ -1224,7 +1226,19 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
         interferometer channel lengths measured.
         """
         self.log.info("Performing calibration of interferometer lengths")
-        self._attached_m_cart.maw(self.cart_center)
+
+        # hack to figure out which selene guide we are in
+        sg1_channels = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
+        sg2_channels = [17, 18, 19, 20, 21, 22, 23, 24, 27, 28]
+        if self._attached_ch_d_v1.channel in sg2_channels:
+            self._attached_m_cart.maw(self.cart_center)
+        elif self._attached_ch_d_v1.channel in sg1_channels:
+            self._attached_m_cart.maw(self.cart_center + 100)
+        else:
+            raise AssertionError(
+                "channel does not belong to the expected channel numbers"
+            )
+
         self._attached_interferometer.measure()
         # maybe reintroduce later
         # self._attached_interferometer.wait()
