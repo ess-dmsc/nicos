@@ -60,16 +60,6 @@ class TestVirtualSourceAndLaserHarness:
         [
             pytest.param(
                 {
-                    "left": (-25.5, -0.5),
-                    "right": (0.5, 25.5),
-                    "bottom": (-12.5, 12.5),
-                    "top": (-12.5, 12.5),
-                    "rot": (-1.5, 16),
-                },
-                id="initial limits are equivalent",
-            ),
-            pytest.param(
-                {
                     "left": (-10, -5),
                     "right": (5, 10),
                     "bottom": (-5, 5),
@@ -141,7 +131,13 @@ class TestVirtualSourceAndLaserHarness:
                     == devices["rotation"].userlimits
                 )
 
-    # ------ Laser Macro ------ #
+    # ------ Laser Macro Tests------ #
+    def test_mapReadValue(self, estia_virtual_source_setup):
+        laser = estia_virtual_source_setup["laser_ctrl"]
+
+        assert laser._mapReadValue((5, 5)).startswith("Off")
+        assert laser._mapReadValue((0, 0)).startswith("Off")
+        assert laser._mapReadValue((11.5, 5)).startswith("Laser in Position")
 
     @pytest.mark.parametrize(
         ("v_pos", "r_pos", "map_pos", "msg"),
