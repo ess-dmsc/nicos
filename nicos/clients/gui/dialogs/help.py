@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-2025 by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,13 +24,19 @@
 """NICOS GUI help window."""
 
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QMainWindow, QUrl, QWebPage, QWebView, pyqtSlot
+from nicos.guisupport.qt import (
+    QMainWindow,
+    QUrl,
+    QWebEnginePage,
+    QWebEngineView,
+    pyqtSlot,
+)
 
-if QWebView is None:
+if QWebEngineView is None:
     raise ImportError("Qt webview component is not available")
 
 
-class HelpPage(QWebPage):
+class HelpPage(QWebEnginePage):
     """Subclass to intercept navigation requests."""
 
     def __init__(self, client, history, parent):
@@ -38,37 +44,20 @@ class HelpPage(QWebPage):
         self.history = history
         self.orig_url = QUrl("about:blank")
         self._setting_html = False
-        # (pylint detects QWebPage as being None...)
+        # (pylint detects QWebEnginePage as being None...)
         # pylint: disable=non-parent-init-called
-        QWebPage.__init__(self, parent)
+        QWebEnginePage.__init__(self, parent)
 
     def setHtml(self, html, url):
         self._setting_html = True
-        if not hasattr(QWebPage, "setHtml"):
-            self.parent().setHtml(html, url)  # WebKit
-        else:
-            QWebPage.setHtml(self, html, url)
+        QWebEnginePage.setHtml(self, html, url)
         self._setting_html = False
         self.orig_url = url
-
-    def mainFrame(self):
-        if not hasattr(QWebPage, "mainFrame"):
-            return self  # WebEngine
-        return QWebPage.mainFrame(self)
 
     def acceptNavigationRequest(self, url, *args):
         if self._setting_html:
             return True
-        if not isinstance(url, QUrl):  # WebKit
-            url = args[0].url()
-        if url.toString().startswith("#"):
-            frame = self.mainFrame()
-            self.history.append(
-                (self.parent().url().toString(), frame.scrollPosition())
-            )
-            el = frame.findFirstElement(url.toString())
-            frame.setScrollPosition(el.geometry().topLeft())
-        elif url.toString().startswith("data:text/html"):
+        if url.toString().startswith("data:text/html"):
             return True
         else:
             target = url.toString()
@@ -81,7 +70,7 @@ class HelpWindow(QMainWindow):
         QMainWindow.__init__(self, parent)
         loadUi(self, "dialogs/helpwin.ui")
         self.history = []
-        self.webView = QWebView(self)
+        self.webView = QWebEngineView(self)
         self.webView.setPage(HelpPage(client, self.history, self.webView))
         self.frame.layout().addWidget(self.webView)
         self.client = client
@@ -93,7 +82,7 @@ class HelpWindow(QMainWindow):
             self.history.append(
                 (
                     self.webView.page().orig_url.toString(),
-                    self.webView.page().mainFrame().scrollPosition(),
+                    self.webView.page().scrollPosition(),
                 )
             )
             if len(self.history) > 100:
@@ -130,13 +119,7 @@ class HelpWindow(QMainWindow):
         self._search()
 
     def _search(self):
-        if hasattr(QWebPage, "FindWrapsAroundDocument"):  # WebKit
-            self.webView.findText(
-                self.searchBox.text(), QWebPage.FindWrapsAroundDocument
-            )
-        else:
-            # WebEngine wraps automatically
-            self.webView.findText(self.searchBox.text())
+        self.webView.findText(self.searchBox.text())
 
     @pyqtSlot()
     def on_closeBtn_clicked(self):

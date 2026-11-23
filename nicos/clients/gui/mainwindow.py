@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-2025 by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -29,13 +29,6 @@ import traceback
 from time import strftime
 from time import time as currenttime
 
-if sys.version_info < (3, 10):
-    # included importlib does not have right entry_points function, use
-    # backported:
-    from importlib_metadata import PackageNotFoundError, entry_points, version
-else:
-    from importlib.metadata import PackageNotFoundError, entry_points, version
-
 import gr
 
 from nicos import nicos_version
@@ -43,7 +36,6 @@ from nicos.clients.base import ConnectionData
 from nicos.clients.gui.client import NicosGuiClient
 from nicos.clients.gui.config import tabbed
 from nicos.clients.gui.data import DataHandler
-from nicos.clients.gui.dialogs.auth import ConnectionDialog
 from nicos.clients.gui.dialogs.debug import DebugConsole
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.dialogs.pnp import PnPSetupQuestion
@@ -62,6 +54,7 @@ from nicos.clients.gui.utils import (
     splitTunnelString,
 )
 from nicos.core.utils import ADMIN
+from nicos.guisupport import typedvalue
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
     PYQT_VERSION_STR,
@@ -70,6 +63,7 @@ from nicos.guisupport.qt import (
     QApplication,
     QColorDialog,
     QDialog,
+    QDialogButtonBox,
     QFontDialog,
     QIcon,
     QLabel,
@@ -81,7 +75,7 @@ from nicos.guisupport.qt import (
     QSystemTrayIcon,
     Qt,
     QTimer,
-    QWebView,
+    QWebEngineView,
     pyqtSignal,
     pyqtSlot,
 )
@@ -138,6 +132,7 @@ class MainWindow(DlgUtils, QMainWindow):
 
     ui = "main.ui"
     default_facility_logo = None
+    default_connect_dialog_cls = "nicos.clients.gui.dialogs.auth.ConnectionDialog"
 
     def __init__(self, log, gui_conf, viewonly=False, tunnel=""):
         QMainWindow.__init__(self)
@@ -161,7 +156,7 @@ class MainWindow(DlgUtils, QMainWindow):
         # window for displaying errors
         self.errorWindow = None
 
-        # window for "prompt" event confirmation
+        # windows for "prompt" event response
         self.promptWindow = None
 
         # debug console window, if opened
@@ -197,6 +192,7 @@ class MainWindow(DlgUtils, QMainWindow):
         self.client.plugplay.connect(self.on_client_plugplay)
         self.client.watchdog.connect(self.on_client_watchdog)
         self.client.prompt.connect(self.on_client_prompt)
+        self.client.promptdone.connect(self.on_client_promptdone)
 
         # data handling setup
         self.data = DataHandler(self.client)
@@ -269,6 +265,9 @@ class MainWindow(DlgUtils, QMainWindow):
 
         # create initial state
         self._init_toolbar()
+
+    def defaultStylefiles(self):
+        return []
 
     def _init_toolbar(self):
         self.statusLabel = QLabel(
@@ -469,6 +468,11 @@ class MainWindow(DlgUtils, QMainWindow):
             self.createWindow(wtype)
 
     def saveWindowLayout(self):
+        if sys.platform == "darwin":
+            # on macos geometry saved in maximized window mode cannot be read
+            # again properly, which crashes nicos-gui
+            if self.isMaximized():
+                self.showNormal()
         with self.sgroup as settings:
             settings.setValue("geometry", self.saveGeometry())
             settings.setValue("windowstate", self.saveState())
@@ -571,7 +575,9 @@ class MainWindow(DlgUtils, QMainWindow):
         if self.showtrayicon:
             self.trayIcon.show()
         if self.promptWindow and status != "paused":
+            # when script continues, any prompts are useless
             self.promptWindow.close()
+            self.promptWindow = None
         # propagate to panels
         for panel in self.panels:
             panel.updateStatus(status, exception)
@@ -695,30 +701,92 @@ class MainWindow(DlgUtils, QMainWindow):
             self.watchdogWindow.show()
 
     def on_client_prompt(self, data):
+        prompt_text = data[0]
+        prev_value = Ellipsis
+        validator = None
+
+        if self.conndata.viewonly:
+            return
+
+        if len(data) == 1:
+            # prompt event from old daemon, without uuid
+            data = (data[0], "")
+        if len(data) >= 4:
+            # it's an input request
+            validator, prev_value = data[2:4]
+        uid = data[1]
+
+        # do we have a prompt open?
         if self.promptWindow:
+            # if it's the same prompt, don't need to do anything
+            if self.promptWindow.prompt_uid == uid:
+                return
             self.promptWindow.close()
 
-        # show non-modal dialog box that prompts the user to continue or abort
-        prompt_text = data[0]
-        dlg = self.promptWindow = QMessageBox(
-            QMessageBox.Icon.Information,
-            "Confirmation required",
-            prompt_text,
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            self,
-        )
+        self.promptWindow = dlg = QDialog(self)
+        self.promptWindow.prompt_uid = uid
+        loadUi(dlg, "dialogs/prompt.ui")
         dlg.setWindowModality(Qt.WindowModality.NonModal)
 
+        if validator is None:
+            dlg.setWindowTitle("Confirmation required")
+        dlg.promptLabel.setText(prompt_text)
+
+        def abort_action():
+            self.client.tell_action("stop", BREAK_NOW)
+            dlg.close()
+            self.promptWindow = None
+
+        def reject_action():
+            dlg.close()
+            self.promptWindow = None
+
+        if validator:
+            prev_value = validator() if prev_value is Ellipsis else prev_value
+            widget = typedvalue.create(
+                dlg, validator, prev_value, allow_buttons=False, allow_enter=True
+            )
+            dlg.inputFrame.layout().addWidget(widget)
+
+            def continue_action():
+                try:
+                    value = widget.getValue()
+                except ValueError:
+                    return
+                self.client.eval(f"session.setUserinput({uid!r}, {value!r})")
+                self.client.tell_action("continue")
+                dlg.close()
+
+            widget.valueChosen.connect(continue_action)
+            widget.setFocus()
+
+        else:
+
+            def continue_action():
+                self.client.tell_action("continue")
+                dlg.close()
+
+            dlg.buttonBox.setFocus()
+
         # give the buttons better descriptions
-        btn = dlg.button(QMessageBox.StandardButton.Cancel)
+        btn = dlg.buttonBox.button(QDialogButtonBox.StandardButton.Discard)
         btn.setText("Abort script")
-        btn.clicked.connect(lambda: self.client.tell_action("stop", BREAK_NOW))
-        btn = dlg.button(QMessageBox.StandardButton.Ok)
-        btn.setText("Continue script")
-        btn.clicked.connect(lambda: self.client.tell_action("continue"))
-        btn.setFocus()
+        btn.clicked.connect(abort_action)
+        btn = dlg.buttonBox.button(QDialogButtonBox.StandardButton.Cancel)
+        btn.setText("Ignore request")
+        btn.clicked.connect(reject_action)
+        btn = dlg.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+        if not validator:
+            btn.setText("Continue script")
+        btn.clicked.connect(continue_action)
 
         dlg.show()
+        dlg.windowHandle().alert(0)
+
+    def on_client_promptdone(self, data):
+        if self.promptWindow and self.promptWindow.prompt_uid == data[0]:
+            self.promptWindow.close()
+            self.promptWindow = None
 
     def on_trayIcon_activated(self, reason):
         if reason == QSystemTrayIcon.Trigger:
@@ -762,7 +830,7 @@ class MainWindow(DlgUtils, QMainWindow):
 
     @pyqtSlot()
     def on_actionNicosDocu_triggered(self):
-        if not QWebView:
+        if not QWebEngineView:
             self.showError(
                 "Cannot open documentation window: Qt web extension"
                 " is not available on your system."
@@ -811,16 +879,6 @@ class MainWindow(DlgUtils, QMainWindow):
         dlg.customPath.setText(dinfo.get("custom_path", ""))
         dlg.customVersion.setText(dinfo.get("custom_version", ""))
         dlg.contributors.setPlainText(nicos.authors.authors_list)
-        # assemble all installed plugins defined via their entry points in the 'nicos.plugin' group:
-        plugins = entry_points(group="nicos.plugins")
-        plugin_summary = []
-        for p in plugins:
-            try:
-                ver = version(p.dist.name)
-            except PackageNotFoundError:
-                ver = "0.0.0"
-            plugin_summary.append(f"{p.name} ({p.dist.name}: {ver})")
-        dlg.plugins.setText(", ".join(plugin_summary))
         dlg.adjustSize()
         dlg.exec()
 
@@ -835,7 +893,12 @@ class MainWindow(DlgUtils, QMainWindow):
             return
 
         self.actionConnect.setChecked(False)  # gets set by connection event
-        ret = ConnectionDialog.getConnectionData(
+        connectionDialog_cls = importString(
+            self.gui_conf.options.get(
+                "connection_dialog_class", self.default_connect_dialog_cls
+            )
+        )
+        ret = connectionDialog_cls.getConnectionData(
             self, self.connpresets, self.lastpreset, self.conndata, self.tunnel
         )
         new_name, new_data, save, tunnel = ret
