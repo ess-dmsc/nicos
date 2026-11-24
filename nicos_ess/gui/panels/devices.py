@@ -292,10 +292,15 @@ class DevicesPanel(Panel):
         faildevdict = state.get("devicefailures", {})
         self._read_setup_info(state["setups"])
 
+        all_params = self._get_all_device_params()
         for devname in devlist:
-            self._create_device_item(devname)
+            self._create_device_item(
+                devname, params=all_params.get(devname.lower(), {})
+            )
         for devname, error in faildevdict.items():
-            self._create_device_item(devname, failure=error)
+            self._create_device_item(
+                devname, failure=error, params=all_params.get(devname.lower(), {})
+            )
 
         # close all control dialogs for now nonexisting devices
         for ldevname in list(self._control_dialogs):
@@ -352,10 +357,20 @@ class DevicesPanel(Panel):
             for devname in info["devices"]:
                 self._dev2setup[devname] = setupname
 
-    def _create_device_item(self, devname, add_cat=False, failure=None):
+    def _get_all_device_params(self):
+        """Return the cached parameters of all devices by lower case name."""
+        all_params = {}
+        for key, value in self.client.ask("getcachekeys", "", quiet=True, default=[]):
+            ldevname, _, rest = key.partition("/")
+            if rest:
+                param = rest.rsplit("/", 1)[-1]
+                all_params.setdefault(ldevname, {})[param] = value
+        return all_params
+
+    def _create_device_item(self, devname, add_cat=False, failure=None, params=None):
         ldevname = devname.lower()
-        # get all cache keys pertaining to the device
-        params = self.client.getDeviceParams(devname)
+        if params is None:
+            params = self.client.getDeviceParams(devname)
         if not params and not failure:
             return
         lowlevel_device = "devlist" not in params.get("visibility", {"devlist"})

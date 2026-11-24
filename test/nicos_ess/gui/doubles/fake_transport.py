@@ -46,6 +46,8 @@ MAINWINDOW_TOOLBAR_EVALS = {
     "session.experiment.proposal": "",
     "session.experiment.run_title": "",
     "session.experiment.get_current_run_number()": 0,
+    # nicos_ess/gui/panels/dashboard.py shows the sample name as well.
+    "session.experiment.sample.samplename or 'None'": "None",
 }
 
 # nicos_ess/gui/panels/editor.py and devices.py read these session defaults.
@@ -127,6 +129,7 @@ class FakeDaemon:
         self.status = (STATUS_IDLE, -1)
         self.mode = MASTER
         self.devices = {}
+        self.device_failures = {}
         self.setups = {}
         self.loaded_setups = set()
         self.cache = {}
@@ -265,7 +268,7 @@ class FakeDaemon:
         if command == "getstatus":
             return True, {
                 "devices": list(self.devices),
-                "devicefailures": {},
+                "devicefailures": dict(self.device_failures),
                 "setups": (sorted(self.loaded_setups), sorted(self.setups)),
                 "script": "",
                 "status": self.status,
@@ -347,11 +350,8 @@ class FakeDaemon:
         keys = query.split(",") if "," in query else [query]
         if len(keys) > 1:
             return [(key, self.cache[key]) for key in keys if key in self.cache]
-        if query.endswith("/"):
-            return sorted((k, v) for k, v in self.cache.items() if k.startswith(query))
-        if query in self.cache:
-            return [(query, self.cache[query])]
-        return []
+        # Like the daemon, a single query returns every key that starts with it.
+        return sorted((k, v) for k, v in self.cache.items() if k.startswith(query))
 
     def push(self, event, data, blobs=None):
         if event not in DAEMON_EVENTS:

@@ -1,6 +1,5 @@
 from time import time as current_time
 
-from nicos.clients.gui.data import DataHandler
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import (
     loadUi,
@@ -105,13 +104,11 @@ class Dashboard(Panel):
 
         # connect client events
         self.client.connected.connect(self.on_client_connected)
+        self.client.initstatus.connect(self.on_client_initstatus)
         self.client.disconnected.connect(self.on_client_disconnected)
         self.client.status.connect(self.on_client_status)
         self.client.cache.connect(self.on_client_cache)
         self.client.experiment.connect(self._update_dashboard_info)
-
-        # data handling setup
-        self.data = DataHandler(self.client)
 
         # setting presets
         self.instrument = self.gui_conf.name
@@ -217,22 +214,20 @@ class Dashboard(Panel):
         return
 
     def on_client_connected(self):
-        self.setStatus("idle   ")
+        # The main window has already set the real status through initstatus,
+        # unless its getstatus request failed.
+        if self.current_status == "disconnected":
+            self.setStatus("idle   ")
         self._reconnect_count = 0
-
-        # get all server status info
-        initstatus = self.client.ask("getstatus")
-        if initstatus:
-            # handle initial status
-            self.on_client_status(initstatus["status"])
-            # propagate info to all components
-            self.client.signal("initstatus", initstatus)
 
         username = str(self.client.login).upper()
         self.userLabel.setText(f"{username}   ")
         self.emergency_button.setEnabled(not self.client.viewonly)
         self.login_button.setText("Sign out")
         self.login_button.setIcon(get_icon("logout_white-24px.svg"))
+
+    def on_client_initstatus(self, state):
+        self.on_client_status(state["status"])
 
     def on_client_status(self, data):
         status = data[0]

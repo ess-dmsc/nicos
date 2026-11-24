@@ -57,17 +57,15 @@ class ProposalSettings:
         self.abort_on_error = abort_on_error
 
     def __eq__(self, other):
-        if (
-            self.proposal_id != other.proposal_id
-            or self.title != other.title
-            or self.users != other.users
-            or self.local_contacts != other.local_contacts
-            or self.notifications != other.notifications
-            or self.abort_on_error != other.abort_on_error
-            or self.samples != other.samples
-        ):
-            return False
-        return True
+        return (
+            self.proposal_id == other.proposal_id
+            and self.title == other.title
+            and self.users == other.users
+            and self.local_contacts == other.local_contacts
+            and self.notifications == other.notifications
+            and self.abort_on_error == other.abort_on_error
+            and self.samples == other.samples
+        )
 
 
 class ExpPanel(PanelBase):
@@ -84,6 +82,7 @@ class ExpPanel(PanelBase):
 
         self._user_fields = USER_FIELDS
         self.to_monitor = ["sample/samples", "exp/propinfo"]
+        self._proposal_info_loaded = False
         self.users_model = TableModel(self._user_fields)
         self.users_model.data_updated.connect(self._check_for_changes)
         self.userTable.setModel(self.users_model)
@@ -151,7 +150,9 @@ class ExpPanel(PanelBase):
             self.client.register(self, monitor)
 
     def on_keyChange(self, key, value, time, expired):
-        if key in self.to_monitor:
+        # The client reports the monitored keys on connect before
+        # on_client_connected runs, and that reads the proposal info itself.
+        if key in self.to_monitor and self._proposal_info_loaded:
             self._update_proposal_info()
 
     def _update_proposal_info(self):
@@ -205,6 +206,7 @@ class ExpPanel(PanelBase):
     def on_client_connected(self):
         PanelBase.on_client_connected(self)
         self._update_proposal_info()
+        self._proposal_info_loaded = True
         self._is_proposal_system_available()
 
     def _is_proposal_system_available(self):
@@ -227,6 +229,7 @@ class ExpPanel(PanelBase):
             )
 
     def on_client_disconnected(self):
+        self._proposal_info_loaded = False
         for control in self._text_controls:
             control.setText("")
         self._update_samples_model([])
@@ -267,7 +270,6 @@ class ExpPanel(PanelBase):
         try:
             self._set_experiment()
             self._set_samples()
-            self._set_notification_receivers()
             self._set_abort_on_error()
             self._update_proposal_info()
         except Exception as error:
@@ -297,7 +299,8 @@ class ExpPanel(PanelBase):
             command = "Exp.new(%s)"
         else:
             command = "Exp.update(%s)"
-        code = command % ", ".join("%s=%r" % i for i in exp_args.items())
+        args = ", ".join(f"{key}={value!r}" for key, value in exp_args.items())
+        code = command % args
         self.client.eval(code)
 
     def _set_samples(self):
@@ -317,14 +320,7 @@ class ExpPanel(PanelBase):
     def _set_abort_on_error(self):
         abort_on_error = self.new_settings.abort_on_error
         if abort_on_error != self.old_settings.abort_on_error:
-            self.client.run("SetErrorAbort(%s)" % abort_on_error)
-
-    def _set_notification_receivers(self):
-        notifications = self.new_settings.notifications
-        if notifications != self.old_settings.notifications:
-            self.client.run(
-                "SetMailReceivers(%s)" % ", ".join(map(repr, notifications))
-            )
+            self.client.run(f"SetErrorAbort({abort_on_error})")
 
     @pyqtSlot()
     def on_addUserButton_clicked(self):

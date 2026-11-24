@@ -67,6 +67,46 @@ def test_device_appears_after_connect(gui_window_factory, fake_daemon, qtbot):
     assert setup_item.child(0).text(panel.col_index["NAME"]) == "tas"
 
 
+def test_connect_shows_each_device_with_its_own_cache_values(
+    gui_window_factory, fake_daemon, qtbot
+):
+    # sth is a prefix of sth_offset, and Omega has upper case in its name.
+    values = {"sth": 1.0, "sth_offset": 2.0, "Omega": 3.0}
+    fake_daemon.add_setup("instrument", loaded=True, devices=["broken"])
+    fake_daemon.device_failures["broken"] = "could not connect to the controller"
+    for name, value in values.items():
+        fake_daemon.add_device(
+            DeviceSpec(
+                name=name,
+                valuetype=float,
+                params={**FORMATTED_VALUE_PARAMS, "value": value},
+            ),
+            setup="instrument",
+            loaded=True,
+        )
+
+    window = gui_window_factory(guiconfig_string=guiconfig_string)
+    panel = get_panel_by_class(window, "nicos_ess.gui.panels.devices.DevicesPanel")
+
+    for name, value in values.items():
+        qtbot.waitUntil(
+            lambda name=name, value=value: (
+                _device_item(panel, name).text(panel.col_index["VALUE"])
+                == f"{value:.1f} mm"
+            ),
+            timeout=2000,
+        )
+    broken = _device_item(panel, "broken")
+    assert "could not connect" in broken.text(panel.col_index["STATUS"])
+    # The client itself asks for session/mastersetup on connect.
+    cache_queries = [
+        args[0]
+        for command, args in fake_daemon.command_log
+        if command == "getcachekeys" and args[0] != "session/mastersetup"
+    ]
+    assert cache_queries == [""]
+
+
 @pytest.mark.parametrize("value_type", [float, np.float64], ids=["python", "numpy"])
 def test_cache_event_updates_panel(gui_window_factory, fake_daemon, qtbot, value_type):
     """Cache events flow through the real event thread into the visible tree."""
