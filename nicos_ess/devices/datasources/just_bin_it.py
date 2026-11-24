@@ -28,7 +28,27 @@ from nicos_ess.devices.kafka.status_handler import (
     DISCONNECTED_STATE,
     KafkaStatusHandler,
 )
+from nicos_ess.utilities.limited_warnings import LimitedWarnings
 from nicos_ess.utilities.live_frame import Coord, LiveArrayDesc, default_dims
+
+
+def _labelled_dims(dim_metadata, dims):
+    """Return the labels of *dim_metadata* as dims, or *dims* if a label repeats."""
+    labels = [m.get("label") or dims[i] for i, m in enumerate(dim_metadata)]
+    return labels if len(set(labels)) == len(dims) else dims
+
+
+def _edge_coords(data, dims, dim_metadata):
+    """Return the bin edges of each axis of *data* that fit, with ns as ms."""
+    coords = {}
+    for i, meta in enumerate(dim_metadata):
+        edges = np.asarray(meta["bin_boundaries"], dtype=np.float64)
+        unit = meta.get("unit") or ("ns" if data.ndim == 1 else "")
+        if unit == "ns":
+            edges, unit = edges / 1e6, "ms"
+        if len(edges) in (data.shape[i], data.shape[i] + 1):
+            coords[dims[i]] = Coord((dims[i],), edges, unit)
+    return coords
 
 
 class Hist1dTof:
@@ -319,17 +339,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         coords = {}
         if len(dim_metadata) == data.ndim and not (data.ndim == 2 and self.rotation):
             if data.ndim > 1:
-                labels = [m.get("label") or dims[i] for i, m in enumerate(dim_metadata)]
-                if len(set(labels)) == data.ndim:
-                    dims = labels
-            for i, meta in enumerate(dim_metadata):
-                dim = dims[i]
-                edges = np.asarray(meta["bin_boundaries"], dtype=np.float64)
-                unit = meta.get("unit") or ("ns" if data.ndim == 1 else "")
-                if unit == "ns":
-                    edges, unit = edges / 1e6, "ms"
-                if len(edges) in (data.shape[i], data.shape[i] + 1):
-                    coords[dim] = Coord((dim,), edges, unit)
+                dims = _labelled_dims(dim_metadata, dims)
+            coords = _edge_coords(data, dims, dim_metadata)
         return LiveArrayDesc(
             self.name,
             data.shape,
@@ -343,7 +354,6 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
     def doPrepare(self):
         self._unique_id = None
         self._zero_data()
-        self._hist_edges = np.array([])
         self._hist_sum = 0
         self._finished.clear()
         self._last_state = None
@@ -360,6 +370,9 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
     def on_histogram(self, hist, info):
         if not self._unique_id or info.get("id") != self._unique_id:
             return
+        # A histogram that arrives after the final one is older than it.
+        if self._finished.is_set():
+            return
         state = info.get("state")
         data = hist_type_by_name[self.hist_type].transform_data(
             hist["data"], rotation=self.rotation
@@ -367,24 +380,23 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         desc = self._describe(data, hist["dim_metadata"])
         self._hist = data, desc
         self._hist_sum = data.sum()
-        self._hist_edges = hist["dim_metadata"][0]["bin_boundaries"]
+        if state != self._last_state:
+            self._last_state = state
+            if state == "ERROR":
+                # the histogram process has ended, no FINISHED will follow
+                error_msg = str(info.get("error_message", "unknown error"))
+                self.log.warning("just-bin-it failed: %s", error_msg)
+                self._update_status(status.WARN, error_msg)
+                self._finished.set()
+            elif state == "FINISHED":
+                self._update_status(status.OK, "")
+                self._finished.set()
+            else:
+                self._update_status(status.BUSY, "Counting")
+        # A bad rate raises here, so that the histogram and its state still count.
         rate = info.get("rate")
         if rate is not None and self._mode == MASTER:
             self._setROParam("event_rate", rate)
-        if state == self._last_state:
-            return
-        self._last_state = state
-        if state == "ERROR":
-            # the histogram process has ended, no FINISHED will follow
-            error_msg = info.get("error_message", "unknown error")
-            self.log.warning("just-bin-it failed: %s", error_msg)
-            self._update_status(status.WARN, error_msg)
-            self._finished.set()
-        elif state == "FINISHED":
-            self._update_status(status.OK, "")
-            self._finished.set()
-        else:
-            self._update_status(status.BUSY, "Counting")
 
     def _update_status(self, new_status, message):
         self._current_status = new_status, message
@@ -410,6 +422,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 
     def doStop(self):
         self._unique_id = None
+        # This ends the wait in finish().
+        self._finished.set()
         self._update_status(status.OK, "")
 
     def doStatus(self, maxage=0):
@@ -530,6 +544,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     def doPreinit(self, mode):
         self._stop_lock = threading.Lock()
+        self._warnings = LimitedWarnings(self.log)
         Detector.doPreinit(self, mode)
         self._jbi_images = [
             image
@@ -556,12 +571,13 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         for _, message in messages:
             try:
                 decoded = decode_histogram(message)
+                if decoded:
+                    for image in self._jbi_images:
+                        image.on_histogram(*decoded)
             except Exception as err:
-                self.log.warning("could not decode histogram message: %s", err)
-                continue
-            if decoded:
-                for image in self._jbi_images:
-                    image.on_histogram(*decoded)
+                self._warnings.warn(
+                    "histogram", "skipping a histogram message: %s", err
+                )
 
     def doPrepare(self):
         self._exit_thread = False
@@ -597,33 +613,9 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         return None, None, None
 
     def _check_for_ack(self, identifier, timeout_duration):
-        timeout = int(time.time()) + timeout_duration
-        acknowledged = False
-        while not (acknowledged or self._exit_thread):
-            message = self._response_consumer.poll(timeout_ms=50)
-            if message:
-                # check for kafka errors, ignore any expected otherwise log them:
-                if message.error() is not None:
-                    # _PARTITION_EOF: Broker: No more messages
-                    if message.error().name() != "_PARTITION_EOF":
-                        err = message.error()
-                        self.log.warning(
-                            f"Encountered Kafka error: {err.str()}, ({err.code()}/{err.name()})"
-                        )
-                    continue
-                try:
-                    msg = json.loads(message.value())
-                except json.decoder.JSONDecodeError as e:
-                    self.log.warning(
-                        f"Could not decode '{message.value()}' as JSON: {repr(e)}"
-                    )
-                else:
-                    if "msg_id" in msg and msg["msg_id"] == identifier:
-                        acknowledged = self._handle_message(msg)
-                        self._acknowledged = acknowledged
-                        break
-            # Check for timeout
-            if not acknowledged and int(time.time()) > timeout:
+        deadline = time.monotonic() + timeout_duration
+        while not self._exit_thread:
+            if time.monotonic() > deadline:
                 err_msg = (
                     "Count aborted as no acknowledgement received from "
                     "just-bin-it within timeout duration "
@@ -632,7 +624,35 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
                 self.log.error(err_msg)
                 self._cache.put(self, "status", (status.ERROR, err_msg), time.time())
                 self._send_stop_once()
-                break
+                return
+            try:
+                answer = self._read_answer(identifier)
+            except Exception as err:
+                # The thread goes on, so that the timeout still fires. The pause
+                # keeps a poll that fails at once from spinning.
+                self._warnings.warn("answer", "could not read an answer: %s", err)
+                time.sleep(0.05)
+                continue
+            if answer is not None:
+                self._acknowledged = self._handle_message(answer)
+                return
+
+    def _read_answer(self, identifier):
+        """Return the answer to the command *identifier*, or None for any other
+        message."""
+        message = self._response_consumer.poll(timeout_ms=50)
+        if not message:
+            return None
+        err = message.error()
+        if err is not None:
+            # _PARTITION_EOF only says that there are no more messages.
+            if err.name() == "_PARTITION_EOF":
+                return None
+            raise RuntimeError(f"Kafka error {err.str()} ({err.code()}/{err.name()})")
+        answer = json.loads(message.value())
+        if isinstance(answer, dict) and answer.get("msg_id") == identifier:
+            return answer
+        return None
 
     def _handle_message(self, msg):
         if "response" in msg and msg["response"] == "ACK":

@@ -167,6 +167,10 @@ class LiveDataMonitor(Readable):
         return len(self.jobs)
 
     def doStatus(self, maxage=0):
+        return self._service_problem() or self._job_status()
+
+    def _service_problem(self):
+        """Return the status of failing or silent services, or None if all run."""
         failing = [
             f"esslivedata service {name}: {svc['message'] or svc['state']}"
             for name, svc in sorted(self.services.items())
@@ -178,6 +182,9 @@ class LiveDataMonitor(Readable):
             return status.WARN, "no heartbeat from esslivedata"
         if lost := [n for n, svc in self.services.items() if svc["state"] == "lost"]:
             return status.WARN, f"no heartbeat from esslivedata {', '.join(lost)}"
+        return None
+
+    def _job_status(self):
         if not self.jobs:
             return status.OK, "no jobs running"
         worst = max(self.jobs.values(), key=lambda j: proto.job_health(j)[0])

@@ -9,6 +9,7 @@ visible in the fixture code:
 """
 
 import json
+import threading
 import time
 
 import numpy as np
@@ -22,7 +23,9 @@ from nicos_ess.devices.kafka import status_handler
 from nicos_ess.devices.timer import TimerChannel
 from test.nicos_ess.command_helpers import wait_until
 from test.nicos_ess.test_devices.doubles import (
+    FakeKafkaError,
     StubKafkaConsumer,
+    StubKafkaMessage,
     StubKafkaProducer,
     StubKafkaSubscriber,
 )
@@ -89,11 +92,11 @@ def _commands(producer):
     return [json.loads(r["message"].decode("utf-8")) for r in producer.messages]
 
 
-def _send_histogram(detector, unique_id, state, total, num_bins=4):
-    """Deliver one hs01 histogram with `total` in the first bin to the detector."""
+def _histogram(info, total=0, num_bins=4):
+    """Serialise one hs01 histogram with `total` in the first bin."""
     data = np.zeros(num_bins, dtype=np.float64)
     data[0] = total
-    message = serialise_hs01(
+    return serialise_hs01(
         {
             "source": "jbi",
             "timestamp": 0,
@@ -105,13 +108,20 @@ def _send_histogram(detector, unique_id, state, total, num_bins=4):
                 }
             ],
             "data": data,
-            "info": json.dumps({"id": unique_id, "state": state}),
+            "info": json.dumps(info),
         }
     )
+
+
+def _send_histogram(detector, unique_id, state, total, num_bins=4):
+    """Deliver one hs01 histogram with `total` in the first bin to the detector."""
+    message = _histogram({"id": unique_id, "state": state}, total, num_bins)
     detector._hist_subscriber.emit_messages([(0, message)])
 
 
-def _create_detector(daemon_device_harness, *, statustopic=None, images=("image_1",)):
+def _create_detector(
+    daemon_device_harness, *, statustopic=None, images=("image_1",), **config
+):
     """Build the smallest complete just-bin-it detector graph used in tests."""
     daemon_device_harness.create_master(
         TimerChannel,
@@ -138,6 +148,7 @@ def _create_detector(daemon_device_harness, *, statustopic=None, images=("image_
         images=list(images),
         timers=["timer"],
         finish_timeout=0.5,
+        **config,
     )
 
 
@@ -192,6 +203,50 @@ class TestJustBinItDetectorHarness:
         assert commands.count("config") == 1
         assert commands.count("stop") == 1
         assert detector.status(0)[0] != status.ERROR
+
+    @pytest.mark.parametrize(
+        "answer",
+        [
+            StubKafkaMessage(b"5"),
+            StubKafkaMessage(b'"msg_id"'),
+            StubKafkaMessage(b"null"),
+            StubKafkaMessage(None),
+            StubKafkaMessage(b"not json"),
+            StubKafkaMessage(None, error=FakeKafkaError(1, name="_TRANSPORT")),
+        ],
+        ids=["number", "text", "null", "tombstone", "not_json", "kafka_error"],
+    )
+    def test_odd_answers_before_the_acknowledgement_are_skipped(
+        self, daemon_device_harness, recording_kafka, caplog, answer
+    ):
+        recording_kafka.ack = False
+        detector = _create_detector(daemon_device_harness)
+        answers = detector._response_consumer
+        for _ in range(5):
+            answers.queue_record(answer)
+        detector.prepare()
+        detector.start()
+        assert wait_until(lambda: not answers.records)
+        recording_kafka.ack = True
+        time.sleep(ACK_WAIT_SECONDS)
+        detector.finish()
+        assert "did not acknowledge" not in caplog.text
+        assert len([r for r in caplog.records if r.levelname == "WARNING"]) <= 1
+
+    def test_the_answer_timeout_fires_while_the_answers_cannot_be_read(
+        self, daemon_device_harness, recording_kafka
+    ):
+        detector = _create_detector(daemon_device_harness, ack_timeout=1)
+
+        def poll(**kwargs):
+            raise RuntimeError("broker transport failure")
+
+        detector._response_consumer.poll = poll
+        detector.prepare()
+        detector.start()
+        assert wait_until(lambda: detector.status(0)[0] == status.ERROR, timeout=3)
+        assert "no acknowledgement" in detector.status(0)[1]
+        detector.stop()
 
     def test_image_input_schema_overrides_detector_default(
         self, daemon_device_harness, recording_kafka
@@ -344,7 +399,6 @@ class TestJustBinItFinalHistograms:
     ):
         detector = _create_detector(daemon_device_harness)
         image = detector._attached_images[0]
-        detector.log.addHandler(caplog.handler)
         detector.setPreset(t=0.05)
         detector.prepare()
         detector.start()
@@ -372,6 +426,66 @@ class TestJustBinItFinalHistograms:
         detector.finish()
         assert time.monotonic() - start < 0.3
         assert image.status(0)[0] == status.WARN
+
+    def test_stop_ends_the_wait_for_the_final_histograms(
+        self, daemon_device_harness, recording_kafka
+    ):
+        detector = _create_detector(daemon_device_harness)
+        detector.finish_timeout = 5
+        detector.setPreset(t=0.05)
+        detector.prepare()
+        detector.start()
+        assert wait_until(detector.isCompleted)
+        threading.Timer(0.2, detector.stop).start()
+        start = time.monotonic()
+        detector.finish()
+        assert time.monotonic() - start < 2
+
+    @pytest.mark.parametrize(
+        "info, final",
+        [({"rate": "fast"}, {}), ([1], {}), (None, {}), ({}, {"rate": "fast"})],
+        ids=["rate", "list", "null", "rate on the final one"],
+    )
+    def test_a_bad_message_does_not_drop_the_rest_of_its_batch(
+        self, daemon_device_harness, recording_kafka, info, final
+    ):
+        detector = _create_detector(daemon_device_harness)
+        image = detector._attached_images[0]
+        detector.prepare()
+        detector.start()
+        channel_id = image._unique_id
+        if isinstance(info, dict):
+            info = dict(info, id=channel_id, state="COUNTING")
+        final = dict(final, id=channel_id, state="FINISHED")
+        detector._hist_subscriber.emit_messages(
+            [(0, _histogram(info, 5)), (0, _histogram(final, 12))]
+        )
+        assert image.finished
+        assert image.read()[0] == 12
+
+    def test_a_histogram_after_the_final_one_is_ignored(
+        self, daemon_device_harness, recording_kafka
+    ):
+        detector = _create_detector(daemon_device_harness)
+        image = detector._attached_images[0]
+        detector.prepare()
+        detector.start()
+        channel_id = image._unique_id
+        _send_histogram(detector, channel_id, "FINISHED", 12)
+        _send_histogram(detector, channel_id, "COUNTING", 5)
+        assert image.read()[0] == 12
+        assert image.status(0) == (status.OK, "")
+
+    def test_an_error_message_that_is_no_text_is_shown_as_text(
+        self, daemon_device_harness, recording_kafka
+    ):
+        detector = _create_detector(daemon_device_harness)
+        image = detector._attached_images[0]
+        detector.prepare()
+        detector.start()
+        info = {"id": image._unique_id, "state": "ERROR", "error_message": {"code": 5}}
+        detector._hist_subscriber.emit_messages([(0, _histogram(info))])
+        assert image.status(0) == (status.WARN, "{'code': 5}")
 
     def test_stopped_count_keeps_last_update(
         self, daemon_device_harness, recording_kafka
@@ -410,7 +524,6 @@ class TestJustBinItFinalHistograms:
     ):
         recording_kafka.ack = False
         detector = _create_detector(daemon_device_harness)
-        detector.log.addHandler(caplog.handler)
         detector.prepare()
         detector.start()
         detector.finish()

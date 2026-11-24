@@ -139,6 +139,12 @@ def frame_from_da00(by_name, title=""):
     the dims of the signal are left out, as the esslivedata reader does. The
     time stamps go into ``meta``.
     """
+    frame = _signal_frame(by_name, title)
+    coords, meta = _coords_and_times(by_name, frame.sizes)
+    return replace(frame, coords=coords, meta=meta)
+
+
+def _signal_frame(by_name, title):
     sig = by_name.get("signal")
     if sig is None:
         raise ValueError(f"no signal, only {', '.join(by_name)}")
@@ -146,21 +152,32 @@ def frame_from_da00(by_name, title=""):
     dims = tuple(sig.axes or ())
     if data.ndim == 0:
         data, dims = data.reshape(1), dims[:1] or ("dim_0",)
-    errors = by_name.get("errors")
-    errors = None if errors is None else np.asarray(errors.data)
-    frame = Frame(
+    return Frame(
         data,
         dims,
         unit=sig.unit or "",
         title=(sig.label or "").strip() or title,
-        errors=errors if errors is not None and errors.shape == data.shape else None,
+        errors=_errors_of(by_name, data.shape),
     )
+
+
+def _errors_of(by_name, shape):
+    """Return the errors of an output, or None if it has none of *shape*."""
+    errors = by_name.get("errors")
+    if errors is None:
+        return None
+    errors = np.asarray(errors.data)
+    return errors if errors.shape == shape else None
+
+
+def _coords_and_times(by_name, sizes):
+    """Return the coordinates that fit *sizes* and the time stamps of an output."""
     coords, meta = {}, {}
     for name, var in by_name.items():
         if name in TIME_STAMPS and (stamp := time_stamp(var)) is not None:
             meta[name] = stamp
         elif name not in ("signal", "errors") and var.axes:
             coord = Coord(tuple(var.axes), np.asarray(var.data), var.unit or "")
-            if coord.fits(frame.sizes):
+            if coord.fits(sizes):
                 coords[name] = coord
-    return replace(frame, coords=coords, meta=meta)
+    return coords, meta
