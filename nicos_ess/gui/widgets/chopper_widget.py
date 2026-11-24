@@ -43,6 +43,15 @@ WAITING = QColor(190, 190, 190, 130)
 LIVE_VALUES = ("speed", "total_delay", "park_angle")
 
 
+def finite_number(value):
+    """Return *value* as a float, or None if it is not a finite number."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return number if math.isfinite(number) else None
+
+
 def polar(center: QPointF, radius: float, angle_deg: float) -> QPointF:
     return QLineF.fromPolar(radius, angle_deg).translated(center).p2()
 
@@ -160,10 +169,11 @@ class ChopperWidget(QWidget):
         self.update()
 
     def set_value(self, chopper_name, key, value):
-        """Set a live value (LIVE_VALUES): None while it is unknown."""
+        """Set the live value *key* of a chopper. A value that is not a finite
+        number is shown as unknown."""
         for chopper in self.chopper_data:
             if chopper["chopper"] == chopper_name:
-                chopper[key] = None if value is None else float(value)
+                chopper[key] = finite_number(value)
                 self.update()
 
     def rotation(self, chopper: dict) -> float | None:

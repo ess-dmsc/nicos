@@ -23,7 +23,7 @@ from nicos_ess.gui.widgets.chopper_widget import (
 from nicos_ess.gui.widgets.pyqtgraph.frame_format import readable
 from nicos_ess.gui.widgets.pyqtgraph.frame_plot import FrameCanvas, FrameView, Solo
 from nicos_ess.gui.widgets.pyqtgraph.theme import COLORS, curve_color
-from nicos_ess.utilities.live_frame import curve_frame
+from nicos_ess.utilities.live_frame import curve_frame, float_array
 
 BIN_WIDTH = 100  # ns
 # Larger delay errors in ns are not real, and 100 ns bins cannot resolve them.
@@ -45,7 +45,8 @@ ALL_CHOPPERS = (
 
 def delay_error_stats(samples):
     """Histogram, mean, standard deviation and FWHM of delay-error samples (ns)."""
-    samples = np.asarray(samples, dtype=float)
+    samples = float_array(samples)
+    # A missing sample becomes nan, and the comparison leaves out nan as well.
     samples = samples[np.abs(samples) < LARGEST_ERROR]
     if not samples.size:
         return None

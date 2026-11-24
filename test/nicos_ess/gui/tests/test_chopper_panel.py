@@ -178,14 +178,33 @@ def test_delay_error_stats():
     assert single["fwhm"] == pytest.approx(100.0)
 
 
-@pytest.mark.parametrize("samples", [[], [np.nan]])
-def test_no_finite_samples_give_no_stats(samples):
+@pytest.mark.parametrize(
+    "samples",
+    [
+        [],
+        [np.nan],
+        ["a", 100.0],
+        [100.0, [2.0]],
+        [{"x": 1}],
+        [10**400],
+        [-1e308, 1e308],
+        [5e24 + i for i in range(9)],
+    ],
+)
+def test_samples_without_a_real_delay_error_give_no_stats(samples):
     assert delay_error_stats(samples) is None
 
 
-@pytest.mark.parametrize("samples", [[-1e308, 1e308], [5e24 + i for i in range(9)]])
-def test_samples_too_large_for_100_ns_bins_give_no_stats(samples):
-    assert delay_error_stats(samples) is None
+@pytest.mark.parametrize(
+    "speed", ["fast", 10**400, [1, 2]], ids=["text", "huge", "list"]
+)
+def test_a_speed_that_is_not_a_number_is_unknown(panel, fake_daemon, qtbot, speed):
+    fake_daemon.push_cache("tpsc_speed/value", 0.0, timestamp=1.0)
+    fake_daemon.push_cache("tpsc_park_angle/value", 329.3, timestamp=1.0)
+    qtbot.waitUntil(lambda: _rotation(panel) is not None, timeout=2000)
+
+    fake_daemon.push_cache("tpsc_speed/value", speed, timestamp=2.0)
+    qtbot.waitUntil(lambda: _rotation(panel) is None, timeout=2000)
 
 
 def test_fwhm_counts_only_the_bins_above_half_maximum():
