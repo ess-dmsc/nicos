@@ -1,6 +1,7 @@
 """NICOS GUI history log window."""
 
 import json
+import math
 import pickle
 import sys
 import time
@@ -64,6 +65,15 @@ def float_with_default(s, d):
         return float(s)
     except ValueError:
         return d
+
+
+def custom_y_limits(info):
+    """Return the custom y limits of a view, or None if they are not set or
+    not finite."""
+    limits = [
+        float_with_default(info[k], math.nan) for k in ("customYFrom", "customYTo")
+    ]
+    return limits if info["customY"] and all(map(math.isfinite, limits)) else None
 
 
 def get_time_and_interval(intv):
@@ -458,17 +468,14 @@ class NewViewDialog(DlgUtils, QDialog):
             except ValueError:
                 self.showSimpleHelp()
                 return
-        if self.customY.isChecked():
-            try:
-                float(self.customYFrom.text())
-            except ValueError:
-                self.showError("You have to input valid y axis limits.")
-                return
-            try:
-                float(self.customYTo.text())
-            except ValueError:
-                self.showError("You have to input valid y axis limits.")
-                return
+        try:
+            parseKeyExpression(self.devices.text(), multiple=True)
+        except ValueError as err:
+            self.showError(f"The devices cannot be shown. {err}")
+            return
+        if self.customY.isChecked() and not custom_y_limits(self.infoDict()):
+            self.showError("You have to input valid y axis limits.")
+            return
         return QDialog.accept(self)
 
     def infoDict(self):
@@ -767,17 +774,7 @@ class BaseHistoryWindow:
             interval = float(info["interval"])
         except ValueError:
             interval = 5.0
-        if info["customY"]:
-            try:
-                yfrom = float(info["customYFrom"])
-            except ValueError:
-                return
-            try:
-                yto = float(info["customYTo"])
-            except ValueError:
-                return
-        else:
-            yfrom = yto = None
+        yfrom, yto = custom_y_limits(info) or (None, None)
 
         view = View(
             self,

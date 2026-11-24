@@ -8,6 +8,7 @@ import pytest
 
 from nicos.guisupport.qt import (
     QApplication,
+    QDialog,
     QEvent,
     QMenu,
     QPointF,
@@ -16,6 +17,7 @@ from nicos.guisupport.qt import (
 )
 from nicos_ess.gui.history_series import HistorySeries
 from nicos_ess.gui.panels import history_pyqt
+from nicos_ess.gui.panels.history import NewViewDialog
 from nicos_ess.gui.panels.history_pyqt import HistoryPanel
 from nicos_ess.gui.widgets.pyqtgraph import export
 from test.nicos_ess.gui.helpers import (
@@ -565,11 +567,51 @@ def test_a_long_time_span_is_fetched_in_one_request_per_key(history, fake_daemon
     assert format_interval == 0
 
 
-def test_a_view_whose_plot_cannot_be_built_is_not_listed(history):
-    info = _info("ts1", customY=True, customYFrom="0", customYTo="inf")
-    with pytest.raises(Exception, match="Cannot set range"):
-        history._createViewFromDialog(info)
+@pytest.mark.parametrize(
+    "low, high, accepted",
+    [
+        ("0", "inf", False),
+        ("nan", "nan", False),
+        ("x", "1", False),
+        ("-1e308", "1e308", True),
+    ],
+)
+def test_the_view_dialog_takes_only_finite_y_limits(
+    history,
+    record_modal_message_boxes,
+    allow_warning_message_boxes,
+    low,
+    high,
+    accepted,
+):
+    dialog = NewViewDialog(history, client=history.client)
+    dialog.devices.setText("ts1")
+    dialog.customY.setChecked(True)
+    dialog.customYFrom.setText(low)
+    dialog.customYTo.setText(high)
 
+    dialog.accept()
+
+    assert (dialog.result() == QDialog.DialogCode.Accepted) == accepted
+    assert [call.kind for call in record_modal_message_boxes] == ["warning"] * (
+        not accepted
+    )
+
+
+def test_a_preset_with_y_limits_that_are_not_finite_autoscales(history):
+    info = _info(
+        "ts1", name="no limits", customY=True, customYFrom="0", customYTo="inf"
+    )
+    history._add_preset("no limits", info)
+    try:
+        [launch] = [a for a in history.presetmenu.actions() if a.text() == "no limits"]
+        launch.trigger()
+    finally:
+        history.presetdict.pop("no limits", None)
+
+    assert [view.name for view in history.views] == ["no limits (1h)"]
+    assert history.currentPlot.view_box.autoRangeEnabled()[1]
+    history.actionDeleteView.trigger()
     assert history.views == [] and history.viewList.count() == 0
 
 
@@ -580,3 +622,29 @@ def test_a_failed_edit_keeps_the_view(history, monkeypatch):
     history.actionEditView.trigger()
 
     assert history.views == [view] and history.currentPlot is view.plot
+
+
+def test_the_view_dialog_refuses_devices_it_cannot_parse(
+    history, record_modal_message_boxes, allow_warning_message_boxes
+):
+    dialog = NewViewDialog(history, client=history.client)
+    dialog.devices.setText("ts1+")
+
+    dialog.accept()
+
+    assert dialog.result() == QDialog.DialogCode.Rejected
+    assert [call.kind for call in record_modal_message_boxes] == ["warning"]
+
+
+def test_an_unmapped_reading_ends_the_previous_history_step():
+    series = HistorySeries("valve", None, 0, mapping={"open": 0})
+    for index in range(series.maxstrings):
+        series.add(index, f"other state {index}")
+    series.add(50, "open")
+    series.add(60, "unseen fault")
+
+    frame = history_pyqt.series_frame(series, start=50, end=70, meta={})
+    times = frame.coords["time"].values
+    # The plot may show a gap or a distinct state after the fault.
+    np.testing.assert_array_equal(frame.data[times == 50], [0])
+    assert not np.any((times > 60) & (frame.data == 0))

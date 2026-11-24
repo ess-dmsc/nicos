@@ -25,7 +25,11 @@ from nicos.guisupport.qt import (
 from nicos.utils import parseKeyExpression
 from nicos_ess.gui.history_series import ColumnNames, HistorySeries
 from nicos_ess.gui.panels import history
-from nicos_ess.gui.panels.history import NewViewDialog, get_time_and_interval
+from nicos_ess.gui.panels.history import (
+    NewViewDialog,
+    custom_y_limits,
+    get_time_and_interval,
+)
 from nicos_ess.gui.widgets.pyqtgraph.export import (
     print_plot,
     save_plot_dialog,
@@ -73,32 +77,51 @@ class View(QObject):
             history = []
             if self.fromtime is not None:
                 if key not in queried:
-                    queried[key] = self._history(key, hist_totime, step)
-                    if not queried[key]:
-                        self.missing.append(key.removesuffix("/value"))
-                        if self.totime is None:
-                            queried[key] = self._current_value(key)
+                    queried[key] = self._query_history(key, hist_totime, step)
                 history = queried[key]
-            first = history[0][1] if history else None
-            if expr or not isinstance(first, (list, tuple)):
-                self._new_series(key, desc, expr).load(history)
-                continue
-            # Make one series per column and take the column names from the
-            # format string when possible.
-            columns = self._column_names(key, hist_totime, history)
-            if columns is None:
-                for i in range(len(first)):
-                    self._new_series(key, f"{desc}[{i}]", f"x[{i}]").load(history)
-                continue
-            self._columns[key] = (columns, desc)
-            history = [(t, columns.named(t, v) or {}) for t, v in history]
-            for column in dict.fromkeys(c for _t, value in history for c in value):
-                self._column_series(key, column).load(history)
+            self._load_series(key, expr, desc, history, hist_totime)
 
     def _history(self, key, totime, interval):
         """Return the history of *key* with at most one point per *interval*."""
         args = (key, str(self.fromtime), str(totime), interval)
         return self.client.ask("gethistory", *args, default=[])
+
+    def _query_history(self, key, totime, interval):
+        """Return the history of *key* and note the key as missing if it has
+        no history.
+
+        A view that runs up to now shows the current value of such a key.
+        """
+        history = self._history(key, totime, interval)
+        if not history:
+            self.missing.append(key.removesuffix("/value"))
+            if self.totime is None:
+                history = self._current_value(key)
+        return history
+
+    def _load_series(self, key, expr, desc, history, totime):
+        """Load *history* into the series of *key*.
+
+        A key with several values gets one series per column unless *expr*
+        picks from the values.
+        """
+        first = history[0][1] if history else None
+        if expr or not isinstance(first, (list, tuple)):
+            self._new_series(key, desc, expr).load(history)
+        else:
+            self._load_columns(key, desc, history, totime)
+
+    def _load_columns(self, key, desc, history, totime):
+        # Take the column names from the format string when possible.
+        columns = self._column_names(key, totime, history)
+        if columns is None:
+            for i in range(len(history[0][1])):
+                self._new_series(key, f"{desc}[{i}]", f"x[{i}]").load(history)
+            return
+        self._columns[key] = (columns, desc)
+        history = [(t, columns.named(t, v) or {}) for t, v in history]
+        for column in dict.fromkeys(c for _t, value in history for c in value):
+            self._column_series(key, column).load(history)
 
     def _new_series(self, key, name, expr):
         """Return the series of *key* called *name*. A view like "multi[0], multi"
@@ -127,7 +150,7 @@ class View(QObject):
         """
         if not key.endswith("/value"):
             return None
-        fmtkey = key[: -len("value")] + "fmtstr"
+        fmtkey = key.removesuffix("value") + "fmtstr"
         # Every format is needed, because each names the columns from its time on.
         formats = self._history(fmtkey, totime, 0)
         item = None if formats else self.client.getCacheKey(fmtkey)
@@ -172,7 +195,8 @@ class View(QObject):
             sip.delete(self.plot)
             self.plot = None
 
-    cleanup = close_plot
+    def cleanup(self):
+        self.close_plot()
 
 
 def series_frame(series, start, end, meta):
@@ -190,6 +214,21 @@ def series_frame(series, start, end, meta):
         x, y = np.append(x, end), np.append(y, y[-1])
     t = "datetime64[s]"
     return curve_frame("time", series.unit, x, y, t, name=series.label, meta=meta)
+
+
+def _dialog_times(info):
+    """Return the start, end and sliding window of the view in the dialog
+    *info*.
+
+    Raise ValueError if the time in the simple time mode cannot be parsed.
+    """
+    if not info["simpleTime"]:
+        fromtime = info["fromdate"] if info["frombox"] else None
+        totime = info["todate"] if info["tobox"] else None
+        return fromtime, totime, None
+    itime, _ = get_time_and_interval(info["simpleTimeSpec"])
+    window = itime if info["slidingWindow"] else None
+    return currenttime() - itime, None, window
 
 
 class HistoryPlot(QWidget):
@@ -334,27 +373,19 @@ class HistoryPanel(history.HistoryPanel):
         if not info["devices"].strip():
             return None
         keys, exprs, descs = parseKeyExpression(info["devices"], multiple=True)
-        name, window = info["name"] or info["devices"], None
+        name = info["name"] or info["devices"]
         if info["simpleTime"]:
             name += f" ({info['simpleTimeSpec']})"
-            try:
-                itime, _ = get_time_and_interval(info["simpleTimeSpec"])
-            except ValueError:
-                return None
-            fromtime, totime = currenttime() - itime, None
-            window = itime if info["slidingWindow"] else None
-        else:
-            fromtime = info["fromdate"] if info["frombox"] else None
-            totime = info["todate"] if info["tobox"] else None
+        try:
+            fromtime, totime, window = _dialog_times(info)
+        except ValueError:
+            return None
         try:
             interval = float(info.get("interval", ""))
         except ValueError:
             interval = 5.0
-        ys = info["customY"] and (float(info["customYFrom"]), float(info["customYTo"]))
-        times = (fromtime, totime, window, ys or None)
+        times = (fromtime, totime, window, custom_y_limits(info))
         view = View(self, info, name, keys, exprs, descs, times, interval)
-        # The panel lists the view only when its plot could be built.
-        HistoryPlot(view, self._plot_entries)
         self.views.append(view)
         view.listitem = QListWidgetItem(view.name)
         row = self.viewList.count() if row is None else row
