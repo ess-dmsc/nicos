@@ -312,7 +312,7 @@ class SpectrometerPanel(Panel):
         self.spectrometer_controller.handle_cache_key(key, decoded)
 
     def on_client_livedata(self, params, blobs):
-        if params["det"] != self.current_spectrometer:
+        if params.get("det") != self.current_spectrometer:
             return
         try:
             _name, frame = next(frames(params, blobs))

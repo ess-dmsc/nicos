@@ -171,3 +171,8 @@ def test_data_of_the_wrong_shape_is_ignored(panel, fake_daemon, qtbot):
     fake_daemon.push_cache("qepro/status", (400, 5))
     fake_daemon.push_cache("qepro/status", (200, "Acquiring"))
     qtbot.waitUntil(lambda: BLUE in controller.start_acq_button.styleSheet())
+
+
+def test_livedata_without_a_detector_name_is_ignored(panel, fake_daemon, qtbot):
+    with qtbot.waitSignal(panel.client.livedata):
+        fake_daemon.push("livedata", dict(tag=LIVE, datadescs=[]), [])
