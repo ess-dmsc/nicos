@@ -568,7 +568,7 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionExpert.setEnabled(True)
         self.actionViewOnly.setEnabled(True)
         self.actionEmergencyStop.setEnabled(not self.client.viewonly)
-        self.actionConnect.setText("Log out")
+        self.actionConnect.setText("Sign out")
         self.actionViewOnly.setChecked(self.client.viewonly)
 
         # set focus to command input, if present
@@ -594,7 +594,7 @@ class MainWindow(DlgUtils, QMainWindow):
         self.adminLabel.setVisible(False)
         self.setStatus("disconnected")
         self.actionConnect.setIcon(get_icon("login-24px.svg"))
-        self.actionConnect.setText("Log in")
+        self.actionConnect.setText("Sign in")
         self.actionExpert.setEnabled(False)
         self.actionViewOnly.setEnabled(False)
         self.actionEmergencyStop.setEnabled(False)

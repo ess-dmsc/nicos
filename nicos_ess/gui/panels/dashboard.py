@@ -231,7 +231,7 @@ class Dashboard(Panel):
         username = str(self.client.login).upper()
         self.userLabel.setText(f"{username}   ")
         self.emergency_button.setEnabled(not self.client.viewonly)
-        self.login_button.setText("Log out")
+        self.login_button.setText("Sign out")
         self.login_button.setIcon(get_icon("logout_white-24px.svg"))
 
     def on_client_status(self, data):
@@ -252,7 +252,7 @@ class Dashboard(Panel):
         self.setStatus("disconnected")
         self.emergency_button.setEnabled(False)
         self.login_button.setIcon(get_icon("login_white-24px.svg"))
-        self.login_button.setText("Log in")
+        self.login_button.setText("Sign in")
         self.userLabel.setText("NONE   ")
 
     def _update_dashboard_info(self):
