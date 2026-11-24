@@ -124,6 +124,10 @@
     <file alias="play_arrow_outline">material/icons/play_arrow_outline-24px.svg</file>
     <file alias="power">material/icons/power-24px.svg</file>
     <file alias="power_off">material/icons/power_off-24px.svg</file>
+    <file alias="login">material/icons/login-24px.svg</file>
+    <file alias="login_white">material/icons/login_white-24px.svg</file>
+    <file alias="logout">material/icons/logout-24px.svg</file>
+    <file alias="logout_white">material/icons/logout_white-24px.svg</file>
     <file alias="print">material/icons/print-24px.svg</file>
     <file alias="redo">material/icons/redo-24px.svg</file>
     <file alias="refresh">material/icons/refresh-24px.svg</file>
