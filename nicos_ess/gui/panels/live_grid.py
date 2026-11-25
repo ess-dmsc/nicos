@@ -42,7 +42,10 @@ from nicos_ess.gui.panels.live_cards import (
     Lift,
     LiveCard,
     drag_picture,
+    drop_modifiers,
     dropped_plot,
+    event_point,
+    global_point,
     paint_shadow,
     paint_styled,
     plot_mime,
@@ -273,7 +276,7 @@ class LiveGrid(QWidget):
                 self.drop()
         elif kind == QEvent.Type.MouseMove and self.session.kind == "resize":
             if event.buttons() & Qt.MouseButton.LeftButton:
-                self.drag_to(event.globalPos())
+                self.drag_to(global_point(event))
             else:
                 self.drop()
         return False
@@ -285,8 +288,8 @@ class LiveGrid(QWidget):
             return False
         if kind in over:
             event.accept()
-            if (bar, bar.tabAt(event.pos())) != self._tab:
-                self._tab = (bar, bar.tabAt(event.pos()))
+            if (bar, bar.tabAt(event_point(event))) != self._tab:
+                self._tab = (bar, bar.tabAt(event_point(event)))
                 self.tab_timer.start()
             return True
         if kind in (QEvent.Type.DragLeave, QEvent.Type.Drop):
@@ -718,14 +721,14 @@ class LiveGrid(QWidget):
             event.ignore()
             return
         self._set_action(event)
-        target = self._target(event.pos())
+        target = self._target(event_point(event))
         if target in (None, ("start",)) and find(session.start, session.name) is None:
             target = session.key or ("add",)
         self._preview(target)
 
     def _set_action(self, event):
         """Accept the drop as a copy while Ctrl is held and return True for a copy."""
-        held = event.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier
+        held = drop_modifiers(event) & Qt.KeyboardModifier.ControlModifier
         copy = bool(held) and self.session.source[0] != id(self)
         action = Qt.DropAction.CopyAction if copy else Qt.DropAction.MoveAction
         event.setDropAction(action)

@@ -7,6 +7,7 @@ import json
 import os
 
 from nicos.guisupport.qt import (
+    QT_VER,
     QColor,
     QLinearGradient,
     QPainter,
@@ -35,6 +36,27 @@ CURSORS = {
     "s": Qt.CursorShape.SizeVerCursor,
     "se": Qt.CursorShape.SizeFDiagCursor,
 }
+
+
+def global_point(event):
+    """Return the global pointer position of a mouse event in Qt 5 and Qt 6."""
+    if QT_VER == 6:
+        return event.globalPosition().toPoint()
+    return event.globalPos()
+
+
+def event_point(event):
+    """Return the pointer position of a mouse or drag event in Qt 5 and Qt 6."""
+    if QT_VER == 6:
+        return event.position().toPoint()
+    return event.pos()
+
+
+def drop_modifiers(event):
+    """Return the keyboard modifiers of a drag event in Qt 5 and Qt 6."""
+    if QT_VER == 6:
+        return event.modifiers()
+    return event.keyboardModifiers()
 
 
 def plot_mime(grid, name):
@@ -172,7 +194,7 @@ class Grip(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.grid.start("resize", self.grid.hovered, event.globalPos(), self.edge)
+            self.grid.start("resize", self.grid.hovered, global_point(event), self.edge)
 
     def leaveEvent(self, event):
         QTimer.singleShot(0, self.grid.hover_check)
