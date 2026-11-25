@@ -117,7 +117,7 @@ class Hist2dRoi:
 
     @classmethod
     def get_array_description(cls, name, det_width, left_edges, **ignored):
-        return ArrayDesc(name, shape=(left_edges, det_width), dtype=np.float64)
+        return ArrayDesc(name, shape=(len(left_edges), det_width), dtype=np.float64)
 
     @classmethod
     def get_zeroes(cls, det_width, left_edges, **ignored):
