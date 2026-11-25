@@ -251,6 +251,10 @@ class MotorDialog(QDialog):
             self.devices_panel.exec_command(f"adjust({self.devrepr}, {val!r})")
 
     @pyqtSlot()
+    def on_btn_clear_offset_clicked(self):
+        self.devices_panel.exec_command(f"adjust({self.devrepr}, 0)")
+
+    @pyqtSlot()
     def on_actionSetPosition_triggered(self):
         val = self._get_new_value(
             "Set hardware position", f"Set hardware position of {self.devname}:"

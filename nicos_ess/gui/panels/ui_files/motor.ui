@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>510</height>
+    <width>448</width>
+    <height>622</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -300,17 +300,19 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="3">
-         <widget class="QPushButton" name="btn_set_offset">
-          <property name="text">
-           <string>Set Offset</string>
+        <item row="2" column="1">
+         <widget class="QLabel" name="label_5">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-         </widget>
-        </item>
-        <item row="2" column="3">
-         <widget class="QPushButton" name="btn_set_limits">
           <property name="text">
-           <string>Set Limits</string>
+           <string>User limits:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
          </widget>
         </item>
@@ -359,31 +361,50 @@
           </item>
          </layout>
         </item>
-        <item row="3" column="1">
-         <widget class="QLabel" name="label_6">
+        <item row="3" column="3">
+         <widget class="QPushButton" name="btn_set_offset">
           <property name="text">
-           <string>Offset:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <string>Set Offset</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
-         <widget class="QLabel" name="label_5">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
+        <item row="2" column="3">
+         <widget class="QPushButton" name="btn_set_limits">
           <property name="text">
-           <string>User limits:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <string>Set Limits</string>
           </property>
          </widget>
+        </item>
+        <item row="3" column="2">
+         <layout class="QHBoxLayout" name="horizontalLayout_8">
+          <item>
+           <widget class="QLabel" name="txt_offset">
+            <property name="text">
+             <string>(offset)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="txt_offset_units">
+            <property name="text">
+             <string>(units)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_4">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </item>
         <item row="2" column="2">
          <layout class="QHBoxLayout" name="horizontalLayout_6">
@@ -430,16 +451,6 @@
           </item>
          </layout>
         </item>
-        <item row="0" column="1">
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>Speed:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
         <item row="0" column="2">
          <layout class="QHBoxLayout" name="horizontalLayout_4">
           <item>
@@ -474,36 +485,35 @@
           </item>
          </layout>
         </item>
-        <item row="3" column="2">
-         <layout class="QHBoxLayout" name="horizontalLayout_8">
-          <item>
-           <widget class="QLabel" name="txt_offset">
-            <property name="text">
-             <string>(offset)</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="txt_offset_units">
-            <property name="text">
-             <string>(units)</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer_4">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
+        <item row="3" column="1">
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>Offset:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Speed:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="3">
+         <widget class="QPushButton" name="btn_clear_offset">
+          <property name="styleSheet">
+           <string notr="true">min-width: 90px;</string>
+          </property>
+          <property name="text">
+           <string>Clear Offset</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
