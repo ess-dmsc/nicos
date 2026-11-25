@@ -88,12 +88,13 @@ class Hist2dDet:
 
     @classmethod
     def get_array_description(cls, name, det_width, det_height, **ignored):
-        return ArrayDesc(name, shape=(det_width, det_height), dtype=np.float64)
+        return ArrayDesc(name, shape=(det_height, det_width), dtype=np.float64)
 
     @classmethod
     def get_zeroes(cls, det_width, det_height, **ignored):
+        # The data from just-bin-it uses row-column ordering.
         return cls.transform_data(
-            np.zeros(shape=(det_width, det_height), dtype=np.float64)
+            np.zeros(shape=(det_height, det_width), dtype=np.float64)
         )
 
     @classmethod
@@ -116,12 +117,13 @@ class Hist2dRoi:
 
     @classmethod
     def get_array_description(cls, name, det_width, left_edges, **ignored):
-        return ArrayDesc(name, shape=(det_width, left_edges), dtype=np.float64)
+        return ArrayDesc(name, shape=(left_edges, det_width), dtype=np.float64)
 
     @classmethod
     def get_zeroes(cls, det_width, left_edges, **ignored):
+        # The data from just-bin-it uses row-column ordering.
         return cls.transform_data(
-            np.zeros(shape=(det_width, left_edges), dtype=np.float64)
+            np.zeros(shape=(len(left_edges), det_width), dtype=np.float64)
         )
 
     @classmethod
