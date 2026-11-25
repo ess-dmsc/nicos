@@ -393,7 +393,11 @@ def test_a_narrow_title_cuts_a_long_part_between_words(plot):
     title.set_parts("detector", parts + [("− background", None, True)], ["hint"])
     title.setGeometry(0, 0, 2000, title.line_height)
     assert note in title.text and "120 bins" in title.text
-    title.setGeometry(0, 0, 450, title.line_height)
+    room = title.bold.horizontalAdvance("detector")
+    room += title.plain.horizontalAdvance(
+        " · background not applied: taken at another …"
+    )
+    title.setGeometry(0, 0, room + 10, title.line_height)
     assert "detector" in title.text and "1.2M" not in title.text
     # The text is cut between words, starting with the first part.
     assert "taken at another …" in title.text

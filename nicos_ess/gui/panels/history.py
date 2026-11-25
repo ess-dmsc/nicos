@@ -1,5 +1,6 @@
 """NICOS GUI history log window."""
 
+import contextlib
 import json
 import math
 import pickle
@@ -139,13 +140,13 @@ class View(QObject):
 
         if fromtime is not None:
             iterator = enumerateWithProgress(
-                zip(keys, exprs, descs),
+                zip(keys, exprs, descs, strict=False),
                 "Querying history...",
                 force_display=True,
                 total=len(keys),
             )
         else:
-            iterator = enumerate(zip(keys, exprs, descs))
+            iterator = enumerate(zip(keys, exprs, descs, strict=False))
 
         for _, (key, expr, desc) in iterator:
             real_exprs = [expr]
@@ -166,8 +167,8 @@ class View(QObject):
                     QMessageBox.warning(
                         widget,
                         "Error",
-                        "Could not get history for %s, "
-                        "there are no values to show." % key,
+                        f"Could not get history for {key}, "
+                        "there are no values to show.",
                     )
 
                 # if the value is a list/tuple and we don't have an index
@@ -176,7 +177,7 @@ class View(QObject):
                     first_value = history[0][1]
                     if not expr and isinstance(first_value, (list, tuple)):
                         _, real_exprs, _ = parseKeyExpression(
-                            ", ".join("x[%d]" % i for i in range(len(first_value))),
+                            ", ".join(f"x[{i}]" for i in range(len(first_value))),
                             multiple=True,
                         )
                         added_index = True
@@ -212,11 +213,12 @@ class View(QObject):
     def _generate_history_from_device(self, key):
         dev, k = key.split("/")
         try:
-            if k == "value":
-                value = self.client.eval("%s.read()" % dev, None)
-            else:
-                value = self.client.eval("%s.%s" % (dev, k), None)
-        except:
+            value = (
+                self.client.eval(f"{dev}.read()", None)
+                if k == "value"
+                else self.client.eval(f"{dev}.{k}", None)
+            )
+        except Exception:
             # If something goes wrong just return no history.
             return []
 
@@ -400,7 +402,7 @@ class NewViewDialog(DlgUtils, QDialog):
                 item.setText(2, "1")
             if not item.text(3):
                 item.setText(3, "0")
-            suffix = "".join("[%s]" % i for i in index.split(",")) if index else ""
+            suffix = "".join(f"[{i}]" for i in index.split(",")) if index else ""
             scale = float_with_default(item.text(2), 1)
             offset = float_with_default(item.text(3), 0)
             if scale != 1:
@@ -742,15 +744,12 @@ class BaseHistoryWindow:
         if not info["devices"].strip():
             return
         keys, exprs, descs = parseKeyExpression(info["devices"], multiple=True)
-        if self.client is not None:
-            meta = self._getMetainfo(keys)
-        else:
-            meta = ({}, {})
+        meta = self._getMetainfo(keys) if self.client is not None else ({}, {})
         name = info["name"]
         if not name:
             name = info["devices"]
         if info["simpleTime"]:
-            name += " (%s)" % info["simpleTimeSpec"]
+            name += " ({})".format(info["simpleTimeSpec"])
         window = None
         if info["simpleTime"]:
             try:
@@ -762,14 +761,8 @@ class BaseHistoryWindow:
             if info["slidingWindow"]:
                 window = itime
         else:
-            if info["frombox"]:
-                fromtime = mktime(localtime(info["fromdate"]))
-            else:
-                fromtime = None
-            if info["tobox"]:
-                totime = mktime(localtime(info["todate"]))
-            else:
-                totime = None
+            fromtime = mktime(localtime(info["fromdate"])) if info["frombox"] else None
+            totime = mktime(localtime(info["todate"])) if info["tobox"] else None
         try:
             interval = float(info["interval"])
         except ValueError:
@@ -883,10 +876,11 @@ class BaseHistoryWindow:
             if view.plot.HAS_AUTOSCALE:
                 from gr.pygr import PlotAxes
 
-                if newView:
-                    mask = PlotAxes.SCALE_X | PlotAxes.SCALE_Y
-                else:
-                    mask = view.plot.plot.autoscale
+                mask = (
+                    PlotAxes.SCALE_X | PlotAxes.SCALE_Y
+                    if newView
+                    else view.plot.plot.autoscale
+                )
                 if view.yfrom and view.yto:
                     mask &= ~PlotAxes.SCALE_Y
                 self._autoscale(x=mask & PlotAxes.SCALE_X, y=mask & PlotAxes.SCALE_Y)
@@ -943,7 +937,7 @@ class BaseHistoryWindow:
     def on__actionSavePlot_triggered(self):
         filename = self.currentPlot.savePlot()
         if filename:
-            self.statusBar.showMessage("View successfully saved to %s." % filename)
+            self.statusBar.showMessage(f"View successfully saved to {filename}.")
 
     def on__actionPrint_triggered(self):
         if self.currentPlot.printPlot():
@@ -1086,7 +1080,7 @@ class HistoryPanel(BaseHistoryWindow, PlotPanel):
 
     @pyqtSlot()
     def on_actionAttachElog_triggered(self):
-        self.attachElogDialogExec(safeName("history_%s" % self.currentPlot.view.name))
+        self.attachElogDialogExec(safeName(f"history_{self.currentPlot.view.name}"))
 
 
 class StandaloneHistoryWindow(DlgUtils, BaseHistoryWindow, QMainWindow):
@@ -1179,10 +1173,8 @@ class StandaloneHistoryApp(CacheClient):
         self._startup_done.wait(2)
         self._window.openViews(self.views)
         self._window.show()
-        try:
+        with contextlib.suppress(KeyboardInterrupt):
             self._qtapp.exec()
-        except KeyboardInterrupt:
-            pass
         self._stoprequest = True
 
     def _propagate(self, args):

@@ -155,8 +155,10 @@ def test_a_strip_axis_without_room_for_ticks_labels_the_data_ends(image_view):
 
     assert len(axis.tickValues(4500, 4900, 300)[0][1]) > 2
     ends = [[v for _s, v in axis.tickValues(4500, 4510, n)] for n in (30, 9)]
-    # Without room for ticks, the axis labels only the data ends that fit.
-    assert ends == [[[4507]], []]
+    # Without room for ticks, the axis labels only the data ends that fit. How
+    # many fit depends on the font.
+    assert 4507 in ends[0][0] and set(ends[0][0]) <= {4504, 4507}
+    assert ends[1] == []
 
 
 def test_measurements_keep_their_pixels_through_other_views(image_view):
