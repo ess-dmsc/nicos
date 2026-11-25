@@ -254,7 +254,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         "rotation": Param(
             "Rotation angle to apply to the image",
             type=oneof(0, 90, 180, 270),
-            default=90,
+            default=0,
             userparam=True,
             settable=True,
         ),
