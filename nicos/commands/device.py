@@ -758,7 +758,7 @@ def getall(*names):
     for name, dev in sorted(
         session.devices.items(),
         key=lambda nd: nd[0].lower(),  # codespell:ignore nd
-    ):  # codespell:ignore
+    ):
         pvalues = []
         for param in names:
             if param in dev.parameters:
