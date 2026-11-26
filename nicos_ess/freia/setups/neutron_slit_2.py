@@ -4,13 +4,13 @@ prefix = "FREIA-ColSl2:MC-"
 devices = dict(
     ns2_blade_b=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Right blade",
+        description="Bottom blade",
         motorpv=f"{prefix}SlZm-01:Mtr",
         visibility=(),
     ),
     ns2_blade_t=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Left blade",
+        description="Top blade",
         motorpv=f"{prefix}SlZp-01:Mtr",
         visibility=(),
     ),
