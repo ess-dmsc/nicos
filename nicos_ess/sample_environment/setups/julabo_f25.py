@@ -1,4 +1,4 @@
-description = "Julabo F25 for the Huginn-sans."
+description = "Julabo F25HL of the Huginn SANS kit"
 
 group = "plugplay"
 

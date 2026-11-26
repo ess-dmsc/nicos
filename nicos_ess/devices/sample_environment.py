@@ -10,7 +10,7 @@ PVA_SCHEME = "pva://"
 
 
 def presence_signals(setup_info):
-    """Return {setup name: presence signal} of all plug-and-play setups."""
+    """Return a dict that maps each plug-and-play setup to its presence signal."""
     return {
         name: info["extended"]["presence_signal"]
         for name, info in setup_info.items()
@@ -31,7 +31,7 @@ class SampleEnvironmentPresence(Readable):
     The setup is present while that signal is connected.  Only ``pva://``
     signals are supported.  Like the ESS EPICS devices, only the poller
     monitors the signals and writes the value to the cache.  The Setups panel
-    lists plug-and-play setups that are present or loaded; nothing is loaded
+    lists plug-and-play setups that are present or loaded.  Nothing is loaded
     or unloaded automatically.
     """
 
@@ -68,7 +68,7 @@ class SampleEnvironmentPresence(Readable):
 
     def doRead(self, maxage=0):
         if self._cache and session.sessiontype != POLLER:
-            # only the poller monitors the signals, other sessions use its value
+            # Only the poller monitors the signals, so other sessions read its value.
             return self._cache.get(self, "value", [])
         with self._lock:
             return sorted(self._present)
@@ -82,6 +82,7 @@ class SampleEnvironmentPresence(Readable):
                 self._present.add(setup)
             else:
                 self._present.discard(setup)
-            present = sorted(self._present)
-        if self._cache:
-            self._cache.put(self, "value", present)
+            # The cache write stays under the lock, otherwise two callbacks can
+            # write their lists in the wrong order and leave an old list behind.
+            if self._cache:
+                self._cache.put(self, "value", sorted(self._present))

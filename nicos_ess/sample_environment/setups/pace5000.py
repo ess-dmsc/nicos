@@ -1,4 +1,4 @@
-description = "The PACE5000 in the E03 lab."
+description = "PACE5000 pressure controller"
 
 group = "plugplay"
 

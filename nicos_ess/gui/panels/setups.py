@@ -32,8 +32,8 @@ class SetupsPanel(Panel):
     """Provides a dialog to select and load the basic and optional setups.
 
     Setups in group ``plugplay`` are only listed while they are loaded or
-    while the presence device (option ``presence_device``, default
-    ``se_presence``) reports their equipment as present.
+    while the presence device reports their equipment as present.  The panel
+    option ``presence_device`` names that device and defaults to ``se_presence``.
     """
 
     panelName = "Setup selection"

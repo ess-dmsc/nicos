@@ -1,7 +1,5 @@
 """Tests for plug-and-play visibility in the ESS SetupsPanel."""
 
-from __future__ import annotations
-
 from nicos.guisupport.qt import Qt
 from test.nicos_ess.gui.helpers import (
     get_panel_by_class,
