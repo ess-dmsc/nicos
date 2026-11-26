@@ -83,8 +83,13 @@ def generateMetainfo():
         except Exception as err:
             device.log.warning("could not collect metadata, skipping", exc=err)
             continue
-        for key, value, strvalue, unit, category in info:
-            metainfo[device.name, key] = (value, strvalue, unit, category)
+        for key, info in device.info():
+            metainfo[device.name, key] = (
+                info.value,
+                info.strvalue,
+                info.unit,
+                info.category,
+            )
     return metainfo
 
 

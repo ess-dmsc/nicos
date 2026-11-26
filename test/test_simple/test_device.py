@@ -49,6 +49,7 @@ from nicos.core import (
     status,
     usermethod,
 )
+from nicos.core.device import DeviceMetaInfo, DeviceParInfo
 from nicos.core.sessions.utils import MAINTENANCE
 from nicos.utils.credentials import keystore
 
@@ -134,7 +135,11 @@ class Dev2(HasLimits, HasOffset, CanDisable, Moveable):
         methods_called.add('doUpdateParam2')
 
     def doInfo(self):
-        return [("testkey", "testval", "testval", "", "instrument")]
+        return [
+            DeviceMetaInfo(
+                "testkey", DeviceParInfo("testval", "testval", "", "instrument")
+            )
+        ]
 
     def doVersion(self):
         return [('testversion', 1.0)]
@@ -291,7 +296,7 @@ def test_forbidden_assignments(session):
     pytest.raises(UsageError, setattr, dev, 'read', 0)
     # changing valuetype function must be allowed
     dev.valuetype = float
-    assert dev.valuetype == float
+    assert dev.valuetype is float
     # internal variable '_val' exists and must be changeable
     dev._val = 10
     assert dev._val == 10

@@ -320,7 +320,7 @@ def activation(
 
 def _extract_powder_data(num, dataset):
     values = {
-        "%s_%s" % dev_key: val for (dev_key, (val, _, _, _)) in dataset.metainfo.items()
+        "%s_%s" % dev_key: info.value for (dev_key, info) in dataset.metainfo.items()
     }
     try:
         ki_name = session.instrument._attached_mono.name

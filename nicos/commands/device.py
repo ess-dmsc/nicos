@@ -758,7 +758,7 @@ def getall(*names):
     for name, dev in sorted(
         session.devices.items(),
         key=lambda nd: nd[0].lower(),  # codespell:ignore nd
-    ):  # codespell:ignore
+    ):
         pvalues = []
         for param in names:
             if param in dev.parameters:
@@ -813,9 +813,9 @@ def info(*devlist):
         devlist = [session.devices[devname] for devname in session.explicit_devices]
     bycategory = {}
     for dev in devlist:
-        for key, _value, strvalue, unit, category in dev.info():
-            bycategory.setdefault(category, []).append(
-                (str(dev), key + ":", strvalue + " " + unit)
+        for key, info in dev.info():
+            bycategory.setdefault(info.category, []).append(
+                (str(dev), key + ":", info.strvalue + " " + info.unit)
             )
     for catname, catinfo in INFO_CATEGORIES:
         if catname not in bycategory:

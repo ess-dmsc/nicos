@@ -185,10 +185,10 @@ class NicosMetaWriterMixin:
     def _collectMetaInformation(self, update_headerinfo=None):
         bycategory = {}
         metainfo = self.dataset.metainfo
-        for (device, key), (_, val, unit, category) in metainfo.items():
-            if category:
-                bycategory.setdefault(category, []).append(
-                    ("%s_%s" % (device, key), (val + " " + unit).strip())
+        for (device, key), info in metainfo.items():
+            if info.category:
+                bycategory.setdefault(info.category, []).append(
+                    ("%s_%s" % (device, key), (info.strvalue + " " + info.unit).strip())
                 )
         if update_headerinfo is None:
             update_headerinfo = getattr(
@@ -205,9 +205,8 @@ class NicosMetaWriterMixin:
                 device = session.getDevice(devname)
                 if (devname, "value") in metainfo:
                     # reuse the category
-                    _, _, unit, category = metainfo[(devname, "value")]
+                    category = metainfo[(devname, "value")].category
                 else:
-                    unit = device.unit
                     category = "result"
                 bycategory.setdefault(category, []).append(
                     ("%s_value" % devname, device.format(val, True).strip())
@@ -319,11 +318,10 @@ class DataSink(Device):
             return False
         if self.settypes and dataset.settype not in self.settypes:
             return False
-        if self.detectors and not (
-            {d.name for d in dataset.detectors} & set(self.detectors)
-        ):
-            return False
-        return True
+        return not (
+            self.detectors
+            and not ({d.name for d in dataset.detectors} & set(self.detectors))
+        )
 
     def createHandlers(self, dataset):
         """Start processing the given dataset (a BaseDataset).
@@ -333,7 +331,7 @@ class DataSink(Device):
         """
         if self.handlerclass is None:
             raise NotImplementedError(
-                'Must set an "handlerclass" attribute ' "on %s" % self.__class__
+                'Must set an "handlerclass" attribute on %s' % self.__class__
             )
         # pylint: disable=not-callable
         if dataset.settype == POINT:

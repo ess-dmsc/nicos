@@ -22,7 +22,8 @@
 # *****************************************************************************
 
 from collections import OrderedDict
-from time import localtime, strftime, time as currenttime
+from time import localtime, strftime
+from time import time as currenttime
 
 import numpy
 
@@ -66,8 +67,10 @@ class FITSImageSinkHandler(SingleFileSinkHandler):
         finished = currenttime()
         header = {}
 
-        for (dev, param), (_, strvalue, unit, _) in info.items():
-            header["%s/%s" % (dev, param)] = ("%s %s" % (strvalue, unit)).strip()
+        for (dev, param), pinfo in info.items():
+            header["%s/%s" % (dev, param)] = (
+                "%s %s" % (pinfo.strvalue, pinfo.unit)
+            ).strip()
 
         header = OrderedDict(
             [
