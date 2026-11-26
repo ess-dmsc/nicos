@@ -312,7 +312,7 @@ class DeviceMeta(DeviceMixinMeta):
 
         # check attribute names for the attached devices (created by
         # Device.__init__)
-        for adevname, entry in newtype.attached_devices.items():
+        for adevname, _entry in newtype.attached_devices.items():
             pname = "_attached_%s" % adevname
             if newtype.parameters and (pname in newtype.parameters):
                 raise ProgrammingError(
@@ -943,7 +943,8 @@ class Device(metaclass=DeviceMeta):
         for category, name, unit in self._infoparams:
             try:
                 parvalue = self._getFromCache(
-                    name, lambda _maxage=None: getattr(self, name)
+                    name,
+                    lambda _maxage=None: getattr(self, name),  # noqa: B023
                 )
             except Exception as err:
                 self.log.warning("error getting %s parameter", name, exc=err)
@@ -1070,31 +1071,29 @@ class Device(metaclass=DeviceMeta):
         device value, determined by :attr:`maxage`, multiplied by *with_ttl*.
         """
         value = getattr(self, "doRead" + name.title())()
-        if with_ttl:
+        if not self._cache:
+            self._params[name] = value
+        elif with_ttl:
             self._cache.put(
                 self, name, value, currenttime(), getattr(self, "maxage", 0) * with_ttl
             )
         else:
             self._cache.put(self, name, value)
 
-    def pollParams(
-        self, volatile_only=True, blocking=False, with_ttl=0, param_list=None
-    ):
-        """Poll all parameters (normally only volatile ones)."""
-        if param_list is None:
-            param_list = list(self.parameters)
-        param_list = [
-            param
-            for param in param_list
-            if self.parameters[param].volatile
-            or (not volatile_only and hasattr(self, "doRead" + param.title()))
-        ]
-        if blocking:
-            for param in param_list:
-                self._pollParam(param, with_ttl)
-        else:
+    def pollParams(self, *params, with_ttl=0):
+        """Poll given *params* (or, if None, all parameters that have a
+        doReadParam() method), in a blocking manner.
+        """
+        for name in params or self.parameters:
+            if hasattr(self, "doRead" + name.title()):
+                self._pollParam(name, with_ttl)
+
+    def asyncPollVolatileParams(self):
+        """Poll all volatile parameters asynchronously."""
+        if self._cache:
+            params = [name for (name, info) in self.parameters.items() if info.volatile]
             self._cache.put_raw(
-                "poller/%s/pollparams" % self.name, param_list, flag=FLAG_NO_STORE
+                f"poller/{self.name}/pollparams", params, flag=FLAG_NO_STORE
             )
 
 
@@ -1878,7 +1877,7 @@ class Moveable(Waitable):
                 self.format(pos, unit=True),
             )
 
-    def isAtTarget(self, pos=None, target=None):
+    def isAtTarget(self, pos=None, target=None, maxage=0):
         """Check if the device has arrived at the given target.
         If target is omitted it defaults to the device's currently set target.
         If pos is omitted the device checks against its current read value.
@@ -1905,7 +1904,7 @@ class Moveable(Waitable):
         if target is None:
             target = self.target
         if pos is None:
-            pos = self.read(0)
+            pos = self.read(maxage)
 
         if hasattr(self, "doIsAtTarget"):
             return self.doIsAtTarget(pos, target)
