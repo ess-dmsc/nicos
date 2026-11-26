@@ -9,8 +9,8 @@ from test.nicos_ess.gui.helpers import (
 
 PANEL = "nicos_ess.gui.panels.samples.SamplePanel"
 SAMPLES = [
-    {"name": "name1", "property1": "value1"},
-    {"name": "name2"},
+    {"samplename": "name1", "property1": "value1"},
+    {"samplename": "name2"},
 ]
 
 
@@ -41,7 +41,10 @@ def test_apply_sends_edited_samples_to_daemon(panel, fake_daemon, qtbot):
     assert fake_daemon.sent_calls() == [
         (
             "Exp.sample.set_samples",
-            {0: {"name": "name1", "property1": "value2"}, 1: {"name": "name2"}},
+            {
+                0: {"samplename": "name1", "property1": "value2"},
+                1: {"samplename": "name2"},
+            },
         )
     ]
 
