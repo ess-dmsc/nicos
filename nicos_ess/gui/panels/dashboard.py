@@ -7,9 +7,11 @@ from nicos.clients.gui.utils import (
 )
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
+    QIcon,
     QLabel,
     QPixmap,
     QPushButton,
+    QSize,
     QSizePolicy,
     Qt,
     pyqtSlot,
@@ -329,13 +331,8 @@ class Dashboard(Panel):
 
     def add_logo(self):
         nicos_label = QLabel()
-        pxr = decolor_logo(
-            QPixmap(":/nicos-logo-high"),
-            Qt.GlobalColor.white,
-        )
-        nicos_label.setPixmap(
-            pxr.scaledToHeight(30, Qt.TransformationMode.SmoothTransformation)
-        )
+        logo = QIcon(findResource("resources/nicos-logo-white.svg"))
+        nicos_label.setPixmap(logo.pixmap(QSize(400, 79)))
         self.logo_box.addWidget(nicos_label)
 
     @pyqtSlot()
