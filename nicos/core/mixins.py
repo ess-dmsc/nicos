@@ -25,7 +25,8 @@
 
 import threading
 import types
-from time import monotonic, time as currenttime
+from time import monotonic
+from time import time as currenttime
 
 from nicos import session
 from nicos.core import status
@@ -310,7 +311,7 @@ class HasLimits(DeviceMixinBase):
 
         if self._check_in_range(curval, value)[0] == status.WARN:
             self.log.warning(
-                "current device value (%s) not within new " "userlimits (%s, %s)",
+                "current device value (%s) not within new userlimits (%s, %s)",
                 self.format(curval, unit=True),
                 value[0],
                 value[1],
@@ -513,7 +514,7 @@ class HasTimeout(DeviceMixinBase):
 
     parameters = {
         "timeout": Param(
-            "Time limit for the device to reach its target" ", or None",
+            "Time limit for the device to reach its target, or None",
             unit="s",
             fmtstr="%.1f",
             type=none_or(floatrange(0)),
@@ -522,7 +523,7 @@ class HasTimeout(DeviceMixinBase):
             chatty=True,
         ),
         "_timesout": Param(
-            "Device movement should finish between these " "timestamps",
+            "Device movement should finish between these timestamps",
             type=none_or(nonemptylistof(tupleof(string, float))),
             unit="s",
             userparam=False,
@@ -731,11 +732,11 @@ class HasWindowTimeout(HasPrecision, HasTimeout):
         res.append(("", res[-1][1] + self.window))
         return res
 
-    def isAtTarget(self, pos=None, target=None):
+    def isAtTarget(self, pos=None, target=None, maxage=0):
         if target is None:
             target = self.target
         if pos is None:
-            pos = self.read(0)
+            pos = self.read(maxage)
 
         ct = currenttime()
         self._cacheCB("value", pos, ct)
@@ -924,4 +925,4 @@ class IsController(DeviceMixinBase):
 
         returns a tuple(bool status, string reason)
         """
-        raise NotImplementedError("Please implement the isAdevTargetAllowed" " method")
+        raise NotImplementedError("Please implement the isAdevTargetAllowed method")

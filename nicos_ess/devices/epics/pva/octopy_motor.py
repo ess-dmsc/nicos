@@ -88,7 +88,7 @@ class OctopyMotor(EpicsDeviceBase, CanDisable, CanReference, Motor):
     def doReset(self):
         self._epics.put_channel_value("reset", 1)
 
-    def doIsAtTarget(self, pos=None, target=None):
+    def doIsAtTarget(self, pos=None, target=None, maxage=0):
         if pos is None:
             pos = self.read(0)
         if target is None:
