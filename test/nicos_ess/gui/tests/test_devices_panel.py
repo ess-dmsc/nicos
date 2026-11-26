@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from nicos.guisupport.qt import QApplication, QLineEdit, Qt, QTimer
 from test.nicos_ess.gui.doubles import DeviceSpec
 from test.nicos_ess.gui.helpers import (
     get_panel_by_class,
@@ -94,3 +95,45 @@ def test_cache_event_updates_panel(gui_window_factory, fake_daemon, qtbot, value
         lambda tree_item=item: tree_item.text(panel.col_index["VALUE"]) == "7.5 mm",
         timeout=2000,
     )
+
+
+def test_enter_confirms_the_parameter_dialog(gui_window_factory, fake_daemon, qtbot):
+    fake_daemon.add_device(
+        DeviceSpec(
+            name="channel",
+            valuetype=float,
+            params={**VISIBLE_DEVICE_PARAMS, "num_bins": 50},
+            param_info={
+                "num_bins": {
+                    "type": int,
+                    "settable": True,
+                    "userparam": True,
+                    "unit": "",
+                    "description": "",
+                }
+            },
+        ),
+        setup="instrument",
+        loaded=True,
+    )
+    fake_daemon.evals["session.getDevice('channel').classes"] = [
+        "nicos.core.device.Readable"
+    ]
+    window = gui_window_factory(guiconfig_string=guiconfig_string)
+    panel = get_panel_by_class(window, "nicos_ess.gui.panels.devices.DevicesPanel")
+    qtbot.waitUntil(lambda: "channel" in panel._devinfo, timeout=2000)
+    dialog = panel._open_control_dialog("channel")
+
+    def type_and_press_enter():
+        field = QApplication.activeModalWidget().findChild(QLineEdit)
+        field.clear()
+        qtbot.keyClicks(field, "100")
+        qtbot.keyClick(field, Qt.Key.Key_Return)
+
+    QTimer.singleShot(0, type_and_press_enter)
+    table = dialog.param_table
+    table.edit_param(table.paramItems["num_bins"])
+    dialog.close()
+
+    qtbot.waitUntil(lambda: bool(fake_daemon.sent_calls()), timeout=2000)
+    assert fake_daemon.sent_calls() == [("set", "channel", "num_bins", 100)]
