@@ -75,7 +75,7 @@ class SamplePanel(PanelBase):
         selected_row = self.list.currentRow()
         self.list.clear()
         for i, sample in enumerate(self.pending_samples):
-            item = QListWidgetItem(sample["name"])
+            item = QListWidgetItem(sample["samplename"])
             item.setData(Qt.ItemDataRole.UserRole, i)
             self.list.addItem(item)
         self._on_sample_selected()
@@ -84,7 +84,7 @@ class SamplePanel(PanelBase):
     def _populate_table(self, data):
         data = deepcopy(data)
 
-        sample = data.pop("name")
+        sample = data.pop("samplename")
         self.txt_sample_name.setText(str(sample))
         for i, (key, value) in enumerate(data.items()):
             self.table.setItem(i, 0, QTableWidgetItem(str(key)))
@@ -107,21 +107,21 @@ class SamplePanel(PanelBase):
         selected_item = self.list.selectedItems()[0]
         selected_item.setText(text)
         index = selected_item.data(Qt.ItemDataRole.UserRole)
-        self.pending_samples[index]["name"] = text
+        self.pending_samples[index]["samplename"] = text
         self._update_reminder_label()
 
     def on_table_item_changed(self, item):
         if self.ignore_table_changes:
             return
         index = self.list.currentItem().data(Qt.ItemDataRole.UserRole)
-        name = self.pending_samples[index]["name"]
-        self.pending_samples[index] = {"name": name, **self._get_table_data()}
+        name = self.pending_samples[index]["samplename"]
+        self.pending_samples[index] = {"samplename": name, **self._get_table_data()}
         self._update_reminder_label()
 
     def _new_sample_btn_clicked(self):
         new_sample_index = len(self.pending_samples)
         new_name = "untitled"
-        self.pending_samples.append({"name": new_name})
+        self.pending_samples.append({"samplename": new_name})
 
         item = QListWidgetItem(new_name)
         item.setData(Qt.ItemDataRole.UserRole, new_sample_index)
@@ -135,7 +135,7 @@ class SamplePanel(PanelBase):
         new_sample_index = len(self.pending_samples)
 
         self.pending_samples.append(deepcopy(self.pending_samples[index]))
-        self.pending_samples[~0]["name"] = name
+        self.pending_samples[~0]["samplename"] = name
 
         item = QListWidgetItem(name)
         item.setData(Qt.ItemDataRole.UserRole, new_sample_index)
