@@ -356,7 +356,7 @@ class EpicsManualMappedMoveable(EpicsReadWriteBase, MappedMoveable):
             candidates.append((status.BUSY, f"moving to {self.target}"))
         return worst_status(self._read_primary_alarm(maxage=maxage), *candidates)
 
-    def doIsAtTarget(self, pos=None, target=None):
+    def doIsAtTarget(self, pos=None, target=None, maxage=0):
         if target is None:
             target = self.target
         if pos is None:
@@ -406,7 +406,7 @@ class EpicsManualMappedAnalogMoveable(
             candidates.append((status.BUSY, f"moving to {self.target}"))
         return worst_status(self._read_primary_alarm(maxage=maxage), *candidates)
 
-    def doIsAtTarget(self, pos=None, target=None):
+    def doIsAtTarget(self, pos=None, target=None, maxage=0):
         """Overwrite parent method to consider precision when checking if
         device is at target."""
         if target is None:
