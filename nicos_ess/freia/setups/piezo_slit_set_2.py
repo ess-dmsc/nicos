@@ -15,7 +15,7 @@ devices = dict(
         motorpv=f"{prefix}SlZm-01:Mtr",
         visibility=(),
     ),
-    piezo_set_2_1=device(
+    piezo_2_1=device(
         "nicos.devices.generic.slit.VerticalGap",
         description="Main Slit 2-1 Controller",
         opmode="2blades_opposite",
@@ -35,7 +35,7 @@ devices = dict(
         motorpv=f"{prefix}SlZm-02:Mtr",
         visibility=(),
     ),
-    piezo_set_2_2=device(
+    piezo_2_2=device(
         "nicos.devices.generic.slit.VerticalGap",
         description="Main Slit 2-2 Controller",
         opmode="2blades_opposite",
@@ -55,7 +55,7 @@ devices = dict(
         motorpv=f"{prefix}SlZm-03:Mtr",
         visibility=(),
     ),
-    piezo_set_2_3=device(
+    piezo_2_3=device(
         "nicos.devices.generic.slit.VerticalGap",
         description="Main Slit 2-3 Controller",
         opmode="2blades_opposite",
@@ -75,7 +75,7 @@ devices = dict(
         motorpv=f"{prefix}SlYp-01:Mtr",
         visibility=(),
     ),
-    neutron_ps_slit_2=device(
+    piezo_2_horizontal=device(
         "nicos.devices.generic.slit.HorizontalGap",
         description="Main Horizontal Piezo Slit Controller",
         opmode="2blades_opposite",
