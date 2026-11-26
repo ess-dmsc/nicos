@@ -49,8 +49,8 @@ def _minimal_metainfo(counter: int = 1) -> dict:
             "experiment",
         ),
         ("Sample", "samples"): (
-            {0: {"name": "SampleA", "description": "A test sample"}},
-            "{0: {'name': 'SampleA', 'description': 'A test sample'}}",
+            {0: {"samplename": "SampleA", "description": "A test sample"}},
+            "{0: {'samplename': 'SampleA', 'description': 'A test sample'}}",
             "",
             "sample",
         ),
@@ -304,7 +304,7 @@ class TestDynamicNexusBuilding(TestCase):
         ]
         metainfo = _minimal_metainfo()
         metainfo[("Sample", "samples")] = (
-            {0: {"name": "SampleA", "temperature": "0"}},
+            {0: {"samplename": "SampleA", "temperature": "0"}},
             "",
             "",
             "sample",
@@ -519,14 +519,14 @@ class TestDynamicNexusBuilding(TestCase):
             "test/nicos_ess/json_test/test_structure_loki.json"
         )
         samples = {
-            0: {"name": "SampleA", "position": "T1"},
-            1: {"name": "SampleB", "position": "T2"},
-            2: {"name": "SampleC", "position": "T3"},
-            3: {"name": "SampleD", "position": "T4"},
-            4: {"name": "SampleE", "position": "T5"},
-            5: {"name": "SampleF", "position": "T6"},
-            6: {"name": "SampleG", "position": "T7"},
-            7: {"name": "SampleH", "position": "T8"},
+            0: {"samplename": "SampleA", "position": "T1"},
+            1: {"samplename": "SampleB", "position": "T2"},
+            2: {"samplename": "SampleC", "position": "T3"},
+            3: {"samplename": "SampleD", "position": "T4"},
+            4: {"samplename": "SampleE", "position": "T5"},
+            5: {"samplename": "SampleF", "position": "T6"},
+            6: {"samplename": "SampleG", "position": "T7"},
+            7: {"samplename": "SampleH", "position": "T8"},
         }
         samplename = ""
         counter = 5

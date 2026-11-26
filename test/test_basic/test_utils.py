@@ -69,6 +69,7 @@ from nicos.utils import (
     updateFileCounter,
 )
 from nicos.utils.timer import Timer
+from nicos.utils.user import combineUsers, splitUsers
 from test.utils import raises
 
 
@@ -665,3 +666,65 @@ def test_expandTemplateRecursion(expr, expected, defaulted_keys, missing_keys):
     assert expected == res
     assert [e["key"] for e in defaulted] == defaulted_keys
     assert [e["key"] for e in missing] == missing_keys
+
+
+def test_split_users():
+    assert splitUsers("") == [{"name": ""}]
+    assert splitUsers("Nico Suser") == [{"name": "Nico Suser"}]
+    assert splitUsers("Nico Suser <nico@suser.org>") == [
+        {"email": "nico@suser.org", "name": "Nico Suser"}
+    ]
+    assert splitUsers("Nico Suser <nico@suser.org> (Home)") == [
+        {"affiliation": "Home", "email": "nico@suser.org", "name": "Nico Suser"},
+    ]
+    assert splitUsers("Nico Suser<nico@suser.org>(Home)") == [
+        {"affiliation": "Home", "email": "nico@suser.org", "name": "Nico Suser"},
+    ]
+    assert splitUsers("Nico Suser (Home)") == [
+        {"affiliation": "Home", "name": "Nico Suser"},
+    ]
+    assert splitUsers("Nico Suser <nico@suser.org> (Home);") == [
+        {"affiliation": "Home", "email": "nico@suser.org", "name": "Nico Suser"},
+        {"name": ""},
+    ]
+    assert splitUsers("Nico Suser <nico@suser.org> (Home); A. User ") == [
+        {"affiliation": "Home", "email": "nico@suser.org", "name": "Nico Suser"},
+        {"name": "A. User"},
+    ]
+    assert splitUsers("Nico Suser <nico@suser.org> (Home);A. User") == [
+        {"affiliation": "Home", "email": "nico@suser.org", "name": "Nico Suser"},
+        {"name": "A. User"},
+    ]
+
+
+def test_combine_users():
+    assert combineUsers([]) == ""
+    assert combineUsers([{"name": "N. User"}]) == "N. User"
+    assert (
+        combineUsers([{"name": "N. User", "email": "nico@suser.org"}])
+        == "N. User <nico@suser.org>"
+    )
+    assert (
+        combineUsers(
+            [{"affiliation": "Home", "name": "N. User", "email": "nico@suser.org"}]
+        )
+        == "N. User <nico@suser.org> (Home)"
+    )
+    assert (
+        combineUsers(
+            [
+                {"affiliation": "Home", "name": "N. User", "email": "nico@suser.org"},
+                {"name": ""},
+            ]
+        )
+        == "N. User <nico@suser.org> (Home); "
+    )
+    assert (
+        combineUsers(
+            [
+                {"affiliation": "Home", "name": "N. User", "email": "nico@suser.org"},
+                {"name": "A. User"},
+            ]
+        )
+        == "N. User <nico@suser.org> (Home); A. User"
+    )

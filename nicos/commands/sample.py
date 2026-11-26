@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -33,6 +33,7 @@ from numpy import arcsin, degrees, pi, radians, sin, sqrt
 from nicos import session
 from nicos.commands import helparglist, parallel_safe, usercommand
 from nicos.commands.analyze import CommandLineFitResult
+from nicos.commands.output import printinfo
 from nicos.core import ConfigurationError, UsageError
 from nicos.devices.tas.spacegroups import can_reflect, get_spacegroup
 from nicos.utils import printTable
@@ -67,8 +68,13 @@ def NewSample(name, **parameters):
     >>> NewSample('Cr', lattice=[2.88, 2.88, 2.88], angles=[90, 90, 90])
 
     see also: `SetSample`, `SelectSample`, `ClearSamples`, `ListSamples`
+
+    .. warning::
+
+        It clears the list of existing samples!
+
     """
-    parameters["name"] = name
+    parameters["samplename"] = name
     session.experiment.sample.new(parameters)
 
 
@@ -86,7 +92,7 @@ def SetSample(number, name, **parameters):
 
     see also: `NewSample`, `SelectSample`, `ClearSamples`, `ListSamples`
     """
-    parameters["name"] = name
+    parameters["samplename"] = name
     session.experiment.sample.set(number, parameters)
 
 
@@ -132,17 +138,37 @@ def ListSamples():
     """
     rows = []
     all_cols = set()
-    index = {}
     for info in session.experiment.sample.samples.values():
         all_cols.update(info)
+    all_cols.discard("samplename")
+    all_cols.discard("sampledescription")
     all_cols.discard("name")
-    index = {key: i for (i, key) in enumerate(sorted(all_cols), start=2)}
-    index["name"] = 1
+    index = {key: i for (i, key) in enumerate(sorted(all_cols), start=3)}
+    index["samplename"] = 1
+    index["sampledescription"] = 2
     for number, info in session.experiment.sample.samples.items():
-        rows.append([str(number), info["name"]] + [""] * len(all_cols))
+        star = "*" if session.experiment.sample.samplenumber == number else " "
+        rows.append(
+            [
+                f"{star:2}{number}",
+                info.get("samplename", ""),
+                info.get("sampledescription", ""),
+            ]
+            + [""] * len(all_cols)
+        )
+        if "name" in info:
+            info = dict(info)
+            name = info.pop("name")
+            if "samplename" not in info:
+                info["samplename"] = name
         for key in info:
             rows[-1][index[key]] = str(info[key])
-    printTable(["number", "sample name"] + sorted(all_cols), rows, session.log.info)
+    printTable(
+        ["number", "sample name", "sample description"] + sorted(all_cols),
+        rows,
+        session.log.info,
+    )
+    printinfo("* Currently used sample")
 
 
 @usercommand
@@ -240,7 +266,7 @@ def activation(
         raise UsageError("Please specify an instrument or flux")
     if mass is None:
         try:
-            formula = session.experiment.sample.mass
+            mass = session.experiment.sample.mass
         except (ConfigurationError, AttributeError):
             pass
     if mass is None:
@@ -261,7 +287,7 @@ def activation(
         return None
     if data["ecode"] == "unknown instrument" and flux is None:
         session.log.warning(
-            "Instrument %s unknown to calculator, " "specify flux manually", instrument
+            "Instrument %s unknown to calculator, specify flux manually", instrument
         )
         session.log.info("Known instruments")
         printTable(
@@ -342,7 +368,7 @@ def _extract_powder_data(num, dataset):
             ][0]
         except IndexError:
             session.log.warning(
-                'dataset %d has no column of type "monitor" ' 'or "time"', num
+                'dataset %d has no column of type "monitor" or "time"', num
             )
             return
     ms = [float(subset.detvaluelist[mcol]) for subset in dataset.subsets]
@@ -415,7 +441,7 @@ def powderfit(powder, scans=None, peaks=None, ki=None, dmono=3.355, spacegroup=1
     else:
         if not isinstance(powder, float):
             raise UsageError(
-                'first argument must be either "YIG" or a ' "lattice constant"
+                'first argument must be either "YIG" or a lattice constant'
             )
         a = powder
 

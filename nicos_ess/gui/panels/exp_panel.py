@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 
-from nicos.clients.gui.panels.setup_panel import ProposalDelegate, combineUsers
+from nicos.clients.gui.panels.setup_panel import ProposalDelegate
 from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.core import ADMIN
 from nicos.guisupport.qt import (
@@ -15,6 +15,7 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.tablemodel import TableModel
 from nicos.utils import decodeAny, findResource
+from nicos.utils.user import combineUsers
 from nicos_ess.gui.panels.panel import PanelBase
 
 USER_FIELDS = ["name", "email", "affiliation"]
@@ -257,8 +258,8 @@ class ExpPanel(PanelBase):
 
         samples = {}
         for index, sample in enumerate(self.new_settings.samples):
-            if not sample.get("name", ""):
-                sample["name"] = f"sample {index + 1}"
+            if not sample.get("samplename", ""):
+                sample["samplename"] = f"sample {index + 1}"
             samples[index] = sample
         self.client.run(f"Exp.sample.set_samples({dict(samples)})")
 
