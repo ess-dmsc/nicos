@@ -132,7 +132,7 @@ class MotorDialog(QDialog):
 
     def update_params(self):
         # Trigger parameter poll
-        self.client.eval(f"{self.devname}.pollParams()", None)
+        self.client.eval(f"{self.devname}.asyncPollVolatileParams()", None)
 
         # Get parameter information from daemon
         # paramvalues contains the name and the value.
