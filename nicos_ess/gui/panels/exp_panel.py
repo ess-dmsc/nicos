@@ -19,22 +19,6 @@ from nicos_ess.gui.panels.panel import PanelBase
 
 USER_FIELDS = ["name", "email", "affiliation"]
 CONTACT_FIELDS = ["name", "email", "affiliation"]
-SAMPLE_FIELDS = [
-    "name",
-    "formula",
-    "number of",
-    "mass/volume",
-    "density",
-    "temperature",
-    "electric field",
-    "magnetic field",
-]
-SAMPLE_MAPPINGS = {
-    "number of": "number_of",
-    "mass/volume": "mass_volume",
-    "electric field": "electric_field",
-    "magnetic field": "magnetic_field",
-}
 
 
 class ProposalSettings:
@@ -57,17 +41,15 @@ class ProposalSettings:
         self.abort_on_error = abort_on_error
 
     def __eq__(self, other):
-        if (
-            self.proposal_id != other.proposal_id
-            or self.title != other.title
-            or self.users != other.users
-            or self.local_contacts != other.local_contacts
-            or self.notifications != other.notifications
-            or self.abort_on_error != other.abort_on_error
-            or self.samples != other.samples
-        ):
-            return False
-        return True
+        return (
+            self.proposal_id == other.proposal_id
+            and self.title == other.title
+            and self.users == other.users
+            and self.local_contacts == other.local_contacts
+            and self.notifications == other.notifications
+            and self.abort_on_error == other.abort_on_error
+            and self.samples == other.samples
+        )
 
 
 class ExpPanel(PanelBase):
@@ -99,23 +81,13 @@ class ExpPanel(PanelBase):
             QHeaderView.ResizeMode.Stretch
         )
 
-        self.samples_model = TableModel(
-            SAMPLE_FIELDS, mappings=SAMPLE_MAPPINGS, transposed=True
-        )
-        self.samples_model.data_updated.connect(self._check_for_changes)
-        self.sampleTable.setModel(self.samples_model)
-        self.sampleTable.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Interactive
-        )
-
         self.proposalNum.setValidator(QIntValidator(0, 999999999))
 
         self._text_controls = (self.propTitle, self.proposalNum)
-        self._tables = (self.sampleTable, self.contactsTable, self.userTable)
+        self._tables = (self.contactsTable, self.userTable)
 
+        # When set, samples from a queried proposal are not sent to the daemon.
         self.hide_samples = options.get("hide_sample", False)
-        if self.hide_samples:
-            self._hide_sample_info()
         self._setup_warning_label()
         self.initialise_connection_status_listeners()
 
@@ -135,13 +107,6 @@ class ExpPanel(PanelBase):
         self.btn_apply.setVisible(value)
         self.btn_discard.setVisible(value)
         self.applyWarningLabel.setVisible(value)
-
-    def _hide_sample_info(self):
-        self.sampleTable.hide()
-        self.sampleLabel.hide()
-        self.sampleLine.hide()
-        self.addSampleButton.hide()
-        self.deleteSampleButton.hide()
 
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
@@ -188,19 +153,8 @@ class ExpPanel(PanelBase):
         self.proposalNum.setText(self.old_settings.proposal_id)
         self.propTitle.setText(self.old_settings.title)
         self.errorAbortBox.setChecked(self.old_settings.abort_on_error)
-        self._update_samples_model(self.old_settings.samples)
         self._update_users_model(self.old_settings.users)
         self._update_contacts_model(self.old_settings.local_contacts)
-        self._format_sample_table()
-
-    def _format_sample_table(self):
-        self._format_table(self.sampleTable, self.samples_model)
-
-    def _format_table(self, table, model):
-        width = table.width() - table.verticalHeader().width()
-        num_cols = model.columnCount(0)
-        for i in range(num_cols):
-            table.setColumnWidth(i, width // num_cols)
 
     def on_client_connected(self):
         PanelBase.on_client_connected(self)
@@ -229,7 +183,6 @@ class ExpPanel(PanelBase):
     def on_client_disconnected(self):
         for control in self._text_controls:
             control.setText("")
-        self._update_samples_model([])
         self._update_users_model([])
         self._update_contacts_model([])
         self.old_settings = ProposalSettings()
@@ -251,8 +204,6 @@ class ExpPanel(PanelBase):
         self.addUserButton.setEnabled(not viewonly)
         self.queryDBButton.setEnabled(not viewonly)
         self.deleteUserButton.setEnabled(not viewonly)
-        self.addSampleButton.setEnabled(not viewonly)
-        self.deleteSampleButton.setEnabled(not viewonly)
         if viewonly:
             self._set_buttons_and_warning_behaviour(False)
         else:
@@ -294,21 +245,18 @@ class ExpPanel(PanelBase):
 
         if self.new_settings.proposal_id != self.old_settings.proposal_id:
             exp_args["proposal"] = self.new_settings.proposal_id
-            command = "Exp.new(%s)"
+            command = "Exp.new"
         else:
-            command = "Exp.update(%s)"
-        code = command % ", ".join("%s=%r" % i for i in exp_args.items())
-        self.client.eval(code)
+            command = "Exp.update"
+        args = ", ".join(f"{key}={value!r}" for key, value in exp_args.items())
+        self.client.eval(f"{command}({args})")
 
     def _set_samples(self):
-        if (
-            self.hide_samples
-            or self.samples_model.raw_data == self.old_settings.samples
-        ):
+        if self.hide_samples or self.new_settings.samples == self.old_settings.samples:
             return
 
         samples = {}
-        for index, sample in enumerate(self.samples_model.raw_data):
+        for index, sample in enumerate(self.new_settings.samples):
             if not sample.get("name", ""):
                 sample["name"] = f"sample {index + 1}"
             samples[index] = sample
@@ -317,14 +265,13 @@ class ExpPanel(PanelBase):
     def _set_abort_on_error(self):
         abort_on_error = self.new_settings.abort_on_error
         if abort_on_error != self.old_settings.abort_on_error:
-            self.client.run("SetErrorAbort(%s)" % abort_on_error)
+            self.client.run(f"SetErrorAbort({abort_on_error})")
 
     def _set_notification_receivers(self):
         notifications = self.new_settings.notifications
         if notifications != self.old_settings.notifications:
-            self.client.run(
-                "SetMailReceivers(%s)" % ", ".join(map(repr, notifications))
-            )
+            receivers = ", ".join(map(repr, notifications))
+            self.client.run(f"SetMailReceivers({receivers})")
 
     @pyqtSlot()
     def on_addUserButton_clicked(self):
@@ -374,8 +321,7 @@ class ExpPanel(PanelBase):
                 self.propTitle.setText(result.get("title", ""))
                 self._update_users_model(result.get("users", []))
                 self._update_contacts_model(result.get("localcontacts", []))
-                self._update_samples_model(result["samples"])
-                self._format_sample_table()
+                self._update_samples(result["samples"])
             else:
                 self.showError("No proposals found")
         except Exception as e:
@@ -401,9 +347,10 @@ class ExpPanel(PanelBase):
         sel = dlg.list.currentRow()
         return proposals[sel]
 
-    def _update_samples_model(self, samples):
+    def _update_samples(self, samples):
         if not self.hide_samples:
-            self.samples_model.raw_data = deepcopy(samples)
+            self.new_settings.samples = deepcopy(samples)
+            self._check_for_changes()
 
     @pyqtSlot(str)
     def on_proposalNum_textChanged(self, value):
@@ -432,9 +379,6 @@ class ExpPanel(PanelBase):
                 self.new_settings != self.old_settings,
                 self.users_model.raw_data != self.old_settings.users,
                 new_contacts != old_contacts,
-                self.samples_model.raw_data != self.old_settings.samples
-                if not self.hide_samples
-                else False,
             )
         )
 
@@ -447,18 +391,3 @@ class ExpPanel(PanelBase):
     def on_experiment_finished(self):
         self._update_proposal_info()
         self._check_for_changes()
-
-    @pyqtSlot()
-    def on_addSampleButton_clicked(self):
-        self.samples_model.insert_row(self.samples_model.num_entries)
-        self._format_sample_table()
-
-    @pyqtSlot()
-    def on_deleteSampleButton_clicked(self):
-        to_remove = {
-            index.column()
-            for index in self.sampleTable.selectedIndexes()
-            if index.isValid() and index.column() < self.samples_model.num_entries
-        }
-        self.samples_model.remove_rows(to_remove)
-        self._format_sample_table()

@@ -4,6 +4,7 @@ main_window = vbox(
     panel("nicos_ess.gui.panels.dashboard.Dashboard"),
     tabbed(
         ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
+        ("Samples", panel("nicos_ess.gui.panels.samples.SamplePanel")),
         ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
         ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
         (
