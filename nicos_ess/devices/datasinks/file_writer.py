@@ -106,10 +106,9 @@ def _owning_script():
 
 
 def _hook_into_daemon(controller):
-    """Stop files on an immediate stop and when their script fails."""
+    """Stop the files of a script that does not finish."""
     if getattr(controller.eventfunc, "file_writer_hook", False):
         return False
-    controller.add_estop_function(_for_each_filewriter, ("stop_jobs", "immediate stop"))
     emit = controller.eventfunc
 
     def eventfunc(event, data):

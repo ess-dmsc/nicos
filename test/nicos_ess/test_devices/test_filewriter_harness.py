@@ -509,16 +509,11 @@ def controller(fw, device_harness):
 def test_hooks_into_the_daemon_once(controller):
     controller.eventfunc("done", {"reqid": "x", "success": True})
 
-    assert len(controller.estop_functions) == 1
     assert controller.events == ["done"]
 
 
-def test_immediate_stop_stops_every_job(controller, two_running_jobs, writer, daemon):
-    func, args = controller.estop_functions[0]
-    with daemon():
-        func(*args)
-
-    assert writer.stopped == list(two_running_jobs)
+def test_immediate_stop_does_not_stop_files(controller):
+    assert controller.estop_functions == []
 
 
 @pytest.mark.parametrize("lost", [False, True])
