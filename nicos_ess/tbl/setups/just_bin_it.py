@@ -23,7 +23,7 @@ devices = dict(
             "ngem",
         ],
         timers=["timer"],
-        # counters=["pulse_counter"],  # needs ECDC-6093
+        counters=["pulse_counter", "proton_charge"],
     ),
     timer=device(
         "nicos_ess.devices.timer.TimerChannel",
@@ -36,6 +36,12 @@ devices = dict(
         description="Proton pulses on target (EVR event 17, NiAcqSt)",
         readpv="TBL-DtCmn:Ctrl-EVR-001:EvtNiAcqStCnt-I",
         fmtstr="%d",
+    ),
+    proton_charge=device(
+        "nicos_ess.devices.epics.pulse_charge_counter.PulseChargeCounter",
+        description="Proton charge on target, summed over the pulses of a count",
+        readpv="A2T-130LWU:PBI-BCM-001:PulseChargeR",
+        fmtstr="%.3f",
     ),
     monitor_1=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
