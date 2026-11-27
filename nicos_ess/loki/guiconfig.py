@@ -35,24 +35,11 @@ main_window = vbox(
                             "Choppers",
                             panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
                         ),
-                        # (
-                        #     "Spectrometer",
-                        #     panel(
-                        #         "nicos_ess.loki.gui.panels.spectrometer.SpectrometerPanel"
-                        #     ),
-                        # ),
                         (
                             "Rheometer Setup",
                             panel(
                                 "nicos_ess.gui.panels.rheometer.RheometerPanel",
                                 rheometer="rheometer",
-                            ),
-                        ),
-                        (
-                            "Script Status",
-                            panel(
-                                "nicos_ess.gui.panels.status.ScriptStatusPanel",
-                                eta=True,
                             ),
                         ),
                     ),
@@ -71,7 +58,27 @@ main_window = vbox(
         ),
         (
             "Scripting",
-            panel("nicos_ess.gui.panels.remote_editor.EditorPanel", tools=None),
+            hsplit(
+                tabbed(
+                    (
+                        "Script",
+                        panel(
+                            "nicos_ess.gui.panels.remote_editor.EditorPanel", tools=None
+                        ),
+                    ),
+                    (
+                        "Script Status",
+                        panel(
+                            "nicos_ess.gui.panels.status.ScriptStatusPanel",
+                            eta=True,
+                        ),
+                    ),
+                ),
+                panel(
+                    "nicos_ess.gui.panels.devices.DevicesPanel",
+                    dockpos="right",
+                ),
+            ),
         ),
         (
             "History",
