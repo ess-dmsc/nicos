@@ -75,6 +75,7 @@ devices = dict(
         hist_type="1-D TOF",
         det_width=1,
         det_height=1,
+        det_range=(0, 100),
         tof_range=(0, 71428000),
         num_bins=744,
         input_schema="da00",
