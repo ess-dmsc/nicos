@@ -98,6 +98,13 @@ def _for_each_filewriter(method, *args):
             getattr(dev, method)(*args)
 
 
+def _owning_script():
+    # A file started with "execute now" does not belong to the running script.
+    if session.checkParallel():
+        return None
+    return getattr(_daemon_controller(), "reqid_work", None)
+
+
 def _hook_into_daemon(controller):
     """Stop files on an immediate stop and when their script fails."""
     if getattr(controller.eventfunc, "file_writer_hook", False):
@@ -360,7 +367,7 @@ class FileWriter(KafkaStatusHandler):
             "service": "",
             "offset": None,
             "replay_of": replay_of,
-            "script": getattr(_daemon_controller(), "reqid_work", None),
+            "script": _owning_script(),
             "deadline": time.time() + self.starttimeout + self.timeoutinterval,
         }
         with self._lock:  # the answer can arrive before _send returns

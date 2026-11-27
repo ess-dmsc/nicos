@@ -2,7 +2,12 @@
 
 import pytest
 
-from nicos_ess.commands.filewriter import nexusfile_open, start_filewriting
+from nicos.commands import usercommandWrapper
+from nicos_ess.commands.filewriter import (
+    nexusfile_open,
+    start_filewriting,
+    stop_filewriting,
+)
 from nicos_ess.devices.datasinks import file_writer
 from nicos_ess.devices.datasinks.nexus_structure import (
     NexusStructureJsonFile,
@@ -125,3 +130,22 @@ def test_nexusfile_open_does_not_stop_files_it_did_not_start(
             pass
 
         assert not stops
+
+
+def test_start_and_stop_can_be_sent_with_execute_now(
+    session, device_harness, filewriter_control_sink_devices, monkeypatch
+):
+    with loaded_setup(session, "ess_filewriter"):
+        calls = []
+        monkeypatch.setattr(
+            file_writer.FileWriter, "start_job", lambda self: calls.append("start")
+        )
+        monkeypatch.setattr(
+            file_writer.FileWriter, "stop_job", lambda self, n: calls.append("stop")
+        )
+        with device_harness.activate("daemon") as daemon_session:
+            monkeypatch.setattr(daemon_session, "checkParallel", lambda: True)
+            usercommandWrapper(start_filewriting)()
+            usercommandWrapper(stop_filewriting)()
+
+        assert calls == ["start", "stop"]

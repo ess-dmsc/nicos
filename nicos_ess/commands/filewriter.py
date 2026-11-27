@@ -81,6 +81,7 @@ def nexusfile_open(run_title=None):
 
 @usercommand
 @helparglist("run_title")
+@parallel_safe
 def start_filewriting(run_title=None):
     """Submit a File Writer job, optionally setting its run title.
 
@@ -99,6 +100,7 @@ def start_filewriting(run_title=None):
 
 @usercommand
 @helparglist("job_number")
+@parallel_safe
 def stop_filewriting(job_number=None):
     """Request that a File Writer job stop at the current time.
 

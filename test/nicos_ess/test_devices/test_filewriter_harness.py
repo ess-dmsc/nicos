@@ -547,6 +547,17 @@ def test_finished_script_hands_its_file_to_the_user(controller, start, writer, d
     assert not writer.stopped
 
 
+def test_file_started_with_execute_now_survives_the_running_script(
+    controller, fw, writer, daemon, monkeypatch
+):
+    with daemon() as daemon_session:
+        monkeypatch.setattr(daemon_session, "checkParallel", lambda: True)
+        fw.start_job()
+        controller.eventfunc("done", {"reqid": "script 1", "success": False})
+
+    assert not writer.stopped
+
+
 def test_end_of_script_never_raises_into_the_daemon(
     controller, start, writer, daemon, caplog
 ):
