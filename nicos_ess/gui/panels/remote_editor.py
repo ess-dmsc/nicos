@@ -619,7 +619,7 @@ class EditorPanel(Panel):
         self._close(editor)
 
     def _close(self, editor):
-        if not self.checkDirty(editor):
+        if not self.checkDirty(editor, "closing"):
             return
         index = self.editors.index(editor)
         del self.editors[index]
@@ -871,7 +871,7 @@ class EditorPanel(Panel):
             return
         if self.is_command_script[self.currentEditor]:
             return
-        if not self.checkDirty(self.currentEditor, askonly=True):
+        if not self.checkDirty(self.currentEditor, "running"):
             return
         if self.current_status != "idle" and not self.askQuestion(
             "A script is currently running, do you want to queue this script?",
@@ -887,7 +887,7 @@ class EditorPanel(Panel):
             return
         if self.is_command_script[self.currentEditor]:
             return
-        if not self.checkDirty(self.currentEditor, askonly=True):
+        if not self.checkDirty(self.currentEditor, "dry running"):
             return
         simuuid = str(uuid1())
         filename = self.filenames[self.currentEditor]
@@ -919,7 +919,7 @@ class EditorPanel(Panel):
         script = self.validateScript()
         if script is None:
             return
-        if not self.checkDirty(self.currentEditor, askonly=True):
+        if not self.checkDirty(self.currentEditor, "updating"):
             return
         reason, ok = QInputDialog.getText(
             self,
@@ -938,13 +938,13 @@ class EditorPanel(Panel):
             editor = self.newFile()
             editor.setText(script)
 
-    def checkDirty(self, editor, askonly=False):
+    def checkDirty(self, editor, action, askonly=False):
         if not editor.isModified():
             return True
         if self.filenames[editor]:
-            message = f"Save changes in {self.filenames[editor]} before closing?"
+            message = f"Save changes in {self.filenames[editor]} before {action}?"
         else:
-            message = "Save changes to new script file before closing?"
+            message = f"Save changes to new script file before {action}?"
         buttons = (
             QMessageBox.StandardButton.Save
             | QMessageBox.StandardButton.Discard
@@ -991,7 +991,7 @@ class EditorPanel(Panel):
         fn = self.filenames[self.currentEditor]
         if not fn:
             return
-        if not self.checkDirty(self.currentEditor):
+        if not self.checkDirty(self.currentEditor, action="reloading"):
             return
         try:
             with open(fn, encoding=LOCALE_ENCODING) as f:
