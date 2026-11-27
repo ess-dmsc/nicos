@@ -39,11 +39,7 @@ class Hist1dTof:
 
     @classmethod
     def get_zeroes(cls, num_bins, **ignored):
-        return cls.transform_data(np.zeros(shape=(num_bins,), dtype=np.float64))
-
-    @classmethod
-    def transform_data(cls, data, rotation=None):
-        return data
+        return np.zeros(shape=(num_bins,), dtype=np.float64)
 
     @classmethod
     def get_info(cls, name, num_bins, **ignored):
@@ -59,16 +55,7 @@ class Hist2dTof:
 
     @classmethod
     def get_zeroes(cls, num_bins, **ignored):
-        return cls.transform_data(
-            np.zeros(shape=(num_bins, num_bins), dtype=np.float64)
-        )
-
-    @classmethod
-    def transform_data(cls, data, rotation=None):
-        # For the ESS detector orientation, pixel 0 is at top-left
-        if rotation:
-            return np.rot90(data, k=rotation // 90)
-        return data
+        return np.zeros(shape=(num_bins, num_bins), dtype=np.float64)
 
     @classmethod
     def get_info(cls, name, num_bins, **ignored):
@@ -88,20 +75,12 @@ class Hist2dDet:
 
     @classmethod
     def get_array_description(cls, name, det_width, det_height, **ignored):
-        return ArrayDesc(name, shape=(det_width, det_height), dtype=np.float64)
+        return ArrayDesc(name, shape=(det_height, det_width), dtype=np.float64)
 
     @classmethod
     def get_zeroes(cls, det_width, det_height, **ignored):
-        return cls.transform_data(
-            np.zeros(shape=(det_width, det_height), dtype=np.float64)
-        )
-
-    @classmethod
-    def transform_data(cls, data, rotation=None):
-        # For the ESS detector orientation, pixel 0 is at top-left
-        if rotation:
-            return np.rot90(data, k=rotation // 90)
-        return data
+        # The data from just-bin-it uses row-column ordering.
+        return np.zeros(shape=(det_height, det_width), dtype=np.float64)
 
     @classmethod
     def get_info(cls, name, det_width, det_height, **ignored):
@@ -116,20 +95,12 @@ class Hist2dRoi:
 
     @classmethod
     def get_array_description(cls, name, det_width, left_edges, **ignored):
-        return ArrayDesc(name, shape=(det_width, left_edges), dtype=np.float64)
+        return ArrayDesc(name, shape=(len(left_edges), det_width), dtype=np.float64)
 
     @classmethod
     def get_zeroes(cls, det_width, left_edges, **ignored):
-        return cls.transform_data(
-            np.zeros(shape=(det_width, left_edges), dtype=np.float64)
-        )
-
-    @classmethod
-    def transform_data(cls, data, rotation=None):
-        # For the ESS detector orientation, pixel 0 is at top-left
-        if rotation:
-            return np.rot90(data, k=rotation // 90)
-        return data
+        # The data from just-bin-it uses row-column ordering.
+        return np.zeros(shape=(len(left_edges), det_width), dtype=np.float64)
 
     @classmethod
     def get_info(cls, name, det_width, left_edges, **ignored):
@@ -251,13 +222,6 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             userparam=False,
             settable=True,
         ),
-        "rotation": Param(
-            "Rotation angle to apply to the image",
-            type=oneof(0, 90, 180, 270),
-            default=90,
-            userparam=True,
-            settable=True,
-        ),
         "event_rate": Param(
             "The neutron event rate",
             type=float,
@@ -318,9 +282,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         if not self._unique_id or info.get("id") != self._unique_id:
             return
         state = info.get("state")
-        self._hist_data = hist_type_by_name[self.hist_type].transform_data(
-            hist["data"], rotation=self.rotation
-        )
+        self._hist_data = hist["data"]
         self._hist_sum = self._hist_data.sum()
         self._hist_edges = hist["dim_metadata"][0]["bin_boundaries"]
         rate = info.get("rate")
