@@ -14,9 +14,7 @@ class ConnectionDialog(QDialog):
     """A dialog to request connection parameters."""
 
     @classmethod
-    def getConnectionData(
-        cls, parent, connpresets, default_server, default_user=None
-    ):
+    def getConnectionData(cls, parent, connpresets, default_server, default_user=None):
         self = cls(parent, connpresets, default_server, default_user)
         ret = self.exec()
         if ret != QDialog.DialogCode.Accepted:
