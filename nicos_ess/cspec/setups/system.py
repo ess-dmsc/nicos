@@ -14,6 +14,7 @@ modules = ["nicos.commands.standard", "nicos_ess.commands"]
 
 includes = [
     "notifiers",
+    "sample_environment_presence",
 ]
 
 devices = dict(

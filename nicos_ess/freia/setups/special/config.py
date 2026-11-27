@@ -3,3 +3,5 @@ group = "configdata"
 
 FREIA_DATA_ROOT = "/opt/nicos-data"
 KAFKA_BROKERS = []
+
+SAMPLE_ENV_TOPIC = "freia_sample_env"
