@@ -229,7 +229,7 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon, request, tmp_path):
         # Keep this NicosLogger visible to pytest's stdlib caplog capture.
         mainwindow_log.parent = logging.getLogger()
         mainwindow_log.propagate = True
-        window = mainwindow_cls(mainwindow_log, config)
+        window = mainwindow_cls(mainwindow_log, config, False, "localhost", "guest")
         window.autoconnect = False
         window.confirmexit = False
 
