@@ -21,7 +21,7 @@ class ConnectionDialog(QDialog):
         ret = self.exec()
         if ret != QDialog.DialogCode.Accepted:
             return None, None, None, ""
-        new_addr = self.txtServer.text()
+        new_addr = self.txtServer.text().strip()
         try:
             host, port = new_addr.split(":")
             port = int(port)
@@ -33,7 +33,7 @@ class ConnectionDialog(QDialog):
         )
         new_data.viewonly = self.viewonly.isChecked()
         new_data.expertmode = self.expertmode.isChecked()
-        return None, new_data, None, "", new_addr
+        return None, new_data, None, "", new_addr, self.userName.text().strip()
 
     def __init__(self, parent, connpresets, default_server, default_user):
         QDialog.__init__(self, parent)

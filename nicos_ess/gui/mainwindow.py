@@ -779,7 +779,7 @@ class MainWindow(DlgUtils, QMainWindow):
         ret = ConnectionDialog.getConnectionData(
             self, self.connpresets, self.default_server, self.default_user
         )
-        new_name, new_data, save, _, self.default_server = ret
+        new_name, new_data, save, _, self.default_server, self.default_user = ret
 
         if new_data is None:
             return
