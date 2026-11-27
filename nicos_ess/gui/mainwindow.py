@@ -112,7 +112,7 @@ class MainWindow(DlgUtils, QMainWindow):
     default_facility_logo = ":/ess-logo-auth"
 
     def __init__(
-        self, log, gui_conf, viewonly=False, default_server=None, default_user=None
+        self, log, gui_conf, viewonly, default_server, default_user
     ):
         QMainWindow.__init__(self)
         DlgUtils.__init__(self, "NICOS")
@@ -779,7 +779,7 @@ class MainWindow(DlgUtils, QMainWindow):
         ret = ConnectionDialog.getConnectionData(
             self, self.connpresets, self.default_server, self.default_user
         )
-        new_name, new_data, save, _ = ret
+        new_name, new_data, save, _, self.default_server = ret
 
         if new_data is None:
             return

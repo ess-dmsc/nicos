@@ -15,7 +15,7 @@ class ConnectionDialog(QDialog):
 
     @classmethod
     def getConnectionData(
-        cls, parent, connpresets, default_server=None, default_user=None
+        cls, parent, connpresets, default_server, default_user=None
     ):
         self = cls(parent, connpresets, default_server, default_user)
         ret = self.exec()
@@ -33,7 +33,7 @@ class ConnectionDialog(QDialog):
         )
         new_data.viewonly = self.viewonly.isChecked()
         new_data.expertmode = self.expertmode.isChecked()
-        return None, new_data, None, ""
+        return None, new_data, None, "", new_addr
 
     def __init__(self, parent, connpresets, default_server, default_user):
         QDialog.__init__(self, parent)
@@ -42,7 +42,14 @@ class ConnectionDialog(QDialog):
             self.logoLabel.setPixmap(QPixmap(parent.facility_logo))
         self.connpresets = OrderedDict(sorted(connpresets.items()))
 
-        self._populate_where_possible(default_server, default_user)
+        if default_server.startswith("localhost"):
+            self._populate_where_possible(default_server, default_user)
+        else:
+            # For instrument machines we don't allow changing the
+            # server address.
+            self._populate_where_possible(default_server, default_user)
+            self.txtServer.setVisible(False)
+            self.lblConnectingTo.setVisible(False)
 
         self.resize(QSize(self.width(), self.minimumSize().height()))
 
