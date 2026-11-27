@@ -1,5 +1,7 @@
 description = "system setup"
 
+includes = ["sample_environment_presence"]
+
 group = "lowlevel"
 
 sysconfig = dict(

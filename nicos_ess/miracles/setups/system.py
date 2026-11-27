@@ -2,6 +2,8 @@ description = "system setup"
 
 group = "lowlevel"
 
+includes = ["sample_environment_presence"]
+
 sysconfig = dict(
     cache="localhost",
     instrument="MIRACLES",
